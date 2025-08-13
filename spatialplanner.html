@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Spatial Pedagogy Classroom Planner (v1.0)</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280;
+    --grid:#e5e7eb; --accent:#2563eb; --accent-2:#16a34a; --accent-3:#f59e0b;
+    --door:#8b5e34; --window:#93c5fd; --danger:#ef4444;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .app{display:grid;grid-template-columns:320px 1fr;gap:12px;height:100vh;padding:12px;box-sizing:border-box}
+  .panel{background:var(--panel);border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);padding:12px;display:flex;flex-direction:column}
+  .panel h2{margin:.25rem 0 .5rem;font-size:16px}
+  .section{margin-bottom:10px;border-top:1px dashed #e5e7eb;padding-top:8px}
+  .section:first-of-type{border-top:none;padding-top:0}
+  .chipbar{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;background:#fafafa;cursor:pointer;user-select:none}
+  .chip .swatch{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.1)}
+  .hint{color:var(--muted);font-size:12px;margin:6px 0}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap}
+  button{border:none;border-radius:10px;padding:8px 12px;background:#111827;color:#fff;cursor:pointer}
+  button.secondary{background:#e5e7eb;color:#111827}
+  button.danger{background:var(--danger)}
+  label.toggle{display:flex;align-items:center;gap:8px;font-weight:600;margin:8px 0}
+  /* Canvas wrapper */
+  .stage-wrap{position:relative;background:var(--panel);border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);padding:10px}
+  #stage{width:100%;height:calc(100vh - 44px);background:#fff;border-radius:12px;}
+  .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .toolbar .left, .toolbar .right{display:flex;gap:12px;align-items:center}
+  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:2px 6px;font-size:12px}
+  .legend{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px}
+  .legend .tag{display:inline-flex;align-items:center;gap:6px}
+  .tag .swatch{width:10px;height:10px;border-radius:2px}
+  .toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#111827;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;opacity:.9}
+  /* Accessibility + focus tweaks */
+  .chip:focus, button:focus{outline:none}
+  .chip:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- Left Panel -->
+    <aside class="panel" id="palette">
+      <h2>Item Library</h2>
+      <div class="hint">Click an item to add, then drag. <span class="kbd">R</span> to rotate (<span class="kbd">Shift</span> for 15°), <span class="kbd">Del</span> to remove.</div>
+
+      <div class="section">
+        <strong>Furniture</strong>
+        <div class="chipbar" id="chips-furniture"></div>
+      </div>
+      <div class="section">
+        <strong>Tech</strong>
+        <div class="chipbar" id="chips-tech"></div>
+      </div>
+      <div class="section">
+        <strong>Cognitive</strong>
+        <div class="chipbar" id="chips-cognitive"></div>
+      </div>
+      <div class="section">
+        <strong>Social</strong>
+        <div class="chipbar" id="chips-social"></div>
+      </div>
+      <div class="section">
+        <strong>Emotional</strong>
+        <div class="chipbar" id="chips-emotional"></div>
+      </div>
+
+      <div class="section">
+        <strong>Stations (desk colors)</strong>
+        <div class="chipbar" id="chips-stations"></div>
+      </div>
+
+      <div class="section">
+        <div class="hint">Zones are translucent overlays for planning.</div>
+        <div class="chipbar" id="chips-zones"></div>
+      </div>
+
+      <div class="section">
+        <label class="toggle"><input type="checkbox" id="toggleWall"> Open operable wall (merge rooms)</label>
+        <div class="btnrow">
+          <button id="btnExport">Export PNG</button>
+          <button class="secondary" id="btnClear">Clear</button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Main Stage -->
+    <main class="stage-wrap">
+      <div class="toolbar">
+        <div class="left legend">
+          <span class="tag"><span class="swatch" style="background:#93c5fd"></span> Cognitive</span>
+          <span class="tag"><span class="swatch" style="background:#a7f3d0"></span> Social</span>
+          <span class="tag"><span class="swatch" style="background:#fde68a"></span> Emotional</span>
+          <span class="tag"><span class="swatch" style="background:var(--door)"></span> Door</span>
+          <span class="tag"><span class="swatch" style="background:var(--window)"></span> Window</span>
+        </div>
+        <div class="right">
+          <span class="kbd">Grid: 8×12 (≈96 units)</span>
+        </div>
+      </div>
+
+      <svg id="stage" viewBox="0 0 1440 480" xmlns="http://www.w3.org/2000/svg">
+        <!-- defs -->
+        <defs>
+          <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+            <rect width="60" height="60" fill="#fff"/>
+            <path d="M60 0V60 M0 60H60" stroke="#e5e7eb" stroke-width="1"/>
+          </pattern>
+          <!-- soft floor shadow -->
+          <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+            <feOffset dx="0" dy="2" result="off"/>
+            <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <!-- elevation + glow for selection -->
+          <filter id="elev" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.25"/>
+          </filter>
+          <filter id="selGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#2563eb" flood-opacity="0.9"/>
+          </filter>
+          <linearGradient id="deskGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
+            <stop offset="100%" stop-color="#000000" stop-opacity="0.05"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Room A background -->
+        <rect id="roomA" x="0" y="0" width="720" height="480" fill="url(#grid)"/>
+        <!-- Operable wall line (adjustable) -->
+        <line id="wall" x1="720" y1="0" x2="720" y2="480" stroke="#9ca3af" stroke-width="6" stroke-dasharray="10 8"/>
+        <circle id="wallHandle" cx="720" cy="24" r="10" fill="#111827" />
+        <!-- Room B background (hidden until wall open) -->
+        <rect id="roomB" x="720" y="0" width="720" height="480" fill="url(#grid)" opacity="0.08" />
+
+        <!-- Layer for placed items -->
+        <g id="items"></g>
+
+        <!-- Building shell & orientation cues (drawn LAST so borders are visible) -->
+        <g id="shell">
+          <!-- Outer walls -->
+          <rect x="0" y="0" width="1440" height="480" fill="none" stroke="#111827" stroke-width="8"/>
+          <!-- FRONT label -->
+          <text x="50" y="22" font-size="14" font-family="system-ui" fill="#111827">FRONT</text>
+          <!-- Top wall: front door + windows + door -->
+          <rect id="doorFrontA" x="60" y="-1" width="60" height="10" fill="var(--door)" />
+          <rect id="winTop1" x="130" y="-1" width="420" height="10" fill="var(--window)" />
+          <rect id="doorFrontB" x="560" y="-1" width="60" height="10" fill="var(--door)" />
+          <!-- Bottom wall: back door + windows + back door -->
+          <rect id="doorBackA" x="60" y="471" width="60" height="10" fill="var(--door)" />
+          <rect id="winBot1" x="130" y="471" width="420" height="10" fill="var(--window)" />
+          <rect id="doorBackB" x="560" y="471" width="60" height="10" fill="var(--door)" />
+          <!-- Continue windows across right room as well -->
+          <rect id="winTop2" x="780" y="-1" width="560" height="10" fill="var(--window)" />
+          <rect id="winBot2" x="780" y="471" width="560" height="10" fill="var(--window)" />
+        </g>
+      </svg>
+
+      <div class="toast" id="toast" style="display:none">Tip: Press <span class="kbd">R</span> to rotate the selected item</div>
+    </main>
+  </div>
+
+<script>
+(function(){
+  const unit = 60; // grid
+  const stage = document.getElementById('stage');
+  const itemsLayer = document.getElementById('items');
+  const wall = document.getElementById('wall');
+  const wallHandle = document.getElementById('wallHandle');
+  const roomA = document.getElementById('roomA');
+  const roomB = document.getElementById('roomB');
+  const toggleWall = document.getElementById('toggleWall');
+  const btnExport = document.getElementById('btnExport');
+  const btnClear = document.getElementById('btnClear');
+  const toast = document.getElementById('toast');
+
+  // Operable wall state
+  let wallX = 720; // px midpoint
+  const minWallX = 540;
+  const maxWallX = 1080;
+
+  // Palette (kept from previous version, with subtle 3D/perspective tweaks)
+  const PALETTE = [
+    // furniture
+    {cat:'furniture', id:'desk_rect', label:'Desk (rect)', draw:(g,opts)=>deskRect(g, {...opts, w:unit*1.2, h:unit*0.8, base:'#e5e7eb'})},
+    {cat:'furniture', id:'desk_round', label:'Table (round)', draw:(g,opts)=>roundTable(g,{...opts, r:unit*0.6, base:'#d1fae5'})},
+    {cat:'furniture', id:'desk_trap', label:'Desk (trapezoid)', draw:(g,opts)=>trapDesk(g,{...opts, w:unit*1.2, h:unit*0.8, base:'#fee2e2'})},
+    {cat:'furniture', id:'chair', label:'Chair', draw:(g,opts)=>chair(g,{...opts, w:unit*0.6, h:unit*0.6})},
+    {cat:'furniture', id:'stand_table', label:'Standing table', draw:(g,opts)=>deskRect(g,{...opts, w:unit*1.2, h:unit*0.6, base:'#fde68a'})},
+
+    // tech
+    {cat:'tech', id:'writable_tv', label:'Writable TV', draw:(g,opts)=>tv(g,{...opts, w:unit*1.8, h:unit*1.0})},
+    {cat:'tech', id:'vr_station', label:'VR Station', draw:(g,opts)=>vr(g,{...opts, r:unit*0.5})},
+    {cat:'tech', id:'tablet_cart', label:'Tablet Cart', draw:(g,opts)=>cart(g,{...opts, w:unit*1.0, h:unit*0.8})},
+
+    // cognitive
+    {cat:'cognitive', id:'whiteboard', label:'Mobile Whiteboard', draw:(g,opts)=>board(g,{...opts, w:unit*1.2, h:unit*1.8, base:'#93c5fd'})},
+    {cat:'cognitive', id:'teacher_desk', label:'Teacher Desk', draw:(g,opts)=>deskRect(g,{...opts, w:unit*1.8, h:unit*0.9, base:'#bfdbfe'})},
+
+    // social
+    {cat:'social', id:'group_table', label:'Group Table (6)', draw:(g,opts)=>roundTable(g,{...opts, r:unit*0.9, base:'#a7f3d0'})},
+    {cat:'social', id:'partition', label:'Mobile Partition', draw:(g,opts)=>partition(g,{...opts, w:unit*0.3, h:unit*2.0, base:'#34d399'})},
+
+    // emotional
+    {cat:'emotional', id:'couch', label:'Couch', draw:(g,opts)=>couch(g,{...opts, w:unit*2.0, h:unit*0.9, base:'#fdba74'})},
+    {cat:'emotional', id:'beanbag', label:'Beanbag', draw:(g,opts)=>beanbag(g,{...opts, r:unit*0.6, base:'#fde68a'})},
+    {cat:'emotional', id:'plant', label:'Plant', draw:(g,opts)=>plant(g,{...opts, r:unit*0.45})},
+
+    // station-colored desks
+    {cat:'stations', id:'desk_blue', label:'Desk (Blue)', draw:(g,opts)=>deskRect(g,{...opts, w:unit*1.2, h:unit*0.8, base:'#bfdbfe'})},
+    {cat:'stations', id:'desk_green', label:'Desk (Green)', draw:(g,opts)=>deskRect(g,{...opts, w:unit*1.2, h:unit*0.8, base:'#bbf7d0'})},
+    {cat:'stations', id:'desk_orange', label:'Desk (Orange)', draw:(g,opts)=>deskRect(g,{...opts, w:unit*1.2, h:unit*0.8, base:'#fed7aa'})},
+
+    // zones (translucent)
+    {cat:'zones', id:'zone_cog', label:'Zone: Cognitive', draw:(g,opts)=>zone(g,{...opts, w:unit*3, h:unit*2, base:'#93c5fd'})},
+    {cat:'zones', id:'zone_soc', label:'Zone: Social', draw:(g,opts)=>zone(g,{...opts, w:unit*3, h:unit*2, base:'#a7f3d0'})},
+    {cat:'zones', id:'zone_emo', label:'Zone: Emotional', draw:(g,opts)=>zone(g,{...opts, w:unit*3, h:unit*2, base:'#fde68a'})},
+  ];
+
+  const mapCatToEl = {
+    furniture: document.getElementById('chips-furniture'),
+    tech: document.getElementById('chips-tech'),
+    cognitive: document.getElementById('chips-cognitive'),
+    social: document.getElementById('chips-social'),
+    emotional: document.getElementById('chips-emotional'),
+    stations: document.getElementById('chips-stations'),
+    zones: document.getElementById('chips-zones')
+  };
+  PALETTE.forEach(item=>{
+    const chip = document.createElement('div');
+    chip.className='chip';
+    const sw = document.createElement('span'); sw.className='swatch'; sw.style.background=(item.id.includes('desk_')? (item.id.includes('blue')?'#bfdbfe':item.id.includes('green')?'#bbf7d0':item.id.includes('orange')?'#fed7aa':'#e5e7eb') : (item.cat==='cognitive'?'#93c5fd':item.cat==='social'?'#a7f3d0':item.cat==='emotional'?'#fde68a':'#e5e7eb'));
+    chip.appendChild(sw);
+    chip.append(item.label);
+    chip.addEventListener('click',()=> addItem(item));
+    mapCatToEl[item.cat].appendChild(chip);
+  });
+
+  // Selected group reference
+  let selected = null;
+
+  function addItem(def){
+    // container group with tiny skew for pseudo-3D perspective
+    const wrapper = document.createElementNS('http://www.w3.org/2000/svg','g');
+    wrapper.setAttribute('transform', `translate(${unit*2},${unit*2}) rotate(0) skewY(-3)`);
+    wrapper.style.cursor='move';
+    wrapper.setAttribute('filter','url(#softShadow)');
+
+    // floor shadow ellipse
+    const shadow = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    shadow.setAttribute('cx', 20);
+    shadow.setAttribute('cy', 20);
+    shadow.setAttribute('rx', 28);
+    shadow.setAttribute('ry', 10);
+    shadow.setAttribute('fill', 'rgba(0,0,0,0.10)');
+    shadow.setAttribute('filter','url(#softShadow)');
+    shadow.setAttribute('opacity','0.6');
+    wrapper.appendChild(shadow);
+
+    // actual geometry inside its own group
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('data-id', def.id);
+    def.draw(g,{x:0,y:0});
+    wrapper.appendChild(g);
+
+    itemsLayer.appendChild(wrapper);
+    makeDraggable(wrapper);
+    select(wrapper);
+    flashToast();
+  }
+
+  function snap(v){ return Math.round(v/unit)*unit; }
+
+  function makeDraggable(g){
+    let offset = {x:0,y:0};
+    let dragging=false;
+
+    g.addEventListener('pointerdown', (e)=>{
+      dragging=true; g.setPointerCapture(e.pointerId); select(g);
+      const {x,y} = getMouseSVG(e);
+      const [tx,ty] = getTranslate(g);
+      offset = {x:x-tx, y:y-ty};
+    });
+    g.addEventListener('pointermove', (e)=>{
+      if(!dragging) return;
+      const {x,y} = getMouseSVG(e);
+      let nx = x - offset.x; let ny = y - offset.y;
+      const open = toggleWall?.checked; const maxW = open? 1440 : wallX;
+      nx = Math.max(0, Math.min(nx, maxW - 10));
+      ny = Math.max(0, Math.min(ny, 480 - 10));
+      nx = snap(nx); ny = snap(ny);
+      const rot = getRotate(g);
+      g.setAttribute('transform', `translate(${nx},${ny}) rotate(${rot}) skewY(-3)`);
+      drawSelection();
+    });
+    g.addEventListener('pointerup', (e)=>{ dragging=false; try{ g.releasePointerCapture(e.pointerId);}catch(_){}} );
+    g.addEventListener('dblclick',()=>{ rotateSelected(false); });
+  }
+
+  function getMouseSVG(evt){
+    const p = stage.createSVGPoint();
+    p.x = evt.clientX; p.y = evt.clientY;
+    const ctm = stage.getScreenCTM().inverse();
+    const sp = p.matrixTransform(ctm);
+    return {x: sp.x, y: sp.y};
+  }
+
+  function getTranslate(g){
+    const tr = g.getAttribute('transform')||'';
+    const m = /translate\(([-0-9.]+),\s*([-0-9.]+)\)/.exec(tr);
+    return m? [parseFloat(m[1]), parseFloat(m[2])] : [0,0];
+  }
+  function getRotate(g){
+    const tr = g.getAttribute('transform')||'';
+    const m = /rotate\(([-0-9.]+)\)/.exec(tr);
+    return m? parseFloat(m[1]) : 0;
+  }
+
+  // --- Selection handling (FIX: no stray blue box) ---
+  function select(g){
+    // remove any existing selection overlays
+    itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove());
+    selected = g;
+    drawSelection();
+  }
+
+  function drawSelection(){
+    itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove());
+    if(!selected) return;
+    // compute bbox in the selected group's local coords
+    const bb = selected.getBBox();
+    const sel = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    sel.classList.add('selection');
+    sel.setAttribute('x', bb.x-6); sel.setAttribute('y', bb.y-6);
+    sel.setAttribute('width', bb.width+12); sel.setAttribute('height', bb.height+12);
+    sel.setAttribute('rx', 6); sel.setAttribute('ry',6);
+    sel.setAttribute('fill','none');
+    sel.setAttribute('stroke','#2563eb');
+    sel.setAttribute('stroke-width','2');
+    sel.setAttribute('vector-effect','non-scaling-stroke');
+    sel.setAttribute('pointer-events','none');
+    // Insert INSIDE the selected group so it stays aligned (prevents stray top-left box)
+    selected.insertBefore(sel, selected.firstChild);
+  }
+
+  function rotateSelected(useFine){
+    if(!selected) return;
+    const step = (useFine? 15 : 45);
+    const rot = getRotate(selected);
+    const [tx,ty] = getTranslate(selected);
+    selected.setAttribute('transform', `translate(${tx},${ty}) rotate(${(rot+step)%360}) skewY(-3)`);
+    drawSelection();
+  }
+
+  // Keyboard controls
+  window.addEventListener('keydown', (e)=>{
+    if(!selected) return;
+    if(e.key==='r' || e.key==='R') { rotateSelected(e.shiftKey); }
+    if(e.key==='Delete' || e.key==='Backspace') { selected.remove(); selected=null; itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); }
+  });
+
+  // Wall toggle visibility
+  toggleWall?.addEventListener('change', ()=>{
+    const open = toggleWall.checked;
+    roomB.setAttribute('opacity', open? '1' : '0.08');
+    wall.setAttribute('stroke-dasharray', open? '2 8' : '10 8');
+    wall.setAttribute('opacity', open? '0.25' : '1');
+  });
+
+  // Draggable operable wall
+  let draggingWall = false; let wallOffsetX = 0;
+  wallHandle.addEventListener('pointerdown', (e)=>{
+    draggingWall = true; wallHandle.setPointerCapture(e.pointerId);
+    const {x} = getMouseSVG(e); wallOffsetX = x - wallX;
+  });
+  wallHandle.addEventListener('pointermove', (e)=>{
+    if(!draggingWall) return;
+    const {x} = getMouseSVG(e);
+    let nx = snap(x - wallOffsetX);
+    nx = Math.max(minWallX, Math.min(maxWallX, nx));
+    setWallX(nx);
+  });
+  wallHandle.addEventListener('pointerup', (e)=>{ draggingWall=false; try{ wallHandle.releasePointerCapture(e.pointerId);}catch(_){} });
+
+  function setWallX(x){
+    wallX = x;
+    wall.setAttribute('x1', wallX); wall.setAttribute('x2', wallX);
+    wallHandle.setAttribute('cx', wallX);
+    roomA.setAttribute('width', wallX);
+    roomB.setAttribute('x', wallX);
+    roomB.setAttribute('width', 1440 - wallX);
+  }
+
+  // Export PNG
+  btnExport.addEventListener('click', ()=>{
+    const open = toggleWall?.checked;
+    const exportWidth = open? 1440 : wallX;
+    const clone = stage.cloneNode(true);
+    clone.setAttribute('viewBox', `0 0 ${exportWidth} 480`);
+    if(!open){
+      clone.querySelector('#roomB')?.setAttribute('opacity','0');
+      const w = clone.querySelector('#wall'); w?.setAttribute('opacity','1');
+    }
+    // remove selection visuals
+    clone.querySelectorAll('.selection').forEach(n=>n.remove());
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+    const svgBlob = new Blob([svgData], {type:'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(svgBlob);
+    img.onload = function(){
+      const canvas = document.createElement('canvas');
+      canvas.width = exportWidth; canvas.height = 480;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0);
+      URL.revokeObjectURL(url);
+      const png = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.download = 'classroom-layout.png';
+      a.href = png; a.click();
+    };
+    img.src = url;
+  });
+
+  btnClear.addEventListener('click', ()=>{
+    [...itemsLayer.querySelectorAll('g')].forEach(n=>n.remove());
+  });
+
+  // --- Drawing primitives + subtle “3D” cues ---
+  function deskRect(g,{w,h,base}){
+    // main body
+    const r = rect(0,0,w,h,base,g); r.setAttribute('filter','url(#elev)');
+    // thin bottom edge shading
+    rect(0,h-4,w,4,'rgba(0,0,0,0.15)',g);
+    // top gloss
+    const gloss = rect(0,0,w,h,'url(#deskGrad)',g,0.6); gloss.setAttribute('pointer-events','none');
+    // front marker (bold edge)
+    line(2,2,w-4,2,'#111827',3,g);
+  }
+  function roundTable(g,{r,base}){
+    // soft drop shadow ring + top highlight ellipse
+    const c = circle(r,r,r,base,g); c.setAttribute('filter','url(#elev)'); stroke(c,'#111827',1);
+    const hl = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    hl.setAttribute('cx', r*0.9); hl.setAttribute('cy', r*0.4);
+    hl.setAttribute('rx', r*0.6); hl.setAttribute('ry', r*0.25);
+    hl.setAttribute('fill', 'rgba(255,255,255,0.35)');
+    g.appendChild(hl);
+  }
+  function trapDesk(g,{w,h,base}){
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const inset = w*0.2;
+    const d = `M0,0 L${w},0 L${w-inset},${h} L${inset},${h} Z`;
+    path.setAttribute('d', d); path.setAttribute('fill', base); path.setAttribute('stroke','#111827'); path.setAttribute('stroke-width','1');
+    path.setAttribute('filter','url(#elev)');
+    g.appendChild(path);
+    // depth strip
+    const depth = document.createElementNS('http://www.w3.org/2000/svg','path');
+    depth.setAttribute('d', `M${inset},${h-3} L${w-inset},${h-3} L${w-inset-4},${h} L${inset+4},${h} Z`);
+    depth.setAttribute('fill', 'rgba(0,0,0,0.12)');
+    g.appendChild(depth);
+    line(2,2,w-4,2,'#111827',3,g);
+  }
+  function chair(g,{w,h}){ const c = rect(0,0,w,h,'#e5e7eb',g); c.setAttribute('filter','url(#elev)'); line(2,2,w-4,2,'#111827',2,g); }
+  function tv(g,{w,h}){ const b = rect(0,0,w,h,'#e5e7eb',g); b.setAttribute('filter','url(#elev)'); strokeRect(0,0,w,h,'#111827',2,g); rect(4,4,w-8,6,'rgba(0,0,0,0.15)',g); }
+  function vr(g,{r}){ const c = circle(r,r,r,'#dbeafe',g); c.setAttribute('filter','url(#elev)'); text(r,r+4,'VR',g); }
+  function cart(g,{w,h}){ const b = rect(0,0,w,h,'#e0e7ff',g); b.setAttribute('filter','url(#elev)'); text(w/2,h/2+4,'iPads',g); rect(0,h-3,w,3,'rgba(0,0,0,0.15)',g); }
+  function board(g,{w,h,base}){ const b = rect(0,0,w,h,base,g,0.3); b.setAttribute('filter','url(#elev)'); strokeRect(0,0,w,h,'#111827',1,g); }
+  function partition(g,{w,h,base}){ const p = rect(0,0,w,h,base,g,0.7); p.setAttribute('filter','url(#elev)'); }
+  function couch(g,{w,h,base}){ const b = rect(0,0,w,h,base,g); b.setAttribute('filter','url(#elev)'); strokeRect(0,0,w,h,'#111827',1,g); rect(0,h-4,w,4,'rgba(0,0,0,0.15)',g); }
+  function beanbag(g,{r,base}){ const c = circle(r,r,r,base,g); c.setAttribute('filter','url(#elev)'); }
+  function plant(g,{r}){ const c = circle(r,r,r,'#bbf7d0',g); c.setAttribute('filter','url(#elev)'); text(r,r+4,'🌿',g,16); }
+  function zone(g,{w,h,base}){ rect(0,0,w,h,base,g,0.25); }
+
+  // Helpers
+  function rect(x,y,w,h,fill,parent,alpha=1){
+    const el = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h);
+    el.setAttribute('fill',fill); if(alpha!==1) el.setAttribute('fill-opacity',alpha);
+    el.setAttribute('stroke','#111827'); el.setAttribute('stroke-width','1');
+    parent.appendChild(el); return el;
+  }
+  function stroke(node,color='#111827',w=1){ node.setAttribute('stroke',color); node.setAttribute('stroke-width',w); return node; }
+  function strokeRect(x,y,w,h,color,sw,parent){
+    const el = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h);
+    el.setAttribute('fill','none'); el.setAttribute('stroke',color); el.setAttribute('stroke-width',sw);
+    parent.appendChild(el); return el;
+  }
+  function circle(cx,cy,r,fill,parent){
+    const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    el.setAttribute('cx',cx); el.setAttribute('cy',cy); el.setAttribute('r',r);
+    el.setAttribute('fill',fill); el.setAttribute('stroke','#111827'); el.setAttribute('stroke-width','1');
+    parent.appendChild(el); return el;
+  }
+  function line(x1,y1,x2,y2,color,sw,parent){
+    const el = document.createElementNS('http://www.w3.org/2000/svg','line');
+    el.setAttribute('x1',x1); el.setAttribute('y1',y1); el.setAttribute('x2',x2); el.setAttribute('y2',y2);
+    el.setAttribute('stroke',color); el.setAttribute('stroke-width',sw);
+    parent.appendChild(el); return el;
+  }
+  function text(x,y,str,parent,size=12){
+    const el = document.createElementNS('http://www.w3.org/2000/svg','text');
+    el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('text-anchor','middle'); el.setAttribute('font-size',size);
+    el.setAttribute('font-family','system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif');
+    el.textContent=str; parent.appendChild(el); return el;
+  }
+
+  // Select on click inside items layer
+  itemsLayer.addEventListener('pointerdown', (e)=>{
+    const g = e.target.closest('g');
+    if(g && itemsLayer.contains(g)) select(g.closest('g')); // wrapper
+  });
+
+  // Tip toast
+  function flashToast(){ toast.style.display='block'; clearTimeout(flashToast._t); toast._t=setTimeout(()=> toast.style.display='none', 1800); }
+})();
+</script>
+</body>
+</html>
