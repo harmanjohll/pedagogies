@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Spatial Pedagogy Classroom Planner (v1.0)</title>
+<title>Spatial Pedagogy Classroom Planner (v1.3)</title>
 <style>
   :root{
     --bg:#f6f7f9; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280;
     --grid:#e5e7eb; --accent:#2563eb; --accent-2:#16a34a; --accent-3:#f59e0b;
     --door:#8b5e34; --window:#93c5fd; --danger:#ef4444;
   }
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .app{display:grid;grid-template-columns:320px 1fr;gap:12px;height:100vh;padding:12px;box-sizing:border-box}
-  .panel{background:var(--panel);border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);padding:12px;display:flex;flex-direction:column}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .app{display:grid;grid-template-columns:320px 1fr 300px;gap:12px;height:100vh;padding:12px;box-sizing:border-box}
+  .panel{background:var(--panel);border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);padding:12px;display:flex;flex-direction:column;min-height:0}
   .panel h2{margin:.25rem 0 .5rem;font-size:16px}
   .section{margin-bottom:10px;border-top:1px dashed #e5e7eb;padding-top:8px}
   .section:first-of-type{border-top:none;padding-top:0}
@@ -23,21 +23,36 @@
   .btnrow{display:flex;gap:8px;flex-wrap:wrap}
   button{border:none;border-radius:10px;padding:8px 12px;background:#111827;color:#fff;cursor:pointer}
   button.secondary{background:#e5e7eb;color:#111827}
+  button.ghost{background:#f3f4f6;color:#111827;border:1px solid #e5e7eb}
   button.danger{background:var(--danger)}
   label.toggle{display:flex;align-items:center;gap:8px;font-weight:600;margin:8px 0}
+  select, input[type="text"]{border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px;font:inherit}
   /* Canvas wrapper */
-  .stage-wrap{position:relative;background:var(--panel);border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);padding:10px}
+  .stage-wrap{position:relative;background:var(--panel);border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);padding:10px;min-height:0}
   #stage{width:100%;height:calc(100vh - 44px);background:#fff;border-radius:12px;}
-  .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px}
-  .toolbar .left, .toolbar .right{display:flex;gap:12px;align-items:center}
-  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:2px 6px;font-size:12px}
-  .legend{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px}
+  .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap}
+  .toolbar .left, .toolbar .right{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:2px 6px;font-size:12px}
+  .legend{display:flex;gap:10px;align-items:center;color:#6b7280;font-size:12px;flex-wrap:wrap}
   .legend .tag{display:inline-flex;align-items:center;gap:6px}
   .tag .swatch{width:10px;height:10px;border-radius:2px}
-  .toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#111827;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;opacity:.9}
-  /* Accessibility + focus tweaks */
-  .chip:focus, button:focus{outline:none}
-  .chip:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#111827;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;opacity:.95}
+  .insight{display:flex;flex-direction:column;gap:10px}
+  .insight label{font-size:12px;color:#374151;display:flex;justify-content:space-between}
+  .insight input[type="range"]{width:100%}
+  .metric{font-variant-numeric:tabular-nums}
+  .scene-list{display:flex;flex-direction:column;gap:6px;overflow:auto}
+  .scene-item{display:flex;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;border-radius:10px;padding:6px 8px}
+  .scene-item input{width:100px}
+  .scene-actions{display:flex;gap:6px}
+  .ghost-snap{fill:none;stroke:#6366f1;stroke-width:2;stroke-dasharray:6 6;pointer-events:none;opacity:.9}
+  .ghost-snap text{fill:#6366f1;font-size:10px}
+  .handle{pointer-events:all}
+  .togglebox{display:flex;align-items:center;gap:8px}
+  .muted{color:#6b7280}
+  /* Focus */
+  .chip:focus, button:focus, select:focus{outline:none}
+  .chip:focus-visible, button:focus-visible, select:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 </style>
 </head>
 <body>
@@ -45,7 +60,10 @@
     <!-- Left Panel -->
     <aside class="panel" id="palette">
       <h2>Item Library</h2>
-      <div class="hint">Click an item to add, then drag. <span class="kbd">R</span> to rotate (<span class="kbd">Shift</span> for 15°), <span class="kbd">Del</span> to remove.</div>
+      <div class="hint">
+        Drag to place. <span class="kbd">R</span> rotate (Shift=15° / Alt=free), <span class="kbd">Del</span> remove.  
+        Hold <span class="kbd">Alt/Option</span> = bypass snapping (move/resize/rotate).
+      </div>
 
       <div class="section">
         <strong>Furniture</strong>
@@ -67,25 +85,29 @@
         <strong>Emotional</strong>
         <div class="chipbar" id="chips-emotional"></div>
       </div>
-
       <div class="section">
-        <strong>Stations (desk colors)</strong>
+        <strong>Stations (coloured desks)</strong>
         <div class="chipbar" id="chips-stations"></div>
       </div>
-
       <div class="section">
-        <div class="hint">Zones are translucent overlays for planning.</div>
+        <div class="hint">Zones are translucent overlays. Drag handles to resize.</div>
         <div class="chipbar" id="chips-zones"></div>
       </div>
 
       <div class="section">
-        <label class="toggle"><input type="checkbox" id="toggleWall"> Open operable wall (merge rooms)</label>
+        <div class="togglebox">
+          <label class="toggle"><input type="checkbox" id="toggleWall"> Open operable wall</label>
+        </div>
+        <div class="togglebox">
+          <label class="toggle"><input type="checkbox" id="toggleSnap" checked> Snap enabled</label>
+          <span class="muted">(hold Alt to bypass)</span>
+        </div>
         <div class="btnrow">
           <button id="btnExport">Export PNG</button>
           <button class="secondary" id="btnClear">Clear</button>
+          <button class="ghost" id="btnFit">Fit to space</button>
         </div>
       </div>
-
     </aside>
 
     <!-- Main Stage -->
@@ -95,33 +117,37 @@
           <span class="tag"><span class="swatch" style="background:#93c5fd"></span> Cognitive</span>
           <span class="tag"><span class="swatch" style="background:#a7f3d0"></span> Social</span>
           <span class="tag"><span class="swatch" style="background:#fde68a"></span> Emotional</span>
-          <span class="tag"><span class="swatch" style="background:var(--door)"></span> Door</span>
-          <span class="tag"><span class="swatch" style="background:var(--window)"></span> Window</span>
+          <span class="tag"><span class="swatch" style="background:var(--door)"></span> Door / Front</span>
+          <span class="tag"><span class="swatch" style="background:var(--window)"></span> Windows</span>
+          <span class="tag"><span class="swatch" style="background:#9ca3af"></span> Operable wall</span>
+          <label class="toggle"><input type="checkbox" id="toggleLegend" checked> Legend</label>
         </div>
         <div class="right">
+          <div class="togglebox">
+            <label>Mode preset</label>
+            <select id="presetSelect">
+              <option value="">— Select preset —</option>
+              <option value="direct">Direct Instruction</option>
+              <option value="pods">Group Pods (4–6)</option>
+              <option value="stations">Stations / Rotations</option>
+              <option value="circle">Discussion Circle / U</option>
+              <option value="quiet">Quiet Work</option>
+              <option value="maker">Makerspace</option>
+            </select>
+            <button class="ghost" id="applyPreset">Apply</button>
+          </div>
           <span class="kbd">Grid: 8×12 (≈96 units)</span>
         </div>
       </div>
 
       <svg id="stage" viewBox="0 0 1440 480" xmlns="http://www.w3.org/2000/svg">
-        <!-- defs -->
         <defs>
           <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
             <rect width="60" height="60" fill="#fff"/>
             <path d="M60 0V60 M0 60H60" stroke="#e5e7eb" stroke-width="1"/>
           </pattern>
-          <!-- soft floor shadow -->
-          <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
-            <feOffset dx="0" dy="2" result="off"/>
-            <feMerge><feMergeNode in="off"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-          <!-- elevation + glow for selection -->
           <filter id="elev" x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.25"/>
-          </filter>
-          <filter id="selGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#2563eb" flood-opacity="0.9"/>
           </filter>
           <linearGradient id="deskGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
@@ -129,98 +155,160 @@
           </linearGradient>
         </defs>
 
-        <!-- Room A background -->
+        <!-- Room A background (LEFT classroom; FRONT/DOOR side is this left/short wall) -->
         <rect id="roomA" x="0" y="0" width="720" height="480" fill="url(#grid)"/>
-        <!-- Operable wall line (adjustable) -->
+        <!-- Operable wall (vertical; closed at x=720 by default) -->
         <line id="wall" x1="720" y1="0" x2="720" y2="480" stroke="#9ca3af" stroke-width="6" stroke-dasharray="10 8"/>
         <circle id="wallHandle" cx="720" cy="24" r="10" fill="#111827" />
-        <!-- Room B background (hidden until wall open) -->
+        <!-- Room B background (RIGHT classroom) -->
         <rect id="roomB" x="720" y="0" width="720" height="480" fill="url(#grid)" opacity="0.08" />
 
-        <!-- Layer for placed items -->
-        <g id="items"></g>
+        <!-- Items root (everything goes inside layoutRoot so we can scale-to-fit safely) -->
+        <g id="items">
+          <g id="layoutRoot"></g>
+        </g>
 
-        <!-- Building shell & orientation cues (drawn LAST so borders are visible) -->
+        <!-- Ghost snap preview -->
+        <g id="ghost"></g>
+
+        <!-- Shell last (with orientation cues) -->
         <g id="shell">
           <!-- Outer walls -->
           <rect x="0" y="0" width="1440" height="480" fill="none" stroke="#111827" stroke-width="8"/>
-          <!-- FRONT label -->
-          <text x="50" y="22" font-size="14" font-family="system-ui" fill="#111827">FRONT</text>
-          <!-- Top wall: front door + windows + door -->
-          <rect id="doorFrontA" x="60" y="-1" width="60" height="10" fill="var(--door)" />
-          <rect id="winTop1" x="130" y="-1" width="420" height="10" fill="var(--window)" />
-          <rect id="doorFrontB" x="560" y="-1" width="60" height="10" fill="var(--door)" />
-          <!-- Bottom wall: back door + windows + back door -->
-          <rect id="doorBackA" x="60" y="471" width="60" height="10" fill="var(--door)" />
-          <rect id="winBot1" x="130" y="471" width="420" height="10" fill="var(--window)" />
-          <rect id="doorBackB" x="560" y="471" width="60" height="10" fill="var(--door)" />
-          <!-- Continue windows across right room as well -->
-          <rect id="winTop2" x="780" y="-1" width="560" height="10" fill="var(--window)" />
-          <rect id="winBot2" x="780" y="471" width="560" height="10" fill="var(--window)" />
+          <!-- FRONT label at left short wall (door side) -->
+          <text id="frontLabel" x="50" y="22" font-size="14" font-family="system-ui" fill="#111827">FRONT (Door)</text>
+          <!-- Top & bottom windows (continuous across both rooms) -->
+          <rect id="winTop1" x="130" y="-1" width="560" height="10" fill="#93c5fd" />
+          <rect id="winTop2" x="780" y="-1" width="560" height="10" fill="#93c5fd" />
+          <rect id="winBot1" x="130" y="471" width="560" height="10" fill="#93c5fd" />
+          <rect id="winBot2" x="780" y="471" width="560" height="10" fill="#93c5fd" />
+          <!-- Doors located on FRONT (left short wall): one for each classroom -->
+          <rect id="doorFrontA" x="-1" y="100" width="10" height="60" fill="#8b5e34" />
+          <rect id="doorFrontB" x="-1" y="320" width="10" height="60" fill="#8b5e34" />
         </g>
       </svg>
 
-      <div class="toast" id="toast" style="display:none">Tip: Press <span class="kbd">R</span> to rotate the selected item</div>
+      <div class="toast" id="toast" style="display:none"></div>
     </main>
+
+    <!-- Right Panel: Insights + Scenes -->
+    <aside class="panel">
+      <h2>Layout Insights</h2>
+      <div class="hint">Auto-updates as you arrange items.</div>
+      <div class="section insight">
+        <label>Personalisation <span class="metric" id="m-personal">0</span></label>
+        <input type="range" id="s-personal" min="0" max="100" value="0" disabled>
+      </div>
+      <div class="section insight">
+        <label>Customisation <span class="metric" id="m-custom">0</span></label>
+        <input type="range" id="s-custom" min="0" max="100" value="0" disabled>
+      </div>
+      <div class="section insight">
+        <label>Mass Fit <span class="metric" id="m-massfit">0</span></label>
+        <input type="range" id="s-massfit" min="0" max="100" value="0" disabled>
+      </div>
+      <div class="section insight">
+        <label>Planning Time (est.) <span class="metric" id="m-plan">0</span></label>
+        <input type="range" id="s-plan" min="0" max="100" value="0" disabled>
+      </div>
+      <div class="section insight">
+        <label>In-class Energy (est.) <span class="metric" id="m-energy">0</span></label>
+        <input type="range" id="s-energy" min="0" max="100" value="0" disabled>
+      </div>
+
+      <h2>Scenes (Lesson Timeline)</h2>
+      <div class="hint">Save snapshots for lesson acts (e.g., Warm-up, Group Work).</div>
+      <div class="section">
+        <div class="btnrow">
+          <input id="sceneName" type="text" placeholder="Scene name (e.g., Warm-up)">
+          <button id="saveScene">Save current</button>
+        </div>
+        <div class="scene-list" id="sceneList"></div>
+      </div>
+    </aside>
   </div>
 
 <script>
 (function(){
-  const unit = 60; // grid
+  const unit = 60;
   const stage = document.getElementById('stage');
   const itemsLayer = document.getElementById('items');
+  const layoutRoot = document.getElementById('layoutRoot');
+  const ghostLayer = document.getElementById('ghost');
   const wall = document.getElementById('wall');
   const wallHandle = document.getElementById('wallHandle');
   const roomA = document.getElementById('roomA');
   const roomB = document.getElementById('roomB');
   const toggleWall = document.getElementById('toggleWall');
+  const toggleSnap = document.getElementById('toggleSnap');
+  const toggleLegend = document.getElementById('toggleLegend');
   const btnExport = document.getElementById('btnExport');
   const btnClear = document.getElementById('btnClear');
+  const btnFit = document.getElementById('btnFit');
   const toast = document.getElementById('toast');
+  const presetSelect = document.getElementById('presetSelect');
+  const applyPresetBtn = document.getElementById('applyPreset');
 
-  // Operable wall state
-  let wallX = 720; // px midpoint
-  const minWallX = 540;
-  const maxWallX = 1080;
+  // Metrics UI
+  const m = (id)=>document.getElementById(id);
+  const metrics = {
+    personalSlider: m('s-personal'), personal: m('m-personal'),
+    customSlider: m('s-custom'), custom: m('m-custom'),
+    massfitSlider: m('s-massfit'), massfit: m('m-massfit'),
+    planSlider: m('s-plan'), plan: m('m-plan'),
+    energySlider: m('s-energy'), energy: m('m-energy')
+  };
 
-  // Palette (kept from previous version, with subtle 3D/perspective tweaks)
+  // Scenes
+  const sceneName = document.getElementById('sceneName');
+  const saveSceneBtn = document.getElementById('saveScene');
+  const sceneList = document.getElementById('sceneList');
+  let scenes = [];
+
+  // Operable wall
+  let wallX = 720;
+  const minWallX = 540, maxWallX = 1080;
+
+  // Snapping thresholds
+  let SNAP_RADIUS = unit * 0.35;
+  let NEIGHBOR_RADIUS = unit * 1.5;
+  let ANGLE_HYSTERESIS = 12;
+  let snapEnabled = true;
+
+  // ---- Palette (sizes tuned smaller so layouts fit a single classroom by default) ----
   const PALETTE = [
-    // furniture
-    {cat:'furniture', id:'desk_rect', label:'Desk (rect)', draw:(g,opts)=>deskRect(g, {...opts, w:unit*1.2, h:unit*0.8, base:'#e5e7eb'})},
-    {cat:'furniture', id:'desk_round', label:'Table (round)', draw:(g,opts)=>roundTable(g,{...opts, r:unit*0.6, base:'#d1fae5'})},
-    {cat:'furniture', id:'desk_trap', label:'Desk (trapezoid)', draw:(g,opts)=>trapDesk(g,{...opts, w:unit*1.2, h:unit*0.8, base:'#fee2e2'})},
-    {cat:'furniture', id:'chair', label:'Chair', draw:(g,opts)=>chair(g,{...opts, w:unit*0.6, h:unit*0.6})},
-    {cat:'furniture', id:'stand_table', label:'Standing table', draw:(g,opts)=>deskRect(g,{...opts, w:unit*1.2, h:unit*0.6, base:'#fde68a'})},
+    {cat:'furniture', id:'desk_rect', label:'Desk (rect)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#e5e7eb'}), snap:'edge90'},
+    {cat:'furniture', id:'desk_round', label:'Table (round)', draw:(g,o)=>roundTable(g,{...o,r:unit*0.55,base:'#d1fae5'}), snap:'none'},
+    {cat:'furniture', id:'desk_trap', label:'Desk (trapezoid)', draw:(g,o)=>trapDesk(g,{...o,w:unit*1.0,h:unit*0.7,base:'#fee2e2'}), snap:'edge60'},
+    {cat:'furniture', id:'desk_tri_eq', label:'Desk (triangle)', draw:(g,o)=>triDesk(g,{...o,s:unit*0.95,base:'#e0f2fe'}), snap:'tri60'},
+    {cat:'furniture', id:'chair', label:'Chair', draw:(g,o)=>chair(g,{...o,w:unit*0.55,h:unit*0.55}), snap:'none'},
+    {cat:'furniture', id:'stand_table', label:'Standing table (long)', draw:(g,o)=>deskRect(g,{...o,w:unit*2.4,h:unit*0.6,base:'#fde68a'}), snap:'edge90'},
 
-    // tech
-    {cat:'tech', id:'writable_tv', label:'Writable TV', draw:(g,opts)=>tv(g,{...opts, w:unit*1.8, h:unit*1.0})},
-    {cat:'tech', id:'vr_station', label:'VR Station', draw:(g,opts)=>vr(g,{...opts, r:unit*0.5})},
-    {cat:'tech', id:'tablet_cart', label:'Tablet Cart', draw:(g,opts)=>cart(g,{...opts, w:unit*1.0, h:unit*0.8})},
+    {cat:'tech', id:'writable_tv', label:'Writable TV', draw:(g,o)=>tv(g,{...o,w:unit*1.6,h:unit*0.9}), snap:'edge90'},
+    {cat:'tech', id:'vr_station', label:'VR Station', draw:(g,o)=>vr(g,{...o,r:unit*0.5}), snap:'none'},
+    {cat:'tech', id:'tablet_cart', label:'Tablet Cart', draw:(g,o)=>cart(g,{...o,w:unit*0.9,h:unit*0.7}), snap:'none'},
 
-    // cognitive
-    {cat:'cognitive', id:'whiteboard', label:'Mobile Whiteboard', draw:(g,opts)=>board(g,{...opts, w:unit*1.2, h:unit*1.8, base:'#93c5fd'})},
-    {cat:'cognitive', id:'teacher_desk', label:'Teacher Desk', draw:(g,opts)=>deskRect(g,{...opts, w:unit*1.8, h:unit*0.9, base:'#bfdbfe'})},
+    {cat:'cognitive', id:'whiteboard', label:'Mobile Whiteboard', draw:(g,o)=>board(g,{...o,w:unit*1.1,h:unit*1.6,base:'#93c5fd'}), snap:'edge90'},
+    {cat:'cognitive', id:'teacher_desk', label:'Teacher Desk', draw:(g,o)=>deskRect(g,{...o,w:unit*1.6,h:unit*0.8,base:'#bfdbfe'}), snap:'edge90'},
 
-    // social
-    {cat:'social', id:'group_table', label:'Group Table (6)', draw:(g,opts)=>roundTable(g,{...opts, r:unit*0.9, base:'#a7f3d0'})},
-    {cat:'social', id:'partition', label:'Mobile Partition', draw:(g,opts)=>partition(g,{...opts, w:unit*0.3, h:unit*2.0, base:'#34d399'})},
+    {cat:'social', id:'group_table', label:'Group Table (6)', draw:(g,o)=>roundTable(g,{...o,r:unit*0.8,base:'#a7f3d0'}), snap:'none'},
+    {cat:'social', id:'partition', label:'Mobile Partition', draw:(g,o)=>partition(g,{...o,w:unit*0.3,h:unit*1.8,base:'#34d399'}), snap:'edge90'},
 
-    // emotional
-    {cat:'emotional', id:'couch', label:'Couch', draw:(g,opts)=>couch(g,{...opts, w:unit*2.0, h:unit*0.9, base:'#fdba74'})},
-    {cat:'emotional', id:'beanbag', label:'Beanbag', draw:(g,opts)=>beanbag(g,{...opts, r:unit*0.6, base:'#fde68a'})},
-    {cat:'emotional', id:'plant', label:'Plant', draw:(g,opts)=>plant(g,{...opts, r:unit*0.45})},
+    {cat:'emotional', id:'couch', label:'Couch', draw:(g,o)=>couch(g,{...o,w:unit*1.8,h:unit*0.8,base:'#fdba74'}), snap:'edge90'},
+    {cat:'emotional', id:'beanbag', label:'Beanbag', draw:(g,o)=>beanbag(g,{...o,r:unit*0.55,base:'#fde68a'}), snap:'none'},
+    {cat:'emotional', id:'plant', label:'Plant', draw:(g,o)=>plant(g,{...o,r:unit*0.45}), snap:'none'},
 
-    // station-colored desks
-    {cat:'stations', id:'desk_blue', label:'Desk (Blue)', draw:(g,opts)=>deskRect(g,{...opts, w:unit*1.2, h:unit*0.8, base:'#bfdbfe'})},
-    {cat:'stations', id:'desk_green', label:'Desk (Green)', draw:(g,opts)=>deskRect(g,{...opts, w:unit*1.2, h:unit*0.8, base:'#bbf7d0'})},
-    {cat:'stations', id:'desk_orange', label:'Desk (Orange)', draw:(g,opts)=>deskRect(g,{...opts, w:unit*1.2, h:unit*0.8, base:'#fed7aa'})},
+    {cat:'stations', id:'desk_blue', label:'Desk (Blue)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#bfdbfe'}), snap:'edge90'},
+    {cat:'stations', id:'desk_green', label:'Desk (Green)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#bbf7d0'}), snap:'edge90'},
+    {cat:'stations', id:'desk_orange', label:'Desk (Orange)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#fed7aa'}), snap:'edge90'},
 
-    // zones (translucent)
-    {cat:'zones', id:'zone_cog', label:'Zone: Cognitive', draw:(g,opts)=>zone(g,{...opts, w:unit*3, h:unit*2, base:'#93c5fd'})},
-    {cat:'zones', id:'zone_soc', label:'Zone: Social', draw:(g,opts)=>zone(g,{...opts, w:unit*3, h:unit*2, base:'#a7f3d0'})},
-    {cat:'zones', id:'zone_emo', label:'Zone: Emotional', draw:(g,opts)=>zone(g,{...opts, w:unit*3, h:unit*2, base:'#fde68a'})},
+    // Zones (resizable, extra transparent)
+    {cat:'zones', id:'zone_cog', label:'Zone: Cognitive', draw:(g,o)=>zone(g,{...o,w:unit*3,h:unit*2,base:'#93c5fd',label:'Cognitive'}), resizable:true},
+    {cat:'zones', id:'zone_soc', label:'Zone: Social', draw:(g,o)=>zone(g,{...o,w:unit*3,h:unit*2,base:'#a7f3d0',label:'Social'}), resizable:true},
+    {cat:'zones', id:'zone_emo', label:'Zone: Emotional', draw:(g,o)=>zone(g,{...o,w:unit*3,h:unit*2,base:'#fde68a',label:'Emotional'}), resizable:true},
   ];
 
+  // Add chips
   const mapCatToEl = {
     furniture: document.getElementById('chips-furniture'),
     tech: document.getElementById('chips-tech'),
@@ -233,82 +321,110 @@
   PALETTE.forEach(item=>{
     const chip = document.createElement('div');
     chip.className='chip';
-    const sw = document.createElement('span'); sw.className='swatch'; sw.style.background=(item.id.includes('desk_')? (item.id.includes('blue')?'#bfdbfe':item.id.includes('green')?'#bbf7d0':item.id.includes('orange')?'#fed7aa':'#e5e7eb') : (item.cat==='cognitive'?'#93c5fd':item.cat==='social'?'#a7f3d0':item.cat==='emotional'?'#fde68a':'#e5e7eb'));
+    const sw = document.createElement('span'); sw.className='swatch';
+    sw.style.background=(item.id.includes('desk_')? (item.id.includes('blue')?'#bfdbfe':item.id.includes('green')?'#bbf7d0':item.id.includes('orange')?'#fed7aa':'#e5e7eb') : (item.cat==='cognitive'?'#93c5fd':item.cat==='social'?'#a7f3d0':item.cat==='emotional'?'#fde68a':'#e5e7eb'));
     chip.appendChild(sw);
     chip.append(item.label);
     chip.addEventListener('click',()=> addItem(item));
     mapCatToEl[item.cat].appendChild(chip);
   });
 
-  // Selected group reference
+  // Helpers
+  const snap = v => Math.round(v/unit)*unit;
+  const deg = r => r*180/Math.PI;
+  const rad = d => d*Math.PI/180;
+  const normAngle = a => { let x=a%360; if(x<0) x+=360; return x; }
+
+  // Selection
   let selected = null;
+  function select(wrapper){
+    itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove());
+    selected = wrapper;
+    drawSelection();
+    if(wrapper?.getAttribute('data-resizable')==='1') showHandles(wrapper); else removeHandles();
+  }
+  function drawSelection(){
+    itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove());
+    if(!selected) return;
+    const bb = selected.getBBox();
+    const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.classList.add('selection');
+    r.setAttribute('x', bb.x-6); r.setAttribute('y', bb.y-6);
+    r.setAttribute('width', bb.width+12); r.setAttribute('height', bb.height+12);
+    r.setAttribute('rx',6); r.setAttribute('ry',6);
+    r.setAttribute('fill','none'); r.setAttribute('stroke','#2563eb');
+    r.setAttribute('stroke-width','2'); r.setAttribute('vector-effect','non-scaling-stroke');
+    r.setAttribute('pointer-events','none');
+    selected.insertBefore(r, selected.firstChild);
+  }
 
+  // Add item (append into layoutRoot so scaling works uniformly)
   function addItem(def){
-    // container group with tiny skew for pseudo-3D perspective
     const wrapper = document.createElementNS('http://www.w3.org/2000/svg','g');
-    wrapper.setAttribute('transform', `translate(${unit*2},${unit*2}) rotate(0) skewY(-3)`);
+    wrapper.setAttribute('data-id', def.id);
+    wrapper.setAttribute('data-snap', def.snap || 'none');
+    if(def.resizable) wrapper.setAttribute('data-resizable','1');
+    wrapper.setAttribute('transform', `translate(${unit*2},${unit*2}) rotate(0)`);
     wrapper.style.cursor='move';
-    wrapper.setAttribute('filter','url(#softShadow)');
 
-    // floor shadow ellipse
-    const shadow = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
-    shadow.setAttribute('cx', 20);
-    shadow.setAttribute('cy', 20);
-    shadow.setAttribute('rx', 28);
-    shadow.setAttribute('ry', 10);
-    shadow.setAttribute('fill', 'rgba(0,0,0,0.10)');
-    shadow.setAttribute('filter','url(#softShadow)');
-    shadow.setAttribute('opacity','0.6');
-    wrapper.appendChild(shadow);
-
-    // actual geometry inside its own group
     const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-    g.setAttribute('data-id', def.id);
     def.draw(g,{x:0,y:0});
     wrapper.appendChild(g);
 
-    itemsLayer.appendChild(wrapper);
+    layoutRoot.appendChild(wrapper);
     makeDraggable(wrapper);
     select(wrapper);
-    flashToast();
+    flash('Tip: Hold Alt to bypass snapping');
+    updateMetrics();
   }
 
-  function snap(v){ return Math.round(v/unit)*unit; }
-
+  // Drag/Move
   function makeDraggable(g){
-    let offset = {x:0,y:0};
-    let dragging=false;
+    let offset = {x:0,y:0}, dragging=false;
 
-    g.addEventListener('pointerdown', (e)=>{
+    g.addEventListener('pointerdown', e=>{
       dragging=true; g.setPointerCapture(e.pointerId); select(g);
       const {x,y} = getMouseSVG(e);
       const [tx,ty] = getTranslate(g);
       offset = {x:x-tx, y:y-ty};
     });
-    g.addEventListener('pointermove', (e)=>{
+    g.addEventListener('pointermove', e=>{
       if(!dragging) return;
       const {x,y} = getMouseSVG(e);
-      let nx = x - offset.x; let ny = y - offset.y;
+      let nx = x - offset.x, ny = y - offset.y;
       const open = toggleWall?.checked; const maxW = open? 1440 : wallX;
+
       nx = Math.max(0, Math.min(nx, maxW - 10));
       ny = Math.max(0, Math.min(ny, 480 - 10));
-      nx = snap(nx); ny = snap(ny);
+
+      const bypass = e.altKey || !toggleSnap.checked;
+      if(!bypass){ nx = snap(nx); ny = snap(ny); }
+
       const rot = getRotate(g);
-      g.setAttribute('transform', `translate(${nx},${ny}) rotate(${rot}) skewY(-3)`);
+      g.setAttribute('transform', `translate(${nx},${ny}) rotate(${rot})`);
+
+      if(!bypass && snapEnabled) trySnap(g, true);
+      else clearGhost();
+
       drawSelection();
     });
-    g.addEventListener('pointerup', (e)=>{ dragging=false; try{ g.releasePointerCapture(e.pointerId);}catch(_){}} );
-    g.addEventListener('dblclick',()=>{ rotateSelected(false); });
+    g.addEventListener('pointerup', e=>{
+      dragging=false; try{ g.releasePointerCapture(e.pointerId);}catch(_){}
+      const bypass = e.altKey || !toggleSnap.checked;
+      if(!bypass) trySnap(g, false);
+      clearGhost();
+      updateMetrics();
+    });
+    g.addEventListener('dblclick',()=> rotateSelected(false));
   }
 
+  // Mouse helpers
   function getMouseSVG(evt){
-    const p = stage.createSVGPoint();
-    p.x = evt.clientX; p.y = evt.clientY;
+    const p = stage.createSVGPoint(); p.x = evt.clientX; p.y = evt.clientY;
     const ctm = stage.getScreenCTM().inverse();
     const sp = p.matrixTransform(ctm);
     return {x: sp.x, y: sp.y};
   }
-
   function getTranslate(g){
     const tr = g.getAttribute('transform')||'';
     const m = /translate\(([-0-9.]+),\s*([-0-9.]+)\)/.exec(tr);
@@ -320,72 +436,84 @@
     return m? parseFloat(m[1]) : 0;
   }
 
-  // --- Selection handling (FIX: no stray blue box) ---
-  function select(g){
-    // remove any existing selection overlays
-    itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove());
-    selected = g;
-    drawSelection();
-  }
-
-  function drawSelection(){
-    itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove());
-    if(!selected) return;
-    // compute bbox in the selected group's local coords
-    const bb = selected.getBBox();
-    const sel = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    sel.classList.add('selection');
-    sel.setAttribute('x', bb.x-6); sel.setAttribute('y', bb.y-6);
-    sel.setAttribute('width', bb.width+12); sel.setAttribute('height', bb.height+12);
-    sel.setAttribute('rx', 6); sel.setAttribute('ry',6);
-    sel.setAttribute('fill','none');
-    sel.setAttribute('stroke','#2563eb');
-    sel.setAttribute('stroke-width','2');
-    sel.setAttribute('vector-effect','non-scaling-stroke');
-    sel.setAttribute('pointer-events','none');
-    // Insert INSIDE the selected group so it stays aligned (prevents stray top-left box)
-    selected.insertBefore(sel, selected.firstChild);
-  }
-
+  // Rotation (Alt = free, Shift = 15°, else 45°)
   function rotateSelected(useFine){
     if(!selected) return;
     const step = (useFine? 15 : 45);
-    const rot = getRotate(selected);
     const [tx,ty] = getTranslate(selected);
-    selected.setAttribute('transform', `translate(${tx},${ty}) rotate(${(rot+step)%360}) skewY(-3)`);
-    drawSelection();
-  }
+    const current = getRotate(selected);
+    const next = rotateSelected._lastAlt ? current + (useFine? 15: 10) : (current + step);
+    selected.setAttribute('transform', `translate(${tx},${ty}) rotate(${next%360})`);
 
-  // Keyboard controls
-  window.addEventListener('keydown', (e)=>{
+    if(!rotateSelected._lastAlt && toggleSnap.checked){
+      const mode = selected.getAttribute('data-snap');
+      if(mode==='tri60' || mode==='edge60'){
+        const n = Math.round((next%360)/60)*60;
+        selected.setAttribute('transform', `translate(${tx},${ty}) rotate(${n})`);
+      }
+      if(mode==='edge90'){
+        const n = Math.round((next%360)/90)*90;
+        if(Math.abs(n-next) <= ANGLE_HYSTERESIS) selected.setAttribute('transform', `translate(${tx},${ty}) rotate(${n})`);
+      }
+    }
+    drawSelection(); updateMetrics();
+  }
+  window.addEventListener('keydown', e=>{
+    if(e.key==='Alt') rotateSelected._lastAlt = true;
     if(!selected) return;
-    if(e.key==='r' || e.key==='R') { rotateSelected(e.shiftKey); }
-    if(e.key==='Delete' || e.key==='Backspace') { selected.remove(); selected=null; itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); }
+    if(e.key==='r' || e.key==='R'){
+      const alt = e.altKey; rotateSelected._lastAlt = alt;
+      rotateSelected(e.shiftKey); return;
+    }
+    if(e.key==='Delete' || e.key==='Backspace'){
+      selected.remove(); selected=null; itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); removeHandles(); updateMetrics(); return;
+    }
+    const [tx,ty] = selected? getTranslate(selected) : [0,0];
+    const step = e.altKey ? 5 : unit;
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+      e.preventDefault();
+      let nx = tx, ny = ty;
+      if(e.key==='ArrowUp') ny -= step;
+      if(e.key==='ArrowDown') ny += step;
+      if(e.key==='ArrowLeft') nx -= step;
+      if(e.key==='ArrowRight') nx += step;
+      const open = toggleWall?.checked; const maxW = open? 1440 : wallX;
+      nx = Math.max(0, Math.min(nx, maxW - 10));
+      ny = Math.max(0, Math.min(ny, 480 - 10));
+      const rot = getRotate(selected);
+      selected.setAttribute('transform', `translate(${nx},${ny}) rotate(${rot})`);
+      drawSelection(); updateMetrics();
+    }
+  });
+  window.addEventListener('keyup', e=>{
+    if(e.key==='Alt') rotateSelected._lastAlt = false;
   });
 
-  // Wall toggle visibility
+  // Toggle wall
   toggleWall?.addEventListener('change', ()=>{
     const open = toggleWall.checked;
     roomB.setAttribute('opacity', open? '1' : '0.08');
     wall.setAttribute('stroke-dasharray', open? '2 8' : '10 8');
     wall.setAttribute('opacity', open? '0.25' : '1');
+    updateMetrics();
   });
 
-  // Draggable operable wall
-  let draggingWall = false; let wallOffsetX = 0;
-  wallHandle.addEventListener('pointerdown', (e)=>{
-    draggingWall = true; wallHandle.setPointerCapture(e.pointerId);
+  // Draggable wall
+  let draggingWall=false, wallOffsetX=0;
+  wallHandle.addEventListener('pointerdown', e=>{
+    draggingWall=true; wallHandle.setPointerCapture(e.pointerId);
     const {x} = getMouseSVG(e); wallOffsetX = x - wallX;
   });
-  wallHandle.addEventListener('pointermove', (e)=>{
+  wallHandle.addEventListener('pointermove', e=>{
     if(!draggingWall) return;
     const {x} = getMouseSVG(e);
     let nx = snap(x - wallOffsetX);
     nx = Math.max(minWallX, Math.min(maxWallX, nx));
     setWallX(nx);
   });
-  wallHandle.addEventListener('pointerup', (e)=>{ draggingWall=false; try{ wallHandle.releasePointerCapture(e.pointerId);}catch(_){} });
-
+  wallHandle.addEventListener('pointerup', e=>{
+    draggingWall=false; try{ wallHandle.releasePointerCapture(e.pointerId);}catch(_){}
+  });
   function setWallX(x){
     wallX = x;
     wall.setAttribute('x1', wallX); wall.setAttribute('x2', wallX);
@@ -395,18 +523,20 @@
     roomB.setAttribute('width', 1440 - wallX);
   }
 
-  // Export PNG
+  // Export
   btnExport.addEventListener('click', ()=>{
     const open = toggleWall?.checked;
     const exportWidth = open? 1440 : wallX;
     const clone = stage.cloneNode(true);
     clone.setAttribute('viewBox', `0 0 ${exportWidth} 480`);
-    if(!open){
-      clone.querySelector('#roomB')?.setAttribute('opacity','0');
-      const w = clone.querySelector('#wall'); w?.setAttribute('opacity','1');
+    if(!open){ clone.querySelector('#roomB')?.setAttribute('opacity','0'); clone.querySelector('#wall')?.setAttribute('opacity','1'); }
+    // remove overlays
+    clone.querySelectorAll('.selection,.handle,#ghost *').forEach(n=>n.remove());
+    // respect legend toggle
+    if(!toggleLegend.checked){
+      const shell = clone.querySelector('#shell');
+      shell.querySelectorAll('text,rect#winTop1,rect#winTop2,rect#winBot1,rect#winBot2,rect#doorFrontA,rect#doorFrontB').forEach(n=>n.setAttribute('opacity','0'));
     }
-    // remove selection visuals
-    clone.querySelectorAll('.selection').forEach(n=>n.remove());
     const svgData = new XMLSerializer().serializeToString(clone);
     const img = new Image();
     const svgBlob = new Blob([svgData], {type:'image/svg+xml;charset=utf-8'});
@@ -419,63 +549,212 @@
       ctx.drawImage(img,0,0);
       URL.revokeObjectURL(url);
       const png = canvas.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.download = 'classroom-layout.png';
-      a.href = png; a.click();
+      const a = document.createElement('a'); a.download='classroom-layout.png'; a.href=png; a.click();
     };
     img.src = url;
   });
 
+  // Clear
   btnClear.addEventListener('click', ()=>{
-    [...itemsLayer.querySelectorAll('g')].forEach(n=>n.remove());
+    layoutRoot.innerHTML='';
+    removeHandles(); updateMetrics();
   });
 
-  // --- Drawing primitives + subtle “3D” cues ---
+  // Fit-to-space button (uniform scale & center inside visible classroom)
+  btnFit.addEventListener('click', ()=>{ fitToSpace(); });
+
+  // Legend toggle
+  toggleLegend.addEventListener('change', ()=>{
+    const show = toggleLegend.checked;
+    const shell = document.getElementById('shell');
+    shell.querySelectorAll('text,rect#winTop1,rect#winTop2,rect#winBot1,rect#winBot2,rect#doorFrontA,rect#doorFrontB').forEach(n=>n.setAttribute('opacity', show? '1':'0'));
+  });
+
+  // Snap logic with ghost preview (same approach as v1.2)
+  function trySnap(g, preview){
+    clearGhost();
+    const mode = g.getAttribute('data-snap')||'none';
+    if(mode==='none') return;
+
+    const [tx,ty] = getTranslate(g);
+    let rot = normAngle(getRotate(g));
+
+    const step = (mode==='tri60'||mode==='edge60') ? 60 : 90;
+    const snappedRot = Math.round(rot/step)*step;
+    if(Math.abs(snappedRot-rot) <= ANGLE_HYSTERESIS) rot = snappedRot;
+
+    const neighbors = [...layoutRoot.querySelectorAll('g[data-snap]')].filter(n=>n!==g);
+    let applied=false;
+
+    for(const n of neighbors){
+      const [nx,ny] = getTranslate(n);
+      const dist = Math.hypot(nx-tx, ny-ty);
+      if(dist > NEIGHBOR_RADIUS) continue;
+
+      // Triangular honeycomb offsets
+      if(mode==='tri60' && n.getAttribute('data-snap')==='tri60'){
+        const s = unit*0.95, h = Math.sin(Math.PI/3)*s;
+        const offsets = [
+          {dx:s, dy:0, a:0}, {dx:s/2, dy:h, a:60}, {dx:-s/2, dy:h, a:120},
+          {dx:-s, dy:0, a:180}, {dx:-s/2, dy:-h, a:240}, {dx:s/2, dy:-h, a:300}
+        ];
+        for(const off of offsets){
+          const tx2 = nx + off.dx, ty2 = ny + off.dy;
+          if(Math.hypot(tx2 - tx, ty2 - ty) <= SNAP_RADIUS){
+            if(preview){ drawGhostTri(tx2,ty2,off.a,s); }
+            else { g.setAttribute('transform', `translate(${snap(tx2)},${snap(ty2)}) rotate(${off.a})`); }
+            applied=true; break;
+          }
+        }
+      }
+      if(applied) break;
+
+      // Edge alignment for rect/trap/edge60/edge90
+      const dx = Math.abs(nx - tx), dy = Math.abs(ny - ty);
+      if(dx <= SNAP_RADIUS || dy <= SNAP_RADIUS){
+        const nx2 = dx <= SNAP_RADIUS ? nx : tx;
+        const ny2 = dy <= SNAP_RADIUS ? ny : ty;
+        if(preview){ drawGhostBox(nx2,ny2,g); }
+        else { g.setAttribute('transform', `translate(${snap(nx2)},${snap(ny2)}) rotate(${rot})`); }
+        applied=true; break;
+      }
+    }
+  }
+  function clearGhost(){ ghostLayer.innerHTML=''; }
+  function drawGhostBox(x,y,g){
+    const bb = g.getBBox();
+    const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('x', x + (bb.x - getTranslate(g)[0]));
+    r.setAttribute('y', y + (bb.y - getTranslate(g)[1]));
+    r.setAttribute('width', bb.width); r.setAttribute('height', bb.height);
+    r.setAttribute('class','ghost-snap');
+    ghostLayer.appendChild(r);
+  }
+  function drawGhostTri(cx,cy,angle,s){
+    const h = Math.sin(Math.PI/3)*s;
+    const pts = [
+      [0,h],[s/2,0],[s,h]
+    ].map(([px,py])=>{
+      const ox = s/2, oy = h/2;
+      const rx = Math.cos(rad(angle))*(px-ox) - Math.sin(rad(angle))*(py-oy) + ox + (cx - s/2);
+      const ry = Math.sin(rad(angle))*(px-ox) + Math.cos(rad(angle))*(py-oy) + oy + (cy - h/2);
+      return [rx,ry];
+    });
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', `M${pts[0][0]},${pts[0][1]} L${pts[1][0]},${pts[1][1]} L${pts[2][0]},${pts[2][1]} Z`);
+    path.setAttribute('class','ghost-snap');
+    ghostLayer.appendChild(path);
+  }
+
+  // Resizable zones (unchanged from v1.2, but appended to layoutRoot)
+  let activeHandle = null;
+  function showHandles(g){
+    removeHandles();
+    const bb = g.getBBox();
+    const corners = [
+      {name:'nw', x:bb.x, y:bb.y},
+      {name:'ne', x:bb.x+bb.width, y:bb.y},
+      {name:'se', x:bb.x+bb.width, y:bb.y+bb.height},
+      {name:'sw', x:bb.x, y:bb.y+bb.height}
+    ];
+    for(const c of corners){
+      const h = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      h.classList.add('handle');
+      h.setAttribute('data-handle', c.name);
+      h.setAttribute('x', c.x-6); h.setAttribute('y', c.y-6);
+      h.setAttribute('width', 12); h.setAttribute('height', 12);
+      h.setAttribute('fill', '#2563eb'); h.setAttribute('opacity','0.85');
+      h.style.cursor = `${c.name}-resize`;
+      h.addEventListener('pointerdown', (e)=> startResize(e,g,h));
+      g.appendChild(h);
+    }
+  }
+  function removeHandles(){ layoutRoot.querySelectorAll('.handle').forEach(n=>n.remove()); }
+
+  function startResize(e, g, handle){
+    e.stopPropagation();
+    activeHandle = handle.getAttribute('data-handle');
+    handle.setPointerCapture(e.pointerId);
+    const start = getMouseSVG(e);
+    const rectNode = [...g.querySelectorAll('rect[data-zone]')][0];
+    if(!rectNode) return;
+    const startBox = {
+      x: +rectNode.getAttribute('x'), y:+rectNode.getAttribute('y'),
+      w:+rectNode.getAttribute('width'), h:+rectNode.getAttribute('height')
+    };
+    const onMove = ev=>{
+      const cur = getMouseSVG(ev);
+      let dx = cur.x - start.x, dy = cur.y - start.y;
+      let {x,y,w,h} = startBox;
+
+      const bypass = ev.altKey || !toggleSnap.checked;
+
+      if(activeHandle.includes('n')){ y = (bypass? y+dy : snap(y+dy)); h = (bypass? startBox.h - dy : snap(startBox.h - dy)); }
+      if(activeHandle.includes('s')){ h = (bypass? startBox.h + dy : snap(startBox.h + dy)); }
+      if(activeHandle.includes('w')){ x = (bypass? x+dx : snap(x+dx)); w = (bypass? startBox.w - dx : snap(startBox.w - dx)); }
+      if(activeHandle.includes('e')){ w = (bypass? startBox.w + dx : snap(startBox.w + dx)); }
+
+      const min = unit;
+      w = Math.max(min,w); h = Math.max(min,h);
+
+      rectNode.setAttribute('x', x); rectNode.setAttribute('y', y);
+      rectNode.setAttribute('width', w); rectNode.setAttribute('height', h);
+
+      const label = g.querySelector('text[data-zone-label]');
+      if(label){ label.setAttribute('x', x + w/2); label.setAttribute('y', y + h/2 + 4); }
+      drawSelection(); showHandles(g);
+    };
+    const onUp = ev=>{
+      try{ handle.releasePointerCapture(ev.pointerId);}catch(_){}
+      stage.removeEventListener('pointermove', onMove);
+      stage.removeEventListener('pointerup', onUp);
+      updateMetrics();
+    };
+    stage.addEventListener('pointermove', onMove);
+    stage.addEventListener('pointerup', onUp);
+  }
+
+  // Drawing primitives
   function deskRect(g,{w,h,base}){
-    // main body
     const r = rect(0,0,w,h,base,g); r.setAttribute('filter','url(#elev)');
-    // thin bottom edge shading
-    rect(0,h-4,w,4,'rgba(0,0,0,0.15)',g);
-    // top gloss
-    const gloss = rect(0,0,w,h,'url(#deskGrad)',g,0.6); gloss.setAttribute('pointer-events','none');
-    // front marker (bold edge)
-    line(2,2,w-4,2,'#111827',3,g);
+    rect(0,h-3,w,3,'rgba(0,0,0,0.12)',g);
+    const gloss = rect(0,0,w,h,'url(#deskGrad)',g,0.5); gloss.setAttribute('pointer-events','none');
+    line(2,2,w-4,2,'#111827',3,g); // front marker along top edge
   }
   function roundTable(g,{r,base}){
-    // soft drop shadow ring + top highlight ellipse
     const c = circle(r,r,r,base,g); c.setAttribute('filter','url(#elev)'); stroke(c,'#111827',1);
-    const hl = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
-    hl.setAttribute('cx', r*0.9); hl.setAttribute('cy', r*0.4);
-    hl.setAttribute('rx', r*0.6); hl.setAttribute('ry', r*0.25);
-    hl.setAttribute('fill', 'rgba(255,255,255,0.35)');
-    g.appendChild(hl);
   }
   function trapDesk(g,{w,h,base}){
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
     const inset = w*0.2;
-    const d = `M0,0 L${w},0 L${w-inset},${h} L${inset},${h} Z`;
-    path.setAttribute('d', d); path.setAttribute('fill', base); path.setAttribute('stroke','#111827'); path.setAttribute('stroke-width','1');
-    path.setAttribute('filter','url(#elev)');
-    g.appendChild(path);
-    // depth strip
-    const depth = document.createElementNS('http://www.w3.org/2000/svg','path');
-    depth.setAttribute('d', `M${inset},${h-3} L${w-inset},${h-3} L${w-inset-4},${h} L${inset+4},${h} Z`);
-    depth.setAttribute('fill', 'rgba(0,0,0,0.12)');
-    g.appendChild(depth);
+    path.setAttribute('d', `M0,0 L${w},0 L${w-inset},${h} L${inset},${h} Z`);
+    path.setAttribute('fill', base); path.setAttribute('stroke','#111827'); path.setAttribute('stroke-width','1');
+    path.setAttribute('filter','url(#elev)'); g.appendChild(path);
     line(2,2,w-4,2,'#111827',3,g);
+  }
+  function triDesk(g,{s,base}){
+    const h = Math.sin(Math.PI/3)*s;
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d', `M0,${h} L${s/2},0 L${s},${h} Z`);
+    p.setAttribute('fill', base); p.setAttribute('stroke','#111827'); p.setAttribute('stroke-width','1');
+    p.setAttribute('filter','url(#elev)'); g.appendChild(p);
+    line(s*0.1, h-0.1, s*0.9, h-0.1, '#111827', 3, g);
   }
   function chair(g,{w,h}){ const c = rect(0,0,w,h,'#e5e7eb',g); c.setAttribute('filter','url(#elev)'); line(2,2,w-4,2,'#111827',2,g); }
   function tv(g,{w,h}){ const b = rect(0,0,w,h,'#e5e7eb',g); b.setAttribute('filter','url(#elev)'); strokeRect(0,0,w,h,'#111827',2,g); rect(4,4,w-8,6,'rgba(0,0,0,0.15)',g); }
   function vr(g,{r}){ const c = circle(r,r,r,'#dbeafe',g); c.setAttribute('filter','url(#elev)'); text(r,r+4,'VR',g); }
   function cart(g,{w,h}){ const b = rect(0,0,w,h,'#e0e7ff',g); b.setAttribute('filter','url(#elev)'); text(w/2,h/2+4,'iPads',g); rect(0,h-3,w,3,'rgba(0,0,0,0.15)',g); }
-  function board(g,{w,h,base}){ const b = rect(0,0,w,h,base,g,0.3); b.setAttribute('filter','url(#elev)'); strokeRect(0,0,w,h,'#111827',1,g); }
-  function partition(g,{w,h,base}){ const p = rect(0,0,w,h,base,g,0.7); p.setAttribute('filter','url(#elev)'); }
-  function couch(g,{w,h,base}){ const b = rect(0,0,w,h,base,g); b.setAttribute('filter','url(#elev)'); strokeRect(0,0,w,h,'#111827',1,g); rect(0,h-4,w,4,'rgba(0,0,0,0.15)',g); }
+  function board(g,{w,h,base}){ const b = rect(0,0,w,h,base,g,0.22); b.setAttribute('filter','url(#elev)'); strokeRect(0,0,w,h,'#111827',1,g); }
+  function partition(g,{w,h,base}){ rect(0,0,w,h,base,g,0.7).setAttribute('filter','url(#elev)'); }
+  function couch(g,{w,h,base}){ const b = rect(0,0,w,h,base,g); b.setAttribute('filter','url(#elev)'); strokeRect(0,0,w,h,'#111827',1,g); rect(0,h-3,w,3,'rgba(0,0,0,0.15)',g); }
   function beanbag(g,{r,base}){ const c = circle(r,r,r,base,g); c.setAttribute('filter','url(#elev)'); }
   function plant(g,{r}){ const c = circle(r,r,r,'#bbf7d0',g); c.setAttribute('filter','url(#elev)'); text(r,r+4,'🌿',g,16); }
-  function zone(g,{w,h,base}){ rect(0,0,w,h,base,g,0.25); }
+  function zone(g,{w,h,base,label='Zone'}){
+    const z = rect(0,0,w,h,base,g,0.16); z.setAttribute('data-zone','1'); stroke(z,'#374151',1);
+    const t = text(w/2,h/2+4,label,g,12); t.setAttribute('data-zone-label','1');
+  }
 
-  // Helpers
+  // Primitive helpers
   function rect(x,y,w,h,fill,parent,alpha=1){
     const el = document.createElementNS('http://www.w3.org/2000/svg','rect');
     el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h);
@@ -497,8 +776,8 @@
     parent.appendChild(el); return el;
   }
   function line(x1,y1,x2,y2,color,sw,parent){
-    const el = document.createElementNS('http://www.w3.org/2000/svg','line');
-    el.setAttribute('x1',x1); el.setAttribute('y1',y1); el.setAttribute('x2',x2); el.setAttribute('y2',y2);
+    const el = document.createElementNS('http://www.w3.org/200vg','line');
+    el.setAttribute('x1',x1); el.setAttribute('y',y1); el.setAttribute('x2',x2); el.setAttribute('y2',y2);
     el.setAttribute('stroke',color); el.setAttribute('stroke-width',sw);
     parent.appendChild(el); return el;
   }
@@ -509,14 +788,208 @@
     el.textContent=str; parent.appendChild(el); return el;
   }
 
-  // Select on click inside items layer
-  itemsLayer.addEventListener('pointerdown', (e)=>{
+  // Click to select
+  itemsLayer.addEventListener('pointerdown', e=>{
     const g = e.target.closest('g');
-    if(g && itemsLayer.contains(g)) select(g.closest('g')); // wrapper
+    if(g && layoutRoot.contains(g)) select(g.closest('g'));
   });
 
-  // Tip toast
-  function flashToast(){ toast.style.display='block'; clearTimeout(flashToast._t); toast._t=setTimeout(()=> toast.style.display='none', 1800); }
+  // Toast
+  function flash(msg){ toast.textContent = msg; toast.style.display='block'; clearTimeout(flash._t); flash._t=setTimeout(()=> toast.style.display='none', 1600); }
+
+  // Metrics (same heuristics)
+  function updateMetrics(){
+    const items = [...layoutRoot.querySelectorAll('g[data-id]')];
+    const desks = items.filter(n=>/desk_/.test(n.getAttribute('data-id')) || ['desk_rect','desk_trap','desk_tri_eq'].includes(n.getAttribute('data-id')));
+    const zones = items.filter(n=>n.getAttribute('data-resizable')==='1');
+    const writables = items.filter(n=>['whiteboard','writable_tv','partition'].includes(n.getAttribute('data-id')));
+    const stationColors = new Set(items.filter(n=>/^desk_(blue|green|orange)$/.test(n.getAttribute('data-id'))).map(n=>n.getAttribute('data-id')));
+
+    let inCluster=0;
+    const pos = g=>getTranslate(g);
+    desks.forEach((d,i)=>{
+      const [x,y]=pos(d);
+      for(let j=0;j<desks.length;j++){
+        if(i===j) continue;
+        const [x2,y2]=pos(desks[j]);
+        if(Math.hypot(x-x2,y-y2) <= unit*1.25){ inCluster++; break; }
+      }
+    });
+    const clusterRatio = desks.length? Math.round((inCluster/desks.length)*100):0;
+
+    const open = toggleWall?.checked; const roomWidth = open? 1440 : wallX; const roomArea = roomWidth*480;
+    let occupied=0; items.forEach(n=>{ const b=n.getBBox(); occupied += (b.width*b.height); });
+    const walkable = Math.max(0, Math.min(100, Math.round(100*(1-occupied/roomArea))));
+
+    let writableArea=0; writables.forEach(n=>{ const b=n.getBBox(); writableArea += b.width*b.height; });
+    const writableScore = Math.max(0, Math.min(100, Math.round(100*(writableArea/(roomArea*0.12)))));
+
+    const stationScore = Math.min(100, stationColors.size*35);
+    const zoneScore = Math.min(100, zones.length*20);
+
+    const personalisation = Math.round(0.5*stationScore + 0.4*zoneScore + 0.1*writableScore);
+    const customisation  = Math.round(0.6*clusterRatio + 0.25*writableScore + 0.15*(100-walkable));
+    const massfit        = Math.max(0, Math.min(100, Math.round(100 - 0.7*clusterRatio - 0.4*stationScore)));
+    const planTime       = Math.max(0, Math.min(100, Math.round( (zones.length*12) + (items.length*1.2) + (toggleWall?.checked?8:0) )));
+    const energy         = Math.max(0, Math.min(100, Math.round( (100-walkable)*0.6 + clusterRatio*0.25 )));
+
+    metrics.personal.textContent = personalisation; metrics.personalSlider.value = personalisation;
+    metrics.custom.textContent = customisation; metrics.customSlider.value = customisation;
+    metrics.massfit.textContent = massfit; metrics.massfitSlider.value = massfit;
+    metrics.plan.textContent = planTime; metrics.planSlider.value = planTime;
+    metrics.energy.textContent = energy; metrics.energySlider.value = energy;
+  }
+
+  // -------- PRESETS (no zones auto-added; oriented to FRONT at LEFT/DOOR; auto fit) --------
+  applyPresetBtn.addEventListener('click', ()=>{
+    const v = presetSelect.value; if(!v) return;
+    applyPreset(v);
+    fitToSpace(); // ensure never spills beyond one classroom (or two, if wall open)
+    updateMetrics();
+  });
+
+  function applyPreset(name){
+    layoutRoot.innerHTML=''; removeHandles(); clearGhost();
+
+    const make = id => {
+      const def = PALETTE.find(p=>p.id===id);
+      if(!def) return null;
+      const wrapper = document.createElementNS('http://www.w3.org/2000/svg','g');
+      wrapper.setAttribute('data-id', def.id);
+      wrapper.setAttribute('data-snap', def.snap || 'none');
+      wrapper.style.cursor='move';
+      const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+      def.draw(g,{x:0,y:0}); wrapper.appendChild(g); layoutRoot.appendChild(wrapper); makeDraggable(wrapper);
+      return wrapper;
+    };
+    const place = (w,x,y,r=0)=>{ w.setAttribute('transform', `translate(${x},${y}) rotate(${r})`); };
+    const FRONT_DIR = 0; // 0° means facing "into the room" from the LEFT wall → desks should face RIGHT, so rotate +90 to put front marker to the RIGHT edge
+
+    if(name==='direct'){
+      const tdesk = make('teacher_desk'); // near door/front (left wall), facing into room
+      place(tdesk, unit*1.2, unit*1.2, 90);
+      const tv = make('writable_tv');     // on front/left side to the right of teacher desk
+      place(tv, unit*2.8, unit*1.0, 90);
+
+      // rows of student desks, all facing RIGHT (front is rightwards → rotate 90)
+      let rows = 4, cols = 5;
+      for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+          const d=make('desk_rect');
+          place(d, unit*(4 + c*1.3), unit*(1.6 + r*1.0), 90);
+        }
+      }
+    }
+
+    if(name==='pods'){
+      // create 4–6 pods of 6 triangles each; each pod center is positioned to the right of the front wall
+      const centers = [[unit*5,unit*2.5],[unit*7,unit*2.5],[unit*9,unit*2.5],[unit*5,unit*5.5],[unit*7,unit*5.5],[unit*9,unit*5.5]];
+      centers.forEach(([cx,cy])=>{
+        for(let i=0;i<6;i++){ const tri = make('desk_tri_eq'); place(tri, cx, cy, i*60); }
+      });
+      const wb = make('whiteboard'); place(wb, unit*1.2, unit*1.2, 90);
+    }
+
+    if(name==='stations'){
+      // furniture only; teacher adds zones later
+      for(let i=0;i<6;i++){ const d=make('desk_blue');   place(d, unit*(5+i*1.2), unit*2.0, 90); }
+      for(let i=0;i<6;i++){ const d=make('desk_green');  place(d, unit*(5+i*1.2), unit*3.4, 90); }
+      for(let i=0;i<6;i++){ const d=make('desk_orange'); place(d, unit*(5+i*1.2), unit*4.8, 90); }
+      const tv = make('writable_tv'); place(tv, unit*2.2, unit*2.2, 90);
+    }
+
+    if(name==='circle'){
+      const cx = unit*7.2, cy = unit*4;
+      const radius = unit*3.1;
+      for(let i=0;i<14;i++){
+        const angle = (i/14)*2*Math.PI;
+        const d = make('desk_rect');
+        // face RIGHT-ish: rotate desk to face towards center (angle to center + 90)
+        place(d, cx + Math.cos(angle)*radius, cy + Math.sin(angle)*radius, deg(angle)+90);
+      }
+      const wb = make('whiteboard'); place(wb, unit*1.2, unit*2.0, 90);
+    }
+
+    if(name==='quiet'){
+      for(let r=0;r<5;r++){ for(let c=0;c<5;c++){ const d=make('desk_rect'); place(d, unit*(4+c*1.2), unit*(1.6+r*0.9), 90); } }
+      const tdesk = make('teacher_desk'); place(tdesk, unit*1.2, unit*1.2, 90);
+    }
+
+    if(name==='maker'){
+      const bench = make('stand_table');  place(bench, unit*3.0, unit*2.0, 90);
+      const bench2 = make('stand_table'); place(bench2, unit*3.0, unit*3.6, 90);
+      for(let i=0;i<8;i++){ const d=make('desk_trap'); place(d, unit*(6+i*1.0), unit*3.2, (i%2)*180); }
+      const vr = make('vr_station'); place(vr, unit*11, unit*2.2, 0);
+    }
+  }
+
+  // Fit-to-space logic: scales and centers layoutRoot inside the visible classroom bounds
+  function fitToSpace(){
+    const open = toggleWall?.checked;
+    const bounds = {
+      x: 0, y:0, w: (open? 1440 : wallX), h: 480
+    };
+    // get bbox of layoutRoot contents
+    const temp = layoutRoot.getBBox();
+    if(temp.width<=0 || temp.height<=0){ layoutRoot.setAttribute('transform',''); return; }
+
+    const margin = unit*0.8;
+    const sx = (bounds.w - margin*2) / temp.width;
+    const sy = (bounds.h - margin*2) / temp.height;
+    const scale = Math.min(sx, sy, 1); // never upscale, only shrink to fit
+
+    // compute translate to center within bounds
+    const newW = temp.width * scale;
+    const newH = temp.height * scale;
+    const tx = bounds.x + (bounds.w - newW)/2 - temp.x*scale;
+    const ty = bounds.y + (bounds.h - newH)/2 - temp.y*scale;
+
+    layoutRoot.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`);
+  }
+
+  // Scenes MVP (unchanged)
+  saveSceneBtn.addEventListener('click', ()=>{
+    const name = sceneName.value.trim() || `Scene ${scenes.length+1}`;
+    const svgData = new XMLSerializer().serializeToString(layoutRoot);
+    scenes.push({name, svgData});
+    renderScenes();
+    sceneName.value='';
+    flash('Scene saved');
+  });
+  function renderScenes(){
+    sceneList.innerHTML='';
+    scenes.forEach((s,idx)=>{
+      const row = document.createElement('div'); row.className='scene-item';
+      const input = document.createElement('input'); input.value=s.name;
+      input.addEventListener('change', ()=>{ s.name = input.value; });
+      const actions = document.createElement('div'); actions.className='scene-actions';
+      const apply = document.createElement('button'); apply.className='ghost'; apply.textContent='Apply';
+      apply.addEventListener('click', ()=>{
+        layoutRoot.innerHTML = new DOMParser().parseFromString(s.svgData,'image/svg+xml').documentElement.innerHTML;
+        // rebind interactions
+        [...layoutRoot.querySelectorAll('g[data-id]')].forEach(makeDraggable);
+        selected=null; removeHandles(); updateMetrics();
+      });
+      const del = document.createElement('button'); del.className='danger'; del.textContent='Delete';
+      del.addEventListener('click', ()=>{ scenes.splice(idx,1); renderScenes(); });
+      actions.appendChild(apply); actions.appendChild(del);
+      row.appendChild(input); row.appendChild(actions);
+      sceneList.appendChild(row);
+    });
+  }
+
+  // Utility: ghost cleared on leave
+  stage.addEventListener('pointerleave', clearGhost);
+
+  // Toggle Snap global
+  toggleSnap.addEventListener('change', ()=>{
+    snapEnabled = toggleSnap.checked;
+    flash(snapEnabled ? 'Snap ON' : 'Snap OFF');
+  });
+
+  // Initial metrics
+  updateMetrics();
+
 })();
 </script>
 </body>
