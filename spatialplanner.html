@@ -3,92 +3,108 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Spatial Pedagogy Classroom Planner (v1.3)</title>
+<title>Spatial Pedagogy Planner (v6.0 — UI Refinements)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#f6f7f9; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280;
     --grid:#e5e7eb; --accent:#2563eb; --accent-2:#16a34a; --accent-3:#f59e0b;
     --door:#8b5e34; --window:#93c5fd; --danger:#ef4444;
   }
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .app{display:grid;grid-template-columns:320px 1fr 300px;gap:12px;height:100vh;padding:12px;box-sizing:border-box}
-  .panel{background:var(--panel);border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);padding:12px;display:flex;flex-direction:column;min-height:0}
-  .panel h2{margin:.25rem 0 .5rem;font-size:16px}
-  .section{margin-bottom:10px;border-top:1px dashed #e5e7eb;padding-top:8px}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5;}
+  .app{display:grid;grid-template-columns:320px 1fr 360px;gap:12px;height:100vh;padding:12px;box-sizing:border-box}
+  .panel{background:var(--panel);border-radius:1rem;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);padding:1.5rem;display:flex;flex-direction:column;min-height:0;overflow:auto}
+  .panel h2{margin:.25rem 0 .5rem;font-size:1.125rem; font-weight:600;}
+  .section{margin-bottom:1.25rem;border-top:1px dashed #e5e7eb;padding-top:1.25rem}
   .section:first-of-type{border-top:none;padding-top:0}
   .chipbar{display:flex;gap:6px;flex-wrap:wrap}
-  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;background:#fafafa;cursor:pointer;user-select:none}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;background:#fafafa;cursor:pointer;user-select:none; font-size: 13px;}
   .chip .swatch{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.1)}
-  .hint{color:var(--muted);font-size:12px;margin:6px 0}
+  .hint{color:#6b7280;font-size:0.75rem;margin-bottom:1rem; text-align: center;}
   .btnrow{display:flex;gap:8px;flex-wrap:wrap}
-  button{border:none;border-radius:10px;padding:8px 12px;background:#111827;color:#fff;cursor:pointer}
+  button{border:none;border-radius:10px;padding:8px 12px;background:#111827;color:#fff;cursor:pointer; transition: background-color 0.2s; font-weight: 500;}
+  button:hover{background:#374151;}
+  button:disabled { background: #9ca3af; cursor: not-allowed; }
+  /* MODIFIED: Added primary button style */
+  button.primary { background: var(--accent); }
+  button.primary:hover { background: #1d4ed8; }
   button.secondary{background:#e5e7eb;color:#111827}
+  button.secondary:hover{background:#d1d5db;}
   button.ghost{background:#f3f4f6;color:#111827;border:1px solid #e5e7eb}
+  button.ghost:hover{background:#e5e7eb;}
   button.danger{background:var(--danger)}
-  label.toggle{display:flex;align-items:center;gap:8px;font-weight:600;margin:8px 0}
-  select, input[type="text"]{border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px;font:inherit}
+  button.danger:hover{background:#b91c1c;}
+  label.toggle{display:flex;align-items:center;gap:8px;font-weight:500;margin:8px 0}
+  select, input[type="text"], textarea{width:100%; border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px;font:inherit}
+  textarea { resize: vertical; min-height: 100px; }
+
   /* Canvas wrapper */
-  .stage-wrap{position:relative;background:var(--panel);border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);padding:10px;min-height:0}
-  #stage{width:100%;height:calc(100vh - 44px);background:#fff;border-radius:12px;}
+  .stage-wrap{position:relative;background:var(--panel);border-radius:1rem;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);padding:10px;min-height:0}
+  #stage{width:100%;height:calc(100vh - 44px);background:#fff;border-radius:12px;-webkit-tap-highlight-color: transparent}
   .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap}
   .toolbar .left, .toolbar .right{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:2px 6px;font-size:12px}
   .legend{display:flex;gap:10px;align-items:center;color:#6b7280;font-size:12px;flex-wrap:wrap}
   .legend .tag{display:inline-flex;align-items:center;gap:6px}
   .tag .swatch{width:10px;height:10px;border-radius:2px}
-  .toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#111827;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;opacity:.95}
-  .insight{display:flex;flex-direction:column;gap:10px}
-  .insight label{font-size:12px;color:#374151;display:flex;justify-content:space-between}
-  .insight input[type="range"]{width:100%}
-  .metric{font-variant-numeric:tabular-nums}
+
+  .toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#111827;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;opacity:.95;display:none}
+  
+  /* INSIGHTS PANEL STYLES */
+  .insight-group { border-left: 3px solid #e5e7eb; padding-left: 1rem; transition: border-color 0.3s; }
+  .insight-group:hover { border-left-color: var(--accent-2); }
+  .insight-title { font-size: 1rem; font-weight: 600; color: #111827; margin-bottom: 0.5rem; }
+  .insight-subtitle { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #4b5563; margin-top: 0.75rem; margin-bottom: 0.25rem; }
+  .insight-text { font-size: 0.875rem; color: #374151; line-height: 1.5; }
+  .insight-list { list-style-type: none; padding-left: 0; font-size: 0.875rem; color: #374151; display: flex; flex-direction: column; gap: 0.75rem; }
+  .insight-list li { position: relative; padding-left: 1.25rem; }
+  .insight-list li::before { content: '✓'; position: absolute; left: 0; color: var(--accent-2); font-weight: 600; }
+  
   .scene-list{display:flex;flex-direction:column;gap:6px;overflow:auto}
   .scene-item{display:flex;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;border-radius:10px;padding:6px 8px}
   .scene-item input{width:100px}
   .scene-actions{display:flex;gap:6px}
+
+  .ow-panel { cursor: grab; }
   .ghost-snap{fill:none;stroke:#6366f1;stroke-width:2;stroke-dasharray:6 6;pointer-events:none;opacity:.9}
   .ghost-snap text{fill:#6366f1;font-size:10px}
   .handle{pointer-events:all}
   .togglebox{display:flex;align-items:center;gap:8px}
   .muted{color:#6b7280}
-  /* Focus */
-  .chip:focus, button:focus, select:focus{outline:none}
-  .chip:focus-visible, button:focus-visible, select:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+  .selection{pointer-events:none}
+  .marquee{fill:rgba(37,99,235,.08); stroke:#2563eb; stroke-dasharray:4 4; stroke-width:1; pointer-events:none}
+
+  svg :focus{outline:none}
 </style>
 </head>
 <body>
   <div class="app">
     <!-- Left Panel -->
     <aside class="panel" id="palette">
-      <h2>Item Library</h2>
-      <div class="hint">
-        Drag to place. <span class="kbd">R</span> rotate (Shift=15° / Alt=free), <span class="kbd">Del</span> remove.  
-        Hold <span class="kbd">Alt/Option</span> = bypass snapping (move/resize/rotate).
+      <div class="section">
+        <h2>Intelligent Assistant</h2>
+        <p class="hint">Describe your lesson, and the assistant will suggest a layout.</p>
+        <textarea id="llm-prompt">I am planning a lesson for [28] students. The main activity is [collaborative problem-solving in small groups] to develop [critical thinking and communication skills]. Please suggest an appropriate classroom layout.</textarea>
+        <!-- MODIFIED: Added 'primary' class to button -->
+        <button id="llm-generate-btn" class="primary mt-2 w-full">Generate Layout</button>
       </div>
 
       <div class="section">
-        <strong>Furniture</strong>
-        <div class="chipbar" id="chips-furniture"></div>
+        <h2>Item Library</h2>
+        <div class="hint">
+          Click to add. Drag to place. <span class="kbd">Shift</span> multi-select • <span class="kbd">Drag</span> empty space = marquee select • <span class="kbd">R</span> rotate (Shift=15° / Alt=free) • <span class="kbd">Del</span> delete • Hold <span class="kbd">Alt</span> = bypass snapping.
+        </div>
       </div>
-      <div class="section">
-        <strong>Tech</strong>
-        <div class="chipbar" id="chips-tech"></div>
-      </div>
-      <div class="section">
-        <strong>Cognitive</strong>
-        <div class="chipbar" id="chips-cognitive"></div>
-      </div>
-      <div class="section">
-        <strong>Social</strong>
-        <div class="chipbar" id="chips-social"></div>
-      </div>
-      <div class="section">
-        <strong>Emotional</strong>
-        <div class="chipbar" id="chips-emotional"></div>
-      </div>
-      <div class="section">
-        <strong>Stations (coloured desks)</strong>
-        <div class="chipbar" id="chips-stations"></div>
-      </div>
+
+      <div class="section"><strong>Furniture</strong><div class="chipbar" id="chips-furniture"></div></div>
+      <div class="section"><strong>Tech</strong><div class="chipbar" id="chips-tech"></div></div>
+      <div class="section"><strong>Cognitive Tools</strong><div class="chipbar" id="chips-cognitive"></div></div>
+      <div class="section"><strong>Social Furniture</strong><div class="chipbar" id="chips-social"></div></div>
+      <div class="section"><strong>Wellbeing Items</strong><div class="chipbar" id="chips-emotional"></div></div>
+      <div class="section"><strong>Stations (coloured desks)</strong><div class="chipbar" id="chips-stations"></div></div>
       <div class="section">
         <div class="hint">Zones are translucent overlays. Drag handles to resize.</div>
         <div class="chipbar" id="chips-zones"></div>
@@ -96,7 +112,7 @@
 
       <div class="section">
         <div class="togglebox">
-          <label class="toggle"><input type="checkbox" id="toggleWall"> Open operable wall</label>
+          <label class="toggle"><input type="checkbox" id="toggleWall" checked> Show operable walls</label>
         </div>
         <div class="togglebox">
           <label class="toggle"><input type="checkbox" id="toggleSnap" checked> Snap enabled</label>
@@ -105,7 +121,12 @@
         <div class="btnrow">
           <button id="btnExport">Export PNG</button>
           <button class="secondary" id="btnClear">Clear</button>
-          <button class="ghost" id="btnFit">Fit to space</button>
+        </div>
+        <div class="btnrow">
+          <button class="ghost" id="btnCloseA">Close A</button>
+          <button class="ghost" id="btnCloseB">Close B</button>
+          <button class="ghost" id="btnStackA">A: Stack 4+4</button>
+          <button class="ghost" id="btnStackB">B: Stack 4+4</button>
         </div>
       </div>
     </aside>
@@ -119,7 +140,7 @@
           <span class="tag"><span class="swatch" style="background:#fde68a"></span> Emotional</span>
           <span class="tag"><span class="swatch" style="background:var(--door)"></span> Door / Front</span>
           <span class="tag"><span class="swatch" style="background:var(--window)"></span> Windows</span>
-          <span class="tag"><span class="swatch" style="background:#9ca3af"></span> Operable wall</span>
+          <span class="tag"><span class="swatch" style="background:#9ca3af"></span> Operable wall tracks</span>
           <label class="toggle"><input type="checkbox" id="toggleLegend" checked> Legend</label>
         </div>
         <div class="right">
@@ -136,11 +157,11 @@
             </select>
             <button class="ghost" id="applyPreset">Apply</button>
           </div>
-          <span class="kbd">Grid: 8×12 (≈96 units)</span>
+          <span class="kbd">Grid: 12×12 (≈144 units)</span>
         </div>
       </div>
 
-      <svg id="stage" viewBox="0 0 1440 480" xmlns="http://www.w3.org/2000/svg">
+      <svg id="stage" viewBox="0 0 1440 720" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
             <rect width="60" height="60" fill="#fff"/>
@@ -155,76 +176,60 @@
           </linearGradient>
         </defs>
 
-        <!-- Room A background (LEFT classroom; FRONT/DOOR side is this left/short wall) -->
-        <rect id="roomA" x="0" y="0" width="720" height="480" fill="url(#grid)"/>
-        <!-- Operable wall (vertical; closed at x=720 by default) -->
-        <line id="wall" x1="720" y1="0" x2="720" y2="480" stroke="#9ca3af" stroke-width="6" stroke-dasharray="10 8"/>
-        <circle id="wallHandle" cx="720" cy="24" r="10" fill="#111827" />
-        <!-- Room B background (RIGHT classroom) -->
-        <rect id="roomB" x="720" y="0" width="720" height="480" fill="url(#grid)" opacity="0.08" />
+        <rect id="roomA" x="0" y="0" width="720" height="720" fill="url(#grid)"/>
 
-        <!-- Items root (everything goes inside layoutRoot so we can scale-to-fit safely) -->
-        <g id="items">
-          <g id="layoutRoot"></g>
+        <line id="trackA" x1="720" y1="0" x2="720" y2="720" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.35"/>
+        <line id="trackB" x1="1080" y1="0" x2="1080" y2="720" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.35"/>
+
+        <g id="operableWalls">
+          <g id="wallA" data-x="720"></g>
+          <g id="wallB" data-x="1080"></g>
         </g>
 
-        <!-- Ghost snap preview -->
-        <g id="ghost"></g>
+        <rect id="roomB" x="720" y="0" width="720" height="720" fill="url(#grid)" opacity="0.08" />
 
-        <!-- Shell last (with orientation cues) -->
+        <g id="items"><g id="layoutRoot"></g></g>
+        <g id="ghost"></g>
+        <rect id="marquee" class="marquee" x="0" y="0" width="0" height="0" style="display:none"/>
+
         <g id="shell">
-          <!-- Outer walls -->
-          <rect x="0" y="0" width="1440" height="480" fill="none" stroke="#111827" stroke-width="8"/>
-          <!-- FRONT label at left short wall (door side) -->
-          <text id="frontLabel" x="50" y="22" font-size="14" font-family="system-ui" fill="#111827">FRONT (Door)</text>
-          <!-- Top & bottom windows (continuous across both rooms) -->
+          <rect x="0" y="0" width="1440" height="720" fill="none" stroke="#111827" stroke-width="8"/>
+          <text id="frontLabel" x="50" y="22" font-size="14" font-family="system-ui" fill="#111827">FRONT</text>
+          <rect id="doorTopA" x="300" y="-1" width="60" height="10" fill="#8b5e34" />
+          <rect id="doorTopB" x="1000" y="-1" width="60" height="10" fill="#8b5e34" />
+          
           <rect id="winTop1" x="130" y="-1" width="560" height="10" fill="#93c5fd" />
           <rect id="winTop2" x="780" y="-1" width="560" height="10" fill="#93c5fd" />
-          <rect id="winBot1" x="130" y="471" width="560" height="10" fill="#93c5fd" />
-          <rect id="winBot2" x="780" y="471" width="560" height="10" fill="#93c5fd" />
-          <!-- Doors located on FRONT (left short wall): one for each classroom -->
-          <rect id="doorFrontA" x="-1" y="100" width="10" height="60" fill="#8b5e34" />
-          <rect id="doorFrontB" x="-1" y="320" width="10" height="60" fill="#8b5e34" />
+          <rect id="winBot1" x="130" y="711" width="560" height="10" fill="#93c5fd" />
+          <rect id="winBot2" x="780" y="711" width="560" height="10" fill="#93c5fd" />
         </g>
       </svg>
 
-      <div class="toast" id="toast" style="display:none"></div>
+      <div class="toast" id="toast"></div>
     </main>
 
     <!-- Right Panel: Insights + Scenes -->
     <aside class="panel">
-      <h2>Layout Insights</h2>
-      <div class="hint">Auto-updates as you arrange items.</div>
-      <div class="section insight">
-        <label>Personalisation <span class="metric" id="m-personal">0</span></label>
-        <input type="range" id="s-personal" min="0" max="100" value="0" disabled>
-      </div>
-      <div class="section insight">
-        <label>Customisation <span class="metric" id="m-custom">0</span></label>
-        <input type="range" id="s-custom" min="0" max="100" value="0" disabled>
-      </div>
-      <div class="section insight">
-        <label>Mass Fit <span class="metric" id="m-massfit">0</span></label>
-        <input type="range" id="s-massfit" min="0" max="100" value="0" disabled>
-      </div>
-      <div class="section insight">
-        <label>Planning Time (est.) <span class="metric" id="m-plan">0</span></label>
-        <input type="range" id="s-plan" min="0" max="100" value="0" disabled>
-      </div>
-      <div class="section insight">
-        <label>In-class Energy (est.) <span class="metric" id="m-energy">0</span></label>
-        <input type="range" id="s-energy" min="0" max="100" value="0" disabled>
-      </div>
-
-      <h2>Scenes (Lesson Timeline)</h2>
-      <div class="hint">Save snapshots for lesson acts (e.g., Warm-up, Group Work).</div>
-      <div class="section">
-        <div class="btnrow">
-          <input id="sceneName" type="text" placeholder="Scene name (e.g., Warm-up)">
-          <button id="saveScene">Save current</button>
+        <div class="section">
+            <h2>Spatial Effectiveness Profile</h2>
+            <canvas id="spatialEffectivenessChart"></canvas>
         </div>
-        <div class="scene-list" id="sceneList"></div>
-      </div>
+        <div class="section" id="pedagogyInsights">
+            <h2>Pedagogical Opportunities</h2>
+            <div id="insightsContainer" class="flex flex-col gap-6">
+                <!-- Qualitative insights will be dynamically generated here -->
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Scenes (Lesson Timeline)</h2>
+            <div class="btnrow">
+              <input id="sceneName" type="text" placeholder="Scene name (e.g., Warm-up)">
+              <!-- MODIFIED: Added 'primary' class to button -->
+              <button id="saveScene" class="primary">Save current</button>
+            </div>
+            <div class="scene-list mt-2" id="sceneList"></div>
+        </div>
     </aside>
   </div>
 
@@ -235,80 +240,62 @@
   const itemsLayer = document.getElementById('items');
   const layoutRoot = document.getElementById('layoutRoot');
   const ghostLayer = document.getElementById('ghost');
-  const wall = document.getElementById('wall');
-  const wallHandle = document.getElementById('wallHandle');
-  const roomA = document.getElementById('roomA');
-  const roomB = document.getElementById('roomB');
+  const marquee = document.getElementById('marquee');
   const toggleWall = document.getElementById('toggleWall');
   const toggleSnap = document.getElementById('toggleSnap');
   const toggleLegend = document.getElementById('toggleLegend');
   const btnExport = document.getElementById('btnExport');
   const btnClear = document.getElementById('btnClear');
-  const btnFit = document.getElementById('btnFit');
   const toast = document.getElementById('toast');
   const presetSelect = document.getElementById('presetSelect');
   const applyPresetBtn = document.getElementById('applyPreset');
+  const wallAG = document.getElementById('wallA');
+  const wallBG = document.getElementById('wallB');
+  const insightsContainer = document.getElementById('insightsContainer');
+  let spatialChart = null;
 
-  // Metrics UI
-  const m = (id)=>document.getElementById(id);
-  const metrics = {
-    personalSlider: m('s-personal'), personal: m('m-personal'),
-    customSlider: m('s-custom'), custom: m('m-custom'),
-    massfitSlider: m('s-massfit'), massfit: m('m-massfit'),
-    planSlider: m('s-plan'), plan: m('m-plan'),
-    energySlider: m('s-energy'), energy: m('m-energy')
-  };
+  const llmPromptEl = document.getElementById('llm-prompt');
+  const llmGenerateBtn = document.getElementById('llm-generate-btn');
 
-  // Scenes
   const sceneName = document.getElementById('sceneName');
   const saveSceneBtn = document.getElementById('saveScene');
   const sceneList = document.getElementById('sceneList');
   let scenes = [];
 
-  // Operable wall
-  let wallX = 720;
-  const minWallX = 540, maxWallX = 1080;
-
-  // Snapping thresholds
   let SNAP_RADIUS = unit * 0.35;
-  let NEIGHBOR_RADIUS = unit * 1.5;
+  let NEIGHBOR_RADIUS = unit * 1.7;
   let ANGLE_HYSTERESIS = 12;
-  let snapEnabled = true;
 
-  // ---- Palette (sizes tuned smaller so layouts fit a single classroom by default) ----
+  const TRI_S = unit * 0.98;
+  const TRI_H = Math.sin(Math.PI/3) * TRI_S;
+
+  const selected = new Set();
+
   const PALETTE = [
     {cat:'furniture', id:'desk_rect', label:'Desk (rect)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#e5e7eb'}), snap:'edge90'},
     {cat:'furniture', id:'desk_round', label:'Table (round)', draw:(g,o)=>roundTable(g,{...o,r:unit*0.55,base:'#d1fae5'}), snap:'none'},
     {cat:'furniture', id:'desk_trap', label:'Desk (trapezoid)', draw:(g,o)=>trapDesk(g,{...o,w:unit*1.0,h:unit*0.7,base:'#fee2e2'}), snap:'edge60'},
-    {cat:'furniture', id:'desk_tri_eq', label:'Desk (triangle)', draw:(g,o)=>triDesk(g,{...o,s:unit*0.95,base:'#e0f2fe'}), snap:'tri60'},
+    {cat:'furniture', id:'desk_tri_eq', label:'Desk (triangle)', draw:(g,o)=>triDesk(g,{...o,s:TRI_S,base:'#e0f2fe'}), snap:'tri60'},
     {cat:'furniture', id:'chair', label:'Chair', draw:(g,o)=>chair(g,{...o,w:unit*0.55,h:unit*0.55}), snap:'none'},
     {cat:'furniture', id:'stand_table', label:'Standing table (long)', draw:(g,o)=>deskRect(g,{...o,w:unit*2.4,h:unit*0.6,base:'#fde68a'}), snap:'edge90'},
-
     {cat:'tech', id:'writable_tv', label:'Writable TV', draw:(g,o)=>tv(g,{...o,w:unit*1.6,h:unit*0.9}), snap:'edge90'},
     {cat:'tech', id:'vr_station', label:'VR Station', draw:(g,o)=>vr(g,{...o,r:unit*0.5}), snap:'none'},
     {cat:'tech', id:'tablet_cart', label:'Tablet Cart', draw:(g,o)=>cart(g,{...o,w:unit*0.9,h:unit*0.7}), snap:'none'},
-
     {cat:'cognitive', id:'whiteboard', label:'Mobile Whiteboard', draw:(g,o)=>board(g,{...o,w:unit*1.1,h:unit*1.6,base:'#93c5fd'}), snap:'edge90'},
     {cat:'cognitive', id:'teacher_desk', label:'Teacher Desk', draw:(g,o)=>deskRect(g,{...o,w:unit*1.6,h:unit*0.8,base:'#bfdbfe'}), snap:'edge90'},
-
     {cat:'social', id:'group_table', label:'Group Table (6)', draw:(g,o)=>roundTable(g,{...o,r:unit*0.8,base:'#a7f3d0'}), snap:'none'},
     {cat:'social', id:'partition', label:'Mobile Partition', draw:(g,o)=>partition(g,{...o,w:unit*0.3,h:unit*1.8,base:'#34d399'}), snap:'edge90'},
-
     {cat:'emotional', id:'couch', label:'Couch', draw:(g,o)=>couch(g,{...o,w:unit*1.8,h:unit*0.8,base:'#fdba74'}), snap:'edge90'},
     {cat:'emotional', id:'beanbag', label:'Beanbag', draw:(g,o)=>beanbag(g,{...o,r:unit*0.55,base:'#fde68a'}), snap:'none'},
     {cat:'emotional', id:'plant', label:'Plant', draw:(g,o)=>plant(g,{...o,r:unit*0.45}), snap:'none'},
-
     {cat:'stations', id:'desk_blue', label:'Desk (Blue)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#bfdbfe'}), snap:'edge90'},
     {cat:'stations', id:'desk_green', label:'Desk (Green)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#bbf7d0'}), snap:'edge90'},
     {cat:'stations', id:'desk_orange', label:'Desk (Orange)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#fed7aa'}), snap:'edge90'},
-
-    // Zones (resizable, extra transparent)
     {cat:'zones', id:'zone_cog', label:'Zone: Cognitive', draw:(g,o)=>zone(g,{...o,w:unit*3,h:unit*2,base:'#93c5fd',label:'Cognitive'}), resizable:true},
     {cat:'zones', id:'zone_soc', label:'Zone: Social', draw:(g,o)=>zone(g,{...o,w:unit*3,h:unit*2,base:'#a7f3d0',label:'Social'}), resizable:true},
     {cat:'zones', id:'zone_emo', label:'Zone: Emotional', draw:(g,o)=>zone(g,{...o,w:unit*3,h:unit*2,base:'#fde68a',label:'Emotional'}), resizable:true},
   ];
 
-  // Add chips
   const mapCatToEl = {
     furniture: document.getElementById('chips-furniture'),
     tech: document.getElementById('chips-tech'),
@@ -323,8 +310,7 @@
     chip.className='chip';
     const sw = document.createElement('span'); sw.className='swatch';
     sw.style.background=(item.id.includes('desk_')? (item.id.includes('blue')?'#bfdbfe':item.id.includes('green')?'#bbf7d0':item.id.includes('orange')?'#fed7aa':'#e5e7eb') : (item.cat==='cognitive'?'#93c5fd':item.cat==='social'?'#a7f3d0':item.cat==='emotional'?'#fde68a':'#e5e7eb'));
-    chip.appendChild(sw);
-    chip.append(item.label);
+    chip.appendChild(sw); chip.append(item.label);
     chip.addEventListener('click',()=> addItem(item));
     mapCatToEl[item.cat].appendChild(chip);
   });
@@ -334,412 +320,45 @@
   const deg = r => r*180/Math.PI;
   const rad = d => d*Math.PI/180;
   const normAngle = a => { let x=a%360; if(x<0) x+=360; return x; }
+  function getMouseSVG(evt){ const p = stage.createSVGPoint(); p.x = evt.clientX; p.y = evt.clientY; const ctm = stage.getScreenCTM().inverse(); const sp = p.matrixTransform(ctm); return {x: sp.x, y: sp.y}; }
+  function getTranslate(g){ const tr = g.getAttribute('transform')||''; const m = /translate\(([-0-9.]+),\s*([-0-9.]+)\)/.exec(tr); return m? [parseFloat(m[1]), parseFloat(m[2])] : [0,0]; }
+  function getRotate(g){ const tr = g.getAttribute('transform')||''; const m = /rotate\(([-0-9.]+)\)/.exec(tr); return m? parseFloat(m[1]) : 0; }
 
-  // Selection
-  let selected = null;
-  function select(wrapper){
-    itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove());
-    selected = wrapper;
-    drawSelection();
-    if(wrapper?.getAttribute('data-resizable')==='1') showHandles(wrapper); else removeHandles();
-  }
-  function drawSelection(){
-    itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove());
-    if(!selected) return;
-    const bb = selected.getBBox();
-    const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    r.classList.add('selection');
-    r.setAttribute('x', bb.x-6); r.setAttribute('y', bb.y-6);
-    r.setAttribute('width', bb.width+12); r.setAttribute('height', bb.height+12);
-    r.setAttribute('rx',6); r.setAttribute('ry',6);
-    r.setAttribute('fill','none'); r.setAttribute('stroke','#2563eb');
-    r.setAttribute('stroke-width','2'); r.setAttribute('vector-effect','non-scaling-stroke');
-    r.setAttribute('pointer-events','none');
-    selected.insertBefore(r, selected.firstChild);
-  }
+  function drawSelection(){ itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); selected.forEach(g=>{ const bb = g.getBBox(); const r = document.createElementNS('http://www.w3.org/2000/svg','rect'); r.classList.add('selection'); r.setAttribute('x', bb.x-6); r.setAttribute('y', bb.y-6); r.setAttribute('width', bb.width+12); r.setAttribute('height', bb.height+12); r.setAttribute('rx',6); r.setAttribute('ry',6); r.setAttribute('fill','none'); r.setAttribute('stroke','#2563eb'); r.setAttribute('stroke-width','2'); r.setAttribute('vector-effect','non-scaling-stroke'); r.setAttribute('pointer-events','none'); g.insertBefore(r, g.firstChild); }); }
+  function clearSelection(){ selected.clear(); itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); removeHandles(); }
+  function addItem(def){ const wrapper = document.createElementNS('http://www.w3.org/2000/svg','g'); wrapper.setAttribute('data-id', def.id); wrapper.setAttribute('data-snap', def.snap || 'none'); if(def.resizable) wrapper.setAttribute('data-resizable','1'); wrapper.setAttribute('transform', `translate(${unit*2},${unit*2}) rotate(0)`); wrapper.style.cursor='move'; const g = document.createElementNS('http://www.w3.org/2000/svg','g'); def.draw(g,{x:0,y:0}); wrapper.appendChild(g); layoutRoot.appendChild(wrapper); makeDraggable(wrapper); clearSelection(); selected.add(wrapper); drawSelection(); flash('Tip: Hold Alt to bypass snapping'); updateMetrics(); }
+  itemsLayer.addEventListener('pointerdown', e=>{ const targetG = e.target.closest('g[data-id]'); if(targetG && layoutRoot.contains(targetG)){ if(e.shiftKey){ if(selected.has(targetG)) selected.delete(targetG); else selected.add(targetG); }else{ if(!selected.has(targetG) || selected.size>1){ clearSelection(); selected.add(targetG); } } if(selected.size===1 && targetG.getAttribute('data-resizable')==='1') showHandles(targetG); else removeHandles(); drawSelection(); }else{ if(!e.shiftKey) { clearSelection(); removeHandles(); } } });
+  
+  let marqueeActive=false, marqueeStart=null;
+  stage.addEventListener('pointerdown', e=>{ const isOnItem = !!e.target.closest('g[data-id]'); const isOnPanel = !!e.target.closest('.ow-panel'); if(isOnItem || isOnPanel || e.shiftKey) return; marqueeActive=true; marqueeStart=getMouseSVG(e); marquee.setAttribute('x', marqueeStart.x); marquee.setAttribute('y', marqueeStart.y); marquee.setAttribute('width', 0); marquee.setAttribute('height', 0); marquee.style.display='block'; clearSelection(); });
+  stage.addEventListener('pointermove', e=>{ if(!marqueeActive) return; const cur=getMouseSVG(e); const x=Math.min(cur.x,marqueeStart.x), y=Math.min(cur.y,marqueeStart.y); const w=Math.abs(cur.x-marqueeStart.x), h=Math.abs(cur.y-marqueeStart.y); marquee.setAttribute('x',x); marquee.setAttribute('y',y); marquee.setAttribute('width',w); marquee.setAttribute('height',h); });
+  stage.addEventListener('pointerup', e=>{ if(!marqueeActive) return; marqueeActive=false; marquee.style.display='none'; const mx=+marquee.getAttribute('x'), my=+marquee.getAttribute('y'), mw=+marquee.getAttribute('width'), mh=+marquee.getAttribute('height'); const box={x:mx,y:my,w:mw,h:mh}; [...layoutRoot.querySelectorAll('g[data-id]')].forEach(g=>{ const b=g.getBBox(); const [tx, ty] = getTranslate(g); const cx=tx, cy=ty; if(cx>=box.x && cx<=box.x+box.w && cy>=box.y && cy<=box.y+box.h) selected.add(g); }); drawSelection(); });
 
-  // Add item (append into layoutRoot so scaling works uniformly)
-  function addItem(def){
-    const wrapper = document.createElementNS('http://www.w3.org/2000/svg','g');
-    wrapper.setAttribute('data-id', def.id);
-    wrapper.setAttribute('data-snap', def.snap || 'none');
-    if(def.resizable) wrapper.setAttribute('data-resizable','1');
-    wrapper.setAttribute('transform', `translate(${unit*2},${unit*2}) rotate(0)`);
-    wrapper.style.cursor='move';
+  function makeDraggable(g){ let offset = {x:0,y:0}, dragging=false, groupStart=null; g.addEventListener('pointerdown', e=>{ dragging=true; g.setPointerCapture(e.pointerId); if(!e.shiftKey && !selected.has(g)){ clearSelection(); selected.add(g); drawSelection(); } const {x,y} = getMouseSVG(e); groupStart = [...selected].map(node=>({ node, t:getTranslate(node) })); const meStart = groupStart.find(s=>s.node===g).t; offset = {x:x-meStart[0], y:y-meStart[1]}; }); g.addEventListener('pointermove', e=>{ if(!dragging) return; const {x,y} = getMouseSVG(e); const bypass = e.altKey || !toggleSnap.checked; let nx = x - offset.x, ny = y - offset.y; if(!bypass){ nx = snap(nx); ny = snap(ny); } const meStart = groupStart.find(s=>s.node===g).t; const dx = nx - meStart[0], dy = ny - meStart[1]; groupStart.forEach(s=>{ let px = s.t[0] + dx, py = s.t[1] + dy;
+    px = Math.max(0, Math.min(px, 1440 - unit)); py = Math.max(0, Math.min(py, 720 - unit)); const r = getRotate(s.node); s.node.setAttribute('transform', `translate(${px},${py}) rotate(${r})`); }); if(selected.size===1){ if(!bypass) trySnap(g, true); else clearGhost(); }else{ clearGhost(); } drawSelection(); }); g.addEventListener('pointerup', e=>{ dragging=false; try{ g.releasePointerCapture(e.pointerId);}catch(_){ } if(selected.size===1){ const bypass = e.altKey || !toggleSnap.checked; if(!bypass) trySnap(g, false); } clearGhost(); updateMetrics(); }); g.addEventListener('dblclick',e=>{ rotateSelection(e.shiftKey); }); }
 
-    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-    def.draw(g,{x:0,y:0});
-    wrapper.appendChild(g);
+  function centroidOfSelection(){ const arr=[...selected]; if(arr.length===0) return null; const pts = arr.map(n=>getTranslate(n)); const cx = pts.reduce((a,p)=>a+p[0],0)/pts.length; const cy = pts.reduce((a,p)=>a+p[1],0)/pts.length; return {cx, cy}; }
+  function rotateSelection(useFine){ if(selected.size===0) return; const altFree = rotateSelection._lastAlt; const step = (useFine? 15 : 45); const delta = altFree ? (useFine? 15 : 10) : step; if(selected.size===1){ const node=[...selected][0]; const [tx,ty]=getTranslate(node); let next = getRotate(node) + delta; if(!altFree && toggleSnap.checked){ const mode = node.getAttribute('data-snap'); if(mode==='tri60' || mode==='edge60'){ next = Math.round((next%360)/60)*60; } else if(mode==='edge90'){ const n = Math.round((next%360)/90)*90; if(Math.abs(n-next) <= ANGLE_HYSTERESIS) next = n; } } node.setAttribute('transform', `translate(${tx},${ty}) rotate(${(next%360+360)%360})`); drawSelection(); updateMetrics(); return; } const C = centroidOfSelection(); if(!C) return; const theta = rad(delta); const sinT = Math.sin(theta), cosT = Math.cos(theta); [...selected].forEach(node=>{ const [tx,ty] = getTranslate(node); const vx = tx - C.cx, vy = ty - C.cy; const rx = vx * cosT - vy * sinT; const ry = vx * sinT + vy * cosT; const newX = C.cx + rx, newY = C.cy + ry; const newRot = getRotate(node) + delta; node.setAttribute('transform', `translate(${newX},${newY}) rotate(${(newRot%360+360)%360})`); }); drawSelection(); updateMetrics(); }
+  window.addEventListener('keydown', e=>{ if(e.key==='Alt') rotateSelection._lastAlt = true; if(e.key==='r' || e.key==='R'){ rotateSelection(e.shiftKey); } if((e.key==='Delete' || e.key==='Backspace') && selected.size){ selected.forEach(n=>n.remove()); clearSelection(); updateMetrics(); } if(selected.size){ const step = e.altKey ? 5 : unit; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){ e.preventDefault(); selected.forEach(node=>{ let [tx,ty]=getTranslate(node); if(e.key==='ArrowUp') ty -= step; if(e.key==='ArrowDown') ty += step; if(e.key==='ArrowLeft') tx -= step; if(e.key==='ArrowRight') tx += step;
+    tx = Math.max(0, Math.min(tx, 1440 - unit)); ty = Math.max(0, Math.min(ty, 720 - unit)); const r = getRotate(node); node.setAttribute('transform', `translate(${tx},${ty}) rotate(${r})`); }); drawSelection(); updateMetrics(); } } });
+  window.addEventListener('keyup', e=>{ if(e.key==='Alt') rotateSelection._lastAlt = false; });
 
-    layoutRoot.appendChild(wrapper);
-    makeDraggable(wrapper);
-    select(wrapper);
-    flash('Tip: Hold Alt to bypass snapping');
-    updateMetrics();
-  }
+  toggleLegend.addEventListener('change', ()=>{ const show = toggleLegend.checked; const shell = document.getElementById('shell'); shell.querySelectorAll('text,rect#winTop1,rect#winTop2,rect#winBot1,rect#winBot2,rect#doorTopA,rect#doorTopB').forEach(n=>n.setAttribute('opacity', show? '1':'0')); });
 
-  // Drag/Move
-  function makeDraggable(g){
-    let offset = {x:0,y:0}, dragging=false;
-
-    g.addEventListener('pointerdown', e=>{
-      dragging=true; g.setPointerCapture(e.pointerId); select(g);
-      const {x,y} = getMouseSVG(e);
-      const [tx,ty] = getTranslate(g);
-      offset = {x:x-tx, y:y-ty};
-    });
-    g.addEventListener('pointermove', e=>{
-      if(!dragging) return;
-      const {x,y} = getMouseSVG(e);
-      let nx = x - offset.x, ny = y - offset.y;
-      const open = toggleWall?.checked; const maxW = open? 1440 : wallX;
-
-      nx = Math.max(0, Math.min(nx, maxW - 10));
-      ny = Math.max(0, Math.min(ny, 480 - 10));
-
-      const bypass = e.altKey || !toggleSnap.checked;
-      if(!bypass){ nx = snap(nx); ny = snap(ny); }
-
-      const rot = getRotate(g);
-      g.setAttribute('transform', `translate(${nx},${ny}) rotate(${rot})`);
-
-      if(!bypass && snapEnabled) trySnap(g, true);
-      else clearGhost();
-
-      drawSelection();
-    });
-    g.addEventListener('pointerup', e=>{
-      dragging=false; try{ g.releasePointerCapture(e.pointerId);}catch(_){}
-      const bypass = e.altKey || !toggleSnap.checked;
-      if(!bypass) trySnap(g, false);
-      clearGhost();
-      updateMetrics();
-    });
-    g.addEventListener('dblclick',()=> rotateSelected(false));
-  }
-
-  // Mouse helpers
-  function getMouseSVG(evt){
-    const p = stage.createSVGPoint(); p.x = evt.clientX; p.y = evt.clientY;
-    const ctm = stage.getScreenCTM().inverse();
-    const sp = p.matrixTransform(ctm);
-    return {x: sp.x, y: sp.y};
-  }
-  function getTranslate(g){
-    const tr = g.getAttribute('transform')||'';
-    const m = /translate\(([-0-9.]+),\s*([-0-9.]+)\)/.exec(tr);
-    return m? [parseFloat(m[1]), parseFloat(m[2])] : [0,0];
-  }
-  function getRotate(g){
-    const tr = g.getAttribute('transform')||'';
-    const m = /rotate\(([-0-9.]+)\)/.exec(tr);
-    return m? parseFloat(m[1]) : 0;
-  }
-
-  // Rotation (Alt = free, Shift = 15°, else 45°)
-  function rotateSelected(useFine){
-    if(!selected) return;
-    const step = (useFine? 15 : 45);
-    const [tx,ty] = getTranslate(selected);
-    const current = getRotate(selected);
-    const next = rotateSelected._lastAlt ? current + (useFine? 15: 10) : (current + step);
-    selected.setAttribute('transform', `translate(${tx},${ty}) rotate(${next%360})`);
-
-    if(!rotateSelected._lastAlt && toggleSnap.checked){
-      const mode = selected.getAttribute('data-snap');
-      if(mode==='tri60' || mode==='edge60'){
-        const n = Math.round((next%360)/60)*60;
-        selected.setAttribute('transform', `translate(${tx},${ty}) rotate(${n})`);
-      }
-      if(mode==='edge90'){
-        const n = Math.round((next%360)/90)*90;
-        if(Math.abs(n-next) <= ANGLE_HYSTERESIS) selected.setAttribute('transform', `translate(${tx},${ty}) rotate(${n})`);
-      }
-    }
-    drawSelection(); updateMetrics();
-  }
-  window.addEventListener('keydown', e=>{
-    if(e.key==='Alt') rotateSelected._lastAlt = true;
-    if(!selected) return;
-    if(e.key==='r' || e.key==='R'){
-      const alt = e.altKey; rotateSelected._lastAlt = alt;
-      rotateSelected(e.shiftKey); return;
-    }
-    if(e.key==='Delete' || e.key==='Backspace'){
-      selected.remove(); selected=null; itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); removeHandles(); updateMetrics(); return;
-    }
-    const [tx,ty] = selected? getTranslate(selected) : [0,0];
-    const step = e.altKey ? 5 : unit;
-    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
-      e.preventDefault();
-      let nx = tx, ny = ty;
-      if(e.key==='ArrowUp') ny -= step;
-      if(e.key==='ArrowDown') ny += step;
-      if(e.key==='ArrowLeft') nx -= step;
-      if(e.key==='ArrowRight') nx += step;
-      const open = toggleWall?.checked; const maxW = open? 1440 : wallX;
-      nx = Math.max(0, Math.min(nx, maxW - 10));
-      ny = Math.max(0, Math.min(ny, 480 - 10));
-      const rot = getRotate(selected);
-      selected.setAttribute('transform', `translate(${nx},${ny}) rotate(${rot})`);
-      drawSelection(); updateMetrics();
-    }
-  });
-  window.addEventListener('keyup', e=>{
-    if(e.key==='Alt') rotateSelected._lastAlt = false;
-  });
-
-  // Toggle wall
-  toggleWall?.addEventListener('change', ()=>{
-    const open = toggleWall.checked;
-    roomB.setAttribute('opacity', open? '1' : '0.08');
-    wall.setAttribute('stroke-dasharray', open? '2 8' : '10 8');
-    wall.setAttribute('opacity', open? '0.25' : '1');
-    updateMetrics();
-  });
-
-  // Draggable wall
-  let draggingWall=false, wallOffsetX=0;
-  wallHandle.addEventListener('pointerdown', e=>{
-    draggingWall=true; wallHandle.setPointerCapture(e.pointerId);
-    const {x} = getMouseSVG(e); wallOffsetX = x - wallX;
-  });
-  wallHandle.addEventListener('pointermove', e=>{
-    if(!draggingWall) return;
-    const {x} = getMouseSVG(e);
-    let nx = snap(x - wallOffsetX);
-    nx = Math.max(minWallX, Math.min(maxWallX, nx));
-    setWallX(nx);
-  });
-  wallHandle.addEventListener('pointerup', e=>{
-    draggingWall=false; try{ wallHandle.releasePointerCapture(e.pointerId);}catch(_){}
-  });
-  function setWallX(x){
-    wallX = x;
-    wall.setAttribute('x1', wallX); wall.setAttribute('x2', wallX);
-    wallHandle.setAttribute('cx', wallX);
-    roomA.setAttribute('width', wallX);
-    roomB.setAttribute('x', wallX);
-    roomB.setAttribute('width', 1440 - wallX);
-  }
-
-  // Export
-  btnExport.addEventListener('click', ()=>{
-    const open = toggleWall?.checked;
-    const exportWidth = open? 1440 : wallX;
-    const clone = stage.cloneNode(true);
-    clone.setAttribute('viewBox', `0 0 ${exportWidth} 480`);
-    if(!open){ clone.querySelector('#roomB')?.setAttribute('opacity','0'); clone.querySelector('#wall')?.setAttribute('opacity','1'); }
-    // remove overlays
-    clone.querySelectorAll('.selection,.handle,#ghost *').forEach(n=>n.remove());
-    // respect legend toggle
-    if(!toggleLegend.checked){
-      const shell = clone.querySelector('#shell');
-      shell.querySelectorAll('text,rect#winTop1,rect#winTop2,rect#winBot1,rect#winBot2,rect#doorFrontA,rect#doorFrontB').forEach(n=>n.setAttribute('opacity','0'));
-    }
-    const svgData = new XMLSerializer().serializeToString(clone);
-    const img = new Image();
-    const svgBlob = new Blob([svgData], {type:'image/svg+xml;charset=utf-8'});
-    const url = URL.createObjectURL(svgBlob);
-    img.onload = function(){
-      const canvas = document.createElement('canvas');
-      canvas.width = exportWidth; canvas.height = 480;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(img,0,0);
-      URL.revokeObjectURL(url);
-      const png = canvas.toDataURL('image/png');
-      const a = document.createElement('a'); a.download='classroom-layout.png'; a.href=png; a.click();
-    };
-    img.src = url;
-  });
-
-  // Clear
-  btnClear.addEventListener('click', ()=>{
-    layoutRoot.innerHTML='';
-    removeHandles(); updateMetrics();
-  });
-
-  // Fit-to-space button (uniform scale & center inside visible classroom)
-  btnFit.addEventListener('click', ()=>{ fitToSpace(); });
-
-  // Legend toggle
-  toggleLegend.addEventListener('change', ()=>{
-    const show = toggleLegend.checked;
-    const shell = document.getElementById('shell');
-    shell.querySelectorAll('text,rect#winTop1,rect#winTop2,rect#winBot1,rect#winBot2,rect#doorFrontA,rect#doorFrontB').forEach(n=>n.setAttribute('opacity', show? '1':'0'));
-  });
-
-  // Snap logic with ghost preview (same approach as v1.2)
-  function trySnap(g, preview){
-    clearGhost();
-    const mode = g.getAttribute('data-snap')||'none';
-    if(mode==='none') return;
-
-    const [tx,ty] = getTranslate(g);
-    let rot = normAngle(getRotate(g));
-
-    const step = (mode==='tri60'||mode==='edge60') ? 60 : 90;
-    const snappedRot = Math.round(rot/step)*step;
-    if(Math.abs(snappedRot-rot) <= ANGLE_HYSTERESIS) rot = snappedRot;
-
-    const neighbors = [...layoutRoot.querySelectorAll('g[data-snap]')].filter(n=>n!==g);
-    let applied=false;
-
-    for(const n of neighbors){
-      const [nx,ny] = getTranslate(n);
-      const dist = Math.hypot(nx-tx, ny-ty);
-      if(dist > NEIGHBOR_RADIUS) continue;
-
-      // Triangular honeycomb offsets
-      if(mode==='tri60' && n.getAttribute('data-snap')==='tri60'){
-        const s = unit*0.95, h = Math.sin(Math.PI/3)*s;
-        const offsets = [
-          {dx:s, dy:0, a:0}, {dx:s/2, dy:h, a:60}, {dx:-s/2, dy:h, a:120},
-          {dx:-s, dy:0, a:180}, {dx:-s/2, dy:-h, a:240}, {dx:s/2, dy:-h, a:300}
-        ];
-        for(const off of offsets){
-          const tx2 = nx + off.dx, ty2 = ny + off.dy;
-          if(Math.hypot(tx2 - tx, ty2 - ty) <= SNAP_RADIUS){
-            if(preview){ drawGhostTri(tx2,ty2,off.a,s); }
-            else { g.setAttribute('transform', `translate(${snap(tx2)},${snap(ty2)}) rotate(${off.a})`); }
-            applied=true; break;
-          }
-        }
-      }
-      if(applied) break;
-
-      // Edge alignment for rect/trap/edge60/edge90
-      const dx = Math.abs(nx - tx), dy = Math.abs(ny - ty);
-      if(dx <= SNAP_RADIUS || dy <= SNAP_RADIUS){
-        const nx2 = dx <= SNAP_RADIUS ? nx : tx;
-        const ny2 = dy <= SNAP_RADIUS ? ny : ty;
-        if(preview){ drawGhostBox(nx2,ny2,g); }
-        else { g.setAttribute('transform', `translate(${snap(nx2)},${snap(ny2)}) rotate(${rot})`); }
-        applied=true; break;
-      }
-    }
-  }
+  function trySnap(g, preview){ clearGhost(); const mode = g.getAttribute('data-snap')||'none'; if(mode==='none') return; const [tx,ty] = getTranslate(g); let rot = normAngle(getRotate(g)); const step = (mode==='tri60'||mode==='edge60') ? 60 : 90; const snappedRot = Math.round(rot/step)*step; if(Math.abs(snappedRot-rot) <= ANGLE_HYSTERESIS) rot = snappedRot; const neighbors = [...layoutRoot.querySelectorAll('g[data-snap]')].filter(n=>n!==g); let applied=false; for(const n of neighbors){ const [nx,ny] = getTranslate(n); const dist = Math.hypot(nx-tx, ny-ty); if(dist > NEIGHBOR_RADIUS) continue; if(mode==='tri60' && n.getAttribute('data-snap')==='tri60'){ const s = TRI_S, h = TRI_H; const offsets = [ {dx:s, dy:0, a:0}, {dx:s/2, dy:h, a:60}, {dx:-s/2, dy:h, a:120}, {dx:-s, dy:0, a:180}, {dx:-s/2, dy:-h, a:240}, {dx:s/2, dy:-h, a:300} ]; for(const off of offsets){ const tx2 = nx + off.dx, ty2 = ny + off.dy; if(Math.hypot(tx2 - tx, ty2 - ty) <= SNAP_RADIUS){ if(preview){ drawGhostTri(tx2,ty2,off.a,s); } else { g.setAttribute('transform', `translate(${snap(tx2)},${snap(ty2)}) rotate(${off.a})`); } applied=true; break; } } } if(applied) break; const dx = Math.abs(nx - tx), dy = Math.abs(ny - ty); if(dx <= SNAP_RADIUS || dy <= SNAP_RADIUS){ const nx2 = dx <= SNAP_RADIUS ? nx : tx; const ny2 = dy <= SNAP_RADIUS ? ny : ty; if(preview){ drawGhostBox(nx2,ny2,g); } else { g.setAttribute('transform', `translate(${snap(nx2)},${snap(ny2)}) rotate(${rot})`); } applied=true; break; } } }
   function clearGhost(){ ghostLayer.innerHTML=''; }
-  function drawGhostBox(x,y,g){
-    const bb = g.getBBox();
-    const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    r.setAttribute('x', x + (bb.x - getTranslate(g)[0]));
-    r.setAttribute('y', y + (bb.y - getTranslate(g)[1]));
-    r.setAttribute('width', bb.width); r.setAttribute('height', bb.height);
-    r.setAttribute('class','ghost-snap');
-    ghostLayer.appendChild(r);
-  }
-  function drawGhostTri(cx,cy,angle,s){
-    const h = Math.sin(Math.PI/3)*s;
-    const pts = [
-      [0,h],[s/2,0],[s,h]
-    ].map(([px,py])=>{
-      const ox = s/2, oy = h/2;
-      const rx = Math.cos(rad(angle))*(px-ox) - Math.sin(rad(angle))*(py-oy) + ox + (cx - s/2);
-      const ry = Math.sin(rad(angle))*(px-ox) + Math.cos(rad(angle))*(py-oy) + oy + (cy - h/2);
-      return [rx,ry];
-    });
-    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
-    path.setAttribute('d', `M${pts[0][0]},${pts[0][1]} L${pts[1][0]},${pts[1][1]} L${pts[2][0]},${pts[2][1]} Z`);
-    path.setAttribute('class','ghost-snap');
-    ghostLayer.appendChild(path);
-  }
+  function drawGhostBox(x,y,g){ const bb = g.getBBox(); const r = document.createElementNS('http://www.w3.org/2000/svg','rect'); r.setAttribute('x', x + (bb.x - getTranslate(g)[0])); r.setAttribute('y', y + (bb.y - getTranslate(g)[1])); r.setAttribute('width', bb.width); r.setAttribute('height', bb.height); r.setAttribute('class','ghost-snap'); ghostLayer.appendChild(r); }
+  function drawGhostTri(cx,cy,angle,s){ const h = Math.sin(Math.PI/3)*s; const pts = [[0,h],[s/2,0],[s,h]].map(([px,py])=>{ const ox = s/2, oy = h/2; const rx = Math.cos(rad(angle))*(px-ox) - Math.sin(rad(angle))*(py-oy) + ox + (cx - s/2); const ry = Math.sin(rad(angle))*(px-ox) + Math.cos(rad(angle))*(py-oy) + oy + (cy - h/2); return [rx,ry]; }); const path = document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d', `M${pts[0][0]},${pts[0][1]} L${pts[1][0]},${pts[1][1]} L${pts[2][0]},${pts[2][1]} Z`); path.setAttribute('class','ghost-snap'); ghostLayer.appendChild(path); }
 
-  // Resizable zones (unchanged from v1.2, but appended to layoutRoot)
   let activeHandle = null;
-  function showHandles(g){
-    removeHandles();
-    const bb = g.getBBox();
-    const corners = [
-      {name:'nw', x:bb.x, y:bb.y},
-      {name:'ne', x:bb.x+bb.width, y:bb.y},
-      {name:'se', x:bb.x+bb.width, y:bb.y+bb.height},
-      {name:'sw', x:bb.x, y:bb.y+bb.height}
-    ];
-    for(const c of corners){
-      const h = document.createElementNS('http://www.w3.org/2000/svg','rect');
-      h.classList.add('handle');
-      h.setAttribute('data-handle', c.name);
-      h.setAttribute('x', c.x-6); h.setAttribute('y', c.y-6);
-      h.setAttribute('width', 12); h.setAttribute('height', 12);
-      h.setAttribute('fill', '#2563eb'); h.setAttribute('opacity','0.85');
-      h.style.cursor = `${c.name}-resize`;
-      h.addEventListener('pointerdown', (e)=> startResize(e,g,h));
-      g.appendChild(h);
-    }
-  }
+  function showHandles(g){ g.querySelectorAll('.handle').forEach(n=>n.remove()); const bb = g.getBBox(); const corners = [ {name:'nw', x:bb.x, y:bb.y}, {name:'ne', x:bb.x+bb.width, y:bb.y}, {name:'se', x:bb.x+bb.width, y:bb.y+bb.height}, {name:'sw', x:bb.x, y:bb.y+bb.height} ]; for(const c of corners){ const h = document.createElementNS('http://www.w3.org/2000/svg','rect'); h.classList.add('handle'); h.setAttribute('data-handle', c.name); h.setAttribute('x', c.x-6); h.setAttribute('y', c.y-6); h.setAttribute('width', 12); h.setAttribute('height', 12); h.setAttribute('fill', '#2563eb'); h.setAttribute('opacity','0.85'); h.style.cursor = `${c.name}-resize`; h.addEventListener('pointerdown', (e)=> startResize(e,g,h)); g.appendChild(h); } }
   function removeHandles(){ layoutRoot.querySelectorAll('.handle').forEach(n=>n.remove()); }
+  function startResize(e, g, handle){ e.stopPropagation(); activeHandle = handle.getAttribute('data-handle'); handle.setPointerCapture(e.pointerId); const start = getMouseSVG(e); const rectNode = g.querySelector('rect[data-zone]'); if(!rectNode) return; const startBox = { x:+rectNode.getAttribute('x'), y:+rectNode.getAttribute('y'), w:+rectNode.getAttribute('width'), h:+rectNode.getAttribute('height') }; const min = unit; const onMove = ev=>{ const cur = getMouseSVG(ev); const dx = cur.x - start.x; const dy = cur.y - start.y; const bypass = ev.altKey || !toggleSnap.checked; let x = startBox.x, y = startBox.y, w = startBox.w, h = startBox.h; if(activeHandle.includes('n')){ const newY = (bypass? startBox.y + dy : snap(startBox.y + dy)); h = startBox.h + (startBox.y - newY); y = newY; } if(activeHandle.includes('s')){ h = (bypass? startBox.h + dy : snap(startBox.h + dy)); } if(activeHandle.includes('w')){ const newX = (bypass? startBox.x + dx : snap(startBox.x + dx)); w = startBox.w + (startBox.x - newX); x = newX; } if(activeHandle.includes('e')){ w = (bypass? startBox.w + dx : snap(startBox.w + dx)); } if(w < min){ const diff = min - w; if(activeHandle.includes('w')) x -= diff; w = min; } if(h < min){ const diff = min - h; if(activeHandle.includes('n')) y -= diff; h = min; } rectNode.setAttribute('x', x); rectNode.setAttribute('y', y); rectNode.setAttribute('width', w); rectNode.setAttribute('height', h); const label = g.querySelector('text[data-zone-label]'); if(label){ label.setAttribute('x', x + w/2); label.setAttribute('y', y + h/2 + 4); } itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); showHandles(g); }; const onUp = ev=>{ try{ handle.releasePointerCapture(ev.pointerId);}catch(_){ } stage.removeEventListener('pointermove', onMove); stage.removeEventListener('pointerup', onUp); drawSelection(); updateMetrics(); }; stage.addEventListener('pointermove', onMove); stage.addEventListener('pointerup', onUp); }
 
-  function startResize(e, g, handle){
-    e.stopPropagation();
-    activeHandle = handle.getAttribute('data-handle');
-    handle.setPointerCapture(e.pointerId);
-    const start = getMouseSVG(e);
-    const rectNode = [...g.querySelectorAll('rect[data-zone]')][0];
-    if(!rectNode) return;
-    const startBox = {
-      x: +rectNode.getAttribute('x'), y:+rectNode.getAttribute('y'),
-      w:+rectNode.getAttribute('width'), h:+rectNode.getAttribute('height')
-    };
-    const onMove = ev=>{
-      const cur = getMouseSVG(ev);
-      let dx = cur.x - start.x, dy = cur.y - start.y;
-      let {x,y,w,h} = startBox;
-
-      const bypass = ev.altKey || !toggleSnap.checked;
-
-      if(activeHandle.includes('n')){ y = (bypass? y+dy : snap(y+dy)); h = (bypass? startBox.h - dy : snap(startBox.h - dy)); }
-      if(activeHandle.includes('s')){ h = (bypass? startBox.h + dy : snap(startBox.h + dy)); }
-      if(activeHandle.includes('w')){ x = (bypass? x+dx : snap(x+dx)); w = (bypass? startBox.w - dx : snap(startBox.w - dx)); }
-      if(activeHandle.includes('e')){ w = (bypass? startBox.w + dx : snap(startBox.w + dx)); }
-
-      const min = unit;
-      w = Math.max(min,w); h = Math.max(min,h);
-
-      rectNode.setAttribute('x', x); rectNode.setAttribute('y', y);
-      rectNode.setAttribute('width', w); rectNode.setAttribute('height', h);
-
-      const label = g.querySelector('text[data-zone-label]');
-      if(label){ label.setAttribute('x', x + w/2); label.setAttribute('y', y + h/2 + 4); }
-      drawSelection(); showHandles(g);
-    };
-    const onUp = ev=>{
-      try{ handle.releasePointerCapture(ev.pointerId);}catch(_){}
-      stage.removeEventListener('pointermove', onMove);
-      stage.removeEventListener('pointerup', onUp);
-      updateMetrics();
-    };
-    stage.addEventListener('pointermove', onMove);
-    stage.addEventListener('pointerup', onUp);
-  }
-
-  // Drawing primitives
-  function deskRect(g,{w,h,base}){
-    const r = rect(0,0,w,h,base,g); r.setAttribute('filter','url(#elev)');
-    rect(0,h-3,w,3,'rgba(0,0,0,0.12)',g);
-    const gloss = rect(0,0,w,h,'url(#deskGrad)',g,0.5); gloss.setAttribute('pointer-events','none');
-    line(2,2,w-4,2,'#111827',3,g); // front marker along top edge
-  }
-  function roundTable(g,{r,base}){
-    const c = circle(r,r,r,base,g); c.setAttribute('filter','url(#elev)'); stroke(c,'#111827',1);
-  }
-  function trapDesk(g,{w,h,base}){
-    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
-    const inset = w*0.2;
-    path.setAttribute('d', `M0,0 L${w},0 L${w-inset},${h} L${inset},${h} Z`);
-    path.setAttribute('fill', base); path.setAttribute('stroke','#111827'); path.setAttribute('stroke-width','1');
-    path.setAttribute('filter','url(#elev)'); g.appendChild(path);
-    line(2,2,w-4,2,'#111827',3,g);
-  }
-  function triDesk(g,{s,base}){
-    const h = Math.sin(Math.PI/3)*s;
-    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
-    p.setAttribute('d', `M0,${h} L${s/2},0 L${s},${h} Z`);
-    p.setAttribute('fill', base); p.setAttribute('stroke','#111827'); p.setAttribute('stroke-width','1');
-    p.setAttribute('filter','url(#elev)'); g.appendChild(p);
-    line(s*0.1, h-0.1, s*0.9, h-0.1, '#111827', 3, g);
-  }
+  function deskRect(g,{w,h,base}){ const r = rect(0,0,w,h,base,g); r.setAttribute('filter','url(#elev)'); rect(0,h-3,w,3,'rgba(0,0,0,0.12)',g); const gloss = rect(0,0,w,h,'url(#deskGrad)',g,0.5); gloss.setAttribute('pointer-events','none'); line(2,2,w-4,2,'#111827',3,g); }
+  function roundTable(g,{r,base}){ const c = circle(r,r,r,base,g); c.setAttribute('filter','url(#elev)'); stroke(c,'#111827',1); }
+  function trapDesk(g,{w,h,base}){ const path = document.createElementNS('http://www.w3.org/2000/svg','path'); const inset = w*0.2; path.setAttribute('d', `M0,0 L${w},0 L${w-inset},${h} L${inset},${h} Z`); path.setAttribute('fill', base); path.setAttribute('stroke','#111827'); path.setAttribute('stroke-width','1'); path.setAttribute('filter','url(#elev)'); g.appendChild(path); line(2,2,w-4,2,'#111827',3,g); }
+  function triDesk(g,{s,base}){ const h = Math.sin(Math.PI/3)*s; const p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d', `M0,${h} L${s/2},0 L${s},${h} Z`); p.setAttribute('fill', base); p.setAttribute('stroke','#111827'); p.setAttribute('stroke-width','1'); p.setAttribute('filter','url(#elev)'); g.appendChild(p); line(s*0.1, h-0.1, s*0.9, h-0.1, '#111827', 3, g); }
   function chair(g,{w,h}){ const c = rect(0,0,w,h,'#e5e7eb',g); c.setAttribute('filter','url(#elev)'); line(2,2,w-4,2,'#111827',2,g); }
   function tv(g,{w,h}){ const b = rect(0,0,w,h,'#e5e7eb',g); b.setAttribute('filter','url(#elev)'); strokeRect(0,0,w,h,'#111827',2,g); rect(4,4,w-8,6,'rgba(0,0,0,0.15)',g); }
   function vr(g,{r}){ const c = circle(r,r,r,'#dbeafe',g); c.setAttribute('filter','url(#elev)'); text(r,r+4,'VR',g); }
@@ -749,247 +368,401 @@
   function couch(g,{w,h,base}){ const b = rect(0,0,w,h,base,g); b.setAttribute('filter','url(#elev)'); strokeRect(0,0,w,h,'#111827',1,g); rect(0,h-3,w,3,'rgba(0,0,0,0.15)',g); }
   function beanbag(g,{r,base}){ const c = circle(r,r,r,base,g); c.setAttribute('filter','url(#elev)'); }
   function plant(g,{r}){ const c = circle(r,r,r,'#bbf7d0',g); c.setAttribute('filter','url(#elev)'); text(r,r+4,'🌿',g,16); }
-  function zone(g,{w,h,base,label='Zone'}){
-    const z = rect(0,0,w,h,base,g,0.16); z.setAttribute('data-zone','1'); stroke(z,'#374151',1);
-    const t = text(w/2,h/2+4,label,g,12); t.setAttribute('data-zone-label','1');
-  }
-
-  // Primitive helpers
-  function rect(x,y,w,h,fill,parent,alpha=1){
-    const el = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h);
-    el.setAttribute('fill',fill); if(alpha!==1) el.setAttribute('fill-opacity',alpha);
-    el.setAttribute('stroke','#111827'); el.setAttribute('stroke-width','1');
-    parent.appendChild(el); return el;
-  }
+  function zone(g,{w,h,base,label='Zone'}){ const z = rect(0,0,w,h,base,g,0.16); z.setAttribute('data-zone','1'); stroke(z,'#374151',1); const t = text(w/2,h/2+4,label,g,12); t.setAttribute('data-zone-label','1'); }
+  function rect(x,y,w,h,fill,parent,alpha=1){ const el = document.createElementNS('http://www.w3.org/2000/svg','rect'); el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h); el.setAttribute('fill',fill); if(alpha!==1) el.setAttribute('fill-opacity',alpha); el.setAttribute('stroke','#111827'); el.setAttribute('stroke-width','1'); parent.appendChild(el); return el; }
   function stroke(node,color='#111827',w=1){ node.setAttribute('stroke',color); node.setAttribute('stroke-width',w); return node; }
-  function strokeRect(x,y,w,h,color,sw,parent){
-    const el = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h);
-    el.setAttribute('fill','none'); el.setAttribute('stroke',color); el.setAttribute('stroke-width',sw);
-    parent.appendChild(el); return el;
-  }
-  function circle(cx,cy,r,fill,parent){
-    const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    el.setAttribute('cx',cx); el.setAttribute('cy',cy); el.setAttribute('r',r);
-    el.setAttribute('fill',fill); el.setAttribute('stroke','#111827'); el.setAttribute('stroke-width','1');
-    parent.appendChild(el); return el;
-  }
-  function line(x1,y1,x2,y2,color,sw,parent){
-    const el = document.createElementNS('http://www.w3.org/200vg','line');
-    el.setAttribute('x1',x1); el.setAttribute('y',y1); el.setAttribute('x2',x2); el.setAttribute('y2',y2);
-    el.setAttribute('stroke',color); el.setAttribute('stroke-width',sw);
-    parent.appendChild(el); return el;
-  }
-  function text(x,y,str,parent,size=12){
-    const el = document.createElementNS('http://www.w3.org/2000/svg','text');
-    el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('text-anchor','middle'); el.setAttribute('font-size',size);
-    el.setAttribute('font-family','system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif');
-    el.textContent=str; parent.appendChild(el); return el;
-  }
+  function strokeRect(x,y,w,h,color,sw,parent){ const el = document.createElementNS('http://www.w3.org/2000/svg','rect'); el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h); el.setAttribute('fill','none'); el.setAttribute('stroke',color); el.setAttribute('stroke-width',sw); parent.appendChild(el); return el; }
+  function circle(cx,cy,r,fill,parent){ const el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.setAttribute('cx',cx); el.setAttribute('cy',cy); el.setAttribute('r',r); el.setAttribute('fill',fill); el.setAttribute('stroke','#111827'); el.setAttribute('stroke-width',1); parent.appendChild(el); return el; }
+  function line(x1,y1,x2,y2,color,sw,parent){ const el = document.createElementNS('http://www.w3.org/2000/svg','line'); el.setAttribute('x1',x1); el.setAttribute('y1',y1); el.setAttribute('x2',x2); el.setAttribute('y2',y2); el.setAttribute('stroke',color); el.setAttribute('stroke-width',sw); parent.appendChild(el); return el; }
+  function text(x,y,str,parent,size=12){ const el = document.createElementNS('http://www.w3.org/2000/svg','text'); el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('text-anchor','middle'); el.setAttribute('font-size',size); el.setAttribute('font-family','system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif'); el.textContent=str; parent.appendChild(el); return el; }
 
-  // Click to select
-  itemsLayer.addEventListener('pointerdown', e=>{
-    const g = e.target.closest('g');
-    if(g && layoutRoot.contains(g)) select(g.closest('g'));
-  });
-
-  // Toast
+  stage.addEventListener('pointerleave', clearGhost);
+  toggleSnap.addEventListener('change', ()=> { flash(toggleSnap.checked ? 'Snap ON' : 'Snap OFF'); });
   function flash(msg){ toast.textContent = msg; toast.style.display='block'; clearTimeout(flash._t); flash._t=setTimeout(()=> toast.style.display='none', 1600); }
 
-  // Metrics (same heuristics)
+  const PANEL_COUNT = 8;
+  const PANEL_THICKNESS = 10;
+  const panelState = { A: [], B: [] };
+
+  function buildOperableWalls(){
+    [{g:wallAG,x:720,id:'A'},{g:wallBG,x:1080,id:'B'}].forEach(({g,x,id})=>{
+      g.innerHTML=''; panelState[id]=[];
+      for(let i=0;i<PANEL_COUNT;i++){
+        const panel = document.createElementNS('http://www.w3.org/2000/svg','g');
+        panel.classList.add('ow-panel');
+        const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+        r.setAttribute('rx',2); r.setAttribute('fill','#dbeafe'); r.setAttribute('stroke','#111827'); r.setAttribute('stroke-width','1'); r.setAttribute('filter','url(#elev)');
+        panel.appendChild(r); g.appendChild(panel);
+        panelState[id].push({ node: panel });
+      }
+    });
+  }
+  
+  function closeWall(which){
+    const arr = panelState[which];
+    const x = which === 'A' ? 720 : 1080;
+    const segmentH = (720 - (PANEL_COUNT - 1) * 2) / PANEL_COUNT;
+    arr.forEach((st, i) => {
+        const y = i * (segmentH + 2);
+        st.node.setAttribute('transform', `translate(${x - PANEL_THICKNESS/2},${y})`);
+        const rect = st.node.querySelector('rect');
+        rect.setAttribute('width', PANEL_THICKNESS);
+        rect.setAttribute('height', segmentH);
+    });
+    updateMetrics();
+  }
+
+  function stackWall(which, topCount = 4){
+    const arr = panelState[which];
+    const x = which === 'A' ? 720 : 1080;
+    const segmentH = (720 - (PANEL_COUNT - 1) * 2) / PANEL_COUNT;
+    const topX = x - segmentH;
+    const botX = x;
+    
+    arr.forEach((st, i) => {
+        const rect = st.node.querySelector('rect');
+        rect.setAttribute('width', segmentH);
+        rect.setAttribute('height', PANEL_THICKNESS);
+        
+        if (i < topCount) {
+            const y = 10 + (i * (PANEL_THICKNESS + 2));
+            st.node.setAttribute('transform', `translate(${topX}, ${y})`);
+        } else {
+            const y = 720 - 10 - ((PANEL_COUNT - i) * (PANEL_THICKNESS + 2));
+            st.node.setAttribute('transform', `translate(${botX}, ${y})`);
+        }
+    });
+    updateMetrics();
+  }
+
+
+  buildOperableWalls();
+  
+  document.getElementById('btnCloseA').onclick = ()=> closeWall('A');
+  document.getElementById('btnCloseB').onclick = ()=> closeWall('B');
+  document.getElementById('btnStackA').onclick = ()=> stackWall('A',4);
+  document.getElementById('btnStackB').onclick = ()=> stackWall('B',4);
+
+  toggleWall?.addEventListener('change', ()=>{ const show = toggleWall.checked; document.getElementById('operableWalls').setAttribute('opacity', show? '1':'0'); document.getElementById('trackA').setAttribute('opacity', show? '0.35':'0'); document.getElementById('trackB').setAttribute('opacity', show? '0.35':'0'); });
+
+  btnExport.addEventListener('click', ()=>{ 
+    const exportWidth = 1440; 
+    const exportHeight = 720;
+    const clone = stage.cloneNode(true); 
+    clone.setAttribute('viewBox', `0 0 ${exportWidth} ${exportHeight}`); 
+    clone.querySelectorAll('.selection,.handle,#ghost *,#marquee').forEach(n=>n.remove()); 
+    if(!toggleLegend.checked){ const shell = clone.querySelector('#shell'); shell.querySelectorAll('text,rect#winTop1,rect#winTop2,rect#winBot1,rect#winBot2,rect#doorTopA,rect#doorTopB').forEach(n=>n.setAttribute('opacity','0')); }
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const img = new Image(); const svgBlob = new Blob([svgData], {type:'image/svg+xml;charset=utf-8'}); const url = URL.createObjectURL(svgBlob);
+    img.onload = function(){ const canvas = document.createElement('canvas'); canvas.width = exportWidth; canvas.height = exportHeight; const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); URL.revokeObjectURL(url); const png = canvas.toDataURL('image/png'); const a = document.createElement('a'); a.download='classroom-layout.png'; a.href=png; a.click(); }; img.src = url; 
+  });
+
+  btnClear.addEventListener('click', ()=>{ layoutRoot.innerHTML=''; clearSelection(); removeHandles(); updateMetrics(); });
+  
+  saveSceneBtn.addEventListener('click', ()=>{ const name = sceneName.value.trim() || `Scene ${scenes.length+1}`; const svgData = new XMLSerializer().serializeToString(layoutRoot); scenes.push({name, svgData}); renderScenes(); sceneName.value=''; flash('Scene saved'); });
+  function renderScenes(){ sceneList.innerHTML=''; scenes.forEach((s,idx)=>{ const row = document.createElement('div'); row.className='scene-item'; const input = document.createElement('input'); input.value=s.name; input.addEventListener('change', ()=>{ s.name = input.value; }); const actions = document.createElement('div'); actions.className='scene-actions'; const apply = document.createElement('button'); apply.className='ghost'; apply.textContent='Apply'; apply.addEventListener('click', ()=>{ layoutRoot.innerHTML = new DOMParser().parseFromString(s.svgData,'image/svg+xml').documentElement.innerHTML; [...layoutRoot.querySelectorAll('g[data-id]')].forEach(makeDraggable); clearSelection(); updateMetrics(); }); const del = document.createElement('button'); del.className='danger'; del.textContent='Delete'; del.addEventListener('click', ()=>{ scenes.splice(idx,1); renderScenes(); }); actions.appendChild(apply); actions.appendChild(del); row.appendChild(input); row.appendChild(actions); sceneList.appendChild(row); }); }
+
+  applyPresetBtn.addEventListener('click', ()=>{ const v = presetSelect.value; if(!v) return; applyPreset(v, 32); stage.setAttribute('viewBox', `0 0 1440 720`); updateMetrics(); });
+  
+  function applyPreset(name, studentCount = 32){ 
+    layoutRoot.innerHTML=''; clearSelection(); removeHandles(); clearGhost(); 
+    const make = id => { const def = PALETTE.find(p=>p.id===id); if(!def) return null; const wrapper = document.createElementNS('http://www.w3.org/2000/svg','g'); wrapper.setAttribute('data-id', def.id); wrapper.setAttribute('data-snap', def.snap || 'none'); wrapper.style.cursor='move'; const g = document.createElementNS('http://www.w3.org/2000/svg','g'); def.draw(g,{x:0,y:0}); wrapper.appendChild(g); layoutRoot.appendChild(wrapper); makeDraggable(wrapper); return wrapper; }; 
+    const place = (w,x,y,r=0)=>{ w.setAttribute('transform', `translate(${x},${y}) rotate(${r})`); };
+    
+    if(name==='direct'){ 
+        const tdesk = make('teacher_desk'); place(tdesk, unit*1.2, unit*3, 90); 
+        const tv = make('writable_tv'); place(tv, unit*2.8, unit*2.8, 90); 
+        const cols = 5;
+        const rows = Math.ceil(studentCount / cols);
+        const aisleCol = 3; 
+        for(let r=0;r<rows;r++){ 
+            for(let c=0;c<cols;c++){ 
+                if (r * cols + c >= studentCount) break;
+                const d=make('desk_rect'); 
+                const cx = c + (c>=aisleCol?0.4:0); 
+                place(d, unit*(6 + cx*1.3), unit*(2 + r*1.2), 90); 
+            } 
+        } 
+    }
+    if(name==='pods'){ 
+        const pods = Math.ceil(studentCount / 6);
+        const centers = [[unit*5.0,unit*3.0],[unit*9.0,unit*3.0],[unit*13.0,unit*3.0],[unit*5.0,unit*7.5],[unit*9.0,unit*7.5],[unit*13.0,unit*7.5]]; 
+        for(let i = 0; i < pods; i++) {
+            if (i >= centers.length) break;
+            const [cx, cy] = centers[i];
+            for(let j=0;j<6;j++){ 
+                const tri = make('desk_tri_eq'); place(tri, cx, cy, j*60); 
+            }
+        }
+        const wb = make('whiteboard'); place(wb, unit*1.2, unit*1.2, 90); 
+    }
+    if(name==='stations'){
+        const wb1 = make('whiteboard'); place(wb1, unit*3, unit*1.5, 0);
+        place(make('desk_blue'), unit*2, unit*3, 0); place(make('desk_blue'), unit*4, unit*3, 0); place(make('desk_blue'), unit*3, unit*4.5, 90);
+        const tv2 = make('writable_tv'); place(tv2, unit*20, unit*1.5, 0);
+        place(make('desk_green'), unit*19, unit*3, 0); place(make('desk_green'), unit*21, unit*3, 0); place(make('desk_green'), unit*20, unit*4.5, 90);
+        const rt3 = make('group_table'); place(rt3, unit*4, unit*8.5);
+        place(make('couch'), unit*19, unit*8.5, 0); place(make('beanbag'), unit*21.5, unit*8.0); place(make('beanbag'), unit*21.5, unit*9.0);
+    }
+    if(name==='circle'){ 
+        const cx = unit*12.0, cy = unit*6.0;
+        const radius = Math.min(unit * 5.0, (studentCount / 18) * unit * 5.0);
+        for(let i=0;i<studentCount;i++){ 
+            const angle = (i/studentCount)*2*Math.PI; 
+            const d = make('desk_rect'); 
+            place(d, cx + Math.cos(angle)*radius, cy + Math.sin(angle)*radius, deg(angle)+90); 
+        } 
+        const wb = make('whiteboard'); place(wb, unit*1.2, unit*2.0, 90); 
+    }
+    if(name==='quiet'){ 
+        const tdesk = make('teacher_desk'); place(tdesk, unit*1.2, unit*3, 90); 
+        const cols = 5;
+        const rows = Math.ceil(studentCount / cols);
+        for(let r=0;r<rows;r++){ 
+            for(let c=0;c<cols;c++){
+                if (r * cols + c >= studentCount) break;
+                const d=make('desk_rect'); 
+                place(d, unit*(4+c*1.4), unit*(1.8+r*1.2), 90); 
+            } 
+        } 
+    }
+    if(name==='maker'){ 
+        const bench = make('stand_table'); place(bench, unit*3.0, unit*2.0, 90); 
+        const bench2 = make('stand_table'); place(bench2, unit*3.0, unit*4.5, 90); 
+        for(let i=0;i<8;i++){ const d=make('desk_trap'); place(d, unit*(6+i*1.0 + (i>=4?0.5:0)), unit*5.2, (i%2)*180); } 
+        const vr = make('vr_station'); place(vr, unit*11, unit*2.2, 0); 
+    }
+  }
+
   function updateMetrics(){
     const items = [...layoutRoot.querySelectorAll('g[data-id]')];
-    const desks = items.filter(n=>/desk_/.test(n.getAttribute('data-id')) || ['desk_rect','desk_trap','desk_tri_eq'].includes(n.getAttribute('data-id')));
+    const desks = items.filter(n=>/desk_/.test(n.getAttribute('data-id')) || ['desk_rect','desk_trap','desk_tri_eq','chair'].includes(n.getAttribute('data-id')));
     const zones = items.filter(n=>n.getAttribute('data-resizable')==='1');
-    const writables = items.filter(n=>['whiteboard','writable_tv','partition'].includes(n.getAttribute('data-id')));
-    const stationColors = new Set(items.filter(n=>/^desk_(blue|green|orange)$/.test(n.getAttribute('data-id'))).map(n=>n.getAttribute('data-id')));
+    const itemIds = new Set(items.map(n => n.getAttribute('data-id')));
+    const furnitureTypes = new Set(PALETTE.filter(p => itemIds.has(p.id) && p.cat === 'furniture').map(p => p.id));
 
-    let inCluster=0;
-    const pos = g=>getTranslate(g);
-    desks.forEach((d,i)=>{
-      const [x,y]=pos(d);
-      for(let j=0;j<desks.length;j++){
-        if(i===j) continue;
-        const [x2,y2]=pos(desks[j]);
-        if(Math.hypot(x-x2,y-y2) <= unit*1.25){ inCluster++; break; }
+    const pos = g => getTranslate(g);
+    const has = (id) => itemIds.has(id);
+    const hasAny = (ids) => ids.some(id => has(id));
+    const count = (id) => items.filter(i => i.getAttribute('data-id') === id).length;
+
+    let sightlineScore = 30;
+    const teacherDesk = items.find(i => i.getAttribute('data-id') === 'teacher_desk');
+    if (teacherDesk && desks.length > 0) {
+        let goodSightlines = 0;
+        desks.forEach(desk => {
+            const rot = normAngle(getRotate(desk));
+            if (rot > 45 && rot < 135) goodSightlines++;
+        });
+        sightlineScore = 30 + Math.round((goodSightlines / desks.length) * 70);
+    } else if (desks.length > 0) {
+        sightlineScore = 40;
+    }
+
+    const roomArea = 1440 * 720;
+    let occupiedArea = 0;
+    items.forEach(n => { const b = n.getBBox(); occupiedArea += (b.width * b.height); });
+    const mobilityScore = 25 + Math.max(0, Math.min(75, (1 - (occupiedArea / roomArea)) * 150 - 20));
+
+    const mobileItems = ['whiteboard', 'partition', 'chair', 'beanbag'];
+    const mobileItemCount = mobileItems.reduce((sum, id) => sum + count(id), 0);
+    const flexibilityScore = 20 + Math.min(80, (furnitureTypes.size * 6) + (items.length > 0 ? (mobileItemCount / items.length) * 40 : 0));
+
+    // MODIFIED: Density score logic
+    const studentCapacity = desks.length;
+    let densityScore = 50; // Neutral baseline for empty room
+    if (studentCapacity > 0) {
+        const sqFtPerStudent = (roomArea / (unit*unit)) / studentCapacity;
+        densityScore = Math.max(0, 100 - Math.abs(sqFtPerStudent - 25) * 8);
+    }
+    
+    let modalityScore = 25;
+    let inCluster=0; desks.forEach((d,i)=>{ for(let j=i+1;j<desks.length;j++){ if(Math.hypot(pos(d)[0]-pos(desks[j])[0], pos(d)[1]-pos(desks[j])[1]) <= unit*1.5){ inCluster++; break; } } });
+    const clusterRatio = desks.length > 0 ? inCluster / desks.length : 0;
+    if (has('group_table') || clusterRatio > 0.5) modalityScore += 25;
+    if (hasAny(['couch', 'beanbag']) || zones.length > 0) modalityScore += 25;
+    if (has('stand_table')) modalityScore += 25;
+    modalityScore = Math.min(100, modalityScore);
+
+    const plantCount = count('plant');
+    let lightScore = 0;
+    if (desks.length > 0) {
+        const desksNearWindow = desks.filter(d => pos(d)[1] < unit * 2 || pos(d)[1] > 720 - (unit * 2)).length;
+        lightScore = (desksNearWindow / desks.length) * 50;
+    }
+    const environmentalScore = 20 + Math.min(80, (plantCount * 15) + lightScore);
+
+    if (spatialChart) {
+        spatialChart.data.datasets[0].data = [sightlineScore, mobilityScore, flexibilityScore, densityScore, modalityScore, environmentalScore];
+        spatialChart.update();
+    }
+
+    let insights = [];
+    let collabAffordance = "This layout is primarily for individual work, with limited opportunities for spontaneous peer discussion.";
+    let collabMoves = ["Use 'Think-Pair-Share' where students turn to their nearest neighbour to discuss a prompt before sharing.", "Encourage digital collaboration using shared documents or online forums to bridge physical distances."];
+    if (clusterRatio > 0.6 || hasAny(['group_table', 'desk_tri_eq'])) {
+        collabAffordance = "The clustered arrangement strongly supports group work, creating natural 'pods' for discussion, peer teaching, and co-construction of knowledge.";
+        collabMoves = ["<b>Facilitate Group Inquiry (STP):</b> Use a 'Jigsaw' activity where each pod becomes an expert on one topic before re-grouping to share.", "<b>Provide Timely Feedback (STP):</b> Circulate among pods to listen in on discussions and provide targeted feedback."];
+    } else if (clusterRatio > 0.2) {
+        collabAffordance = "This balanced arrangement allows for both individual focus and easy pairing without significant furniture rearrangement.";
+        collabMoves = ["<b>Cultivate a Positive Classroom Culture (STP):</b> Design tasks that require partner work, encouraging students to learn from diverse perspectives.", "Use 'Numbered Heads Together' to ensure both individual accountability and group collaboration."];
+    }
+    insights.push({ title: '🤝 Communication & Collaboration', affordance: collabAffordance, moves: collabMoves });
+
+    let agencyAffordance = "A uniform furniture setup provides a structured and predictable environment, suitable for teacher-led activities.";
+    let agencyMoves = ["Provide choice in how students demonstrate learning (e.g., written report, presentation) even if the physical space is fixed.", "Allow students to briefly personalize their own desk space to foster a sense of ownership."];
+    if (zones.length > 0 || furnitureTypes.size > 4 || hasAny(['couch', 'beanbag', 'stand_table'])) {
+        agencyAffordance = "A variety of furniture types and designated zones empowers students with choice over where and how they learn, fostering agency and self-regulation.";
+        agencyMoves = ["<b>Practice Differentiated Instruction (STP):</b> Set up stations in different zones (e.g., quiet reading on a couch, collaborative work at a table) and allow students to rotate based on task or preference.", "<b>Set Learning Goals (STP):</b> Encourage students to choose the space that best supports the specific learning goal they are working towards."];
+    } else if (mobilityScore > 60) {
+        agencyAffordance = "The open space and flexible furniture allow for easy reconfiguration by students, giving them ownership over their immediate learning environment.";
+         agencyMoves = ["Pose a problem and ask students to arrange the furniture in a way they feel best supports solving it.", "<b>Empower Learners (STP):</b> Co-create classroom norms with students about how to use and reset the flexible space respectfully."];
+    }
+    insights.push({ title: '🧑‍🏫 Learner Agency & Self-Direction', affordance: agencyAffordance, moves: agencyMoves });
+
+    let citAffordance = "The layout supports focused, deep thinking on individual tasks. Learning is structured and content-driven.";
+    let citMoves = ["Pose complex, open-ended questions that require sustained individual thought before any group discussion.", "Use individual response systems (e.g., mini whiteboards, digital polls) to make every student's thinking visible."];
+    if (hasAny(['whiteboard', 'writable_tv', 'vr_station'])) {
+        citAffordance = "The presence of large, mobile, vertical surfaces and advanced tech tools encourages brainstorming, prototyping, and making thinking visible.";
+        citMoves = ["<b>Promote Metacognition (STP):</b> Have groups map out their thinking processes or designs on whiteboards to analyze their own learning.", "<b>Pose Thought-Provoking Questions (STP):</b> Use the writable TV for a 'gallery walk' of different complex problems, where groups rotate to add to and critique the solutions of others."];
+    }
+    insights.push({ title: '💡 Critical & Inventive Thinking', affordance: citAffordance, moves: citMoves });
+
+    insightsContainer.innerHTML = '';
+    insights.forEach(insight => {
+        const group = document.createElement('div');
+        group.className = 'insight-group';
+        const movesHTML = insight.moves.map(move => `<li>${move}</li>`).join('');
+        group.innerHTML = `
+            <h3 class="insight-title">${insight.title}</h3>
+            <p class="insight-subtitle">Affordances of this Layout</p>
+            <p class="insight-text">${insight.affordance}</p>
+            <p class="insight-subtitle">Suggested Pedagogical Moves (STP)</p>
+            <ul class="insight-list">${movesHTML}</ul>`;
+        insightsContainer.appendChild(group);
+    });
+  }
+  
+  function initializeChart() {
+    const ctx = document.getElementById('spatialEffectivenessChart');
+    spatialChart = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ['Sightlines', 'Mobility', 'Flexibility', 'Density', 'Modality', 'Environment'],
+        datasets: [{
+          label: 'Effectiveness Score',
+          data: [20, 20, 20, 20, 20, 20],
+          fill: true,
+          backgroundColor: 'rgba(37, 99, 235, 0.2)',
+          borderColor: 'rgb(37, 99, 235)',
+          pointBackgroundColor: 'rgb(37, 99, 235)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgb(37, 99, 235)'
+        }]
+      },
+      options: {
+        elements: { line: { borderWidth: 2 } },
+        scales: {
+          r: {
+            angleLines: { display: true },
+            suggestedMin: 0,
+            suggestedMax: 100,
+            ticks: { display: false, stepSize: 25 },
+            pointLabels: { font: { size: 11 }, color: '#4b5563' }
+          }
+        },
+        plugins: { legend: { display: false } }
       }
     });
-    const clusterRatio = desks.length? Math.round((inCluster/desks.length)*100):0;
-
-    const open = toggleWall?.checked; const roomWidth = open? 1440 : wallX; const roomArea = roomWidth*480;
-    let occupied=0; items.forEach(n=>{ const b=n.getBBox(); occupied += (b.width*b.height); });
-    const walkable = Math.max(0, Math.min(100, Math.round(100*(1-occupied/roomArea))));
-
-    let writableArea=0; writables.forEach(n=>{ const b=n.getBBox(); writableArea += b.width*b.height; });
-    const writableScore = Math.max(0, Math.min(100, Math.round(100*(writableArea/(roomArea*0.12)))));
-
-    const stationScore = Math.min(100, stationColors.size*35);
-    const zoneScore = Math.min(100, zones.length*20);
-
-    const personalisation = Math.round(0.5*stationScore + 0.4*zoneScore + 0.1*writableScore);
-    const customisation  = Math.round(0.6*clusterRatio + 0.25*writableScore + 0.15*(100-walkable));
-    const massfit        = Math.max(0, Math.min(100, Math.round(100 - 0.7*clusterRatio - 0.4*stationScore)));
-    const planTime       = Math.max(0, Math.min(100, Math.round( (zones.length*12) + (items.length*1.2) + (toggleWall?.checked?8:0) )));
-    const energy         = Math.max(0, Math.min(100, Math.round( (100-walkable)*0.6 + clusterRatio*0.25 )));
-
-    metrics.personal.textContent = personalisation; metrics.personalSlider.value = personalisation;
-    metrics.custom.textContent = customisation; metrics.customSlider.value = customisation;
-    metrics.massfit.textContent = massfit; metrics.massfitSlider.value = massfit;
-    metrics.plan.textContent = planTime; metrics.planSlider.value = planTime;
-    metrics.energy.textContent = energy; metrics.energySlider.value = energy;
   }
 
-  // -------- PRESETS (no zones auto-added; oriented to FRONT at LEFT/DOOR; auto fit) --------
-  applyPresetBtn.addEventListener('click', ()=>{
-    const v = presetSelect.value; if(!v) return;
-    applyPreset(v);
-    fitToSpace(); // ensure never spills beyond one classroom (or two, if wall open)
-    updateMetrics();
-  });
+  llmGenerateBtn.addEventListener('click', async () => {
+    const userPrompt = llmPromptEl.value;
+    if (!userPrompt) {
+        flash('Please describe your lesson first.');
+        return;
+    }
 
-  function applyPreset(name){
-    layoutRoot.innerHTML=''; removeHandles(); clearGhost();
+    const studentCountMatch = userPrompt.match(/\[(\d+)\]/);
+    const studentCount = studentCountMatch ? parseInt(studentCountMatch[1], 10) : 32;
 
-    const make = id => {
-      const def = PALETTE.find(p=>p.id===id);
-      if(!def) return null;
-      const wrapper = document.createElementNS('http://www.w3.org/2000/svg','g');
-      wrapper.setAttribute('data-id', def.id);
-      wrapper.setAttribute('data-snap', def.snap || 'none');
-      wrapper.style.cursor='move';
-      const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-      def.draw(g,{x:0,y:0}); wrapper.appendChild(g); layoutRoot.appendChild(wrapper); makeDraggable(wrapper);
-      return wrapper;
-    };
-    const place = (w,x,y,r=0)=>{ w.setAttribute('transform', `translate(${x},${y}) rotate(${r})`); };
-    const FRONT_DIR = 0; // 0° means facing "into the room" from the LEFT wall → desks should face RIGHT, so rotate +90 to put front marker to the RIGHT edge
+    llmGenerateBtn.disabled = true;
+    llmGenerateBtn.textContent = 'Generating...';
 
-    if(name==='direct'){
-      const tdesk = make('teacher_desk'); // near door/front (left wall), facing into room
-      place(tdesk, unit*1.2, unit*1.2, 90);
-      const tv = make('writable_tv');     // on front/left side to the right of teacher desk
-      place(tv, unit*2.8, unit*1.0, 90);
+    const systemPrompt = `You are an expert in spatial pedagogy. Analyze the user's lesson plan. Respond with a JSON object containing the best layout preset and operable wall configuration. The JSON must have three keys: "preset", "wall_A", and "wall_B".
 
-      // rows of student desks, all facing RIGHT (front is rightwards → rotate 90)
-      let rows = 4, cols = 5;
-      for(let r=0;r<rows;r++){
-        for(let c=0;c<cols;c++){
-          const d=make('desk_rect');
-          place(d, unit*(4 + c*1.3), unit*(1.6 + r*1.0), 90);
+    - "preset" must be one of: "direct", "pods", "stations", "circle", "quiet", "maker".
+    - "wall_A" must be one of: "close", "stack".
+    - "wall_B" must be one of: "close", "stack".
+
+    Choose the preset that best matches the pedagogical activity described. Example: if the user mentions "small groups" or "collaboration", choose "pods". If "individual work", choose "quiet" or "direct". If "hands-on activities", choose "maker" or "stations".
+    
+    Choose wall configurations based on the need for space. If the lesson needs a large, unified space (e.g., maker activities, large circles), choose "stack" for both walls. If the lesson involves distinct groups or needs separation (e.g., stations), you might "close" one wall and "stack" the other. For focused, quiet work, "close" both walls.
+    
+    User prompt: "${userPrompt}"`;
+    
+    let chatHistory = [{ role: "user", parts: [{ text: systemPrompt }] }];
+    const payload = { 
+        contents: chatHistory,
+        generationConfig: {
+            responseMimeType: "application/json",
         }
-      }
-    }
-
-    if(name==='pods'){
-      // create 4–6 pods of 6 triangles each; each pod center is positioned to the right of the front wall
-      const centers = [[unit*5,unit*2.5],[unit*7,unit*2.5],[unit*9,unit*2.5],[unit*5,unit*5.5],[unit*7,unit*5.5],[unit*9,unit*5.5]];
-      centers.forEach(([cx,cy])=>{
-        for(let i=0;i<6;i++){ const tri = make('desk_tri_eq'); place(tri, cx, cy, i*60); }
-      });
-      const wb = make('whiteboard'); place(wb, unit*1.2, unit*1.2, 90);
-    }
-
-    if(name==='stations'){
-      // furniture only; teacher adds zones later
-      for(let i=0;i<6;i++){ const d=make('desk_blue');   place(d, unit*(5+i*1.2), unit*2.0, 90); }
-      for(let i=0;i<6;i++){ const d=make('desk_green');  place(d, unit*(5+i*1.2), unit*3.4, 90); }
-      for(let i=0;i<6;i++){ const d=make('desk_orange'); place(d, unit*(5+i*1.2), unit*4.8, 90); }
-      const tv = make('writable_tv'); place(tv, unit*2.2, unit*2.2, 90);
-    }
-
-    if(name==='circle'){
-      const cx = unit*7.2, cy = unit*4;
-      const radius = unit*3.1;
-      for(let i=0;i<14;i++){
-        const angle = (i/14)*2*Math.PI;
-        const d = make('desk_rect');
-        // face RIGHT-ish: rotate desk to face towards center (angle to center + 90)
-        place(d, cx + Math.cos(angle)*radius, cy + Math.sin(angle)*radius, deg(angle)+90);
-      }
-      const wb = make('whiteboard'); place(wb, unit*1.2, unit*2.0, 90);
-    }
-
-    if(name==='quiet'){
-      for(let r=0;r<5;r++){ for(let c=0;c<5;c++){ const d=make('desk_rect'); place(d, unit*(4+c*1.2), unit*(1.6+r*0.9), 90); } }
-      const tdesk = make('teacher_desk'); place(tdesk, unit*1.2, unit*1.2, 90);
-    }
-
-    if(name==='maker'){
-      const bench = make('stand_table');  place(bench, unit*3.0, unit*2.0, 90);
-      const bench2 = make('stand_table'); place(bench2, unit*3.0, unit*3.6, 90);
-      for(let i=0;i<8;i++){ const d=make('desk_trap'); place(d, unit*(6+i*1.0), unit*3.2, (i%2)*180); }
-      const vr = make('vr_station'); place(vr, unit*11, unit*2.2, 0);
-    }
-  }
-
-  // Fit-to-space logic: scales and centers layoutRoot inside the visible classroom bounds
-  function fitToSpace(){
-    const open = toggleWall?.checked;
-    const bounds = {
-      x: 0, y:0, w: (open? 1440 : wallX), h: 480
     };
-    // get bbox of layoutRoot contents
-    const temp = layoutRoot.getBBox();
-    if(temp.width<=0 || temp.height<=0){ layoutRoot.setAttribute('transform',''); return; }
+    const apiKey = "";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
-    const margin = unit*0.8;
-    const sx = (bounds.w - margin*2) / temp.width;
-    const sy = (bounds.h - margin*2) / temp.height;
-    const scale = Math.min(sx, sy, 1); // never upscale, only shrink to fit
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-    // compute translate to center within bounds
-    const newW = temp.width * scale;
-    const newH = temp.height * scale;
-    const tx = bounds.x + (bounds.w - newW)/2 - temp.x*scale;
-    const ty = bounds.y + (bounds.h - newH)/2 - temp.y*scale;
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.statusText}`);
+        }
 
-    layoutRoot.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`);
-  }
+        const result = await response.json();
+        
+        if (result.candidates && result.candidates.length > 0) {
+            const rawJson = result.candidates[0].content.parts[0].text;
+            const parsedJson = JSON.parse(rawJson);
+            
+            if (parsedJson.preset) {
+                applyPreset(parsedJson.preset, studentCount);
+                presetSelect.value = parsedJson.preset;
+            }
+            if (parsedJson.wall_A === 'stack') {
+                stackWall('A');
+            } else {
+                closeWall('A');
+            }
+            if (parsedJson.wall_B === 'stack') {
+                stackWall('B');
+            } else {
+                closeWall('B');
+            }
+            flash(`Generated '${parsedJson.preset}' layout for ${studentCount} students.`);
+        } else {
+            throw new Error('No valid response from AI.');
+        }
 
-  // Scenes MVP (unchanged)
-  saveSceneBtn.addEventListener('click', ()=>{
-    const name = sceneName.value.trim() || `Scene ${scenes.length+1}`;
-    const svgData = new XMLSerializer().serializeToString(layoutRoot);
-    scenes.push({name, svgData});
-    renderScenes();
-    sceneName.value='';
-    flash('Scene saved');
-  });
-  function renderScenes(){
-    sceneList.innerHTML='';
-    scenes.forEach((s,idx)=>{
-      const row = document.createElement('div'); row.className='scene-item';
-      const input = document.createElement('input'); input.value=s.name;
-      input.addEventListener('change', ()=>{ s.name = input.value; });
-      const actions = document.createElement('div'); actions.className='scene-actions';
-      const apply = document.createElement('button'); apply.className='ghost'; apply.textContent='Apply';
-      apply.addEventListener('click', ()=>{
-        layoutRoot.innerHTML = new DOMParser().parseFromString(s.svgData,'image/svg+xml').documentElement.innerHTML;
-        // rebind interactions
-        [...layoutRoot.querySelectorAll('g[data-id]')].forEach(makeDraggable);
-        selected=null; removeHandles(); updateMetrics();
-      });
-      const del = document.createElement('button'); del.className='danger'; del.textContent='Delete';
-      del.addEventListener('click', ()=>{ scenes.splice(idx,1); renderScenes(); });
-      actions.appendChild(apply); actions.appendChild(del);
-      row.appendChild(input); row.appendChild(actions);
-      sceneList.appendChild(row);
-    });
-  }
-
-  // Utility: ghost cleared on leave
-  stage.addEventListener('pointerleave', clearGhost);
-
-  // Toggle Snap global
-  toggleSnap.addEventListener('change', ()=>{
-    snapEnabled = toggleSnap.checked;
-    flash(snapEnabled ? 'Snap ON' : 'Snap OFF');
+    } catch (error) {
+        console.error("LLM Error:", error);
+        flash('Sorry, could not generate layout. Please try again.');
+    } finally {
+        llmGenerateBtn.disabled = false;
+        llmGenerateBtn.textContent = 'Generate Layout';
+    }
   });
 
-  // Initial metrics
+
+  initializeChart();
+  buildOperableWalls();
+  closeWall('A');
+  closeWall('B');
   updateMetrics();
-
 })();
 </script>
 </body>
