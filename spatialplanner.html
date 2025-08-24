@@ -548,8 +548,8 @@
         // Swap width and height to make the panel horizontal
         rect.setAttribute('width', segmentH);
         rect.setAttribute('height', PANEL_THICKNESS);
-        rect.setAttribute('x', 0); // Draw from top-left
-        rect.setAttribute('y', 0); // Draw from top-left
+        rect.setAttribute('x', 0); // Draw from top-left for easier translation
+        rect.setAttribute('y', 0);
         
         // No rotation needed, just translation
         if (i < topCount) {
