@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Spatial Pedagogy Planner (v6.8 — Custom Tooltips)</title>
+<title>Spatial Pedagogy Planner (v6.12 — Final Tooltip Fix)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -114,7 +114,7 @@
   .modal-content h3 { font-size: 1.125rem; font-weight: 600; margin-top: 0; margin-bottom: 1rem; }
   .modal-content input { margin-bottom: 1rem; }
   
-  /* --- NEW: CUSTOM CHART TOOLTIP STYLES --- */
+  /* --- CUSTOM CHART TOOLTIP STYLES --- */
   #chartTooltip {
     position: absolute;
     display: none;
@@ -125,7 +125,7 @@
     font-size: 0.75rem;
     pointer-events: none;
     z-index: 10;
-    width: 220px;
+    width: 200px; /* Made slightly narrower for better wrapping */
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
     line-height: 1.4;
   }
@@ -948,55 +948,61 @@
 
   // --- CHART INITIALIZATION (REVISED FOR CUSTOM TOOLTIPS) ---
   function initializeChart() {
-    const ctx = document.getElementById('spatialEffectivenessChart');
+    const canvas = document.getElementById('spatialEffectivenessChart');
     const isDark = document.documentElement.classList.contains('dark');
     const gridColor = isDark ? 'rgba(107, 114, 128, 0.5)' : 'rgba(209, 213, 219, 1)';
     const pointLabelColor = isDark ? '#9ca3af' : '#4b5563';
     const datasetBG = isDark ? 'rgba(255, 226, 0, 0.3)' : 'rgba(0, 12, 83, 0.2)';
     const datasetBorder = isDark ? '#FFE200' : '#000C53';
 
-    const customTooltipHandler = (context) => {
+    // --- FIX 2: Corrected Tooltip Logic ---
+    const externalTooltipHandler = (context) => {
         const { chart, tooltip } = context;
+        const tooltipEl = document.getElementById('chartTooltip');
+
         if (tooltip.opacity === 0) {
-            chartTooltip.style.display = 'none';
+            tooltipEl.style.display = 'none';
             return;
         }
 
         const point = tooltip.dataPoints[0];
-        const labelName = point.label;
-        const score = point.raw;
-        const definition = CHART_DEFINITIONS[labelName];
+        if (point) {
+            const labelName = point.label;
+            const score = point.raw;
+            const definition = CHART_DEFINITIONS[labelName];
 
-        if (definition) {
-            chartTooltip.innerHTML = `
-                <h4>${labelName} (Score: ${score})</h4>
-                <p>${definition.definition}</p>
-                <p class="reading">▶ ${definition.reading}</p>
-            `;
-            
-            const panelRect = rightPanel.getBoundingClientRect();
-            const chartRect = chart.canvas.getBoundingClientRect();
-            
-            let top = (chartRect.top - panelRect.top) + tooltip.caretY;
-            let left = (chartRect.left - panelRect.left) + tooltip.caretX;
+            if (definition) {
+                tooltipEl.innerHTML = `
+                    <h4>${labelName} (Score: ${score})</h4>
+                    <p>${definition.definition}</p>
+                    <p class="reading">▶ ${definition.reading}</p>
+                `;
 
-            // Prevent tooltip from going off-screen
-            top = Math.max(top, 10);
-            left = Math.max(left, 10);
-            if (left + chartTooltip.offsetWidth + 20 > panelRect.width) {
-                left = panelRect.width - chartTooltip.offsetWidth - 20;
+                const panelRect = rightPanel.getBoundingClientRect();
+                const chartRect = chart.canvas.getBoundingClientRect();
+                
+                let left = chartRect.left - panelRect.left + tooltip.caretX;
+                let top = chartRect.top - panelRect.top + tooltip.caretY;
+
+                // Reposition tooltip to prevent overflow
+                if (left + tooltipEl.offsetWidth + 15 > panelRect.width) {
+                    left -= (tooltipEl.offsetWidth + 30); // flip to the left
+                } else {
+                    left += 15;
+                }
+                
+                if (top + tooltipEl.offsetHeight > panelRect.height) {
+                    top -= tooltipEl.offsetHeight;
+                }
+
+                tooltipEl.style.left = `${left}px`;
+                tooltipEl.style.top = `${top}px`;
+                tooltipEl.style.display = 'block';
             }
-             if (top + chartTooltip.offsetHeight + 20 > panelRect.height) {
-                top = tooltip.y - chartTooltip.offsetHeight - 10;
-            }
-
-            chartTooltip.style.top = `${top}px`;
-            chartTooltip.style.left = `${left + 15}px`;
-            chartTooltip.style.display = 'block';
         }
     };
 
-    spatialChart = new Chart(ctx, {
+    spatialChart = new Chart(canvas, {
       type: 'radar',
       data: {
         labels: ['Sightlines', 'Mobility', 'Flexibility', 'Density', 'Modality', 'Environment'],
@@ -1019,10 +1025,10 @@
         },
         plugins: { 
           legend: { display: false },
-          tooltip: {
-            enabled: false, // Disable default tooltip
-            external: customTooltipHandler,
-            position: 'nearest',
+          tooltip: { 
+              enabled: false,
+              position: 'nearest',
+              external: externalTooltipHandler
           }
         }
       }
@@ -1120,6 +1126,7 @@
         place(make('desk_rect'), unit * 19, unit * 6);
         place(make('tablet_cart'), unit*1.5, unit*9);
     }
+    // --- FIX 1: Corrected Fishbowl Preset Logic ---
     if(name==='fishbowl'){
         const innerCount = Math.min(8, Math.floor(studentCount / 3));
         const outerCount = studentCount - innerCount;
@@ -1127,7 +1134,7 @@
         const innerRadius = unit * 2.5;
         const outerRadius = unit * 4.5;
         for(let i=0; i<innerCount; i++){ const angle = (i/innerCount)*2*Math.PI; place(make('desk_rect'), cx + Math.cos(angle)*innerRadius, cy + Math.sin(angle)*innerRadius, deg(angle)+90); }
-        for(let i=0; i<outerCount; i++){ const angle = (i/outerCount)*2*Math.PI; place(make('desk_rect'), cx + Math.cos(angle)*outerRadius, cy + Math.sin(angle)*radius, deg(angle)+90); }
+        for(let i=0; i<outerCount; i++){ const angle = (i/outerCount)*2*Math.PI; place(make('desk_rect'), cx + Math.cos(angle)*outerRadius, cy + Math.sin(angle)*outerRadius, deg(angle)+90); }
     }
     if(name==='gallery'){
         const stations = Math.min(studentCount, 10);
