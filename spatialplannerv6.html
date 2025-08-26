@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Spatial Pedagogy Planner (v6.8 — Custom Tooltips)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1f2937; --muted: #6b7280;
+    --grid: #e5e7eb; --accent: #2563eb; --accent-dark: #1e40af; --accent-2: #16a34a; --accent-3: #f59e0b;
+    --door: #8b5e34; --window: #93c5fd; --danger: #ef4444;
+    --btn-primary-bg: #000C53; --btn-primary-text: #FFE200;
+  }
+  .dark {
+    --bg: #111827; --panel: #1f2937; --ink: #f9fafb; --muted: #9ca3af;
+    --grid: #374151; --accent: #3b82f6; --accent-dark: #60a5fa; --accent-2: #22c55e; --accent-3: #f59e0b;
+    --door: #ab8259; --window: #60a5fa;
+    --btn-primary-bg: #FFE200; --btn-primary-text: #000C53;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; transition: background-color 0.3s, color 0.3s;}
+  .app{display:grid;grid-template-columns:320px 1fr 360px;gap:12px;height:100vh;padding:12px;box-sizing:border-box}
+  .panel{background:var(--panel);border-radius:1rem;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);padding:1.5rem;display:flex;flex-direction:column;min-height:0;overflow:auto; transition: background-color 0.3s; position: relative;}
+  .panel h2{margin:.25rem 0 .5rem;font-size:1.125rem; font-weight:600;}
+  .section{margin-bottom:1.25rem;border-top:1px dashed var(--grid);padding-top:1.25rem}
+  .section:first-of-type{border-top:none;padding-top:0}
+  .chipbar{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--grid);border-radius:999px;padding:6px 10px;background: var(--bg);cursor:pointer;user-select:none; font-size: 13px;}
+  .chip .swatch{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.1)}
+  .hint{color:var(--muted);font-size:0.75rem;margin-bottom:1rem; text-align: center;}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap}
+  button{border:none;border-radius:12px;padding:12px 16px;background:#111827;color:#fff;cursor:pointer; transition: background-color 0.2s; font-weight: 500; white-space: nowrap; font-size: 14px;}
+  button:hover{background:#374151;}
+  button:disabled { background: #9ca3af; cursor: not-allowed; }
+  button.primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); }
+  button.primary:hover { background: var(--accent-dark); }
+  .dark button.primary:hover { background: #d3be00; }
+  button.secondary{background:#e5e7eb;color:#111827}
+  button.secondary:hover{background:#d1d5db;}
+  .dark button.secondary { background: #4b5563; color: #f9fafb; }
+  .dark button.secondary:hover { background: #6b7280; }
+  button.ghost{background:transparent;color:var(--ink);border:1px solid var(--grid)}
+  button.ghost:hover{background:var(--bg);}
+  button.danger{background:var(--danger)}
+  button.danger:hover{background:#b91c1c;}
+  label.toggle{display:flex;align-items:center;gap:8px;font-weight:500;margin:8px 0}
+  select, input[type="text"], textarea{width:100%; border:1px solid var(--grid);border-radius:8px;padding:6px 8px;font:inherit; box-sizing: border-box; background: var(--bg); color: var(--ink);}
+  textarea { resize: vertical; min-height: 100px; }
+
+  /* Canvas wrapper */
+  .stage-wrap{position:relative;background:var(--panel);border-radius:1rem;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);padding:10px;min-height:0}
+  #stage{width:100%;height:calc(100vh - 44px);background:var(--panel);border-radius:12px;-webkit-tap-highlight-color: transparent}
+  .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap}
+  .toolbar .left, .toolbar .right{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;background:var(--bg);border:1px solid var(--grid);border-radius:6px;padding:2px 6px;font-size:12px}
+  .legend{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px;flex-wrap:wrap}
+  .legend .tag{display:inline-flex;align-items:center;gap:6px}
+  .tag .swatch{width:10px;height:10px;border-radius:2px}
+
+  .toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#111827;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;opacity:.95;display:none; z-index: 100;}
+  
+  /* INSIGHTS PANEL STYLES */
+  .insight-group { border-left: 3px solid var(--grid); padding-left: 1rem; transition: border-color 0.3s; }
+  .insight-group:hover { border-left-color: var(--accent-2); }
+  .insight-title { font-size: 1rem; font-weight: 600; color: var(--ink); margin-bottom: 0.5rem; }
+  .insight-subtitle { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-top: 0.75rem; margin-bottom: 0.25rem; }
+  .insight-text { font-size: 0.875rem; color: var(--ink); line-height: 1.5; }
+  .insight-list { list-style-type: none; padding-left: 0; font-size: 0.875rem; color: var(--ink); display: flex; flex-direction: column; gap: 0.75rem; }
+  .insight-list li { position: relative; padding-left: 1.25rem; }
+  .insight-list li::before { content: '✓'; position: absolute; left: 0; color: var(--accent-2); font-weight: 600; }
+  
+  .scene-list{display:flex;flex-direction:column;gap:6px;overflow:auto}
+  .scene-item{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--grid);border-radius:10px;padding:6px 8px}
+  .scene-item input{width:100px}
+  .scene-actions{display:flex;gap:6px}
+
+  .ow-panel { cursor: grab; }
+  .ghost-snap{fill:none;stroke:#6366f1;stroke-width:2;stroke-dasharray:6 6;pointer-events:none;opacity:.9}
+  .ghost-snap text{fill:#6366f1;font-size:10px}
+  .handle{pointer-events:all}
+  .togglebox{display:flex;align-items:center;gap:8px}
+  .muted{color:var(--muted)}
+
+  .selection{pointer-events:none}
+  .marquee{fill:rgba(59, 130, 246, .08); stroke:#3b82f6; stroke-dasharray:4 4; stroke-width:1; pointer-events:none}
+
+  svg :focus{outline:none}
+
+  .text-label-bg { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; fill: rgba(243, 244, 246, 0.7); }
+  .dark .text-label-bg { fill: rgba(55, 65, 81, 0.7); }
+  .text-label-text { font-size: 14px; font-family: 'Inter', sans-serif; fill: var(--ink); }
+  .text-edit-foreign-object { overflow: visible; }
+  .text-edit-textarea {
+    background: var(--panel); border: 1px solid var(--accent); color: var(--ink);
+    padding: 4px; font-family: inherit; font-size: 14px;
+    width: 100%; height: 100%; box-sizing: border-box; resize: none;
+    border-radius: 4px;
+  }
+  
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .modal-content {
+    background: var(--panel); color: var(--ink);
+    padding: 1.5rem; border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+    width: 90%; max-width: 400px;
+  }
+  .modal-content h3 { font-size: 1.125rem; font-weight: 600; margin-top: 0; margin-bottom: 1rem; }
+  .modal-content input { margin-bottom: 1rem; }
+  
+  /* --- NEW: CUSTOM CHART TOOLTIP STYLES --- */
+  #chartTooltip {
+    position: absolute;
+    display: none;
+    background: rgba(0, 12, 83, 0.9);
+    color: white;
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    font-size: 0.75rem;
+    pointer-events: none;
+    z-index: 10;
+    width: 220px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    line-height: 1.4;
+  }
+  .dark #chartTooltip {
+    background: rgba(255, 226, 0, 0.9);
+    color: #000C53;
+  }
+  #chartTooltip h4 {
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+  #chartTooltip p {
+    margin: 0 0 0.5rem 0;
+  }
+  #chartTooltip .reading {
+    font-style: italic;
+    opacity: 0.9;
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- Left Panel -->
+    <aside class="panel" id="palette">
+      <div class="section">
+        <h2>Intelligent Assistant</h2>
+        <p class="hint">Describe your lesson, and the assistant will suggest a layout.</p>
+        <textarea id="llm-prompt">I am planning a lesson for [28] students. The main activity is [collaborative problem-solving in small groups] to develop [critical thinking and communication skills]. Please suggest an appropriate classroom layout.</textarea>
+        <button id="llm-generate-btn" class="primary mt-2 w-full">Generate Layout</button>
+      </div>
+
+      <div class="section">
+        <h2>Item Library</h2>
+        <div class="hint">
+          Click to add. Drag to place. <span class="kbd">Shift</span> multi-select • <span class="kbd">Drag</span> empty space = marquee select • <span class="kbd">R</span> rotate (Shift=15° / Alt=free) • <span class="kbd">Del</span> delete • Hold <span class="kbd">Alt</span> = bypass snapping.
+        </div>
+      </div>
+
+      <div class="section"><strong>Furniture</strong><div class="chipbar" id="chips-furniture"></div></div>
+      <div class="section"><strong>Tech</strong><div class="chipbar" id="chips-tech"></div></div>
+      <div class="section"><strong>Cognitive Tools</strong><div class="chipbar" id="chips-cognitive"></div></div>
+      <div class="section"><strong>Social Furniture</strong><div class="chipbar" id="chips-social"></div></div>
+      <div class="section"><strong>Wellbeing Items</strong><div class="chipbar" id="chips-emotional"></div></div>
+      <div class="section"><strong>Stations (coloured desks)</strong><div class="chipbar" id="chips-stations"></div></div>
+      <div class="section"><strong>Zones & Annotations</strong>
+        <div class="hint">Zones are overlays. Text labels are for annotation.</div>
+        <div class="chipbar" id="chips-zones"></div>
+      </div>
+
+      <div class="section">
+        <div class="togglebox">
+          <label class="toggle"><input type="checkbox" id="toggleWall" checked> Show operable walls</label>
+        </div>
+        <div class="togglebox">
+          <label class="toggle"><input type="checkbox" id="toggleSnap" checked> Snap enabled</label>
+          <span class="muted">(hold Alt to bypass)</span>
+        </div>
+        <div class="togglebox">
+          <label class="toggle"><input type="checkbox" id="toggleDarkMode"> 🌙 Dark Mode</label>
+        </div>
+        <div class="btnrow mt-4">
+          <button id="btnExport" class="primary">Export PNG</button>
+          <button class="primary" id="btnClear">Clear</button>
+        </div>
+        <div class="btnrow mt-2">
+          <button class="primary" id="btnCloseA">Close A</button>
+          <button class="primary" id="btnCloseB">Close B</button>
+          <button class="primary" id="btnStackA">A: Stack 4+4</button>
+          <button class="primary" id="btnStackB">B: Stack 4+4</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Stage -->
+    <main class="stage-wrap">
+      <div class="toolbar">
+        <div class="left legend">
+          <span class="tag"><span class="swatch" style="background:#93c5fd"></span> Cognitive</span>
+          <span class="tag"><span class="swatch" style="background:#a7f3d0"></span> Social</span>
+          <span class="tag"><span class="swatch" style="background:#fde68a"></span> Emotional</span>
+          <span class="tag"><span class="swatch" style="background:var(--door)"></span> Door / Front</span>
+          <span class="tag"><span class="swatch" style="background:var(--window)"></span> Windows</span>
+          <span class="tag"><span class="swatch" style="background:#9ca3af"></span> Operable wall tracks</span>
+          <label class="toggle"><input type="checkbox" id="toggleLegend" checked> Legend</label>
+        </div>
+        <div class="right">
+          <div class="togglebox">
+            <label>Mode preset</label>
+            <select id="presetSelect">
+              <option value="">— Select preset —</option>
+              <optgroup label="Standard Presets">
+                <option value="direct">Direct Instruction</option>
+                <option value="pods">Group Pods (4–6)</option>
+                <option value="stations">Stations / Rotations</option>
+                <option value="circle">Discussion Circle / U</option>
+                <option value="quiet">Quiet Work</option>
+                <option value="maker">Makerspace</option>
+                <option value="fishbowl">Fishbowl / Socratic</option>
+                <option value="gallery">Gallery Walk</option>
+              </optgroup>
+              <!-- Custom presets will be added here by JS -->
+              <optgroup label="Custom Presets" id="customPresetGroup"></optgroup>
+            </select>
+            <button class="ghost" id="applyPreset">Apply</button>
+            <button class="ghost" id="saveCustomPreset">Save custom</button>
+          </div>
+          <span class="kbd">Grid: 12×12 (≈144 units)</span>
+        </div>
+      </div>
+
+      <svg id="stage" viewBox="0 0 1440 720" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+            <rect width="60" height="60" fill="var(--panel)"/>
+            <path d="M60 0V60 M0 60H60" stroke="var(--grid)" stroke-width="1"/>
+          </pattern>
+          <filter id="elev" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.25"/>
+          </filter>
+          <linearGradient id="deskGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
+            <stop offset="100%" stop-color="#000000" stop-opacity="0.05"/>
+          </linearGradient>
+        </defs>
+
+        <rect id="roomA" x="0" y="0" width="720" height="720" fill="url(#grid)"/>
+        <line id="trackA" x1="720" y1="0" x2="720" y2="720" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.35"/>
+        <line id="trackB" x1="1080" y1="0" x2="1080" y2="720" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.35"/>
+        <rect id="roomB" x="720" y="0" width="720" height="720" fill="url(#grid)" opacity="0.08" />
+
+        <g id="items"><g id="layoutRoot"></g></g>
+        
+        <g id="operableWalls">
+          <g id="wallA" data-x="720"></g>
+          <g id="wallB" data-x="1080"></g>
+        </g>
+
+        <g id="ghost"></g>
+        <rect id="marquee" class="marquee" x="0" y="0" width="0" height="0" style="display:none"/>
+
+        <g id="shell">
+          <rect x="0" y="0" width="1440" height="720" fill="none" stroke="var(--ink)" stroke-width="8"/>
+          <text id="frontLabel" x="50" y="22" font-size="14" font-family="system-ui" fill="var(--ink)">FRONT</text>
+          <rect id="doorTopA" x="300" y="-1" width="60" height="10" fill="var(--door)" />
+          <rect id="doorTopB" x="1000" y="-1" width="60" height="10" fill="var(--door)" />
+          
+          <rect id="winTop1" x="130" y="-1" width="560" height="10" fill="var(--window)" />
+          <rect id="winTop2" x="780" y="-1" width="560" height="10" fill="var(--window)" />
+          <rect id="winBot1" x="130" y="711" width="560" height="10" fill="var(--window)" />
+          <rect id="winBot2" x="780" y="711" width="560" height="10" fill="var(--window)" />
+        </g>
+      </svg>
+
+      <div class="toast" id="toast"></div>
+    </main>
+
+    <!-- Right Panel: Insights + Scenes -->
+    <aside class="panel" id="right-panel">
+        <div class="section">
+            <h2>Spatial Effectiveness Profile</h2>
+            <canvas id="spatialEffectivenessChart"></canvas>
+        </div>
+        <div class="section" id="pedagogyInsights">
+            <h2>Pedagogical Opportunities</h2>
+            <div id="insightsContainer" class="flex flex-col gap-6">
+                <!-- Qualitative insights will be dynamically generated here -->
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Scenes (Lesson Timeline)</h2>
+            <div class="btnrow">
+                <input id="sceneName" type="text" placeholder="Scene name (e.g., Warm-up)">
+                <button id="saveScene" class="primary">Save current</button>
+            </div>
+            <div class="scene-list mt-2" id="sceneList"></div>
+        </div>
+        <!-- NEW: CUSTOM TOOLTIP ELEMENT -->
+        <div id="chartTooltip"></div>
+    </aside>
+  </div>
+  
+  <div id="savePresetModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h3>Save Custom Preset</h3>
+        <input type="text" id="customPresetNameInput" placeholder="Enter preset name...">
+        <div class="btnrow">
+            <button id="confirmSavePreset" class="primary">Save</button>
+            <button id="cancelSavePreset" class="secondary">Cancel</button>
+        </div>
+    </div>
+  </div>
+
+
+<script>
+(function(){
+  // --- DOM ELEMENT REFERENCES ---
+  const unit = 60;
+  const stage = document.getElementById('stage');
+  const itemsLayer = document.getElementById('items');
+  const layoutRoot = document.getElementById('layoutRoot');
+  const operableWallsLayer = document.getElementById('operableWalls');
+  const ghostLayer = document.getElementById('ghost');
+  const marquee = document.getElementById('marquee');
+  const toast = document.getElementById('toast');
+  const insightsContainer = document.getElementById('insightsContainer');
+  const wallAG = document.getElementById('wallA');
+  const wallBG = document.getElementById('wallB');
+  
+  // Toggles
+  const toggleWall = document.getElementById('toggleWall');
+  const toggleSnap = document.getElementById('toggleSnap');
+  const toggleLegend = document.getElementById('toggleLegend');
+  const toggleDarkMode = document.getElementById('toggleDarkMode');
+
+  // Buttons
+  const btnExport = document.getElementById('btnExport');
+  const btnClear = document.getElementById('btnClear');
+  const applyPresetBtn = document.getElementById('applyPreset');
+  const saveCustomPresetBtn = document.getElementById('saveCustomPreset');
+  
+  // Scene Controls
+  const sceneName = document.getElementById('sceneName');
+  const saveSceneBtn = document.getElementById('saveScene');
+  const sceneList = document.getElementById('sceneList');
+  
+  // LLM Controls
+  const llmPromptEl = document.getElementById('llm-prompt');
+  const llmGenerateBtn = document.getElementById('llm-generate-btn');
+  
+  // Modal Controls
+  const savePresetModal = document.getElementById('savePresetModal');
+  const customPresetNameInput = document.getElementById('customPresetNameInput');
+  const confirmSavePresetBtn = document.getElementById('confirmSavePreset');
+  const cancelSavePresetBtn = document.getElementById('cancelSavePreset');
+  
+  // Tooltip
+  const chartTooltip = document.getElementById('chartTooltip');
+  const rightPanel = document.getElementById('right-panel');
+
+
+  // --- STATE VARIABLES ---
+  let spatialChart = null;
+  let scenes = [];
+  let customPresets = [];
+  const selected = new Set();
+  let SNAP_RADIUS = unit * 0.35;
+  let NEIGHBOR_RADIUS = unit * 1.7;
+  let ANGLE_HYSTERESIS = 12;
+
+  // --- CONSTANTS ---
+  const TRI_S = unit * 0.98;
+  const TRI_H = Math.sin(Math.PI/3) * TRI_S;
+  const PANEL_COUNT = 8;
+  const PANEL_THICKNESS = 10;
+  let panelState = { A: [], B: [] };
+
+  // --- ITEM PALETTE DEFINITION ---
+  const PALETTE = [
+    {cat:'furniture', id:'desk_rect', label:'Desk (rect)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#e5e7eb'}), snap:'edge90'},
+    {cat:'furniture', id:'desk_round', label:'Table (round)', draw:(g,o)=>roundTable(g,{...o,r:unit*0.55,base:'#d1fae5'}), snap:'none'},
+    {cat:'furniture', id:'desk_trap', label:'Desk (trapezoid)', draw:(g,o)=>trapDesk(g,{...o,w:unit*1.0,h:unit*0.7,base:'#fee2e2'}), snap:'edge60'},
+    {cat:'furniture', id:'desk_tri_eq', label:'Desk (triangle)', draw:(g,o)=>triDesk(g,{...o,s:TRI_S,base:'#e0f2fe'}), snap:'tri60'},
+    {cat:'furniture', id:'chair', label:'Chair', draw:(g,o)=>chair(g,{...o,w:unit*0.55,h:unit*0.55}), snap:'none'},
+    {cat:'furniture', id:'stand_table', label:'Standing table (long)', draw:(g,o)=>deskRect(g,{...o,w:unit*2.4,h:unit*0.6,base:'#fde68a'}), snap:'edge90'},
+    {cat:'tech', id:'writable_tv', label:'Writable TV', draw:(g,o)=>tv(g,{...o,w:unit*1.6,h:unit*0.9}), snap:'edge90'},
+    {cat:'tech', id:'vr_station', label:'VR Station', draw:(g,o)=>vr(g,{...o,r:unit*0.5}), snap:'none'},
+    {cat:'tech', id:'tablet_cart', label:'Tablet Cart', draw:(g,o)=>cart(g,{...o,w:unit*0.9,h:unit*0.7}), snap:'none'},
+    {cat:'tech', id:'printer_3d', label:'3D Printer', draw:(g,o)=>printer3d(g,{...o,w:unit*0.8,h:unit*0.8}), snap:'none'},
+    {cat:'cognitive', id:'whiteboard', label:'Mobile Whiteboard', draw:(g,o)=>board(g,{...o,w:unit*1.1,h:unit*1.6,base:'#93c5fd'}), snap:'edge90'},
+    {cat:'cognitive', id:'teacher_desk', label:'Teacher Desk', draw:(g,o)=>deskRect(g,{...o,w:unit*1.6,h:unit*0.8,base:'#bfdbfe'}), snap:'edge90'},
+    {cat:'cognitive', id:'tool_cabinet', label:'Tool Cabinet', draw:(g,o)=>toolCabinet(g,{...o,w:unit*1.5,h:unit*0.6}), snap:'edge90'},
+    {cat:'social', id:'group_table', label:'Group Table (6)', draw:(g,o)=>roundTable(g,{...o,r:unit*0.8,base:'#a7f3d0'}), snap:'none'},
+    {cat:'social', id:'partition', label:'Mobile Partition', draw:(g,o)=>partition(g,{...o,w:unit*0.3,h:unit*1.8,base:'#34d399'}), snap:'edge90'},
+    {cat:'emotional', id:'couch', label:'Couch', draw:(g,o)=>couch(g,{...o,w:unit*1.8,h:unit*0.8,base:'#fdba74'}), snap:'edge90'},
+    {cat:'emotional', id:'beanbag', label:'Beanbag', draw:(g,o)=>beanbag(g,{...o,r:unit*0.55,base:'#fde68a'}), snap:'none'},
+    {cat:'emotional', id:'plant', label:'Plant', draw:(g,o)=>plant(g,{...o,r:unit*0.45}), snap:'none'},
+    {cat:'stations', id:'desk_blue', label:'Desk (Blue)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#bfdbfe'}), snap:'edge90'},
+    {cat:'stations', id:'desk_green', label:'Desk (Green)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#bbf7d0'}), snap:'edge90'},
+    {cat:'stations', id:'desk_orange', label:'Desk (Orange)', draw:(g,o)=>deskRect(g,{...o,w:unit*1.0,h:unit*0.7,base:'#fed7aa'}), snap:'edge90'},
+    {cat:'zones', id:'text_label', label:'Text Label', draw:(g,o)=>textLabel(g,{...o,w:unit*2, h:unit*0.8, text:'Double-click to edit'}), resizable:true},
+    {cat:'zones', id:'zone_cog', label:'Zone: Cognitive', draw:(g,o)=>zone(g,{...o,w:unit*3,h:unit*2,base:'#93c5fd',label:'Cognitive'}), resizable:true},
+    {cat:'zones', id:'zone_soc', label:'Zone: Social', draw:(g,o)=>zone(g,{...o,w:unit*3,h:unit*2,base:'#a7f3d0',label:'Social'}), resizable:true},
+    {cat:'zones', id:'zone_emo', label:'Zone: Emotional', draw:(g,o)=>zone(g,{...o,w:unit*3,h:unit*2,base:'#fde68a',label:'Emotional'}), resizable:true},
+  ];
+
+  // --- PRESET_INSIGHTS object ---
+  const PRESET_INSIGHTS = {
+    direct: [
+        { title: '📣 Clear Communication', affordance: 'Rows facing a clear focal point (teacher desk, TV) ensures all students have a direct line of sight for instruction.', moves: ['Use direct instruction for introducing new concepts.', 'Employ call-and-response techniques to maintain engagement.'] },
+        { title: '🧑‍🏫 Teacher Mobility', affordance: 'Aisles allow the teacher to easily circulate, monitor progress, and provide individual support.', moves: ['Walk the room during independent work to check for understanding.', 'Use proximity to manage off-task behavior non-verbally.'] },
+        { title: '👀 Focused Attention', affordance: 'This structured layout minimizes distractions from peers, encouraging individual focus on the teacher and the task at hand.', moves: ['Set clear time limits for tasks.', 'Use think-pair-share to introduce brief, structured peer interaction.'] }
+    ],
+    pods: [
+        { title: '🤝 Enhanced Collaboration', affordance: 'Clustered seating creates natural "pods" for group work, peer teaching, and co-construction of knowledge.', moves: ['Use jigsaw activities where each pod becomes an expert on one topic.', 'Assign group roles to ensure equitable participation.'] },
+        { title: '💬 Peer-to-Peer Learning', affordance: 'The proximity of students within pods encourages spontaneous discussion and problem-solving.', moves: ['Provide complex problems that require multiple perspectives to solve.', 'Encourage groups to present their findings to the class.'] },
+        { title: '💡 Shared Cognitive Load', affordance: 'Students can easily share resources and ideas, breaking down complex tasks into manageable parts.', moves: ['Use large paper or mini-whiteboards for group brainstorming.', 'Facilitate group goal-setting at the start of an activity.'] }
+    ],
+    stations: [
+        { title: '🔄 Differentiated Instruction', affordance: 'Multiple distinct stations allow for a variety of tasks catering to different learning styles, paces, and levels of readiness.', moves: ['Design tasks at each station that target specific skills or concepts.', 'Allow students to self-select stations based on their learning goals.'] },
+        { title: '🏃‍♀️ Active Learning', affordance: 'The need to physically move between stations keeps students active and engaged, breaking up long periods of sitting.', moves: ['Use a timer to structure rotations between stations.', 'Provide clear instructions and materials at each station to ensure smooth transitions.'] },
+        { title: '🧑‍🏫 Targeted Support', affordance: 'This layout allows the teacher to work intensively with a small group at one station while other students work independently.', moves: ['Create a teacher-led station for re-teaching or enrichment.', 'Circulate among the independent stations to provide targeted feedback.'] }
+    ],
+    circle: [
+        { title: '💬 Democratic Dialogue', affordance: 'A circle or U-shape puts all participants on an equal footing, with clear sightlines to everyone else, fostering a sense of community.', moves: ['Facilitate Socratic seminars or philosophical chairs debates.', 'Establish norms for respectful listening and turn-taking.'] },
+        { title: ' ️‍🗨️ Full Class Visibility', affordance: 'Every student is visible to the teacher and their peers, which encourages active participation and accountability.', moves: ['Use non-verbal cues to gauge understanding across the entire group.', 'Pose open-ended questions that invite multiple viewpoints.'] },
+        { title: '🤝 Community Building', affordance: 'The lack of a "front" of the room breaks down traditional hierarchies and promotes a more collaborative, shared learning experience.', moves: ['Start class with a community-building check-in circle.', 'Use the format for storytelling or shared reading experiences.'] }
+    ],
+    quiet: [
+        { title: '🧠 Deep Focus', affordance: 'Individual desks arranged in a uniform pattern minimize distractions and provide each student with a personal workspace.', moves: ['Use for summative assessments, standardized tests, or timed writing assignments.', 'Play quiet background music to help with concentration.'] },
+        { title: '🧘‍♀️ Self-Paced Learning', affordance: 'This layout is ideal for tasks that require sustained, independent concentration and self-pacing.', moves: ['Provide students with playlists of online resources or digital modules to work through.', 'Offer extension activities for students who finish early.'] },
+        { title: '📝 Individual Accountability', affordance: 'The separation of workspaces makes it easy to monitor individual progress and ensure each student is responsible for their own work.', moves: ['Circulate the room to provide one-on-one feedback and support.', 'Use individual response systems (like mini-whiteboards) for quick checks for understanding.'] }
+    ],
+    maker: [
+        { title: '🛠️ Hands-On Creation', affordance: 'Large, open work surfaces and access to diverse tools empower students to engage in hands-on design, building, and prototyping.', moves: ['Pose design challenges that require students to build physical solutions.', 'Set up a "tinkering" station with various materials for open-ended exploration.'] },
+        { title: '🏃‍♂️ Flexible Movement', affordance: 'The open-plan design allows for easy movement between different work areas, from ideation stations to fabrication zones.', moves: ['Encourage a "design thinking" process: empathize, define, ideate, prototype, test.', 'Use mobile whiteboards for teams to capture and share their design processes.'] },
+        { title: '💡 Interdisciplinary Thinking', affordance: 'This space naturally blends art, design, engineering, and technology, encouraging students to make connections across subjects.', moves: ['Partner with other subject teachers to create cross-curricular projects.', 'Invite community experts to mentor students on their projects.'] }
+    ],
+    fishbowl: [
+        { title: '🗣️ Focused Dialogue', affordance: 'The inner circle creates a "stage" for active speakers, while the outer circle provides a clear role for active listeners and observers.', moves: ['Use for structured debates, Socratic seminars, or role-playing scenarios.', 'Provide the outer circle with specific observation tasks or note-taking guides.'] },
+        { title: '👂 Active Listening Skills', affordance: 'The distinct roles of speaker and listener make the practice of active listening explicit and purposeful.', moves: ['Have the outer circle provide feedback to the inner circle on the quality of the discussion.', 'Rotate students between the inner and outer circles to give everyone a chance to speak.'] },
+        { title: '🏛️ Structured Participation', affordance: 'This layout provides a clear, structured way to manage a full-class discussion, ensuring that the conversation remains focused and productive.', moves: ['Use a "hot seat" model where one student in the center answers questions from the group.', 'Establish clear norms for entering and exiting the inner circle.'] }
+    ],
+    gallery: [
+        { title: '🚶‍♀️ Peer Feedback & Review', affordance: 'Spreading student work around the room encourages movement and allows for structured peer-to-peer feedback in a low-stakes environment.', moves: ['Provide sticky notes or feedback forms for students to leave comments at each station.', 'Use protocols like "I like, I wonder, What if" to guide feedback.'] },
+        { title: '🎨 Showcasing Process', affordance: 'This layout is perfect for displaying multiple stages of a project, allowing students to see and learn from each other\'s thinking processes.', moves: ['Have students display drafts and final versions side-by-side.', 'Ask students to present their "exhibit" to small groups as they rotate.'] },
+        { title: '🔄 Synthesizing Information', affordance: 'Each station can present a different piece of information, requiring students to move around and synthesize the content to see the big picture.', moves: ['Use for analyzing different historical documents, scientific data sets, or literary interpretations.', 'Provide a graphic organizer for students to complete as they visit each station.'] }
+    ]
+  };
+  
+  const CHART_DEFINITIONS = {
+    Sightlines: {
+      definition: "Measures how clearly students can see instructional focal points (e.g., whiteboards, teacher).",
+      reading: "Higher scores mean better visibility and focus. Lower scores suggest potential obstructions."
+    },
+    Mobility: {
+      definition: "Assesses the ease with which teachers and students can move around the classroom.",
+      reading: "Higher scores indicate more open space for circulation. Lower scores suggest a cramped or restrictive layout."
+    },
+    Flexibility: {
+      definition: "Evaluates the variety of furniture and the ease of reconfiguring the space for different activities.",
+      reading: "Higher scores mean the space is highly adaptable. Lower scores indicate a more static, single-purpose setup."
+    },
+    Density: {
+      definition: "Gauges the amount of personal and group space available to each student.",
+      reading: "Higher scores mean more space per student, supporting focus and comfort. Lower scores suggest overcrowding."
+    },
+    Modality: {
+      definition: "Rates the space's ability to support various learning modes (e.g., group work, individual focus, presentation).",
+      reading: "Higher scores indicate a multi-functional space. Lower scores suggest the layout is optimized for only one or two activities."
+    },
+    Environment: {
+      definition: "Considers factors like natural light and biophilic elements (plants) that contribute to wellbeing.",
+      reading: "Higher scores suggest a more comfortable and calming atmosphere. Lower scores indicate a less stimulating environment."
+    }
+  };
+
+  // --- HELPER FUNCTIONS ---
+  const snap = v => Math.round(v/unit)*unit;
+  const deg = r => r*180/Math.PI;
+  const rad = d => d*Math.PI/180;
+  const normAngle = a => (a % 360 + 360) % 360;
+  function getMouseSVG(evt){ const p = stage.createSVGPoint(); p.x = evt.clientX; p.y = evt.clientY; return p.matrixTransform(stage.getScreenCTM().inverse()); }
+  function getTranslate(g){ const tr = g.getAttribute('transform')||''; const m = /translate\(([-0-9.]+),\s*([-0-9.]+)\)/.exec(tr); return m ? [parseFloat(m[1]), parseFloat(m[2])] : [0,0]; }
+  function getRotate(g){ const tr = g.getAttribute('transform')||''; const m = /rotate\(([-0-9.]+)\)/.exec(tr); return m ? parseFloat(m[1]) : 0; }
+  function flash(msg){ toast.textContent = msg; toast.style.display='block'; clearTimeout(flash._t); flash._t=setTimeout(()=> toast.style.display='none', 1600); }
+
+  // --- INITIALIZATION ---
+  function initializeApp() {
+    populatePalette();
+    buildOperableWalls();
+    closeWall('A');
+    closeWall('B');
+    setupEventListeners();
+    checkDarkMode(); 
+    initializeChart();
+    loadCustomPresets();
+    updateMetrics();
+  }
+
+  function populatePalette() {
+    const mapCatToEl = {
+      furniture: document.getElementById('chips-furniture'), tech: document.getElementById('chips-tech'),
+      cognitive: document.getElementById('chips-cognitive'), social: document.getElementById('chips-social'),
+      emotional: document.getElementById('chips-emotional'), stations: document.getElementById('chips-stations'),
+      zones: document.getElementById('chips-zones')
+    };
+    PALETTE.forEach(item=>{
+      const chip = document.createElement('div'); chip.className='chip';
+      const sw = document.createElement('span'); sw.className='swatch';
+      if (item.id === 'text_label') {
+        sw.textContent = 'T'; sw.style.fontWeight = 'bold'; sw.style.textAlign = 'center'; sw.style.lineHeight = '14px';
+      } else {
+        sw.style.background=(item.id.includes('desk_')? (item.id.includes('blue')?'#bfdbfe':item.id.includes('green')?'#bbf7d0':item.id.includes('orange')?'#fed7aa':'#e5e7eb') : (item.cat==='cognitive'?'#93c5fd':item.cat==='social'?'#a7f3d0':item.cat==='emotional'?'#fde68a':'#e5e7eb'));
+      }
+      chip.appendChild(sw); chip.append(item.label);
+      chip.addEventListener('click',()=> addItem(item));
+      mapCatToEl[item.cat].appendChild(chip);
+    });
+  }
+
+  // --- SELECTION MANAGEMENT ---
+  function drawSelection(){ itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); operableWallsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); selected.forEach(g=>{ const bb = g.getBBox(); const r = document.createElementNS('http://www.w3.org/2000/svg','rect'); r.classList.add('selection'); r.setAttribute('x', bb.x-6); r.setAttribute('y', bb.y-6); r.setAttribute('width', bb.width+12); r.setAttribute('height', bb.height+12); r.setAttribute('rx',6); r.setAttribute('ry',6); r.setAttribute('fill','none'); r.setAttribute('stroke','var(--accent)'); r.setAttribute('stroke-width','2'); r.setAttribute('vector-effect','non-scaling-stroke'); r.setAttribute('pointer-events','none'); g.insertBefore(r, g.firstChild); }); }
+  function clearSelection(){ selected.clear(); itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); operableWallsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); removeHandles(); }
+  
+  // --- ITEM MANIPULATION ---
+  function addItem(def){ 
+    const wrapper = document.createElementNS('http://www.w3.org/2000/svg','g'); 
+    wrapper.setAttribute('data-id', def.id); 
+    wrapper.setAttribute('data-snap', def.snap || 'none'); 
+    if(def.resizable) wrapper.setAttribute('data-resizable','1'); 
+    wrapper.setAttribute('transform', `translate(${unit*2},${unit*2}) rotate(0)`); 
+    wrapper.style.cursor='move'; 
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g'); 
+    def.draw(g,{x:0,y:0}); 
+    wrapper.appendChild(g); 
+    layoutRoot.appendChild(wrapper); 
+    makeDraggable(wrapper); 
+
+    if (def.id === 'text_label') {
+        wrapper.addEventListener('dblclick', editTextLabel);
+    }
+
+    clearSelection(); 
+    selected.add(wrapper); 
+    drawSelection(); 
+    flash('Tip: Hold Alt to bypass snapping'); 
+    updateMetrics(); 
+  }
+
+  function makeDraggable(g){ let offset = {x:0,y:0}, dragging=false, groupStart=null; g.addEventListener('pointerdown', e=>{ e.stopPropagation(); dragging=true; g.setPointerCapture(e.pointerId); if(!e.shiftKey && !selected.has(g)){ clearSelection(); selected.add(g); drawSelection(); } const {x,y} = getMouseSVG(e); groupStart = [...selected].map(node=>({ node, t:getTranslate(node) })); const meStart = groupStart.find(s=>s.node===g).t; offset = {x:x-meStart[0], y:y-meStart[1]}; }); g.addEventListener('pointermove', e=>{ if(!dragging) return; const {x,y} = getMouseSVG(e); const bypass = e.altKey || !toggleSnap.checked; let nx = x - offset.x, ny = y - offset.y; if(!bypass){ nx = snap(nx); ny = snap(ny); } const meStart = groupStart.find(s=>s.node===g).t; const dx = nx - meStart[0], dy = ny - meStart[1]; groupStart.forEach(s=>{ let px = s.t[0] + dx, py = s.t[1] + dy;
+    px = Math.max(0, Math.min(px, 1440 - unit)); py = Math.max(0, Math.min(py, 720 - unit)); const r = getRotate(s.node); s.node.setAttribute('transform', `translate(${px},${py}) rotate(${r})`); }); if(selected.size===1){ if(!bypass) trySnap(g, true); else clearGhost(); }else{ clearGhost(); } drawSelection(); }); g.addEventListener('pointerup', e=>{ dragging=false; try{ g.releasePointerCapture(e.pointerId);}catch(_){ } if(selected.size===1){ const bypass = e.altKey || !toggleSnap.checked; if(!bypass) trySnap(g, false); } clearGhost(); updateMetrics(); }); }
+  
+  function centroidOfSelection(){ const arr=[...selected]; if(arr.length===0) return null; const pts = arr.map(n=>getTranslate(n)); const cx = pts.reduce((a,p)=>a+p[0],0)/pts.length; const cy = pts.reduce((a,p)=>a+p[1],0)/pts.length; return {cx, cy}; }
+  
+  function rotateSelection(useFine, isAltPressed){ 
+    if(selected.size===0) return; 
+    
+    const step = isAltPressed ? 1 : (useFine ? 15 : 45); 
+    
+    if(selected.size===1){ 
+        const node=[...selected][0]; 
+        const [tx,ty]=getTranslate(node); 
+        let currentRot = getRotate(node);
+        let nextRot = currentRot + step;
+        
+        if(!isAltPressed && toggleSnap.checked){ 
+            const mode = node.getAttribute('data-snap'); 
+            if(mode==='tri60' || mode==='edge60'){ 
+                nextRot = Math.round(nextRot/60)*60; 
+            } else if(mode==='edge90'){ 
+                const n = Math.round(nextRot/90)*90; 
+                if(Math.abs(n-nextRot) <= ANGLE_HYSTERESIS) nextRot = n; 
+            } 
+        } 
+        node.setAttribute('transform', `translate(${tx},${ty}) rotate(${normAngle(nextRot)})`); 
+        drawSelection(); 
+        updateMetrics(); 
+        return; 
+    } 
+    
+    const C = centroidOfSelection(); 
+    if(!C) return; 
+    const theta = rad(step); 
+    const sinT = Math.sin(theta), cosT = Math.cos(theta); 
+    [...selected].forEach(node=>{ 
+        const [tx,ty] = getTranslate(node); 
+        const vx = tx - C.cx, vy = ty - C.cy; 
+        const rx = vx * cosT - vy * sinT; 
+        const ry = vx * sinT + vy * cosT; 
+        const newX = C.cx + rx, newY = C.cy + ry; 
+        const newRot = getRotate(node) + step; 
+        node.setAttribute('transform', `translate(${newX},${newY}) rotate(${normAngle(newRot)})`); 
+    }); 
+    drawSelection(); 
+    updateMetrics(); 
+  }
+
+  // --- OPERABLE WALLS ---
+  function buildOperableWalls(){
+    wallAG.innerHTML = ''; wallBG.innerHTML = '';
+    panelState = { A: [], B: [] };
+    [{g:wallAG,x:720,id:'A'},{g:wallBG,x:1080,id:'B'}].forEach(({g,x,id})=>{
+      for(let i=0;i<PANEL_COUNT;i++){
+        const panel = document.createElementNS('http://www.w3.org/2000/svg','g');
+        panel.classList.add('ow-panel');
+        panel.setAttribute('data-id', `ow-panel-${id}-${i}`);
+        panel.setAttribute('data-track', x);
+        const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+        r.setAttribute('rx',2); r.setAttribute('fill','#dbeafe'); r.setAttribute('stroke','var(--ink)'); r.setAttribute('stroke-width','1'); r.setAttribute('filter','url(#elev)');
+        panel.appendChild(r); g.appendChild(panel);
+        panelState[id].push({ node: panel });
+        makeWallPanelDraggable(panel);
+      }
+    });
+  }
+  
+  function closeWall(which){
+    const arr = panelState[which];
+    const x = which === 'A' ? 720 : 1080;
+    const segmentH = (720 - (PANEL_COUNT - 1) * 2) / PANEL_COUNT;
+    arr.forEach((st, i) => {
+        const y = (segmentH / 2) + (i * (segmentH + 2));
+        st.node.setAttribute('transform', `translate(${x},${y}) rotate(0)`);
+        const rect = st.node.querySelector('rect');
+        rect.setAttribute('width', PANEL_THICKNESS);
+        rect.setAttribute('height', segmentH);
+        rect.setAttribute('x', -PANEL_THICKNESS / 2);
+        rect.setAttribute('y', -segmentH / 2);
+    });
+    flash(`Wall ${which} Closed`);
+    updateMetrics();
+  }
+
+  // --- USER REQUESTED NO CHANGES TO THIS FUNCTION ---
+  function stackWall(which, topCount = 4){
+    const arr = panelState[which];
+    const x = which === 'A' ? 720 : 1080;
+    const segmentH = (720 - (PANEL_COUNT - 1) * 2) / PANEL_COUNT;
+    const topX = x - segmentH;
+    const botX = x;
+    
+    arr.forEach((st, i) => {
+        const rect = st.node.querySelector('rect');
+        rect.setAttribute('width', segmentH);
+        rect.setAttribute('height', PANEL_THICKNESS);
+        rect.setAttribute('x', 0);
+        rect.setAttribute('y', 0);
+        
+        if (i < topCount) {
+            const y = 10 + (i * (PANEL_THICKNESS + 2));
+            st.node.setAttribute('transform', `translate(${topX}, ${y}) rotate(0)`);
+        } else {
+            const y = 720 - 10 - ((PANEL_COUNT - i) * (PANEL_THICKNESS + 2));
+            st.node.setAttribute('transform', `translate(${botX}, ${y}) rotate(0)`);
+        }
+    });
+    flash(`Wall ${which} Stacked`);
+    updateMetrics();
+  }
+
+  function makeWallPanelDraggable(g) {
+    let offset = {x:0, y:0}, dragging=false, startPos=null;
+    g.addEventListener('pointerdown', e => {
+        e.stopPropagation(); dragging = true;
+        g.setPointerCapture(e.pointerId);
+        if(!e.shiftKey && !selected.has(g)){ clearSelection(); selected.add(g); drawSelection(); }
+        const {y} = getMouseSVG(e);
+        startPos = getTranslate(g);
+        offset = {y: y - startPos[1]};
+    });
+    g.addEventListener('pointermove', e => {
+        if (!dragging) return;
+        const {y} = getMouseSVG(e);
+        let ny = y - offset.y;
+        const rect = g.querySelector('rect');
+        const h = +rect.getAttribute('height');
+        ny = Math.max(h/2, Math.min(ny, 720 - h/2));
+        g.setAttribute('transform', `translate(${startPos[0]},${ny}) rotate(${getRotate(g)})`);
+        drawSelection();
+    });
+    g.addEventListener('pointerup', e => {
+        dragging = false;
+        try { g.releasePointerCapture(e.pointerId); } catch(_) {}
+        updateMetrics();
+    });
+  }
+
+  // --- EVENT LISTENERS SETUP ---
+  function setupEventListeners() {
+    stage.addEventListener('pointerdown', handleStagePointerDown);
+    stage.addEventListener('pointermove', handleStagePointerMove);
+    stage.addEventListener('pointerup', handleStagePointerUp);
+    stage.addEventListener('pointerleave', clearGhost);
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', e => { if(e.key==='Alt') rotateSelection._lastAlt = false; });
+
+    toggleWall.addEventListener('change', ()=>{ const show = toggleWall.checked; operableWallsLayer.setAttribute('opacity', show? '1':'0'); document.getElementById('trackA').setAttribute('opacity', show? '0.35':'0'); document.getElementById('trackB').setAttribute('opacity', show? '0.35':'0'); });
+    toggleSnap.addEventListener('change', ()=> { flash(toggleSnap.checked ? 'Snap ON' : 'Snap OFF'); });
+    toggleLegend.addEventListener('change', ()=>{ const show = toggleLegend.checked; const shell = document.getElementById('shell'); shell.querySelectorAll('text,rect[id^="win"],rect[id^="door"]').forEach(n=>n.setAttribute('opacity', show? '1':'0')); });
+    toggleDarkMode.addEventListener('change', () => {
+        document.documentElement.classList.toggle('dark', toggleDarkMode.checked);
+        localStorage.setItem('darkMode', toggleDarkMode.checked);
+        if (spatialChart) spatialChart.destroy();
+        initializeChart();
+        updateMetrics();
+    });
+
+    btnExport.addEventListener('click', exportPNG);
+    btnClear.addEventListener('click', ()=>{ layoutRoot.innerHTML=''; clearSelection(); removeHandles(); buildOperableWalls(); closeWall('A'); closeWall('B'); updateMetrics(); });
+    document.getElementById('btnCloseA').onclick = ()=> closeWall('A');
+    document.getElementById('btnCloseB').onclick = ()=> closeWall('B');
+    document.getElementById('btnStackA').onclick = ()=> stackWall('A',4);
+    document.getElementById('btnStackB').onclick = ()=> stackWall('B',4);
+    applyPresetBtn.addEventListener('click', ()=>{ const v = document.getElementById('presetSelect').value; if(!v) return; applyPreset(v, 28); });
+    saveCustomPresetBtn.addEventListener('click', showSavePresetModal);
+    saveSceneBtn.addEventListener('click', saveScene);
+    llmGenerateBtn.addEventListener('click', generateLayoutFromLLM);
+    
+    // Modal listeners
+    confirmSavePresetBtn.addEventListener('click', handleConfirmSavePreset);
+    cancelSavePresetBtn.addEventListener('click', hideSavePresetModal);
+    savePresetModal.addEventListener('click', (e) => { if (e.target === savePresetModal) hideSavePresetModal(); });
+  }
+
+  // --- EVENT HANDLER LOGIC ---
+  let marqueeActive=false, marqueeStart=null;
+  function handleStagePointerDown(e) {
+    const isOnItem = !!e.target.closest('g[data-id]');
+    if (isOnItem) {
+        const targetG = e.target.closest('g[data-id]');
+        const isWall = targetG.getAttribute('data-id')?.startsWith('ow-panel');
+
+        if (e.shiftKey) {
+            const hasFurniture = [...selected].some(n => !n.getAttribute('data-id')?.startsWith('ow-panel'));
+            if (isWall && hasFurniture) {
+                flash("Wall panels cannot be grouped with furniture.");
+                return;
+            }
+            if (selected.has(targetG)) selected.delete(targetG);
+            else selected.add(targetG);
+        } else {
+            if (!selected.has(targetG)) {
+                clearSelection();
+                selected.add(targetG);
+            }
+        }
+        if (selected.size === 1 && targetG.getAttribute('data-resizable') === '1') showHandles(targetG);
+        else removeHandles();
+        drawSelection();
+    } else {
+        if (!e.shiftKey) { clearSelection(); removeHandles(); }
+        marqueeActive = true;
+        marqueeStart = getMouseSVG(e);
+        marquee.setAttribute('x', marqueeStart.x); marquee.setAttribute('y', marqueeStart.y);
+        marquee.setAttribute('width', 0); marquee.setAttribute('height', 0);
+        marquee.style.display = 'block';
+    }
+  }
+  function handleStagePointerMove(e) {
+    if(!marqueeActive) return; 
+    const cur=getMouseSVG(e); 
+    const x=Math.min(cur.x,marqueeStart.x), y=Math.min(cur.y,marqueeStart.y); 
+    const w=Math.abs(cur.x-marqueeStart.x), h=Math.abs(cur.y-marqueeStart.y); 
+    marquee.setAttribute('x',x); marquee.setAttribute('y',y); 
+    marquee.setAttribute('width',w); marquee.setAttribute('height',h);
+  }
+  function handleStagePointerUp(e) {
+    if(!marqueeActive) return; 
+    marqueeActive=false; marquee.style.display='none'; 
+    const mx=+marquee.getAttribute('x'), my=+marquee.getAttribute('y'), mw=+marquee.getAttribute('width'), mh=+marquee.getAttribute('height'); 
+    const box={x:mx,y:my,w:mw,h:mh}; 
+    const itemsInBox = [...layoutRoot.querySelectorAll('g[data-id]'), ...operableWallsLayer.querySelectorAll('g[data-id]')].filter(g => {
+        const [tx, ty] = getTranslate(g);
+        return tx >= box.x && tx <= box.x + box.w && ty >= box.y && ty <= box.y + box.h;
+    });
+
+    const hasWall = itemsInBox.some(g => g.getAttribute('data-id')?.startsWith('ow-panel'));
+    const hasFurniture = itemsInBox.some(g => !g.getAttribute('data-id')?.startsWith('ow-panel'));
+
+    if (hasWall && hasFurniture) {
+        flash("Wall panels cannot be grouped with furniture.");
+        itemsInBox.forEach(g => {
+            if (!g.getAttribute('data-id')?.startsWith('ow-panel')) {
+                selected.add(g);
+            }
+        });
+    } else {
+        itemsInBox.forEach(g => selected.add(g));
+    }
+    drawSelection();
+  }
+
+  function handleKeyDown(e) {
+    if(['TEXTAREA', 'INPUT'].includes(document.activeElement.tagName)) return;
+    if(e.key==='Alt') rotateSelection._lastAlt = true;
+    if(e.key.toLowerCase()==='r'){
+      if (selected.size === 1) {
+          const node = [...selected][0];
+          if (node.getAttribute('data-id')?.startsWith('ow-panel')) {
+              const [tx, ty] = getTranslate(node);
+              const currentRot = getRotate(node);
+              const nextRot = (currentRot === 0) ? 90 : 0;
+              node.setAttribute('transform', `translate(${tx},${ty}) rotate(${nextRot})`);
+              const rect = node.querySelector('rect');
+              const w = +rect.getAttribute('width');
+              const h = +rect.getAttribute('height');
+              rect.setAttribute('width', h);
+              rect.setAttribute('height', w);
+              rect.setAttribute('x', -h/2);
+              rect.setAttribute('y', -w/2);
+              drawSelection(); updateMetrics();
+              return;
+          }
+      }
+      rotateSelection(e.shiftKey, e.altKey);
+    }
+    if((e.key==='Delete' || e.key==='Backspace') && selected.size){ selected.forEach(n=>n.remove()); clearSelection(); updateMetrics(); }
+    if(selected.size && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){ 
+      e.preventDefault(); 
+      const step = e.altKey ? 5 : (e.shiftKey ? unit : 15);
+      [...selected].forEach(node=>{ 
+          let [tx,ty]=getTranslate(node);
+          const isWall = node.getAttribute('data-id')?.startsWith('ow-panel');
+          
+          if(e.key==='ArrowUp') ty -= step; 
+          if(e.key==='ArrowDown') ty += step; 
+          if(e.key==='ArrowLeft' && !isWall) tx -= step; 
+          if(e.key==='ArrowRight' && !isWall) tx += step;
+
+          tx = Math.max(0, Math.min(tx, 1440 - unit)); 
+          ty = Math.max(0, Math.min(ty, 720 - unit)); 
+          const r = getRotate(node); 
+          node.setAttribute('transform', `translate(${tx},${ty}) rotate(${r})`); 
+      }); 
+      drawSelection(); 
+      updateMetrics(); 
+    }
+  }
+
+  // --- METRICS & INSIGHTS CALCULATION ---
+  function updateMetrics(){
+    const furnitureItems = [...layoutRoot.querySelectorAll('g[data-id]')];
+    const isWallAOpen = panelState.A.some(p => getTranslate(p.node)[0] !== 720);
+    const isWallBOpen = panelState.B.some(p => getTranslate(p.node)[0] !== 1080);
+
+    let totalWidth = 720; 
+    if (isWallAOpen) totalWidth += 360; 
+    if (isWallBOpen) totalWidth += 360; 
+    const roomArea = totalWidth * 720;
+
+    const desks = furnitureItems.filter(n=>/desk_/.test(n.getAttribute('data-id')) || ['chair'].includes(n.getAttribute('data-id')));
+    const itemIds = new Set(furnitureItems.map(n => n.getAttribute('data-id')));
+    const pos = g => getTranslate(g);
+    const count = (id) => furnitureItems.filter(i => i.getAttribute('data-id') === id).length;
+
+    let sightlineScore = 20;
+    const teachingPoints = furnitureItems
+      .filter(i => ['teacher_desk', 'writable_tv', 'whiteboard'].includes(i.getAttribute('data-id')))
+      .map(tp => { const [x,y] = pos(tp); return {x, y}; });
+    if (teachingPoints.length === 0) teachingPoints.push({x: 720, y: 10}); 
+    if (desks.length > 0) {
+        let goodSightlines = 0;
+        desks.forEach(desk => {
+            const [dx, dy] = pos(desk);
+            const deskAngle = rad(getRotate(desk) + 90); 
+            const facingVec = { x: Math.cos(deskAngle), y: Math.sin(deskAngle) };
+            let bestTP = teachingPoints.reduce((best, tp) => Math.hypot(tp.x-dx, tp.y-dy) < Math.hypot(best.x-dx, best.y-dy) ? tp : best, teachingPoints[0]);
+            const toTpVec = { x: bestTP.x - dx, y: bestTP.y - dy };
+            const magToTp = Math.hypot(toTpVec.x, toTpVec.y);
+            if (magToTp === 0) return;
+            const dotProduct = (facingVec.x * toTpVec.x + facingVec.y * toTpVec.y);
+            const angleDiff = Math.acos(dotProduct / magToTp); 
+            if (deg(angleDiff) < 45) goodSightlines++;
+        });
+        sightlineScore = 20 + Math.round((goodSightlines / desks.length) * 80);
+    }
+
+    let occupiedArea = furnitureItems.reduce((acc, n) => { const b = n.getBBox(); return acc + (b.width * b.height); }, 0);
+    const mobilityScore = Math.max(0, Math.min(100, (1 - (occupiedArea / roomArea)) * 150 - 10));
+
+    const studentCapacity = desks.length;
+    let densityScore = 50;
+    if (studentCapacity > 0) {
+        const areaPerStudent = roomArea / studentCapacity;
+        const minArea = 12000; const maxArea = 45000;
+        const clampedArea = Math.max(minArea, Math.min(areaPerStudent, maxArea));
+        densityScore = 10 + ((clampedArea - minArea) / (maxArea - minArea)) * 90;
+    }
+    
+    const furnitureTypes = new Set(PALETTE.filter(p => itemIds.has(p.id) && p.cat === 'furniture').map(p => p.id));
+    const mobileItems = ['whiteboard', 'partition', 'chair', 'beanbag', 'tablet_cart'];
+    const mobileItemCount = mobileItems.reduce((sum, id) => sum + count(id), 0);
+    let flexibilityScore = 20 + (furnitureTypes.size * 5) + (furnitureItems.length > 0 ? (mobileItemCount / furnitureItems.length) * 50 : 0);
+    if (furnitureItems.some(i => i.getAttribute('data-id').startsWith('zone_'))) flexibilityScore += 10;
+    flexibilityScore = Math.min(100, flexibilityScore);
+
+    let inCluster=0; desks.forEach((d,i)=>{ for(let j=i+1;j<desks.length;j++){ if(Math.hypot(pos(d)[0]-pos(desks[j])[0], pos(d)[1]-pos(desks[j])[1]) <= unit*1.5){ inCluster++; break; } } });
+    const clusterRatio = desks.length > 0 ? inCluster / desks.length : 0;
+    let modalityScore = 10;
+    if (clusterRatio > 0.5) modalityScore += 30;
+    if (itemIds.has('writable_tv') || itemIds.has('whiteboard')) modalityScore += 25;
+    if (itemIds.has('group_table')) modalityScore += 15;
+    if (itemIds.has('stand_table')) modalityScore += 15;
+    if (itemIds.has('couch') || itemIds.has('beanbag')) modalityScore += 10;
+    modalityScore = Math.min(100, modalityScore);
+
+    const plantCount = count('plant');
+    let lightScore = 0;
+    if (desks.length > 0) {
+        const desksNearWindow = desks.filter(d => pos(d)[1] < unit * 2 || pos(d)[1] > 720 - (unit * 2)).length;
+        lightScore = (desksNearWindow / desks.length) * 50;
+    }
+    const environmentalScore = 20 + Math.min(80, (plantCount * 15) + lightScore);
+
+    if (spatialChart) {
+        spatialChart.data.datasets[0].data = [sightlineScore, mobilityScore, flexibilityScore, densityScore, modalityScore, environmentalScore].map(s => Math.round(s));
+        spatialChart.update();
+    }
+  }
+
+  // --- Renders insights from any source (static or LLM) ---
+  function renderInsights(insights) {
+    insightsContainer.innerHTML = '';
+    insights.forEach(insight => {
+        const group = document.createElement('div');
+        group.className = 'insight-group';
+        const movesHTML = insight.moves.map(move => `<li>${move}</li>`).join('');
+        group.innerHTML = `
+            <h3 class="insight-title">${insight.title}</h3>
+            <p class="insight-subtitle">Affordances of this Layout</p>
+            <p class="insight-text">${insight.affordance}</p>
+            <p class="insight-subtitle">Suggested Pedagogical Moves (STP)</p>
+            <ul class="insight-list">${movesHTML}</ul>`;
+        insightsContainer.appendChild(group);
+    });
+  }
+
+  // --- CHART INITIALIZATION (REVISED FOR CUSTOM TOOLTIPS) ---
+  function initializeChart() {
+    const ctx = document.getElementById('spatialEffectivenessChart');
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(107, 114, 128, 0.5)' : 'rgba(209, 213, 219, 1)';
+    const pointLabelColor = isDark ? '#9ca3af' : '#4b5563';
+    const datasetBG = isDark ? 'rgba(255, 226, 0, 0.3)' : 'rgba(0, 12, 83, 0.2)';
+    const datasetBorder = isDark ? '#FFE200' : '#000C53';
+
+    const customTooltipHandler = (context) => {
+        const { chart, tooltip } = context;
+        if (tooltip.opacity === 0) {
+            chartTooltip.style.display = 'none';
+            return;
+        }
+
+        const point = tooltip.dataPoints[0];
+        const labelName = point.label;
+        const score = point.raw;
+        const definition = CHART_DEFINITIONS[labelName];
+
+        if (definition) {
+            chartTooltip.innerHTML = `
+                <h4>${labelName} (Score: ${score})</h4>
+                <p>${definition.definition}</p>
+                <p class="reading">▶ ${definition.reading}</p>
+            `;
+            
+            const panelRect = rightPanel.getBoundingClientRect();
+            const chartRect = chart.canvas.getBoundingClientRect();
+            
+            let top = (chartRect.top - panelRect.top) + tooltip.caretY;
+            let left = (chartRect.left - panelRect.left) + tooltip.caretX;
+
+            // Prevent tooltip from going off-screen
+            top = Math.max(top, 10);
+            left = Math.max(left, 10);
+            if (left + chartTooltip.offsetWidth + 20 > panelRect.width) {
+                left = panelRect.width - chartTooltip.offsetWidth - 20;
+            }
+             if (top + chartTooltip.offsetHeight + 20 > panelRect.height) {
+                top = tooltip.y - chartTooltip.offsetHeight - 10;
+            }
+
+            chartTooltip.style.top = `${top}px`;
+            chartTooltip.style.left = `${left + 15}px`;
+            chartTooltip.style.display = 'block';
+        }
+    };
+
+    spatialChart = new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ['Sightlines', 'Mobility', 'Flexibility', 'Density', 'Modality', 'Environment'],
+        datasets: [{
+          label: 'Effectiveness Score', data: [50, 50, 50, 50, 50, 50],
+          fill: true, backgroundColor: datasetBG, borderColor: datasetBorder,
+          pointBackgroundColor: datasetBorder, pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff', pointHoverBorderColor: datasetBorder
+        }]
+      },
+      options: {
+        elements: { line: { borderWidth: 2 } },
+        scales: {
+          r: {
+            angleLines: { color: gridColor }, grid: { color: gridColor },
+            suggestedMin: 0, suggestedMax: 100,
+            ticks: { display: false, stepSize: 25 },
+            pointLabels: { font: { size: 11 }, color: pointLabelColor }
+          }
+        },
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            enabled: false, // Disable default tooltip
+            external: customTooltipHandler,
+            position: 'nearest',
+          }
+        }
+      }
+    });
+  }
+
+  // --- DARK MODE ---
+  function checkDarkMode() {
+    if (localStorage.getItem('darkMode') === 'false') {
+        toggleDarkMode.checked = false;
+        document.documentElement.classList.remove('dark');
+    } else {
+        toggleDarkMode.checked = true;
+        document.documentElement.classList.add('dark');
+    }
+  }
+
+  // --- PRESETS & SCENES ---
+  function applyPreset(name, studentCount = 28){ 
+    layoutRoot.innerHTML=''; clearSelection(); removeHandles(); clearGhost(); 
+    
+    const customPreset = customPresets.find(p => p.name === name);
+    if (customPreset) {
+        layoutRoot.innerHTML = customPreset.layoutHTML;
+        [...layoutRoot.querySelectorAll('g[data-id]')].forEach(g => {
+            makeDraggable(g);
+            if (g.getAttribute('data-id') === 'text_label') {
+                g.addEventListener('dblclick', editTextLabel);
+            }
+        });
+        if (customPreset.wallAState === 'stacked') stackWall('A'); else closeWall('A');
+        if (customPreset.wallBState === 'stacked') stackWall('B'); else closeWall('B');
+        flash(`Loaded custom preset: ${name}`);
+        updateMetrics();
+        insightsContainer.innerHTML = '';
+        return;
+    }
+
+    if (name === 'direct' || name === 'quiet') {
+        closeWall('A');
+        closeWall('B');
+    } else {
+        stackWall('A');
+        stackWall('B');
+    }
+
+    const make = id => { const def = PALETTE.find(p=>p.id===id); if(!def) return null; const wrapper = document.createElementNS('http://www.w3.org/2000/svg','g'); wrapper.setAttribute('data-id', def.id); wrapper.setAttribute('data-snap', def.snap || 'none'); if(def.resizable) wrapper.setAttribute('data-resizable','1'); wrapper.style.cursor='move'; const g = document.createElementNS('http://www.w3.org/2000/svg','g'); def.draw(g,{x:0,y:0}); wrapper.appendChild(g); layoutRoot.appendChild(wrapper); makeDraggable(wrapper); return wrapper; }; 
+    const place = (w,x,y,r=0)=>{ if(w) w.setAttribute('transform', `translate(${x},${y}) rotate(${r})`); };
+    
+    if(name==='direct'){ const tdesk = make('teacher_desk'); place(tdesk, unit*1.2, unit*3, 90); const tv = make('writable_tv'); place(tv, unit*2.8, unit*2.8, 90); const cols = 5; const rows = Math.ceil(studentCount / cols); const aisleCol = 3; for(let r=0;r<rows;r++){ for(let c=0;c<cols;c++){ if (r * cols + c >= studentCount) break; const d=make('desk_rect'); const cx = c + (c>=aisleCol?0.4:0); place(d, unit*(6 + cx*1.3), unit*(2 + r*1.2), 90); } } }
+    if(name==='pods'){ 
+        const pods = Math.ceil(studentCount / 6);
+        const centers = [[unit*5.0,unit*3.0],[unit*9.0,unit*3.0],[unit*13.0,unit*3.0],[unit*5.0,unit*7.5],[unit*9.0,unit*7.5],[unit*13.0,unit*7.5]]; 
+        for(let i = 0; i < pods; i++) { 
+            if (i >= centers.length) break; 
+            const [cx, cy] = centers[i]; 
+            const radius = TRI_H * 0.6; 
+            for(let j=0;j<6;j++){ 
+                const angle = j * 60;
+                const x = cx + radius * Math.cos(rad(angle));
+                const y = cy + radius * Math.sin(rad(angle));
+                place(make('desk_tri_eq'), x, y, angle - 90); 
+            } 
+        } 
+        place(make('whiteboard'), unit*1.2, unit*1.2, 90); 
+    }
+    if(name==='stations'){ 
+        place(make('teacher_desk'), unit * 11.5, unit * 10, 180);
+        place(make('desk_trap'), unit * 10, unit * 8, 0);
+        place(make('desk_trap'), unit * 11.5, unit * 8, 0);
+        place(make('desk_trap'), unit * 13, unit * 8, 0);
+        place(make('writable_tv'), unit * 3, unit * 1.5, 0);
+        place(make('group_table'), unit * 3, unit * 4);
+        place(make('chair'), unit*2, unit*3.5); place(make('chair'), unit*4, unit*3.5); place(make('chair'), unit*3, unit*5);
+        place(make('couch'), unit * 21, unit * 2, 0);
+        place(make('beanbag'), unit * 22.5, unit * 3.5);
+        place(make('beanbag'), unit * 19.5, unit * 3.5);
+        place(make('plant'), unit * 21, unit * 4);
+        place(make('stand_table'), unit * 20, unit * 9, 90);
+        place(make('printer_3d'), unit * 22, unit * 8);
+        place(make('tool_cabinet'), unit * 22, unit * 10, 180);
+    }
+    if(name==='circle'){ const cx = unit*12.0, cy = unit*6.0; const radius = Math.min(unit * 5.0, (studentCount / 18) * unit * 5.0); for(let i=0;i<studentCount;i++){ const angle = (i/studentCount)*2*Math.PI; place(make('desk_rect'), cx + Math.cos(angle)*radius, cy + Math.sin(angle)*radius, deg(angle)+90); } place(make('whiteboard'), unit*1.2, unit*2.0, 90); }
+    if(name==='quiet'){ const tdesk = make('teacher_desk'); place(tdesk, unit*1.2, unit*3, 90); const cols = 5; const rows = Math.ceil(studentCount / cols); for(let r=0;r<rows;r++){ for(let c=0;c<cols;c++){ if (r * cols + c >= studentCount) break; place(make('desk_rect'), unit*(4+c*1.4), unit*(1.8+r*1.2), 90); } } }
+    if(name==='maker'){ 
+        place(make('whiteboard'), unit*1.5, unit*2, 90);
+        place(make('group_table'), unit*4, unit*3);
+        place(make('stand_table'), unit*10.0, unit*3.5, 0);
+        place(make('stand_table'), unit*10.0, unit*6.5, 0);
+        place(make('printer_3d'), unit*13.5, unit*2.5);
+        place(make('tool_cabinet'), unit*13.5, unit*8.5, 180);
+        place(make('writable_tv'), unit * 22, unit * 5, -90);
+        place(make('desk_rect'), unit * 19, unit * 2);
+        place(make('desk_rect'), unit * 19, unit * 4);
+        place(make('desk_rect'), unit * 19, unit * 6);
+        place(make('tablet_cart'), unit*1.5, unit*9);
+    }
+    if(name==='fishbowl'){
+        const innerCount = Math.min(8, Math.floor(studentCount / 3));
+        const outerCount = studentCount - innerCount;
+        const cx = unit*12.0, cy = unit*6.0;
+        const innerRadius = unit * 2.5;
+        const outerRadius = unit * 4.5;
+        for(let i=0; i<innerCount; i++){ const angle = (i/innerCount)*2*Math.PI; place(make('desk_rect'), cx + Math.cos(angle)*innerRadius, cy + Math.sin(angle)*innerRadius, deg(angle)+90); }
+        for(let i=0; i<outerCount; i++){ const angle = (i/outerCount)*2*Math.PI; place(make('desk_rect'), cx + Math.cos(angle)*outerRadius, cy + Math.sin(angle)*radius, deg(angle)+90); }
+    }
+    if(name==='gallery'){
+        const stations = Math.min(studentCount, 10);
+        const wallOffset = unit * 1.5;
+        for(let i=0; i<stations; i++){
+            const wb = make('whiteboard');
+            if(i < 5) place(wb, wallOffset + i * unit * 2.5, wallOffset, 0);
+            else place(wb, wallOffset + (i-5) * unit * 2.5, 720 - wallOffset, 180);
+        }
+    }
+    updateMetrics();
+    renderInsights(PRESET_INSIGHTS[name] || []);
+  }
+
+  function saveScene() {
+    const name = sceneName.value.trim() || `Scene ${scenes.length+1}`; 
+    const svgData = new XMLSerializer().serializeToString(layoutRoot); 
+    scenes.push({name, svgData}); 
+    renderScenes(); 
+    sceneName.value=''; 
+    flash('Scene saved');
+  }
+
+  function renderScenes(){ 
+    sceneList.innerHTML=''; 
+    scenes.forEach((s,idx)=>{ 
+      const row = document.createElement('div'); row.className='scene-item'; 
+      const input = document.createElement('input'); input.value=s.name; input.addEventListener('change', ()=>{ s.name = input.value; }); 
+      const actions = document.createElement('div'); actions.className='scene-actions'; 
+      const apply = document.createElement('button'); apply.className='ghost'; apply.textContent='Apply'; apply.addEventListener('click', ()=>{ layoutRoot.innerHTML = new DOMParser().parseFromString(s.svgData,'image/svg+xml').documentElement.innerHTML; [...layoutRoot.querySelectorAll('g[data-id]')].forEach(makeDraggable); clearSelection(); updateMetrics(); }); 
+      const del = document.createElement('button'); del.className='danger'; del.textContent='Delete'; del.addEventListener('click', ()=>{ scenes.splice(idx,1); renderScenes(); }); 
+      actions.appendChild(apply); actions.appendChild(del); 
+      row.appendChild(input); row.appendChild(actions); 
+      sceneList.appendChild(row); 
+    }); 
+  }
+  
+  // --- CUSTOM PRESET & MODAL FUNCTIONS (REVISED) ---
+  function showSavePresetModal() {
+    customPresetNameInput.value = `My Layout ${customPresets.length + 1}`;
+    savePresetModal.style.display = 'flex';
+    customPresetNameInput.focus();
+    customPresetNameInput.select();
+  }
+  
+  function hideSavePresetModal() {
+    savePresetModal.style.display = 'none';
+  }
+  
+  function handleConfirmSavePreset() {
+    const name = customPresetNameInput.value.trim();
+    if (!name) {
+        flash("Please enter a preset name.");
+        return;
+    }
+
+    const layoutHTML = layoutRoot.innerHTML;
+    const wallAState = panelState.A.some(p => getTranslate(p.node)[0] !== 720) ? 'stacked' : 'closed';
+    const wallBState = panelState.B.some(p => getTranslate(p.node)[0] !== 1080) ? 'stacked' : 'closed';
+
+    customPresets.push({ name, layoutHTML, wallAState, wallBState });
+    localStorage.setItem('spatialPlannerCustomPresets', JSON.stringify(customPresets));
+    populateCustomPresets();
+    hideSavePresetModal();
+    flash(`Saved preset: ${name}`);
+  }
+
+  function loadCustomPresets() {
+    const storedPresets = localStorage.getItem('spatialPlannerCustomPresets');
+    if (storedPresets) {
+        customPresets = JSON.parse(storedPresets);
+        populateCustomPresets();
+    }
+  }
+
+  function populateCustomPresets() {
+    const group = document.getElementById('customPresetGroup');
+    group.innerHTML = '';
+    customPresets.forEach(preset => {
+        const option = document.createElement('option');
+        option.value = preset.name;
+        option.textContent = preset.name;
+        group.appendChild(option);
+    });
+  }
+
+
+  // --- DRAWING & SVG HELPERS ---
+  function deskRect(g,{w,h,base}){ const r=rect(-w/2,-h/2,w,h,base,g); r.setAttribute('filter','url(#elev)'); rect(-w/2,h/2-3,w,3,'rgba(0,0,0,0.12)',g); const gloss=rect(-w/2,-h/2,w,h,'url(#deskGrad)',g,0.5); gloss.setAttribute('pointer-events','none'); line(-w/2+2,-h/2+2,w/2-2,-h/2+2,'#111827',3,g); }
+  function roundTable(g,{r,base}){ const c=circle(0,0,r,base,g); c.setAttribute('filter','url(#elev)'); stroke(c,'#111827',1); }
+  function trapDesk(g,{w,h,base}){ const path = document.createElementNS('http://www.w3.org/2000/svg','path'); const inset = w*0.2; path.setAttribute('d', `M${-w/2},${-h/2} L${w/2},${-h/2} L${w/2-inset},${h/2} L${-w/2+inset},${h/2} Z`); path.setAttribute('fill', base); path.setAttribute('stroke','#111827'); path.setAttribute('stroke-width','1'); path.setAttribute('filter','url(#elev)'); g.appendChild(path); line(-w/2+2,-h/2+2,w/2-2,-h/2+2,'#111827',3,g); }
+  function triDesk(g,{s,base}){ const h = TRI_H; const p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d', `M${-s/2},${h/2} L0,${-h/2} L${s/2},${h/2} Z`); p.setAttribute('fill', base); p.setAttribute('stroke','#111827'); p.setAttribute('stroke-width','1'); p.setAttribute('filter','url(#elev)'); g.appendChild(p); line(s*(-0.4), h/2-0.1, s*0.4, h/2-0.1, '#111827', 3, g); }
+  function chair(g,{w,h}){ const c = rect(-w/2,-h/2,w,h,'#e5e7eb',g); c.setAttribute('filter','url(#elev)'); line(-w/2+2,-h/2+2,w/2-2,-h/2+2,'#111827',2,g); }
+  function tv(g,{w,h}){ const b = rect(-w/2,-h/2,w,h,'#e5e7eb',g); b.setAttribute('filter','url(#elev)'); strokeRect(-w/2,-h/2,w,h,'#111827',2,g); rect(-w/2+4,-h/2+4,w-8,6,'rgba(0,0,0,0.15)',g); }
+  function vr(g,{r}){ const c = circle(0,0,r,'#dbeafe',g); c.setAttribute('filter','url(#elev)'); text(0,4,'VR',g); }
+  function cart(g,{w,h}){ const b = rect(-w/2,-h/2,w,h,'#e0e7ff',g); b.setAttribute('filter','url(#elev)'); text(0,4,'iPads',g); rect(-w/2,h/2-3,w,3,'rgba(0,0,0,0.15)',g); }
+  function board(g,{w,h,base}){ const b = rect(-w/2,-h/2,w,h,base,g,0.22); b.setAttribute('filter','url(#elev)'); strokeRect(-w/2,-h/2,w,h,'#111827',1,g); }
+  function partition(g,{w,h,base}){ rect(-w/2,-h/2,w,h,base,g,0.7).setAttribute('filter','url(#elev)'); }
+  function couch(g,{w,h,base}){ const b = rect(-w/2,-h/2,w,h,base,g); b.setAttribute('filter','url(#elev)'); strokeRect(-w/2,-h/2,w,h,'#111827',1,g); rect(-w/2,h/2-3,w,3,'rgba(0,0,0,0.15)',g); }
+  function beanbag(g,{r,base}){ const c = circle(0,0,r,base,g); c.setAttribute('filter','url(#elev)'); }
+  function plant(g,{r}){ const c = circle(0,0,r,'#bbf7d0',g); c.setAttribute('filter','url(#elev)'); text(0,4,'🌿',g,16); }
+  function toolCabinet(g,{w,h}){ const b=rect(-w/2,-h/2,w,h,'#e5e7eb',g); b.setAttribute('filter','url(#elev)'); line(-w/2+4,-h/2+4,w/2-4,-h/2+4,'#9ca3af',2,g); line(-w/2+4,4,w/2-4,4,'#9ca3af',2,g); }
+  function printer3d(g,{w,h}){ const b=rect(-w/2,-h/2,w,h,'#d1d5db',g); b.setAttribute('filter','url(#elev)'); text(0,4,'3D',g); }
+  function zone(g,{w,h,base,label='Zone'}){ const z = rect(-w/2,-h/2,w,h,base,g,0.16); z.setAttribute('data-zone','1'); stroke(z,'#374151',1); const t = text(0,4,label,g,12); t.setAttribute('data-zone-label','1'); }
+  function textLabel(g, {w, h, text: initialText}) { const bg = rect(-w/2, -h/2, w, h, 'transparent', g); bg.classList.add('text-label-bg'); const txt = text(0, 4, initialText, g, 14); txt.classList.add('text-label-text'); }
+  function rect(x,y,w,h,fill,parent,alpha=1){ const el = document.createElementNS('http://www.w3.org/2000/svg','rect'); el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h); el.setAttribute('fill',fill); if(alpha!==1) el.setAttribute('fill-opacity',alpha); el.setAttribute('stroke','#111827'); el.setAttribute('stroke-width','1'); parent.appendChild(el); return el; }
+  function stroke(node,color,w=1){ node.setAttribute('stroke',color); node.setAttribute('stroke-width',w); return node; }
+  function strokeRect(x,y,w,h,color,sw,parent){ const el = document.createElementNS('http://www.w3.org/2000/svg','rect'); el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('width',w); el.setAttribute('height',h); el.setAttribute('fill','none'); el.setAttribute('stroke',color); el.setAttribute('stroke-width',sw); parent.appendChild(el); return el; }
+  function circle(cx,cy,r,fill,parent){ const el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.setAttribute('cx',cx); el.setAttribute('cy',cy); el.setAttribute('r',r); el.setAttribute('fill',fill); el.setAttribute('stroke','#111827'); el.setAttribute('stroke-width',1); parent.appendChild(el); return el; }
+  function line(x1,y1,x2,y2,color,sw,parent){ const el = document.createElementNS('http://www.w3.org/2000/svg','line'); el.setAttribute('x1',x1); el.setAttribute('y1',y1); el.setAttribute('x2',x2); el.setAttribute('y2',y2); el.setAttribute('stroke',color); el.setAttribute('stroke-width',sw); parent.appendChild(el); return el; }
+  function text(x,y,str,parent,size=12){ const el = document.createElementNS('http://www.w3.org/2000/svg','text'); el.setAttribute('x',x); el.setAttribute('y',y); el.setAttribute('text-anchor','middle'); el.setAttribute('font-size',size); el.setAttribute('font-family','system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif'); el.textContent=str; parent.appendChild(el); return el; }
+  
+  function exportPNG(){ 
+    const exportWidth = 1440; 
+    const exportHeight = 720;
+    const clone = stage.cloneNode(true); 
+    clone.setAttribute('viewBox', `0 0 ${exportWidth} ${exportHeight}`); 
+    clone.querySelectorAll('.selection,.handle,#ghost *,#marquee').forEach(n=>n.remove()); 
+    if(!toggleLegend.checked){ const shell = clone.querySelector('#shell'); shell.querySelectorAll('text,rect#winTop1,rect#winTop2,rect#winBot1,rect#winBot2,rect#doorTopA,rect#doorTopB').forEach(n=>n.setAttribute('opacity','0')); }
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const img = new Image(); const svgBlob = new Blob([svgData], {type:'image/svg+xml;charset=utf-8'}); const url = URL.createObjectURL(svgBlob);
+    img.onload = function(){ const canvas = document.createElement('canvas'); canvas.width = exportWidth; canvas.height = exportHeight; const ctx = canvas.getContext('2d'); ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#111827' : '#f6f7f9'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); URL.revokeObjectURL(url); const png = canvas.toDataURL('image/png'); const a = document.createElement('a'); a.download='classroom-layout.png'; a.href=png; a.click(); }; img.src = url; 
+  }
+
+  async function generateLayoutFromLLM() {
+    const userPrompt = llmPromptEl.value;
+    if (!userPrompt) {
+        flash('Please describe your lesson first.');
+        return;
+    }
+
+    const studentCountMatch = userPrompt.match(/\[(\d+)\]/);
+    const studentCount = studentCountMatch ? parseInt(studentCountMatch[1], 10) : 32;
+
+    llmGenerateBtn.disabled = true;
+    llmGenerateBtn.textContent = 'Generating...';
+
+    const apiKey = "AIzaSyC9AKQcORYqndRZGhvTh-OqyMvE-Q7F2aI"; 
+
+    const systemPrompt = `You are an expert in spatial pedagogy. Analyze the user's lesson plan. Respond with a JSON object that includes the best layout preset, wall configuration, and three pedagogical opportunities. The JSON object must have four keys: "preset", "wall_A", "wall_B", and "insights". - "preset" must be one of: "direct", "pods", "stations", "circle", "quiet", "maker", "fishbowl", "gallery". - "wall_A" and "wall_B" must be one of: "close", "stack". - "insights" must be an array of exactly three objects. Each object must have three keys: "title" (string), "affordance" (string), and "moves" (an array of strings). User prompt: "${userPrompt}"`;
+    
+    let chatHistory = [{ role: "user", parts: [{ text: systemPrompt }] }];
+    const payload = { 
+        contents: chatHistory,
+        generationConfig: {
+            responseMimeType: "application/json",
+        }
+    };
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error("API Error Response:", errorBody);
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
+            const rawJson = result.candidates[0].content.parts[0].text;
+            const parsedJson = JSON.parse(rawJson);
+            
+            if (parsedJson.preset) {
+                applyPreset(parsedJson.preset, studentCount);
+                document.getElementById('presetSelect').value = parsedJson.preset;
+            }
+            if (parsedJson.wall_A === 'stack') stackWall('A'); else closeWall('A');
+            if (parsedJson.wall_B === 'stack') stackWall('B'); else closeWall('B');
+            if (parsedJson.insights) renderInsights(parsedJson.insights);
+            flash(`Generated '${parsedJson.preset}' layout for ${studentCount} students.`);
+        } else {
+            console.error("Invalid response structure from AI:", result);
+            throw new Error('No valid response from AI.');
+        }
+
+    } catch (error) {
+        console.error("LLM Error:", error);
+        flash("Error generating layout. Check console for details.");
+        updateMetrics();
+    } finally {
+        llmGenerateBtn.disabled = false;
+        llmGenerateBtn.textContent = 'Generate Layout';
+    }
+  }
+
+  function trySnap(g, preview){ clearGhost(); const mode = g.getAttribute('data-snap')||'none'; if(mode==='none') return; const [tx,ty] = getTranslate(g); let rot = normAngle(getRotate(g)); const step = (mode==='tri60'||mode==='edge60') ? 60 : 90; const snappedRot = Math.round(rot/step)*step; if(!rotateSelection._lastAlt && Math.abs(snappedRot-rot) <= ANGLE_HYSTERESIS) rot = snappedRot; const neighbors = [...layoutRoot.querySelectorAll('g[data-snap]')].filter(n=>n!==g); let applied=false; for(const n of neighbors){ const [nx,ny] = getTranslate(n); const dist = Math.hypot(nx-tx, ny-ty); if(dist > NEIGHBOR_RADIUS) continue; if(mode==='tri60' && n.getAttribute('data-snap')==='tri60'){ const s = TRI_S, h = TRI_H; const offsets = [ {dx:s, dy:0, a:0}, {dx:s/2, dy:h, a:60}, {dx:-s/2, dy:h, a:120}, {dx:-s, dy:0, a:180}, {dx:-s/2, dy:-h, a:240}, {dx:s/2, dy:-h, a:300} ]; for(const off of offsets){ const tx2 = nx + off.dx, ty2 = ny + off.dy; if(Math.hypot(tx2 - tx, ty2 - ty) <= SNAP_RADIUS){ if(preview){ drawGhostTri(tx2,ty2,off.a,s); } else { g.setAttribute('transform', `translate(${snap(tx2)},${snap(ty2)}) rotate(${off.a})`); } applied=true; break; } } } if(applied) break; const dx = Math.abs(nx - tx), dy = Math.abs(ny - ty); if(dx <= SNAP_RADIUS || dy <= SNAP_RADIUS){ const nx2 = dx <= SNAP_RADIUS ? nx : tx; const ny2 = dy <= SNAP_RADIUS ? ny : ty; if(preview){ drawGhostBox(nx2,ny2,g); } else { g.setAttribute('transform', `translate(${snap(nx2)},${snap(ny2)}) rotate(${rot})`); } applied=true; break; } } }
+  function clearGhost(){ ghostLayer.innerHTML=''; }
+  function drawGhostBox(x,y,g){ const bb = g.getBBox(); const r = document.createElementNS('http://www.w3.org/2000/svg','rect'); r.setAttribute('x', x + bb.x); r.setAttribute('y', y + bb.y); r.setAttribute('width', bb.width); r.setAttribute('height', bb.height); r.setAttribute('class','ghost-snap'); ghostLayer.appendChild(r); }
+  function drawGhostTri(cx,cy,angle,s){ const h = Math.sin(Math.PI/3)*s; const pts = [[-s/2,h/2],[0,-h/2],[s/2,h/2]].map(([px,py])=>{ const rx = Math.cos(rad(angle))*px - Math.sin(rad(angle))*py + cx; const ry = Math.sin(rad(angle))*px + Math.cos(rad(angle))*py + cy; return [rx,ry]; }); const path = document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d', `M${pts[0][0]},${pts[0][1]} L${pts[1][0]},${pts[1][1]} L${pts[2][0]},${pts[2][1]} Z`); path.setAttribute('class','ghost-snap'); ghostLayer.appendChild(path); }
+  
+  let activeHandle = null;
+  function showHandles(g){ 
+    g.querySelectorAll('.handle').forEach(n=>n.remove()); 
+    const bb = g.querySelector('g').getBBox();
+    const corners = [ 
+      {name:'nw', x:bb.x, y:bb.y}, 
+      {name:'ne', x:bb.x+bb.width, y:bb.y}, 
+      {name:'se', x:bb.x+bb.width, y:bb.y+bb.height}, 
+      {name:'sw', x:bb.x, y:bb.y+bb.height} 
+    ]; 
+    for(const c of corners){ 
+      const h = document.createElementNS('http://www.w3.org/2000/svg','rect'); 
+      h.classList.add('handle'); 
+      h.setAttribute('data-handle', c.name); 
+      h.setAttribute('x', c.x-6); h.setAttribute('y', c.y-6); 
+      h.setAttribute('width', 12); h.setAttribute('height', 12); 
+      h.setAttribute('fill', 'var(--accent)'); h.setAttribute('opacity','0.85'); 
+      h.style.cursor = `${c.name}-resize`; 
+      h.addEventListener('pointerdown', (e)=> startResize(e,g,h)); 
+      g.appendChild(h); 
+    } 
+  }
+  function removeHandles(){ layoutRoot.querySelectorAll('.handle').forEach(n=>n.remove()); }
+  
+  function startResize(e, g, handle){ 
+    e.stopPropagation(); 
+    activeHandle = handle.getAttribute('data-handle'); 
+    handle.setPointerCapture(e.pointerId); 
+    const start = getMouseSVG(e); 
+    const nodeToResize = g.querySelector('rect[data-zone], rect.text-label-bg'); 
+    if(!nodeToResize) return; 
+    
+    const startBox = { x:+nodeToResize.getAttribute('x'), y:+nodeToResize.getAttribute('y'), w:+nodeToResize.getAttribute('width'), h:+nodeToResize.getAttribute('height') }; 
+    const rotation = getRotate(g);
+    const angleRad = -rad(rotation); // Inverse rotation
+    const cosA = Math.cos(angleRad);
+    const sinA = Math.sin(angleRad);
+    const min = unit; 
+
+    const onMove = ev=>{ 
+        const cur = getMouseSVG(ev); 
+        const dx = cur.x - start.x; 
+        const dy = cur.y - start.y; 
+        
+        const localDx = dx * cosA - dy * sinA;
+        const localDy = dx * sinA + dy * cosA;
+
+        const bypass = ev.altKey || !toggleSnap.checked; 
+        let x = startBox.x, y = startBox.y, w = startBox.w, h = startBox.h; 
+
+        if(activeHandle.includes('n')){ 
+            const newY = startBox.y + localDy;
+            h = startBox.h - localDy;
+            y = newY; 
+        } 
+        if(activeHandle.includes('s')){ h = startBox.h + localDy; } 
+        if(activeHandle.includes('w')){ 
+            const newX = startBox.x + localDx;
+            w = startBox.w - localDx;
+            x = newX;
+        } 
+        if(activeHandle.includes('e')){ w = startBox.w + localDx; } 
+
+        if(w < min){ const diff = min - w; if(activeHandle.includes('w')) x -= diff; w = min; } 
+        if(h < min){ const diff = min - h; if(activeHandle.includes('n')) y -= diff; h = min; } 
+        
+        nodeToResize.setAttribute('x', x); 
+        nodeToResize.setAttribute('y', y); 
+        nodeToResize.setAttribute('width', w); 
+        nodeToResize.setAttribute('height', h); 
+        
+        const label = g.querySelector('text[data-zone-label], text.text-label-text'); 
+        if(label){ label.setAttribute('x', 0); label.setAttribute('y', 4); } 
+        
+        itemsLayer.querySelectorAll('.selection').forEach(n=>n.remove()); 
+        showHandles(g); 
+    }; 
+    const onUp = ev=>{ 
+        try{ handle.releasePointerCapture(ev.pointerId);}catch(_){ } 
+        stage.removeEventListener('pointermove', onMove); 
+        stage.removeEventListener('pointerup', onUp); 
+        drawSelection(); 
+        updateMetrics(); 
+    }; 
+    stage.addEventListener('pointermove', onMove); 
+    stage.addEventListener('pointerup', onUp); 
+  }
+
+  function editTextLabel(e) {
+    const g = e.currentTarget;
+    const textEl = g.querySelector('.text-label-text');
+    const bgRect = g.querySelector('.text-label-bg');
+    const { width, height } = bgRect.getBBox();
+
+    const foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+    foreignObject.setAttribute('x', bgRect.getAttribute('x'));
+    foreignObject.setAttribute('y', bgRect.getAttribute('y'));
+    foreignObject.setAttribute('width', width);
+    foreignObject.setAttribute('height', height);
+    foreignObject.classList.add('text-edit-foreign-object');
+
+    const textarea = document.createElement('textarea');
+    textarea.value = textEl.textContent;
+    textarea.classList.add('text-edit-textarea');
+    
+    foreignObject.appendChild(textarea);
+    g.appendChild(foreignObject);
+    
+    textarea.focus();
+    textarea.select();
+
+    textEl.style.display = 'none';
+
+    const finishEditing = () => {
+        textEl.textContent = textarea.value;
+        g.removeChild(foreignObject);
+        textEl.style.display = 'block';
+        updateMetrics();
+    };
+
+    textarea.addEventListener('blur', finishEditing);
+    textarea.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' && !ev.shiftKey) {
+            ev.preventDefault();
+            finishEditing();
+        }
+    });
+  }
+  
+  // --- RUN APP ---
+  initializeApp();
+})();
+</script>
+</body>
+</html>
