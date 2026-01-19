@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PedPlannerPro v3.2 (Visual Fixes)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        body { overflow: hidden; user-select: none; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .dark .glass-panel { background: rgba(17, 24, 39, 0.95); }
+        .cursor-grab { cursor: grab; }
+        .cursor-grabbing { cursor: grabbing; }
+        .bg-grid { background-size: 60px 60px; background-image: linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px); }
+        .dark .bg-grid { background-image: linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px); }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 transition-colors duration-200">
+    <div id="root" class="h-screen w-screen flex flex-col"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+        // --- ICONS ---
+        const Icon = ({ path, size = 18, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+        
+        const ICONS = {
+            Grid: <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/>,
+            Sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></>,
+            Moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>,
+            Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
+            Eye: <><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>,
+            Save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>,
+            Trash: <><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></>,
+            Folder: <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>,
+            Sparkles: <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>,
+            Book: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>,
+            BarChart: <><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></>,
+            Clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+            Hash: <><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></>,
+            Settings: <><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.18-.08a2 2 0 0 0-2 2v.44a2 2 0 0 0 2 2h.18a2 2 0 0 1 1.73 1l.25.43a2 2 0 0 1 0 2l-.08.18a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.18.08a2 2 0 0 0 2-2v-.44a2 2 0 0 0-2-2h-.18a2 2 0 0 1-1.73-1l-.25-.43a2 2 0 0 1 0-2l.08-.18a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>,
+            ChevronRight: <polyline points="9 18 15 12 9 6"/>,
+            Info: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>
+        };
+
+        const ROOM_W = 720;
+        const ROOM_H = 1440; 
+        const LEFT_PANEL_W = 280;
+        const RIGHT_PANEL_W = 400;
+        const WALL_A_Y = 720; 
+        const WALL_B_Y = 1080;
+        const WALL_PANEL_W = (ROOM_W / 8) - 2; 
+        const DEFAULT_API_KEY = "AIzaSyAHgdgfEY4A3pFGX-grpwNaPDRaI3cbBNE"; 
+
+        const PEDAGOGICAL_CONTEXT = `
+        You are a Senior Educational Consultant for the Ministry of Education, Singapore.
+        Analyze the lesson plan and suggest layout + insights.
+        REFERENCES: E21CC (CCI, CIT, CGC), STP, EdTech Masterplan 2030.
+        
+        OUTPUT FORMAT (JSON):
+        { 
+            "preset": "pods", 
+            "wall_A": "close", 
+            "wall_B": "stack", 
+            "rationale": "...", 
+            "insights": [{ "framework": "STP", "title": "...", "content": "..." }] 
+        }
+        `;
+
+        const METRIC_DEFINITIONS = {
+            sightlines: "Visual access to instruction. High = clear view.",
+            mobility: "Ease of movement. High = wide paths, less clutter.",
+            flexibility: "Adaptability. High = mobile furniture.",
+            density: "Comfortable spacing. High = less crowded.",
+            modality: "Variety of learning modes. High = supports VR, Maker, Group, & Solo.",
+            environment: "Wellbeing (Barrett 2015). High = ownership, comfort, natural elements."
+        };
+
+        const CATEGORIES = {
+            furniture: { label: "Furniture", items: [] },
+            tech: { label: "Technology", items: [] },
+            cognitive: { label: "Cognitive Tools", items: [] },
+            social: { label: "Social & Group", items: [] },
+            emotional: { label: "Wellbeing", items: [] },
+            zones: { label: "Zones & Labels", items: [] }
+        };
+
+        // --- FIXED PALETTE: RENAMED 'r' (Radius) TO 'radius' TO AVOID CONFLICT WITH 'r' (Rotation) ---
+        const RAW_PALETTE = [
+            { cat: 'furniture', id: 'desk_rect', label: 'Desk (Rect)', w: 60, h: 42, color: '#e2e8f0', snap: 90, type: 'rect', mobile: false },
+            { cat: 'furniture', id: 'desk_round', label: 'Table (Round)', radius: 33, color: '#d1fae5', snap: 0, type: 'circle', mobile: false },
+            { cat: 'furniture', id: 'desk_trap', label: 'Desk (Trap)', w: 60, h: 42, color: '#fee2e2', snap: 60, type: 'trap', mobile: true },
+            { cat: 'furniture', id: 'desk_tri', label: 'Desk (Tri)', s: 58, color: '#e0f2fe', snap: 60, type: 'tri', mobile: true },
+            { cat: 'furniture', id: 'chair', label: 'Chair', w: 33, h: 33, color: '#f1f5f9', snap: 0, type: 'chair', mobile: true },
+            { cat: 'furniture', id: 'stand_table', label: 'Standing Table', w: 144, h: 36, color: '#fde68a', snap: 90, type: 'rect', mobile: false },
+            
+            { cat: 'tech', id: 'writable_tv', label: 'Writable TV', w: 96, h: 24, color: '#e2e8f0', snap: 90, type: 'tv', mobile: true },
+            { cat: 'tech', id: 'vr_station', label: 'VR Station', radius: 30, color: '#dbeafe', snap: 0, type: 'vr', mobile: false },
+            { cat: 'tech', id: 'printer_3d', label: '3D Printer', w: 48, h: 48, color: '#cbd5e1', snap: 0, type: 'rect', icon: '3D', mobile: false },
+            { cat: 'tech', id: 'tablet_cart', label: 'Tablet Cart', w: 54, h: 42, color: '#e0e7ff', snap: 0, type: 'cart', mobile: true },
+            
+            { cat: 'cognitive', id: 'teacher_desk', label: 'Teacher Desk', w: 96, h: 48, color: '#bfdbfe', snap: 90, type: 'rect', icon: 'Teacher', mobile: false },
+            { cat: 'cognitive', id: 'whiteboard', label: 'Mobile Board', w: 66, h: 12, color: '#93c5fd', snap: 90, type: 'board', mobile: true },
+            { cat: 'cognitive', id: 'tool_cabinet', label: 'Tool Cabinet', w: 90, h: 36, color: '#e2e8f0', snap: 90, type: 'cabinet', mobile: false },
+            
+            { cat: 'social', id: 'group_table', label: 'Group Table (6)', radius: 48, color: '#a7f3d0', snap: 0, type: 'circle', mobile: false },
+            { cat: 'social', id: 'partition', label: 'Partition', w: 12, h: 108, color: '#34d399', snap: 90, type: 'rect', mobile: true },
+            
+            { cat: 'emotional', id: 'couch', label: 'Couch', w: 108, h: 48, color: '#fdba74', snap: 90, type: 'couch', mobile: false },
+            { cat: 'emotional', id: 'beanbag', label: 'Beanbag', radius: 33, color: '#fde68a', snap: 0, type: 'beanbag', mobile: true },
+            { cat: 'emotional', id: 'plant', label: 'Plant', radius: 27, color: '#bbf7d0', snap: 0, type: 'plant', mobile: true },
+            
+            { cat: 'zones', id: 'zone_cog', label: 'Zone: Cognitive', w: 180, h: 120, color: '#93c5fd', type: 'zone', opacity: 0.2 },
+            { cat: 'zones', id: 'zone_soc', label: 'Zone: Social', w: 180, h: 120, color: '#a7f3d0', type: 'zone', opacity: 0.2 },
+            { cat: 'zones', id: 'zone_emo', label: 'Zone: Emotional', w: 180, h: 120, color: '#fde68a', type: 'zone', opacity: 0.2 },
+            { cat: 'zones', id: 'text_label', label: 'Text Label', w: 120, h: 48, type: 'text', text: 'Double-click to edit' },
+        ];
+
+        RAW_PALETTE.forEach(p => { if(CATEGORIES[p.cat]) CATEGORIES[p.cat].items.push(p); });
+
+        const PRESETS = {
+            direct: { name: 'Direct Instruction', desc: 'Rows facing front.' },
+            pods: { name: 'Group Pods', desc: 'Clusters for collaboration.' },
+            stations: { name: 'Stations / Rotations', desc: 'Distinct zones.' },
+            circle: { name: 'Discussion Circle', desc: 'Democratic layout.' },
+            fishbowl: { name: 'Fishbowl', desc: 'Inner/outer circles.' },
+            maker: { name: 'Makerspace', desc: 'Workbench zones.' },
+            gallery: { name: 'Gallery Walk', desc: 'Perimeter display stations.' }
+        };
+
+        const RadarChart = ({ data, labels, darkMode }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            useEffect(() => {
+                const ctx = chartRef.current.getContext('2d');
+                const gridColor = darkMode ? '#4b5563' : '#e2e8f0';
+                const pointLabelColor = darkMode ? '#9ca3af' : '#64748b';
+
+                if (!chartInstance.current) {
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'radar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Score',
+                                data: data,
+                                backgroundColor: darkMode ? 'rgba(251, 191, 36, 0.2)' : 'rgba(79, 70, 229, 0.2)',
+                                borderColor: darkMode ? '#fbbf24' : '#4f46e5',
+                                pointBackgroundColor: darkMode ? '#fbbf24' : '#4f46e5',
+                                pointBorderColor: '#fff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+                            scales: {
+                                r: {
+                                    min: 0, max: 100, ticks: { display: false, stepSize: 20 },
+                                    angleLines: { color: gridColor }, grid: { color: gridColor },
+                                    pointLabels: { font: { size: 11 }, color: pointLabelColor }
+                                }
+                            },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                } else {
+                    chartInstance.current.data.datasets[0].data = data;
+                    chartInstance.current.data.datasets[0].backgroundColor = darkMode ? 'rgba(251, 191, 36, 0.2)' : 'rgba(79, 70, 229, 0.2)';
+                    chartInstance.current.data.datasets[0].borderColor = darkMode ? '#fbbf24' : '#4f46e5';
+                    chartInstance.current.data.datasets[0].pointBackgroundColor = darkMode ? '#fbbf24' : '#4f46e5';
+                    chartInstance.current.options.scales.r.grid.color = gridColor;
+                    chartInstance.current.options.scales.r.angleLines.color = gridColor;
+                    chartInstance.current.options.scales.r.pointLabels.color = pointLabelColor;
+                    chartInstance.current.update();
+                }
+            }, [data, labels, darkMode]);
+
+            return <canvas ref={chartRef} />;
+        };
+
+        const SafeText = ({ content }) => {
+            if (typeof content === 'string') return content;
+            if (typeof content === 'number') return content;
+            if (Array.isArray(content)) return content.map(c => typeof c === 'string' ? c : JSON.stringify(c)).join(' ');
+            return '';
+        };
+
+        const SpatialPlannerPro = () => {
+            const [items, setItems] = useState([]);
+            const [history, setHistory] = useState([]);
+            const [historyIdx, setHistoryIdx] = useState(-1);
+            const [selection, setSelection] = useState(new Set());
+            const [view, setView] = useState({ x: 0, y: 0, k: 0.6 });
+            const [walls, setWalls] = useState({ A: 'closed', B: 'closed' });
+            const [darkMode, setDarkMode] = useState(false);
+            const [leftTab, setLeftTab] = useState('library');
+            const [isGenerating, setIsGenerating] = useState(false);
+            const [savedScenes, setSavedScenes] = useState([]);
+            const [sceneNameInput, setSceneNameInput] = useState('');
+            const [apiKey, setApiKey] = useState(DEFAULT_API_KEY);
+            const [showSettings, setShowSettings] = useState(false);
+            const [lessonParams, setLessonParams] = useState({ students: '28', duration: '60 mins', topic: 'Thermodynamics', activity: 'collaborative problem-solving', goal: 'critical thinking' });
+            const [aiInsights, setAiInsights] = useState([]);
+            const [layoutRationale, setLayoutRationale] = useState('');
+            const [editingTextId, setEditingTextId] = useState(null);
+            const [hoveredMetric, setHoveredMetric] = useState(null);
+            const [openCategories, setOpenCategories] = useState({ furniture: true, tech: true, cognitive: true, social: true, emotional: true, zones: true });
+            
+            const svgRef = useRef(null);
+            const interaction = useRef({ mode: 'idle', start: {x:0,y:0}, last: {x:0,y:0}, itemsStart: {}, handle: null });
+
+            // Init
+            useEffect(() => {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setDarkMode(true);
+                const saved = localStorage.getItem('spatial_scenes');
+                if (saved) { try { const parsed = JSON.parse(saved); if (Array.isArray(parsed)) setSavedScenes(parsed); } catch (e) {} }
+            }, []);
+            useEffect(() => { document.body.className = darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'; }, [darkMode]);
+
+            const createWallPanels = (yPos, startId) => {
+                return Array.from({length: 8}).map((_, i) => ({
+                    id: 'wall_panel', 
+                    cat: 'structure',
+                    uid: `wall-${startId}-${i}`,
+                    x: i * (ROOM_W/8) + (ROOM_W/16),
+                    y: yPos,
+                    w: WALL_PANEL_W,
+                    h: 12,
+                    r: 0,
+                    color: '#cbd5e1',
+                    type: 'rect',
+                    constraint: 'x'
+                }));
+            };
+
+            const fitToScreen = useCallback(() => {
+                const availW = window.innerWidth - LEFT_PANEL_W - RIGHT_PANEL_W;
+                const availH = window.innerHeight - 64;
+                const scaleW = (availW - 40) / ROOM_W;
+                const scaleH = (availH - 40) / ROOM_H;
+                const k = Math.min(scaleW, scaleH) * 0.95;
+                const x = (availW - ROOM_W * k) / 2;
+                const y = (availH - ROOM_H * k) / 2;
+                setView({ x, y, k: k || 0.4 });
+            }, []);
+            useEffect(() => { fitToScreen(); window.addEventListener('resize', fitToScreen); return () => window.removeEventListener('resize', fitToScreen); }, [fitToScreen]);
+
+            const pushHistory = (newItems) => {
+                const next = history.slice(0, historyIdx + 1);
+                next.push(JSON.stringify(newItems));
+                if (next.length > 30) next.shift();
+                setHistory(next);
+                setHistoryIdx(next.length - 1);
+            };
+            const updateItems = (newItems, save = true) => { setItems(newItems); if (save) pushHistory(newItems); };
+
+            const metrics = useMemo(() => {
+                const m = { sightlines: 20, mobility: 20, flexibility: 20, density: 20, modality: 20, environment: 20 };
+                if (items.length === 0) return m;
+                
+                const desks = items.filter(i => i.cat === 'furniture' && (i.id.includes('desk') || i.id === 'chair'));
+                const teachers = items.filter(i => ['teacher_desk', 'writable_tv', 'whiteboard'].includes(i.id));
+                const mobileCount = items.filter(i => i.mobile).length;
+                const totalFurniture = items.filter(i => i.cat === 'furniture' || i.cat === 'tech').length;
+
+                // Sightlines
+                if (desks.length > 0 && teachers.length > 0) {
+                    let score = 0;
+                    desks.forEach(d => {
+                        const closestT = teachers.reduce((a, b) => Math.hypot(b.x-d.x, b.y-d.y) < Math.hypot(a.x-d.x, a.y-d.y) ? b : a);
+                        const angleRad = (d.r - 90) * Math.PI / 180;
+                        const vecToT = { x: closestT.x - d.x, y: closestT.y - d.y };
+                        const facing = { x: Math.cos(angleRad), y: Math.sin(angleRad) };
+                        if ((facing.x * vecToT.x + facing.y * vecToT.y) > 0) score++;
+                    });
+                    m.sightlines = 20 + (score / desks.length) * 80;
+                }
+
+                // Mobility
+                const usedArea = items.reduce((acc, i) => acc + (i.w * i.h || (i.radius ? Math.PI*i.radius*i.radius : 2500)), 0);
+                m.mobility = Math.max(0, 100 - (usedArea / (ROOM_W*ROOM_H) * 200)); 
+
+                // Flexibility
+                m.flexibility = totalFurniture > 0 ? (mobileCount / totalFurniture) * 100 : 20;
+
+                // Modality
+                let modalityScore = 20;
+                let clusters = 0;
+                desks.forEach((d1, i) => { for(let j=i+1; j<desks.length; j++) { if (Math.hypot(d1.x-desks[j].x, d1.y-desks[j].y) < 140) { clusters++; break; } } });
+                const clusterRatio = desks.length > 0 ? clusters / desks.length : 0;
+                if (clusterRatio > 0.3) modalityScore += 20;
+                const hasVR = items.some(i => i.id === 'vr_station');
+                const hasMaker = items.some(i => i.id === 'printer_3d' || i.id === 'tool_cabinet');
+                const hasAV = items.some(i => i.id === 'writable_tv');
+                if (hasVR) modalityScore += 20;
+                if (hasMaker) modalityScore += 15;
+                if (hasAV) modalityScore += 10;
+                const hasSoft = items.some(i => i.cat === 'emotional');
+                const hasStanding = items.some(i => i.id === 'stand_table');
+                if (hasSoft) modalityScore += 10;
+                if (hasStanding) modalityScore += 10;
+                m.modality = Math.min(100, modalityScore);
+
+                // Environment
+                let envScore = 20;
+                const bioCount = items.filter(i => i.id === 'plant').length;
+                envScore += Math.min(15, bioCount * 5); 
+                const softCount = items.filter(i => ['couch', 'beanbag'].includes(i.id)).length;
+                if (softCount > 0) envScore += 20;
+                if (softCount > 2) envScore += 10;
+                const perimeterItems = items.filter(i => i.x < 100 || i.x > ROOM_W - 100 || i.y < 100 || i.y > ROOM_H - 100).length;
+                const perimeterRatio = items.length > 0 ? perimeterItems / items.length : 0;
+                if (perimeterRatio > 0.3) envScore += 20;
+                if (m.density < 40) envScore -= 10;
+                m.environment = Math.min(100, Math.max(0, envScore));
+                m.density = Math.max(10, Math.min(100, 140 - (items.length * 0.8)));
+
+                return m;
+            }, [items]);
+
+            const addItem = (def) => {
+                const availW = window.innerWidth - LEFT_PANEL_W - RIGHT_PANEL_W;
+                const cx = (availW / 2 - view.x) / view.k;
+                const cy = ((window.innerHeight - 64) / 2 - view.y) / view.k;
+                // Def contains 'radius' (if circle), 'r' is init to 0 for Rotation
+                updateItems([...items, { ...def, uid: Math.random().toString(36).substr(2,9), x: cx, y: cy, r: 0 }]);
+            };
+            
+            const deleteSelection = () => { if (selection.size) updateItems(items.filter(i => !selection.has(i.uid))); setSelection(new Set()); };
+            const rotateSelection = () => {
+                if (!selection.size) return;
+                updateItems(items.map(i => selection.has(i.uid) ? { ...i, r: (Math.round((i.r+45)/15)*15) % 360 } : i));
+            };
+            const updateText = (uid, txt) => { setItems(items.map(i => i.uid === uid ? { ...i, text: txt } : i)); setEditingTextId(null); };
+
+            const applyPreset = (key, studentCount) => {
+                const count = parseInt(studentCount) || 28;
+                const cx = ROOM_W / 2;
+                const make = (id,x,y,r=0) => ({ ...RAW_PALETTE.find(p=>p.id===id), uid: Math.random().toString(36).substr(2,9), x, y, r });
+                let newItems = [...createWallPanels(WALL_A_Y, 'A'), ...createWallPanels(WALL_B_Y, 'B')];
+                setAiInsights([]); setLayoutRationale(`Standard ${PRESETS[key]?.name} layout.`);
+
+                if (key === 'direct') {
+                    newItems.push(make('teacher_desk', cx, 80, 180), make('writable_tv', 150, 80, 45));
+                    const cols = 5; const startX = 140; const startY = 250;
+                    for(let i=0; i<count; i++) {
+                        const r = Math.floor(i / cols); const c = i % cols;
+                        newItems.push(make('desk_rect', startX + c*110, startY + r*100, 90));
+                    }
+                    toggleWalls('A', 'close'); toggleWalls('B', 'close');
+                } else if (key === 'pods') {
+                    const groupSize = 4; const numGroups = Math.ceil(count / groupSize);
+                    const col1X = 200; const col2X = 520; let currentY = 250;
+                    newItems.push(make('whiteboard', cx, 80));
+                    for(let g=0; g<numGroups; g++) {
+                        const px = (g % 2 === 0) ? col1X : col2X; const py = currentY + (Math.floor(g/2) * 250);
+                        newItems.push(make('group_table', px, py));
+                        for(let i=0; i<groupSize; i++) { newItems.push(make('chair', px+Math.cos(i/groupSize*Math.PI*2)*60, py+Math.sin(i/groupSize*Math.PI*2)*60, (i/groupSize*360)+90)); }
+                    }
+                    newItems.push(make('teacher_desk', cx, 1350, 0));
+                    toggleWalls('A', 'stack'); toggleWalls('B', 'stack');
+                } else if (key === 'stations') {
+                    newItems.push(make('teacher_desk', 600, 100, 180));
+                    newItems.push(make('stand_table', 200, 200, 0)); newItems.push(make('printer_3d', 100, 150));
+                    newItems.push(make('group_table', 550, 500));
+                    for(let i=0;i<6;i++) newItems.push(make('chair', 550+Math.cos(i/6*Math.PI*2)*60, 500+Math.sin(i/6*Math.PI*2)*60, (i/6*360)+90));
+                    newItems.push(make('couch', 150, 850, 90)); newItems.push(make('beanbag', 250, 900));
+                    for(let i=0; i<8; i++) newItems.push(make('desk_trap', 450 + (i%2)*120, 1100 + Math.floor(i/2)*80, 0));
+                    toggleWalls('A', 'stack'); toggleWalls('B', 'stack');
+                } else if (key === 'circle') {
+                    const radius = 280; const cY = 720; 
+                    for(let i=0; i<count; i++) { const angle = (i/count)*2*Math.PI; newItems.push(make('chair', cx + Math.cos(angle)*radius, cY + Math.sin(angle)*radius, (i/count*360)+90)); }
+                    newItems.push(make('plant', cx, cY));
+                } else if (key === 'fishbowl') {
+                    const innerCount = 6; const outerCount = count - innerCount; const cY = 720;
+                    for(let i=0; i<innerCount; i++){ const angle = (i/innerCount)*2*Math.PI; newItems.push(make('desk_trap', cx + Math.cos(angle)*120, cY + Math.sin(angle)*120, (i/innerCount*360)+90)); }
+                    for(let i=0; i<outerCount; i++){ const angle = (i/outerCount)*2*Math.PI; newItems.push(make('chair', cx + Math.cos(angle)*300, cY + Math.sin(angle)*300, (i/outerCount*360)-90)); }
+                    toggleWalls('A', 'stack'); toggleWalls('B', 'stack');
+                } else if (key === 'gallery') {
+                    newItems.push(make('whiteboard', 100, 100, 45), make('whiteboard', 620, 100, -45));
+                    newItems.push(make('whiteboard', 100, 720, 90), make('whiteboard', 620, 720, -90));
+                    newItems.push(make('whiteboard', 100, 1340, 135), make('whiteboard', 620, 1340, -135));
+                    newItems.push(make('stand_table', cx, 400, 90), make('stand_table', cx, 1000, 90));
+                    for(let i=0; i<count; i++) { const angle = (i/count)*2*Math.PI; newItems.push(make('chair', cx + Math.cos(angle)*150, 720 + Math.sin(angle)*150, (i/count*360)+90)); }
+                } else if (key === 'maker') {
+                    newItems.push(make('stand_table', 200, 200, 0), make('stand_table', 520, 200, 0)); newItems.push(make('printer_3d', 360, 150));
+                    newItems.push(make('group_table', 200, 500), make('group_table', 520, 500));
+                    const rows = Math.ceil((count - 12) / 4);
+                    for(let r=0; r<rows; r++) { for(let c=0; c<4; c++) { if(12 + r*4 + c >= count) break; newItems.push(make('desk_rect', 150 + c*140, 800 + r*120, 0)); } }
+                }
+                updateItems(newItems);
+            };
+
+            const toggleWalls = (wallId, action) => {
+                const startId = wallId === 'A' ? 'wall-A' : 'wall-B';
+                setItems(prevItems => prevItems.map(item => {
+                    if (item.uid.startsWith(startId)) {
+                        const index = parseInt(item.uid.split('-')[2]);
+                        if (action === 'close') return { ...item, x: index * (ROOM_W/8) + (ROOM_W/16) };
+                        else return { ...item, x: index < 4 ? 45 + (index * 12) : (ROOM_W - 45) - ((7-index) * 12) };
+                    }
+                    return item;
+                }));
+            };
+
+            const generateLayout = async () => {
+                setIsGenerating(true);
+                const prompt = `Lesson: ${lessonParams.topic} (${lessonParams.duration}). Size: ${lessonParams.students}. Activity: ${lessonParams.activity}. Goal: ${lessonParams.goal}.`;
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ contents:[{parts:[{text: prompt}]}], system_instruction:{parts:[{text: PEDAGOGICAL_CONTEXT}]} })
+                    });
+                    const data = await res.json();
+                    if(data.error) throw new Error(data.error.message);
+                    const txt = data.candidates?.[0]?.content?.parts?.[0]?.text.replace(/```json/g,'').replace(/```/g,'').trim() || '{}';
+                    const json = JSON.parse(txt);
+                    if(json.preset) { 
+                        applyPreset(json.preset, lessonParams.students); 
+                        setAiInsights(json.insights||[]);
+                        setLayoutRationale(json.rationale || "AI optimized layout.");
+                        if(json.wall_A) toggleWalls('A', json.wall_A); if(json.wall_B) toggleWalls('B', json.wall_B);
+                    }
+                } catch(e) { alert("AI Error: " + e.message); }
+                setIsGenerating(false);
+            };
+
+            const getPt = (e) => { const p = svgRef.current.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; return p.matrixTransform(svgRef.current.getScreenCTM().inverse()); };
+            const handleDown = (e) => {
+                const pt = getPt(e);
+                const target = e.target.closest('g[data-uid]');
+                const handle = e.target.getAttribute('data-handle');
+                const isSpace = e.code === 'Space' || e.button === 1;
+                if(isSpace || (!target && !handle && e.altKey)) { interaction.current = { mode: 'pan', start: {x:e.clientX, y:e.clientY}, last: {...view} }; e.target.setPointerCapture(e.pointerId); return; }
+                const wPt = { x: (pt.x - view.x)/view.k, y: (pt.y - view.y)/view.k };
+                if(handle) { e.stopPropagation(); const item = items.find(i => i.uid === e.target.closest('g').dataset.uid); if(item) interaction.current = { mode: 'resize', handle, itemUid: item.uid, start: wPt, itemStart: {...item} }; e.target.setPointerCapture(e.pointerId); return; }
+                if(target) {
+                    const uid = target.dataset.uid;
+                    let newSel = new Set(selection);
+                    if(e.shiftKey) { if(newSel.has(uid)) newSel.delete(uid); else newSel.add(uid); } else if(!newSel.has(uid)) newSel = new Set([uid]);
+                    setSelection(newSel);
+                    const iStart = {}; items.forEach(i=>{if(newSel.has(i.uid)) iStart[i.uid] = {x:i.x, y:i.y};});
+                    interaction.current = { mode: 'drag', start: wPt, itemsStart: iStart };
+                    target.setPointerCapture(e.pointerId); return;
+                }
+                setSelection(new Set()); interaction.current = { mode: 'marquee', start: wPt, end: wPt }; e.target.setPointerCapture(e.pointerId);
+            };
+
+            const handleMove = (e) => {
+                const { mode, start, itemsStart, handle, itemUid, itemStart } = interaction.current;
+                if (mode === 'idle') return;
+                const wPt = { x: (getPt(e).x - view.x)/view.k, y: (getPt(e).y - view.y)/view.k };
+                if (mode === 'pan') {
+                    setView(v => ({ ...v, x: interaction.current.last.x + (e.clientX - interaction.current.start.x), y: interaction.current.last.y + (e.clientY - interaction.current.start.y) }));
+                } else if (mode === 'drag' && start) {
+                    const dx = wPt.x - start.x, dy = wPt.y - start.y;
+                    setItems(items.map(i => {
+                        if (itemsStart[i.uid]) {
+                            if (i.constraint === 'x') { let nx = itemsStart[i.uid].x + dx; nx = Math.max(i.w/2, Math.min(ROOM_W - i.w/2, nx)); return { ...i, x: nx }; }
+                            let nx = itemsStart[i.uid].x + dx; let ny = itemsStart[i.uid].y + dy;
+                            if (!e.altKey && !i.constraint) { nx = Math.round(nx/10)*10; ny = Math.round(ny/10)*10; }
+                            return { ...i, x: nx, y: ny };
+                        }
+                        return i;
+                    }));
+                } else if (mode === 'resize' && start && itemStart) {
+                    const dx = wPt.x - start.x, dy = wPt.y - start.y;
+                    let { w, h, x, y } = itemStart;
+                    if(handle.includes('e')) w+=dx; if(handle.includes('w')) { x+=dx; w-=dx; }
+                    if(handle.includes('s')) h+=dy; if(handle.includes('n')) { y+=dy; h-=dy; }
+                    setItems(items.map(i => i.uid === itemUid ? { ...i, x, y, w: Math.max(20,w), h: Math.max(20,h) } : i));
+                } else if (mode === 'marquee') { interaction.current.end = wPt; setItems([...items]); }
+            };
+
+            const handleUp = (e) => {
+                const { mode, start, end } = interaction.current;
+                if (mode==='drag'||mode==='resize') pushHistory(items);
+                if (mode==='marquee' && start && end) {
+                    const x1=Math.min(start.x,end.x), x2=Math.max(start.x,end.x), y1=Math.min(start.y,end.y), y2=Math.max(start.y,end.y);
+                    const s = new Set(); items.forEach(i => { if(i.x>=x1 && i.x<=x2 && i.y>=y1 && i.y<=y2) s.add(i.uid); });
+                    setSelection(s);
+                }
+                interaction.current = { mode: 'idle' }; try { e.target.releasePointerCapture(e.pointerId); } catch(e){}
+            };
+
+            useEffect(() => {
+                const k = (e) => {
+                    if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+                    if(e.key==='Backspace'||e.key==='Delete') deleteSelection();
+                    if(e.key.toLowerCase()==='r') rotateSelection();
+                };
+                window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
+            }, [selection, items]);
+
+            const saveLocal = () => { if(sceneNameInput) { const s = [...savedScenes, {id:Date.now(), name:sceneNameInput, items, walls}]; setSavedScenes(s); localStorage.setItem('spatial_scenes', JSON.stringify(s)); setSceneNameInput(''); }};
+            const loadLocal = (s) => { setItems(s.items); setWalls(s.walls); pushHistory(s.items); };
+            const delLocal = (id) => { if(confirm("Delete?")) { const s = savedScenes.filter(x=>x.id!==id); setSavedScenes(s); localStorage.setItem('spatial_scenes', JSON.stringify(s)); }};
+            const handleExport = () => {
+                const svg = svgRef.current;
+                const data = new XMLSerializer().serializeToString(svg);
+                const blob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const img = new Image();
+                img.onload = () => {
+                    const cvs = document.createElement('canvas'); cvs.width = ROOM_W; cvs.height = ROOM_H;
+                    const ctx = cvs.getContext('2d');
+                    ctx.fillStyle = darkMode ? '#111827' : '#f6f7f9';
+                    ctx.fillRect(0,0,ROOM_W,ROOM_H); ctx.drawImage(img, 0, 0, ROOM_W, ROOM_H);
+                    const a = document.createElement('a'); a.download = 'layout.png'; a.href = cvs.toDataURL('image/png'); a.click();
+                };
+                img.src = url;
+            };
+
+            const renderShape = (item, sel, filter) => {
+                // --- CUSTOM RENDERERS FOR SPECIFIC ITEMS ---
+                
+                // 1. Group Table: Uses item.radius
+                if (item.id === 'group_table') return <g filter={filter}>
+                    <circle r={item.radius} fill={item.color} stroke="currentColor" strokeWidth="2"/>
+                    <circle r={item.radius - 8} fill="none" stroke="currentColor" strokeOpacity="0.2" strokeWidth="2"/>
+                </g>;
+
+                // 2. VR Station: Uses item.radius
+                if (item.type === 'vr') return <g filter={filter}>
+                    <circle r={item.radius} fill={item.color} stroke="currentColor" strokeWidth="1.5"/>
+                    <text textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight="bold" fill="currentColor" dy="1">VR</text>
+                    <path d={`M0,-${item.radius} L0,-${item.radius+5}`} stroke="currentColor" strokeWidth="2"/>
+                </g>;
+
+                // 3. Cabinet / Tool Cabinet: Uses w, h
+                if (item.type === 'cabinet') return <g filter={filter}>
+                     <rect x={-item.w/2} y={-item.h/2} width={item.w} height={item.h} fill={item.color} stroke="currentColor" strokeWidth="1.5"/>
+                     <line x1={-item.w/2+4} y1={-item.h/2+4} x2={item.w/2-4} y2={-item.h/2+4} stroke="currentColor" strokeOpacity="0.4" strokeWidth="1"/>
+                     <line x1={-item.w/2+4} y1={0} x2={item.w/2-4} y2={0} stroke="currentColor" strokeOpacity="0.2"/>
+                     <line x1={-item.w/2+4} y1={item.h/2-4} x2={item.w/2-4} y2={item.h/2-4} stroke="currentColor" strokeOpacity="0.4"/>
+                </g>;
+
+                // 4. Mobile Board: Uses w, h
+                if (item.type === 'board') return <g filter={filter}>
+                    <rect x={-item.w/2} y={-item.h/2} width={item.w} height={item.h} fill={item.color} stroke="currentColor" strokeWidth="1.5"/>
+                    <rect x={-item.w/2+2} y={-item.h/2+2} width={item.w-4} height={item.h-4} fill="rgba(255,255,255,0.3)"/>
+                    <line x1={-item.w/2} y1={0} x2={-item.w/2-4} y2={0} stroke="currentColor" strokeWidth="2"/>
+                    <line x1={item.w/2} y1={0} x2={item.w/2+4} y2={0} stroke="currentColor" strokeWidth="2"/>
+                </g>;
+
+                // 5. Tablet Cart: Uses w, h
+                if (item.type === 'cart') return <g filter={filter}>
+                    <rect x={-item.w/2} y={-item.h/2} width={item.w} height={item.h} rx="4" fill={item.color} stroke="currentColor" strokeWidth="1.5"/>
+                    <line x1={-item.w/2} y1={0} x2={item.w/2} y2={0} stroke="currentColor" strokeOpacity="0.2"/>
+                    <rect x={-item.w/2-4} y={-10} width={4} height={20} fill="currentColor" rx="2"/>
+                </g>;
+
+                // --- GENERIC SHAPES ---
+
+                if (item.type==='circle') return <circle r={item.radius} fill={item.color} stroke="currentColor" filter={filter} strokeWidth="1.5"/>;
+                
+                if (item.type==='rect') return <g><rect x={-item.w/2} y={-item.h/2} width={item.w} height={item.h} rx="2" fill={item.color} stroke="currentColor" filter={filter} strokeWidth="1.5"/><rect x={-item.w/2} y={item.h/2-4} width={item.w} height={4} fill="rgba(0,0,0,0.1)"/></g>;
+                
+                if (item.type==='trap') return <g><path d={`M${-item.w/2},${-item.h/2} L${item.w/2},${-item.h/2} L${item.w/2*0.75},${item.h/2} L${-item.w/2*0.75},${item.h/2} Z`} fill={item.color} stroke="currentColor" filter={filter} strokeWidth="1.5"/><line x1={-item.w/2+5} y1={-item.h/2+2} x2={item.w/2-5} y2={-item.h/2+2} stroke="rgba(0,0,0,0.1)"/></g>;
+                
+                if (item.type==='tri') return <g><path d={`M0,${-item.s*0.8/2} L${item.s/2},${item.s*0.8/2} L${-item.s/2},${item.s*0.8/2} Z`} fill={item.color} stroke="currentColor" filter={filter} strokeWidth="1.5"/><line x1={-10} y1={item.s*0.8/2-5} x2={10} y2={item.s*0.8/2-5} stroke="rgba(0,0,0,0.1)"/></g>;
+                
+                if (item.type==='chair') return <g filter={filter}>
+                    <rect x={-item.w/2} y={-item.h/2} width={item.w} height={item.h} rx="4" fill={item.color} stroke="currentColor" strokeWidth="1.5"/>
+                    <path d={`M${-item.w/2+4},${-item.h/2+18} Q0,${-item.h/2-8} ${item.w/2-4},${-item.h/2+18}`} fill="none" stroke="currentColor" strokeWidth="2"/>
+                </g>;
+                
+                if (item.type==='tv') return <g filter={filter}>
+                    <rect x={-item.w/2} y={-item.h/2} width={item.w} height={item.h} fill="#1e293b" rx="2"/>
+                    <rect x={-item.w/2+2} y={-item.h/2+2} width={item.w-4} height={item.h-4} fill={item.color}/>
+                </g>;
+                
+                if (item.type==='text') return editingTextId===item.uid ? <foreignObject x={-item.w/2} y={-item.h/2} width={item.w} height={item.h}><textarea autoFocus onBlur={e=>{updateText(item.uid,e.target.value)}} defaultValue={item.text} className="w-full h-full text-xs p-1 resize-none bg-white/90 border border-indigo-500 rounded"/></foreignObject> : <g><rect x={-item.w/2} y={-item.h/2} width={item.w} height={item.h} fill="none" stroke={sel?'currentColor':'transparent'} strokeDasharray="4 4"/><text textAnchor="middle" dominantBaseline="middle" fontSize="14" fontWeight="600" fill="currentColor" style={{textShadow:'0 1px 2px rgba(255,255,255,0.8)'}}>{item.text}</text></g>;
+                
+                if (item.type==='plant') return <g filter={filter}>
+                    <circle r={item.radius} fill={item.color} stroke="currentColor"/>
+                    <text textAnchor="middle" dy="5" fontSize="20">🌿</text>
+                </g>;
+                
+                if (item.type==='beanbag') return <g filter={filter}><circle r={item.radius} fill={item.color} stroke="currentColor"/><circle r={item.radius*0.6} fill="rgba(0,0,0,0.05)"/></g>;
+                
+                if (item.type==='couch') return <g filter={filter}>
+                    <rect x={-item.w/2} y={-item.h/2} width={item.w} height={item.h} rx="12" fill={item.color} stroke="currentColor"/>
+                    <rect x={-item.w/2+4} y={-item.h/2+4} width={item.w-8} height={item.h-20} rx="4" fill="rgba(0,0,0,0.05)"/>
+                </g>;
+
+                if (item.type==='zone') return <rect x={-item.w/2} y={-item.h/2} width={item.w} height={item.h} fill={item.color} fillOpacity="0.2" stroke="currentColor" strokeDasharray="6 4" strokeWidth="2"/>;
+                
+                return null;
+            };
+
+            return (
+                <div className={`h-full w-full flex flex-col ${darkMode?'dark':''}`}>
+                    <div className="h-14 flex items-center justify-between px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0 z-20 shadow-sm glass-panel">
+                        <div className="flex items-center gap-4">
+                            <span className="font-bold text-lg flex items-center gap-2 text-indigo-700 dark:text-indigo-400"><Icon path={ICONS.Grid} className="text-indigo-600"/> Spatial Planner Pro</span>
+                            <select onChange={e=>applyPreset(e.target.value, lessonParams.students)} defaultValue="" className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm rounded px-3 py-1.5 w-64 focus:ring-2 focus:ring-indigo-500 shadow-sm font-medium">
+                                <option value="" disabled>📂 Load Layout...</option>
+                                {Object.entries(PRESETS).map(([k,v])=><option key={k} value={k}>{v.name}</option>)}
+                            </select>
+                            <button onClick={()=>setDarkMode(!darkMode)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500 dark:text-gray-400"><Icon path={darkMode?ICONS.Sun:ICONS.Moon}/></button>
+                            <button onClick={fitToScreen} className="px-3 py-1.5 text-xs font-semibold border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600 text-gray-600 dark:text-gray-300 transition-colors">Auto-Fit</button>
+                            <button onClick={()=>setShowSettings(!showSettings)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500"><Icon path={ICONS.Settings}/></button>
+                        </div>
+                        <button onClick={handleExport} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 shadow-md transition-all hover:scale-105"><Icon path={ICONS.Download} size={16}/> Export PNG</button>
+                    </div>
+
+                    {showSettings && (
+                        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-800 p-6 shadow-2xl border dark:border-gray-700 rounded-lg z-50 w-96 animate-in fade-in zoom-in-95 duration-200">
+                            <h3 className="font-bold mb-4 text-lg">Settings</h3>
+                            <label className="text-xs font-semibold uppercase text-gray-500 mb-1 block">Gemini API Key</label>
+                            <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} className="w-full border dark:border-gray-600 p-2 rounded mb-4 dark:bg-gray-900 text-sm"/>
+                            <button onClick={()=>setShowSettings(false)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded font-medium transition-colors">Close</button>
+                        </div>
+                    )}
+
+                    <div className="flex-1 flex overflow-hidden">
+                        <div style={{width:LEFT_PANEL_W}} className="flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-10 shadow-lg">
+                            <div className="flex border-b border-gray-200 dark:border-gray-700">
+                                <button onClick={()=>setLeftTab('library')} className={`flex-1 py-4 text-sm font-bold border-b-2 transition-colors ${leftTab==='library'?'text-indigo-600 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20':'text-gray-500 border-transparent hover:text-gray-700'}`}>Library</button>
+                                <button onClick={()=>setLeftTab('scenes')} className={`flex-1 py-4 text-sm font-bold border-b-2 transition-colors ${leftTab==='scenes'?'text-indigo-600 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20':'text-gray-500 border-transparent hover:text-gray-700'}`}>My Scenes</button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                                {leftTab==='library' ? Object.entries(CATEGORIES).map(([key, cat]) => (
+                                    <div key={key} className="mb-4">
+                                        <button onClick={()=>setOpenCategories(prev=>({...prev, [key]: !prev[key]}))} className="flex items-center justify-between w-full text-left text-xs font-bold uppercase text-gray-500 tracking-wider mb-2 hover:text-indigo-600 transition-colors">
+                                            {cat.label}
+                                            <span className={`transform transition-transform ${openCategories[key]?'rotate-90':''}`}><Icon path={ICONS.ChevronRight} size={12}/></span>
+                                        </button>
+                                        {openCategories[key] && (
+                                            <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-top-2 duration-200">
+                                                {cat.items.map(p => (
+                                                    <button key={p.id} onClick={()=>addItem(p)} className="flex flex-col items-center justify-center p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700 hover:border-indigo-300 dark:hover:border-indigo-500 hover:shadow-md transition-all group">
+                                                        <div className="w-8 h-8 mb-2 flex items-center justify-center relative">
+                                                            <div className="absolute inset-0 opacity-20 bg-indigo-500 rounded-full blur-md group-hover:opacity-40 transition-opacity"></div>
+                                                            <div style={{width: p.cat==='zones'?24:p.w?p.w/3:p.radius?p.radius/1.2:20, height: p.cat==='zones'?16:p.h?p.h/3:p.radius?p.radius/1.2:20, background:p.color, borderRadius:p.type==='circle'||p.type==='chair'?'50%':'3px', border:'1px solid rgba(0,0,0,0.1)', boxShadow:'0 1px 2px rgba(0,0,0,0.1)'}} className="relative z-10"></div>
+                                                        </div>
+                                                        <span className="text-[10px] font-medium text-gray-600 dark:text-gray-400 text-center leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-300">{p.label}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )) : (
+                                    <div className="space-y-4">
+                                        <div className="bg-indigo-50 dark:bg-gray-800 p-4 rounded-lg border border-indigo-100 dark:border-gray-700">
+                                            <label className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase block mb-2">Save Layout</label>
+                                            <div className="flex gap-2">
+                                                <input value={sceneNameInput} onChange={e=>setSceneNameInput(e.target.value)} placeholder="Enter name..." className="flex-1 text-sm p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none"/>
+                                                <button onClick={saveLocal} className="p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"><Icon path={ICONS.Save} size={18}/></button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {savedScenes.length===0 && <div className="text-center text-sm text-gray-400 italic py-8">No saved scenes yet.</div>}
+                                            {savedScenes.map(s=>(
+                                                <div key={s.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg group hover:border-indigo-300 transition-all shadow-sm">
+                                                    <div>
+                                                        <div className="font-bold text-sm text-gray-800 dark:text-gray-200">{s.name}</div>
+                                                        <div className="text-[10px] text-gray-500">{new Date(s.id).toLocaleDateString()}</div>
+                                                    </div>
+                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={()=>loadLocal(s)} className="p-1.5 hover:bg-green-100 dark:hover:bg-green-900/30 rounded text-green-600" title="Load"><Icon path={ICONS.Folder} size={16}/></button>
+                                                        <button onClick={()=>delLocal(s.id)} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600" title="Delete"><Icon path={ICONS.Trash} size={16}/></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className={`flex-1 relative bg-gray-100 dark:bg-black overflow-hidden flex items-center justify-center ${interaction.current.mode==='drag'||interaction.current.mode==='pan'?'cursor-grabbing':'cursor-default'}`} onWheel={e=>{ if(e.ctrlKey){ e.preventDefault(); const s=Math.exp(-e.deltaY*0.001); setView(v=>({...v, k:Math.min(5, Math.max(0.1, v.k*s))})); } else { setView(v=>({...v, x:v.x-e.deltaX, y:v.y-e.deltaY})); } }}>
+                            <div className="absolute top-4 left-4 z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur p-2 rounded-lg shadow border border-gray-200 dark:border-gray-700 text-xs text-gray-500 font-mono pointer-events-none">
+                                x: {Math.round(-view.x)} y: {Math.round(-view.y)} z: {Math.round(view.k*100)}%
+                            </div>
+                            <svg ref={svgRef} className="w-full h-full" onPointerDown={handleDown} onPointerMove={handleMove} onPointerUp={handleUp} onPointerLeave={handleUp}>
+                                <defs>
+                                    <filter id="shadow"><feDropShadow dx="0" dy="3" stdDeviation="3" floodOpacity="0.15"/></filter>
+                                    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0V60 M0 60H60" stroke="currentColor" strokeOpacity="0.08" fill="none"/></pattern>
+                                </defs>
+                                <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
+                                    <rect x="-20" y="-20" width={ROOM_W+40} height={ROOM_H+40} fill="none" stroke="currentColor" strokeOpacity="0.05" strokeWidth="40"/>
+                                    <rect x="0" y="0" width={ROOM_W} height={ROOM_H} fill={darkMode?'#1e293b':'white'} filter="url(#shadow)"/>
+                                    <rect x="0" y="0" width={ROOM_W} height={ROOM_H} fill="url(#grid)"/>
+                                    
+                                    {/* Vertical Room Accents */}
+                                    <g className="text-blue-400 dark:text-blue-500">
+                                        <rect x="-8" y="200" width="8" height="300" fill="currentColor" rx="2"/>
+                                        <rect x={ROOM_W} y="200" width="8" height="300" fill="currentColor" rx="2"/>
+                                    </g>
+                                    <g className="text-amber-700 dark:text-amber-600">
+                                        <rect x="50" y="-8" width="100" height="12" fill="currentColor" rx="2"/>
+                                        <rect x={ROOM_W-150} y="-8" width="100" height="12" fill="currentColor" rx="2"/>
+                                    </g>
+                                    
+                                    <text x={ROOM_W/2} y="40" textAnchor="middle" fontSize="16" fill="currentColor" opacity="0.3" fontWeight="bold" letterSpacing="4">FRONT OF CLASS</text>
+                                    
+                                    {/* Horizontal Wall Tracks */}
+                                    <line x1="0" y1={WALL_A_Y} x2={ROOM_W} y2={WALL_A_Y} stroke="currentColor" strokeWidth="2" strokeDasharray="8 8" opacity="0.2"/>
+                                    <line x1="0" y1={WALL_B_Y} x2={ROOM_W} y2={WALL_B_Y} stroke="currentColor" strokeWidth="2" strokeDasharray="8 8" opacity="0.2"/>
+                                    
+                                    {items.map(item => {
+                                        const sel = selection.has(item.uid);
+                                        const filter = item.cat!=='zones'?'url(#shadow)':undefined;
+                                        return (
+                                            <g key={item.uid} data-uid={item.uid} transform={`translate(${item.x},${item.y}) rotate(${item.r})`} className={item.constraint ? "cursor-ns-resize" : "cursor-grab"} onDoubleClick={()=>item.cat==='zones'&&item.type==='text'&&setEditingTextId(item.uid)}>
+                                                {sel && item.cat!=='zones' && (
+                                                    <rect x={-item.w/2-2} y={-item.h/2-2} width={item.w+4} height={item.h+4} fill="none" stroke={darkMode?'#facc15':'#4f46e5'} strokeWidth="2" strokeDasharray="4 4" rx={item.type==='circle'||item.type==='vr'?100:4}/>
+                                                )}
+                                                {renderShape(item, sel, filter)}
+                                                {sel && item.cat==='zones' && item.type==='zone' && (
+                                                    <g>
+                                                        <rect x={-item.w/2-6} y={-item.h/2-6} width="12" height="12" fill="white" stroke="#4f46e5" strokeWidth="2" data-handle="nw" className="cursor-nw-resize"/>
+                                                        <rect x={item.w/2-6} y={item.h/2-6} width="12" height="12" fill="white" stroke="#4f46e5" strokeWidth="2" data-handle="se" className="cursor-se-resize"/>
+                                                    </g>
+                                                )}
+                                            </g>
+                                        );
+                                    })}
+                                    
+                                    {/* Wall Controls (Rotated for Vertical Walls) */}
+                                    <g transform={`translate(${ROOM_W+10}, ${WALL_A_Y})`}>
+                                        <foreignObject x="0" y="-30" width="100" height="60" className="pointer-events-none">
+                                            <div className="flex flex-col gap-1 pointer-events-auto">
+                                                <button onClick={()=>toggleWalls('A','close')} className="px-2 py-1 text-[10px] font-bold rounded shadow border bg-white text-gray-600 hover:bg-gray-50">Close</button>
+                                                <button onClick={()=>toggleWalls('A','stack')} className="px-2 py-1 text-[10px] font-bold rounded shadow border bg-white text-gray-600 hover:bg-gray-50">Stack</button>
+                                            </div>
+                                        </foreignObject>
+                                    </g>
+                                    
+                                    <g transform={`translate(${ROOM_W+10}, ${WALL_B_Y})`}>
+                                        <foreignObject x="0" y="-30" width="100" height="60" className="pointer-events-none">
+                                            <div className="flex flex-col gap-1 pointer-events-auto">
+                                                <button onClick={()=>toggleWalls('B','close')} className="px-2 py-1 text-[10px] font-bold rounded shadow border bg-white text-gray-600 hover:bg-gray-50">Close</button>
+                                                <button onClick={()=>toggleWalls('B','stack')} className="px-2 py-1 text-[10px] font-bold rounded shadow border bg-white text-gray-600 hover:bg-gray-50">Stack</button>
+                                            </div>
+                                        </foreignObject>
+                                    </g>
+                                    
+                                    {interaction.current.mode==='marquee' && <rect x={Math.min(interaction.current.start.x,interaction.current.end.x)} y={Math.min(interaction.current.start.y,interaction.current.end.y)} width={Math.abs(interaction.current.end.x-interaction.current.start.x)} height={Math.abs(interaction.current.end.y-interaction.current.start.y)} fill={darkMode?'#facc15':'#4f46e5'} fillOpacity="0.1" stroke="currentColor" strokeDasharray="4 4"/>}
+                                </g>
+                            </svg>
+                        </div>
+
+                        <div style={{width:RIGHT_PANEL_W}} className="flex-shrink-0 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex flex-col z-10 shadow-lg overflow-y-auto custom-scrollbar">
+                            <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+                                <div className="text-sm font-black uppercase text-gray-400 tracking-widest flex items-center gap-2 mb-1">
+                                    <Icon path={ICONS.Book} size={14}/> Planning
+                                </div>
+                                <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Lesson Builder</h2>
+                            </div>
+                            <div className="p-6 space-y-8">
+                                <div className="bg-indigo-50 dark:bg-gray-800/60 border border-indigo-100 dark:border-gray-700 p-6 rounded-xl shadow-sm space-y-5">
+                                    <div className="space-y-4 text-sm leading-relaxed text-gray-700 dark:text-gray-300 font-medium">
+                                        <div className="flex flex-wrap items-baseline gap-2">
+                                            I am planning a <span className="relative inline-block w-24 group"><Icon path={ICONS.Clock} size={12} className="absolute left-0 top-2 text-indigo-400 group-focus-within:text-indigo-600"/><input value={lessonParams.duration} onChange={e=>setLessonParams({...lessonParams,duration:e.target.value})} className="w-full pl-5 pr-1 py-1 text-center font-bold text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-300 focus:border-indigo-600 bg-transparent outline-none transition-colors"/></span> lesson on
+                                        </div>
+                                        <div><input value={lessonParams.topic} onChange={e=>setLessonParams({...lessonParams,topic:e.target.value})} className="w-full py-1 font-bold text-lg text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-300 focus:border-indigo-600 bg-transparent outline-none transition-colors" placeholder="e.g. Thermodynamics"/></div>
+                                        <div className="flex flex-wrap items-baseline gap-2">
+                                            for <span className="relative inline-block w-16 group"><Icon path={ICONS.Hash} size={12} className="absolute left-0 top-2 text-indigo-400 group-focus-within:text-indigo-600"/><input type="number" value={lessonParams.students} onChange={e=>setLessonParams({...lessonParams,students:e.target.value})} className="w-full pl-5 pr-1 py-1 text-center font-bold text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-300 focus:border-indigo-600 bg-transparent outline-none transition-colors"/></span> students.
+                                        </div>
+                                        <div>
+                                            <div className="text-xs uppercase text-gray-400 font-bold mb-1">Key Activities</div>
+                                            <input value={lessonParams.activity} onChange={e=>setLessonParams({...lessonParams,activity:e.target.value})} className="w-full py-1 font-bold text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-300 focus:border-indigo-600 bg-transparent outline-none transition-colors"/>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs uppercase text-gray-400 font-bold mb-1">Learning Goals</div>
+                                            <textarea value={lessonParams.goal} onChange={e=>setLessonParams({...lessonParams,goal:e.target.value})} className="w-full py-1 font-bold text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-300 focus:border-indigo-600 bg-transparent outline-none resize-none h-16 transition-colors"/>
+                                        </div>
+                                    </div>
+                                    <button onClick={generateLayout} disabled={isGenerating} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg text-sm font-bold tracking-wide flex justify-center items-center gap-2 shadow-lg shadow-indigo-200 dark:shadow-none transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
+                                        {isGenerating ? <><span className="animate-spin">⟳</span> Consulting Frameworks...</> : <><Icon path={ICONS.Sparkles}/> GENERATE LAYOUT</>}
+                                    </button>
+                                </div>
+
+                                {layoutRationale && (
+                                    <div className="bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-4 rounded-lg shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        <div className="text-xs font-bold uppercase text-indigo-600 dark:text-indigo-300 mb-2 flex items-center gap-2">
+                                            <Icon path={ICONS.Info} size={14}/> Design Rationale
+                                        </div>
+                                        <div className="text-sm text-indigo-900 dark:text-indigo-100 leading-relaxed italic">
+                                            "{layoutRationale}"
+                                        </div>
+                                    </div>
+                                )}
+
+                                {aiInsights.length>0 && (
+                                    <div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase text-gray-400 tracking-wider"><Icon path={ICONS.Book} size={14}/> Pedagogical Insights</div>
+                                        {aiInsights.map((ins,i)=>(
+                                            <div key={i} className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                                                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-purple-500"></div>
+                                                <div className="pl-3">
+                                                    <div className="text-[10px] font-black text-indigo-500 uppercase mb-1 tracking-wider">{ins.framework||'Pedagogy'}</div>
+                                                    <div className="font-bold text-gray-900 dark:text-gray-100 mb-2 text-sm">{ins.title}</div>
+                                                    <div className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed"><SafeText content={ins.content}/></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative">
+                                    <div className="text-xs font-bold uppercase text-gray-400 mb-4 w-full flex items-center gap-2"><Icon path={ICONS.BarChart} size={14}/> Spatial Metrics</div>
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex items-center justify-center py-2 h-64"><RadarChart labels={Object.keys(metrics)} data={Object.values(metrics)} darkMode={darkMode}/></div>
+                                        <div className="space-y-2">
+                                            {Object.keys(metrics).map(k=>(
+                                                <div key={k} onMouseEnter={()=>setHoveredMetric(k)} onMouseLeave={()=>setHoveredMetric(null)} className="flex justify-between items-center text-[10px] cursor-help hover:bg-gray-50 dark:hover:bg-gray-700/50 p-1.5 rounded transition-colors group">
+                                                    <span className="capitalize font-semibold text-gray-500 group-hover:text-indigo-600 transition-colors">{k}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-24 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 transition-all duration-500" style={{width:`${metrics[k]}%`}}></div></div>
+                                                        <span className="font-bold w-6 text-right">{Math.round(metrics[k])}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 text-[10px] bg-indigo-50 dark:bg-gray-800/50 p-3 rounded-lg border border-indigo-100 dark:border-gray-700 min-h-[50px] flex items-center text-gray-600 dark:text-gray-300">
+                                        {hoveredMetric ? <span><strong className="text-indigo-600">{hoveredMetric.charAt(0).toUpperCase()+hoveredMetric.slice(1)}:</strong> {METRIC_DEFINITIONS[hoveredMetric]}</span> : <span className="italic text-gray-400 flex gap-1 items-center"><Icon path={ICONS.Eye} size={12}/> Hover over a metric to see definitions.</span>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SpatialPlannerPro />);
+    </script>
+</body>
+</html>
