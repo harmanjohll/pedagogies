@@ -129,7 +129,7 @@ button.ghost:hover{background:var(--bg)}
 button.danger{background:var(--danger)}
 button.danger:hover{background:#b91c1c}
 label.toggle{display:flex;align-items:center;gap:8px;font-weight:500;margin:8px 0}
-select,input[type="text"],textarea{width:100%;border:1px solid var(--grid);border-radius:8px;padding:6px 8px;font:inherit;box-sizing:border-box;background:var(--bg);color:var(--ink)}
+select,input[type="text"],input[type="password"],textarea{width:100%;border:1px solid var(--grid);border-radius:8px;padding:6px 8px;font:inherit;box-sizing:border-box;background:var(--bg);color:var(--ink)}
 
 .stage-wrap{position:relative;background:var(--panel);border-radius:1rem;box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);padding:10px;min-height:0}
 #stage{width:100%;height:calc(100vh - 112px);background:var(--panel);border-radius:12px;-webkit-tap-highlight-color:transparent}
@@ -191,6 +191,7 @@ svg :focus{outline:none}
       Your key is stored only in your browser, never sent anywhere except Google's API.
       <br><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free Gemini API key here</a>
     </div>
+    <div id="keyStatus" style="display:none;padding:8px 12px;border-radius:8px;font-size:.8rem;margin-bottom:1rem;text-align:left"></div>
     <button class="start-btn" id="getStarted">Get Started</button>
   </div>
 </div>
@@ -379,7 +380,9 @@ svg :focus{outline:none}
       <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash Preview</option>
       <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
     </select>
+    <div id="settingsKeyStatus" style="display:none;padding:8px 12px;border-radius:8px;font-size:.8rem;margin-bottom:1rem"></div>
     <div class="btnrow">
+      <button class="ghost" id="settingsTestKey">Test Key</button>
       <button class="primary" id="settingsSave">Save</button>
       <button class="secondary" id="settingsCancel">Cancel</button>
     </div>
@@ -529,6 +532,35 @@ let isGenerating = false;
 // ║  SECTION 3: WELCOME SCREEN & SETTINGS                          ║
 // ╚══════════════════════════════════════════════════════════════════╝
 
+async function testApiKey(key, model) {
+  model = model || geminiModel || 'gemini-2.0-flash';
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key;
+  var payload = {
+    contents: [{ role: 'user', parts: [{ text: 'Reply with exactly: OK' }] }],
+    generationConfig: { maxOutputTokens: 10 }
+  };
+  var resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!resp.ok) {
+    var body = await resp.text();
+    if (resp.status === 400) throw new Error('Invalid API key format. Check that you copied the full key.');
+    if (resp.status === 403) throw new Error('API key is valid but lacks permission. Enable "Generative Language API" in Google Cloud Console.');
+    if (resp.status === 429) throw new Error('Rate limited. Your key works but has hit its quota. Wait a moment and try again.');
+    throw new Error('API returned ' + resp.status + ': ' + body.substring(0, 150));
+  }
+  var data = await resp.json();
+  if (!data.candidates || !data.candidates.length) throw new Error('Unexpected response format. The model may not be available.');
+  return true;
+}
+
+function showKeyStatus(msg, isError) {
+  var el = document.getElementById('keyStatus');
+  el.style.display = 'block';
+  el.style.background = isError ? '#fef2f2' : '#f0fdf4';
+  el.style.color = isError ? '#991b1b' : '#166534';
+  el.style.border = '1px solid ' + (isError ? '#fecaca' : '#bbf7d0');
+  el.textContent = msg;
+}
+
 function initWelcome() {
   if (apiKey) {
     document.getElementById('welcome').style.display = 'none';
@@ -536,14 +568,25 @@ function initWelcome() {
     initApp();
     return;
   }
-  document.getElementById('getStarted').addEventListener('click', function() {
-    const key = document.getElementById('apiKeyInput').value.trim();
-    if (!key) { alert('Please enter your Gemini API key to continue.'); return; }
-    apiKey = key;
-    localStorage.setItem('cocher_api_key', apiKey);
-    document.getElementById('welcome').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    initApp();
+  document.getElementById('getStarted').addEventListener('click', async function() {
+    var btn = document.getElementById('getStarted');
+    var key = document.getElementById('apiKeyInput').value.trim();
+    if (!key) { showKeyStatus('Please enter your Gemini API key.', true); return; }
+    btn.textContent = 'Testing key...'; btn.disabled = true;
+    try {
+      await testApiKey(key);
+      showKeyStatus('Key verified successfully!', false);
+      apiKey = key;
+      localStorage.setItem('cocher_api_key', apiKey);
+      setTimeout(function() {
+        document.getElementById('welcome').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        initApp();
+      }, 600);
+    } catch(err) {
+      showKeyStatus(err.message, true);
+      btn.textContent = 'Get Started'; btn.disabled = false;
+    }
   });
   document.getElementById('apiKeyInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') document.getElementById('getStarted').click();
@@ -727,6 +770,9 @@ async function sendUserMessage(text) {
     var resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     if (!resp.ok) {
       var errText = await resp.text();
+      if (resp.status === 400) throw new Error('Bad request — your API key may be invalid or the model "' + geminiModel + '" may not be available. Try changing the model in Settings.');
+      if (resp.status === 403) throw new Error('Permission denied — your API key lacks access. Enable "Generative Language API" in Google Cloud Console.');
+      if (resp.status === 429) throw new Error('Rate limited — you\'ve hit your API quota. Wait a minute and try again, or check your quota at console.cloud.google.com.');
       throw new Error('API error ' + resp.status + ': ' + errText.substring(0, 200));
     }
     var data = await resp.json();
@@ -750,7 +796,7 @@ async function sendUserMessage(text) {
     }
   } catch(err) {
     hideTyping();
-    addChatMessage('ai', '<p style="color:var(--danger)"><strong>Error:</strong> ' + err.message + '</p><p>Please check your API key in Settings.</p>');
+    addChatMessage('ai', '<p style="color:var(--danger)"><strong>Error:</strong> ' + err.message + '</p><p>You can test your API key via the <strong>Settings</strong> button (top right) &rarr; <strong>Test Key</strong>.</p>');
   }
   isGenerating = false;
   document.getElementById('chatSend').disabled = false;
@@ -1502,6 +1548,23 @@ function initApp(){
 
   // Settings
   document.getElementById('settingsBtn').addEventListener('click',openSettings);
+  document.getElementById('settingsTestKey').addEventListener('click', async function(){
+    var btn=document.getElementById('settingsTestKey');
+    var key=document.getElementById('settingsApiKey').value.trim();
+    var model=document.getElementById('settingsModel').value;
+    var statusEl=document.getElementById('settingsKeyStatus');
+    if(!key){statusEl.style.display='block';statusEl.style.background='#fef2f2';statusEl.style.color='#991b1b';statusEl.style.border='1px solid #fecaca';statusEl.textContent='Please enter a key first.';return;}
+    btn.textContent='Testing...';btn.disabled=true;
+    try{
+      await testApiKey(key,model);
+      statusEl.style.display='block';statusEl.style.background='#f0fdf4';statusEl.style.color='#166534';statusEl.style.border='1px solid #bbf7d0';
+      statusEl.textContent='Key works with '+model+'!';
+    }catch(err){
+      statusEl.style.display='block';statusEl.style.background='#fef2f2';statusEl.style.color='#991b1b';statusEl.style.border='1px solid #fecaca';
+      statusEl.textContent=err.message;
+    }
+    btn.textContent='Test Key';btn.disabled=false;
+  });
   document.getElementById('settingsSave').addEventListener('click',function(){
     apiKey=document.getElementById('settingsApiKey').value.trim();
     geminiModel=document.getElementById('settingsModel').value;
