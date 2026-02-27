@@ -46,7 +46,7 @@
   button.danger{background:var(--danger)}
   button.danger:hover{background:#b91c1c;}
   label.toggle{display:flex;align-items:center;gap:8px;font-weight:500;margin:8px 0}
-  select, input[type="text"], textarea{width:100%; border:1px solid var(--grid);border-radius:8px;padding:6px 8px;font:inherit; box-sizing: border-box; background: var(--bg); color: var(--ink);}
+  select, input[type="text"], input[type="password"], textarea{width:100%; border:1px solid var(--grid);border-radius:8px;padding:6px 8px;font:inherit; box-sizing: border-box; background: var(--bg); color: var(--ink);}
   textarea { resize: vertical; min-height: 100px; }
 
   /* Canvas wrapper */
@@ -154,6 +154,9 @@
       <div class="section">
         <h2>Intelligent Assistant</h2>
         <p class="hint">Describe your lesson, and the assistant will suggest a layout.</p>
+        <label style="font-size:.8rem;font-weight:600">Gemini API Key</label>
+        <input type="password" id="sp-api-key" placeholder="Paste your Gemini API key" style="margin-bottom:8px">
+        <p class="hint" style="text-align:left"><a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">Get a free key here</a> &mdash; stored in your browser only.</p>
         <textarea id="llm-prompt">I am planning a lesson for [28] students. The main activity is [collaborative problem-solving in small groups] to develop [critical thinking and communication skills]. Please suggest an appropriate classroom layout.</textarea>
         <button id="llm-generate-btn" class="primary mt-2 w-full">Generate Layout</button>
       </div>
@@ -502,10 +505,13 @@
     closeWall('A');
     closeWall('B');
     setupEventListeners();
-    checkDarkMode(); 
+    checkDarkMode();
     initializeChart();
     loadCustomPresets();
     updateMetrics();
+    // Restore saved API key
+    const savedKey = localStorage.getItem('sp_api_key');
+    if (savedKey) document.getElementById('sp-api-key').value = savedKey;
   }
 
   function populatePalette() {
@@ -1286,19 +1292,27 @@
     llmGenerateBtn.disabled = true;
     llmGenerateBtn.textContent = 'Generating...';
 
-    const apiKey = "AIzaSyCcvO_MhzUPCtFHBmpD615XrXOyoCJdDhU"; 
+    const spKeyEl = document.getElementById('sp-api-key');
+    const userApiKey = spKeyEl.value.trim() || localStorage.getItem('sp_api_key') || '';
+    if (!userApiKey) {
+        flash('Please enter your Gemini API key above.');
+        llmGenerateBtn.disabled = false;
+        llmGenerateBtn.textContent = 'Generate Layout';
+        return;
+    }
+    // Remember key for this session
+    localStorage.setItem('sp_api_key', userApiKey);
 
     const systemPrompt = `You are an expert in spatial pedagogy. Analyze the user's lesson plan. Respond with a JSON object that includes the best layout preset, wall configuration, and three pedagogical opportunities. The JSON object must have four keys: "preset", "wall_A", "wall_B", and "insights". - "preset" must be one of: "direct", "pods", "stations", "circle", "quiet", "maker", "fishbowl", "gallery". - "wall_A" and "wall_B" must be one of: "close", "stack". - "insights" must be an array of exactly three objects. Each object must have three keys: "title" (string), "affordance" (string), and "moves" (an array of strings). User prompt: "${userPrompt}"`;
-    
+
     let chatHistory = [{ role: "user", parts: [{ text: systemPrompt }] }];
-    const payload = { 
+    const payload = {
         contents: chatHistory,
         generationConfig: {
             responseMimeType: "application/json",
         }
     };
-    //const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${userApiKey}`;
     
     try {
         const response = await fetch(apiUrl, {
