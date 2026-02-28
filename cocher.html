@@ -376,7 +376,7 @@ svg :focus{outline:none}
     <input type="password" id="settingsApiKey" placeholder="Your API key">
     <label style="font-weight:600;font-size:.875rem">Model</label>
     <select id="settingsModel" style="margin-bottom:1rem">
-      <option value="gemini-2.0-flash">Gemini 2.0 Flash (Recommended)</option>
+      <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
       <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash Preview</option>
       <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
     </select>
@@ -523,7 +523,7 @@ Keep suggestions practical, classroom-ready for Singapore schools. Reference spe
 // ╚══════════════════════════════════════════════════════════════════╝
 
 let apiKey = localStorage.getItem('cocher_api_key') || '';
-let geminiModel = localStorage.getItem('cocher_model') || 'gemini-2.0-flash';
+let geminiModel = localStorage.getItem('cocher_model') || 'gemini-2.5-flash';
 let chatHistory = [];
 let currentMode = 'lesson';
 let isGenerating = false;
@@ -533,7 +533,7 @@ let isGenerating = false;
 // ╚══════════════════════════════════════════════════════════════════╝
 
 async function testApiKey(key, model) {
-  model = model || geminiModel || 'gemini-2.0-flash';
+  model = model || geminiModel || 'gemini-2.5-flash';
   var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key;
   var payload = {
     contents: [{ role: 'user', parts: [{ text: 'Reply with exactly: OK' }] }],
@@ -1360,7 +1360,7 @@ async function generateLayoutFromLLM(){
   if(!key){flash('Please set your API key in Settings.');llmGenerateBtn.disabled=false;llmGenerateBtn.textContent='Generate Layout';return;}
   var sysPrompt='You are an expert in spatial pedagogy. Analyze the lesson plan. Respond with JSON: {"preset":"direct|pods|stations|circle|quiet|maker|fishbowl|gallery","wall_A":"close|stack","wall_B":"close|stack","insights":[{"title":"string","affordance":"string","moves":["string"]}]} (exactly 3 insights). User: '+userPrompt;
   var payload={contents:[{role:'user',parts:[{text:sysPrompt}]}],generationConfig:{responseMimeType:'application/json'}};
-  var model=geminiModel||'gemini-2.0-flash';
+  var model=geminiModel||'gemini-2.5-flash';
   var apiUrl='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+key;
   try{
     var response=await fetch(apiUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});

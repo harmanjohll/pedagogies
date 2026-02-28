@@ -1286,7 +1286,8 @@
     llmGenerateBtn.disabled = true;
     llmGenerateBtn.textContent = 'Generating...';
 
-    const apiKey = "AIzaSyC9AKQcORYqndRZGhvTh-OqyMvE-Q7F2aI"; 
+    const apiKey = localStorage.getItem('sp_api_key') || '';
+    if (!apiKey) { flash('Please set your Gemini API key.'); llmGenerateBtn.disabled = false; llmGenerateBtn.textContent = 'Generate Layout'; return; }
 
     const systemPrompt = `You are an expert in spatial pedagogy. Analyze the user's lesson plan. Respond with a JSON object that includes the best layout preset, wall configuration, and three pedagogical opportunities. The JSON object must have four keys: "preset", "wall_A", "wall_B", and "insights". - "preset" must be one of: "direct", "pods", "stations", "circle", "quiet", "maker", "fishbowl", "gallery". - "wall_A" and "wall_B" must be one of: "close", "stack". - "insights" must be an array of exactly three objects. Each object must have three keys: "title" (string), "affordance" (string), and "moves" (an array of strings). User prompt: "${userPrompt}"`;
     
