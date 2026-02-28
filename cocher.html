@@ -523,6 +523,10 @@ Keep suggestions practical, classroom-ready for Singapore schools. Reference spe
 // ╚══════════════════════════════════════════════════════════════════╝
 
 let apiKey = localStorage.getItem('cocher_api_key') || '';
+// Migrate away from deprecated gemini-2.0-flash model
+if (localStorage.getItem('cocher_model') === 'gemini-2.0-flash') {
+  localStorage.setItem('cocher_model', 'gemini-2.5-flash');
+}
 let geminiModel = localStorage.getItem('cocher_model') || 'gemini-2.5-flash';
 let chatHistory = [];
 let currentMode = 'lesson';
