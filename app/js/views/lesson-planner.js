@@ -779,9 +779,16 @@ function renderKBChips(container) {
 
 function showAttachKBModal(container) {
   const uploads = Store.get('knowledgeUploads') || [];
+  const pdFolders = Store.get('pdFolders') || [];
   const allItems = [
     ...FRAMEWORK_SUMMARIES.map(f => ({ ...f, type: 'framework' })),
-    ...uploads.map(u => ({ id: u.id, title: u.title, content: u.content, type: 'upload' }))
+    ...uploads.map(u => ({ id: u.id, title: u.title, content: u.content, type: 'upload' })),
+    ...pdFolders.map(f => ({
+      id: 'pd_' + f.id,
+      title: f.name + ' (PD Folder)',
+      content: (f.materials || []).map(m => `## ${m.title}\n${m.content}`).join('\n\n---\n\n'),
+      type: 'pd-folder'
+    })).filter(f => f.content.length > 0)
   ];
 
   const alreadyAttached = new Set(attachedKBContext.map(k => k.id));
@@ -799,7 +806,7 @@ function showAttachKBModal(container) {
             <div>
               <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);">${esc(item.title)}</div>
               <div style="font-size:0.6875rem;color:var(--ink-muted);">
-                ${item.type === 'framework' ? 'Built-in Framework' : 'Uploaded Resource'} · ${(item.content?.length || 0) > 1000 ? Math.round(item.content.length / 1000) + 'K chars' : item.content?.length + ' chars'}
+                ${item.type === 'framework' ? 'Built-in Framework' : item.type === 'pd-folder' ? 'PD Portfolio Folder' : 'Uploaded Resource'} · ${(item.content?.length || 0) > 1000 ? Math.round(item.content.length / 1000) + 'K chars' : item.content?.length + ' chars'}
               </div>
             </div>
           </label>

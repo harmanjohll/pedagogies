@@ -250,6 +250,66 @@ function renderInsights(classes, lessons) {
     </div>`;
 }
 
+function renderReflectionAnalytics(lessons) {
+  const reflected = lessons.filter(l => {
+    const r = l.reflection;
+    if (!r) return false;
+    if (typeof r === 'string') return r.trim().length > 0;
+    return !!(r.whatWorked || r.whatToAdjust || r.engagement || r.e21ccObservations || r.freeform);
+  });
+  if (reflected.length === 0) return '';
+
+  const engagements = reflected.map(l => {
+    const r = typeof l.reflection === 'object' ? l.reflection : {};
+    return r.engagement || 0;
+  }).filter(e => e > 0);
+  const avgEng = engagements.length > 0 ? (engagements.reduce((a, b) => a + b, 0) / engagements.length).toFixed(1) : null;
+  const engLabels = ['', 'Low', 'Below Average', 'Average', 'Good', 'Excellent'];
+  const totalLessons = lessons.length;
+  const reflectedPct = totalLessons > 0 ? Math.round((reflected.length / totalLessons) * 100) : 0;
+
+  // Count what-worked themes (simple word frequency)
+  const workedTexts = reflected.map(l => (typeof l.reflection === 'object' ? l.reflection.whatWorked : '') || '').join(' ');
+  const adjustTexts = reflected.map(l => (typeof l.reflection === 'object' ? l.reflection.whatToAdjust : '') || '').join(' ');
+
+  return `
+    <div style="margin-bottom:var(--sp-8);">
+      <div class="section-header">
+        <h2 class="section-title" style="font-size:1.125rem;">Reflection Insights</h2>
+      </div>
+      <div class="grid-3 stagger">
+        <div class="card" style="padding:var(--sp-5) var(--sp-6);text-align:center;">
+          <div style="font-size:0.75rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-2);">Reflection Rate</div>
+          <div style="font-size:1.5rem;font-weight:700;color:var(--accent);">${reflectedPct}%</div>
+          <div style="font-size:0.75rem;color:var(--ink-muted);">${reflected.length} of ${totalLessons} lessons</div>
+          <div style="height:6px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;margin-top:var(--sp-2);">
+            <div style="width:${reflectedPct}%;height:100%;background:var(--accent);border-radius:var(--radius-full);"></div>
+          </div>
+        </div>
+        <div class="card" style="padding:var(--sp-5) var(--sp-6);text-align:center;">
+          <div style="font-size:0.75rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-2);">Avg Engagement</div>
+          ${avgEng ? `
+            <div style="font-size:1.5rem;font-weight:700;color:var(--warning);">${'&#9733;'.repeat(Math.round(avgEng))}${'&#9734;'.repeat(5 - Math.round(avgEng))}</div>
+            <div style="font-size:0.75rem;color:var(--ink-muted);">${avgEng}/5 (${engLabels[Math.round(avgEng)] || ''})</div>
+          ` : `<div style="font-size:0.875rem;color:var(--ink-faint);">No ratings yet</div>`}
+        </div>
+        <div class="card" style="padding:var(--sp-5) var(--sp-6);">
+          <div style="font-size:0.75rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-2);">Recent Reflections</div>
+          <div style="display:flex;flex-direction:column;gap:var(--sp-2);font-size:0.75rem;">
+            ${reflected.slice(0, 3).map(l => {
+              const r = typeof l.reflection === 'object' ? l.reflection : {};
+              const snippet = (r.whatWorked || r.freeform || '').slice(0, 50);
+              return `<div style="color:var(--ink-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                <strong style="color:var(--ink);">${l.title?.slice(0, 20) || 'Untitled'}</strong>
+                ${snippet ? ` — ${snippet}...` : ''}
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
 export function render(container) {
   const classes = Store.getClasses();
   const lessons = Store.getLessons();
@@ -362,6 +422,9 @@ export function render(container) {
 
         <!-- Teaching Insights -->
         ${totalStudents > 0 ? renderInsights(classes, lessons) : ''}
+
+        <!-- Reflection Analytics -->
+        ${renderReflectionAnalytics(lessons)}
 
         <!-- Three Column: Recent Lessons + Admin Events + Activity -->
         <div class="grid-3" style="margin-bottom: var(--sp-8);">
