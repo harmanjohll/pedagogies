@@ -120,9 +120,9 @@ const EVENT_TASKS = [
 /* ── Standalone admin tools ── */
 const ADMIN_TOOLS = [
   { key: 'quick_aor', label: 'Quick AOR', desc: 'Submit a standalone Approval of Request for purchases or services.', icon: '📄' },
-  { key: 'relief_timetable', label: 'Relief Timetable', desc: 'Plan teacher relief assignments when staff are away.', icon: '🔄', href: '../btyrelief/relief.html' },
-  { key: 'org_chart', label: 'Org Chart', desc: 'View and edit the school organisational chart.', icon: '🏢', href: '../btyrelief/orgstruc.html' },
-  { key: 'framework', label: 'Framework Builder', desc: 'Create cycle-arrow diagrams for frameworks and processes.', icon: '🔃', href: '../btyrelief/framework.html' },
+  { key: 'relief_timetable', label: 'Relief Timetable', desc: 'Plan teacher relief assignments when staff are away.', icon: '🔄', href: 'btyrelief/relief.html' },
+  { key: 'org_chart', label: 'Org Chart', desc: 'View and edit the school organisational chart.', icon: '🏢', href: 'btyrelief/orgstruc.html' },
+  { key: 'framework', label: 'Framework Builder', desc: 'Create cycle-arrow diagrams for frameworks and processes.', icon: '🔃', href: 'btyrelief/framework.html' },
   { key: 'inventory', label: 'Resource Inventory', desc: 'Track department resources, equipment, and consumables.', icon: '📦' },
   { key: 'calendar', label: 'Department Calendar', desc: 'View and plan department events, deadlines, and milestones.', icon: '📅' }
 ];
