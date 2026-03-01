@@ -14,6 +14,8 @@ import { navigate } from '../router.js';
 let chatMessages = [];
 let isGenerating = false;
 let currentLessonId = null;  // if editing a saved lesson
+let planClassContext = null;  // class context from "Plan from Class"
+let attachedKBContext = [];   // attached knowledge base resources
 
 /* ── Markdown renderer (improved — supports tables and ordered lists) ── */
 function md(text) {
@@ -69,9 +71,13 @@ function esc(s) { const d = document.createElement('div'); d.textContent = s; re
 function buildQuickPrompts(classes) {
   const prompts = [];
 
-  // Subject-specific prompts based on existing classes
-  const subjects = [...new Set(classes.map(c => c.subject).filter(Boolean))];
-  const levels = [...new Set(classes.map(c => c.level).filter(Boolean))];
+  // Use planClassContext first if available
+  const subjects = planClassContext?.subject
+    ? [planClassContext.subject]
+    : [...new Set(classes.map(c => c.subject).filter(Boolean))];
+  const levels = planClassContext?.level
+    ? [planClassContext.level]
+    : [...new Set(classes.map(c => c.level).filter(Boolean))];
 
   if (subjects.length > 0) {
     const subj = subjects[0];
@@ -120,6 +126,21 @@ export function render(container) {
   const classes = Store.getClasses();
   const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
 
+  // Pick up "Plan from Class" context from sessionStorage
+  const planClassId = sessionStorage.getItem('cocher_plan_class_id');
+  if (planClassId && !currentLessonId && chatMessages.length === 0) {
+    planClassContext = {
+      id: planClassId,
+      name: sessionStorage.getItem('cocher_plan_class_name') || '',
+      subject: sessionStorage.getItem('cocher_plan_class_subject') || '',
+      level: sessionStorage.getItem('cocher_plan_class_level') || ''
+    };
+    sessionStorage.removeItem('cocher_plan_class_id');
+    sessionStorage.removeItem('cocher_plan_class_name');
+    sessionStorage.removeItem('cocher_plan_class_subject');
+    sessionStorage.removeItem('cocher_plan_class_level');
+  }
+
   // Status badge for current lesson
   const statusBadgeHTML = currentLesson ? (() => {
     const colors = { draft: 'badge-gray', ready: 'badge-blue', completed: 'badge-green' };
@@ -156,10 +177,33 @@ export function render(container) {
           </div>
         </div>
 
+        ${planClassContext ? `
+          <div class="chat-context-banner" id="class-context-banner" style="flex-shrink:0;padding:var(--sp-2) var(--sp-4);background:var(--accent-light);border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:0.8125rem;color:var(--accent-dark);">
+              <strong>Planning for:</strong> ${planClassContext.name}${planClassContext.subject ? ' · ' + planClassContext.subject : ''}${planClassContext.level ? ' · ' + planClassContext.level : ''}
+            </span>
+            <button class="btn btn-ghost btn-sm" id="clear-class-context" style="padding:2px 6px;font-size:0.75rem;">Clear</button>
+          </div>
+        ` : ''}
+
+        <!-- KB Context Attachments -->
+        <div id="kb-context-bar" style="flex-shrink:0;${attachedKBContext.length > 0 ? '' : 'display:none;'}padding:var(--sp-2) var(--sp-4);background:var(--bg-subtle);border-bottom:1px solid var(--border-light);">
+          <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
+            <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);">Context:</span>
+            <div id="kb-chips" style="display:flex;gap:var(--sp-1);flex-wrap:wrap;"></div>
+          </div>
+        </div>
+
         <div class="chat-messages" id="chat-messages" style="flex:1;min-height:0;overflow-y:auto;"></div>
 
         <div class="chat-input-row" style="flex-shrink:0;">
-          <textarea class="chat-input" id="chat-input" placeholder="Describe your lesson idea, ask about spatial design, or explore frameworks..." rows="3"></textarea>
+          <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-2);">
+            <button class="btn btn-ghost btn-sm" id="attach-kb-btn" title="Attach Knowledge Base resource as context" style="font-size:0.75rem;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              Attach Context
+            </button>
+          </div>
+          <textarea class="chat-input" id="chat-input" placeholder="${planClassContext ? `Plan a lesson for ${planClassContext.name}...` : 'Describe your lesson idea, ask about spatial design, or explore frameworks...'}" rows="3"></textarea>
           <button class="chat-send" id="chat-send" ${isGenerating ? 'disabled' : ''}>Send</button>
         </div>
       </div>
@@ -287,7 +331,22 @@ export function render(container) {
     if (!text || isGenerating) return;
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
 
-    chatMessages.push({ role: 'user', content: text });
+    // Build context-enriched message
+    let contextParts = [];
+    if (planClassContext && chatMessages.length === 0) {
+      contextParts.push(`[Class Context: ${planClassContext.name}, ${planClassContext.level} ${planClassContext.subject}]`);
+    }
+    if (attachedKBContext.length > 0) {
+      contextParts.push(...attachedKBContext.map(kb =>
+        `[Reference — ${kb.title}]:\n${kb.content.slice(0, 2000)}`
+      ));
+    }
+
+    const enrichedContent = contextParts.length > 0 && chatMessages.length === 0
+      ? `${contextParts.join('\n\n')}\n\n${text}`
+      : text;
+
+    chatMessages.push({ role: 'user', content: enrichedContent });
     chatInput.value = '';
     chatInput.style.height = 'auto';
     isGenerating = true;
@@ -317,6 +376,21 @@ export function render(container) {
   chatInput.addEventListener('input', () => {
     chatInput.style.height = 'auto';
     chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+  });
+
+  // Class context banner
+  container.querySelector('#clear-class-context')?.addEventListener('click', () => {
+    planClassContext = null;
+    container.querySelector('#class-context-banner')?.remove();
+    chatInput.placeholder = 'Describe your lesson idea, ask about spatial design, or explore frameworks...';
+  });
+
+  // KB context chips
+  renderKBChips(container);
+
+  // Attach KB context
+  container.querySelector('#attach-kb-btn')?.addEventListener('click', () => {
+    showAttachKBModal(container);
   });
 
   // Quick prompts
@@ -495,7 +569,7 @@ function showSaveModal(classes) {
   const existing = currentLessonId ? Store.getLesson(currentLessonId) : null;
 
   // Auto-suggest class linkage if there's context
-  const suggestedClassId = existing?.classId || '';
+  const suggestedClassId = existing?.classId || planClassContext?.id || '';
 
   const { backdrop, close } = openModal({
     title: existing ? 'Update Lesson' : 'Save Lesson',
@@ -639,6 +713,88 @@ function showGroupingModal(container, classes) {
       resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
     } catch (err) {
       resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Grouping failed: ${err.message}</div>`;
+    }
+  });
+}
+
+/* ══════════ KB Context Attachment ══════════ */
+
+const FRAMEWORK_SUMMARIES = [
+  { id: 'e21cc', title: 'E21CC Framework', content: 'Enhanced 21st Century Competencies:\n\nCAIT — Critical, Adaptive & Inventive Thinking:\n- Sound Reasoning: Examine issues logically, draw well-reasoned conclusions\n- Creative Problem-Solving: Generate novel ideas, explore innovative solutions\n- Managing Complexity & Ambiguity: Navigate uncertain, complex problems\n- Metacognition: Monitor own thinking, self-regulate, transfer learning\n\nCCI — Communication, Collaboration & Information:\n- Communicative Competence: Express ideas clearly across modes and contexts\n- Collaborative Skills: Work effectively in teams, co-create meaning\n- Information Literacy: Find, evaluate, use information critically and ethically\n\nCGC — Civic, Global & Cross-cultural Literacy:\n- Active Citizenship: Contribute responsibly to community and nation\n- Global Awareness: Appreciate interconnectedness and global challenges\n- Cross-cultural Sensitivity: Respect diversity, bridge cultural divides' },
+  { id: 'stp', title: 'Singapore Teaching Practice', content: 'Singapore Teaching Practice (STP) — 4 Areas:\n\nArea 1: Lesson Preparation — Understanding learners, clear objectives, resource planning\nArea 2: Lesson Enactment — Teaching actions, interaction patterns, classroom discourse\nArea 3: Monitoring & Feedback — Formative assessment, effective feedback, differentiated support\nArea 4: Positive Learning Culture — Safe environment, routines, student agency' },
+  { id: 'edtech', title: 'EdTech Masterplan 2030', content: 'EdTech Masterplan 2030 — 3 Thrusts:\n\nThrust 1: Digital Literacy — Data literacy, information & media literacy, digital communication\nThrust 2: Digital Creation — Computational thinking, digital design, AI literacy\nThrust 3: Digital Citizenship — Online safety, digital ethics, digital wellbeing\n\nIntegration: TPACK model, blended learning (SLS), AI-enhanced pedagogy' }
+];
+
+function renderKBChips(container) {
+  const chipsEl = container.querySelector('#kb-chips');
+  const barEl = container.querySelector('#kb-context-bar');
+  if (!chipsEl || !barEl) return;
+
+  if (attachedKBContext.length === 0) {
+    barEl.style.display = 'none';
+    return;
+  }
+
+  barEl.style.display = '';
+  chipsEl.innerHTML = attachedKBContext.map((kb, i) => `
+    <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--accent-light);color:var(--accent-dark);border-radius:var(--radius-full);font-size:0.75rem;font-weight:500;">
+      ${esc(kb.title.slice(0, 30))}
+      <button class="kb-remove-chip" data-idx="${i}" style="background:none;border:none;cursor:pointer;color:var(--accent-dark);padding:0;font-size:0.875rem;line-height:1;">&times;</button>
+    </span>
+  `).join('');
+
+  chipsEl.querySelectorAll('.kb-remove-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      attachedKBContext.splice(parseInt(btn.dataset.idx), 1);
+      renderKBChips(container);
+    });
+  });
+}
+
+function showAttachKBModal(container) {
+  const uploads = Store.get('knowledgeUploads') || [];
+  const allItems = [
+    ...FRAMEWORK_SUMMARIES.map(f => ({ ...f, type: 'framework' })),
+    ...uploads.map(u => ({ id: u.id, title: u.title, content: u.content, type: 'upload' }))
+  ];
+
+  const alreadyAttached = new Set(attachedKBContext.map(k => k.id));
+
+  const { backdrop, close } = openModal({
+    title: 'Attach Knowledge Base Context',
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">
+        Select resources to include as context in your conversation. Co-Cher will reference these when planning your lesson.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
+        ${allItems.map(item => `
+          <label style="display:flex;align-items:flex-start;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-radius:var(--radius-md);cursor:pointer;transition:background 0.15s;">
+            <input type="checkbox" value="${item.id}" class="kb-attach-check" ${alreadyAttached.has(item.id) ? 'checked' : ''} style="margin-top:3px;" />
+            <div>
+              <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);">${esc(item.title)}</div>
+              <div style="font-size:0.6875rem;color:var(--ink-muted);">
+                ${item.type === 'framework' ? 'Built-in Framework' : 'Uploaded Resource'} · ${(item.content?.length || 0) > 1000 ? Math.round(item.content.length / 1000) + 'K chars' : item.content?.length + ' chars'}
+              </div>
+            </div>
+          </label>
+        `).join('')}
+      </div>
+      ${allItems.length === 0 ? '<p style="text-align:center;color:var(--ink-muted);padding:var(--sp-6);font-size:0.875rem;">No resources available. Upload documents in the Knowledge Base.</p>' : ''}
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="attach">Attach Selected</button>
+    `
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="attach"]').addEventListener('click', () => {
+    const checked = [...backdrop.querySelectorAll('.kb-attach-check:checked')].map(cb => cb.value);
+    attachedKBContext = allItems.filter(item => checked.includes(item.id));
+    renderKBChips(container);
+    close();
+    if (attachedKBContext.length > 0) {
+      showToast(`${attachedKBContext.length} resource${attachedKBContext.length > 1 ? 's' : ''} attached as context`, 'success');
     }
   });
 }

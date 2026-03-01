@@ -174,6 +174,9 @@ function renderCards(grid, lessons, classMap) {
             <button class="btn btn-ghost btn-sm edit-btn" data-id="${l.id}" title="Edit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
+            <button class="btn btn-ghost btn-sm dup-btn" data-id="${l.id}" title="Duplicate">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
             <button class="btn btn-ghost btn-sm del-btn" data-id="${l.id}" title="Delete" style="color:var(--danger);">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
@@ -190,6 +193,23 @@ function renderCards(grid, lessons, classMap) {
   });
   grid.querySelectorAll('.edit-btn').forEach(b => {
     b.addEventListener('click', e => { e.stopPropagation(); navigate(`/lesson-planner/${b.dataset.id}`); });
+  });
+  grid.querySelectorAll('.dup-btn').forEach(b => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      const original = Store.getLesson(b.dataset.id);
+      if (!original) return;
+      const dup = Store.addLesson({
+        title: original.title + ' (copy)',
+        classId: original.classId,
+        status: 'draft',
+        chatHistory: [...(original.chatHistory || [])],
+        plan: original.plan || '',
+        e21ccFocus: [...(original.e21ccFocus || [])]
+      });
+      showToast(`Duplicated "${original.title}"`, 'success');
+      navigate(`/lesson-planner/${dup.id}`);
+    });
   });
   grid.querySelectorAll('.del-btn').forEach(b => {
     b.addEventListener('click', async e => {
@@ -235,6 +255,14 @@ export function renderDetail(container, { id }) {
         <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-6);flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" id="edit-btn">Continue in Planner</button>
           <button class="btn btn-secondary btn-sm" id="status-btn">Change Status</button>
+          <button class="btn btn-ghost btn-sm" id="dup-detail-btn" title="Duplicate this lesson">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Duplicate
+          </button>
+          <button class="btn btn-ghost btn-sm" id="print-lesson-btn" title="Print/export as PDF">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+          </button>
           <button class="btn btn-ghost btn-sm" id="export-btn" title="Export lesson as shareable JSON file">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
             Share
@@ -276,9 +304,52 @@ export function renderDetail(container, { id }) {
     showToast(`Status: ${STATUS_MAP[next].label}`, 'success');
     renderDetail(container, { id });
   });
+  container.querySelector('#dup-detail-btn')?.addEventListener('click', () => {
+    const dup = Store.addLesson({
+      title: lesson.title + ' (copy)',
+      classId: lesson.classId,
+      status: 'draft',
+      chatHistory: [...(lesson.chatHistory || [])],
+      plan: lesson.plan || '',
+      e21ccFocus: [...(lesson.e21ccFocus || [])]
+    });
+    showToast(`Duplicated "${lesson.title}"`, 'success');
+    navigate(`/lesson-planner/${dup.id}`);
+  });
   container.querySelector('#save-ref').addEventListener('click', () => {
     Store.updateLesson(id, { reflection: container.querySelector('#reflection').value });
     showToast('Reflection saved!', 'success');
+  });
+
+  // Print / PDF
+  container.querySelector('#print-lesson-btn')?.addEventListener('click', () => {
+    if (aiMsgs.length === 0) { showToast('No lesson content to print.', 'danger'); return; }
+    const planHtml = aiMsgs.map(m => mdBasic(m.content)).join('<hr style="margin:24px 0;">');
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`<!DOCTYPE html><html><head><title>${esc(lesson.title)} — Co-Cher</title>
+      <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.7;font-size:14px}
+      h1{font-size:18px;border-bottom:2px solid #000c53;padding-bottom:8px;color:#000c53}
+      h2,h3,h4{margin:16px 0 8px}strong{font-weight:600}ul,ol{padding-left:20px}
+      hr{border:none;border-top:1px solid #e2e8f0;margin:20px 0}
+      table{width:100%;border-collapse:collapse;margin:12px 0}th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0}th{font-weight:600;background:#f1f5f9}
+      pre{background:#f1f5f9;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto}
+      .meta{display:flex;gap:12px;margin-bottom:16px;font-size:12px;color:#64748b}
+      .reflection{margin-top:24px;padding:16px;background:#f7f8fc;border-radius:8px;border-left:3px solid #3b82f6}
+      @media print{body{margin:0;padding:16px}}</style></head>
+      <body>
+        <h1>${esc(lesson.title)}</h1>
+        <div class="meta">
+          <span>${s.label}</span>
+          ${cn ? `<span>${esc(cn)}</span>` : ''}
+          ${(lesson.e21ccFocus || []).map(f => `<span>${E21CC_LABELS[f]}</span>`).join('')}
+          <span>${fmtDate(lesson.createdAt)}</span>
+        </div>
+        ${planHtml}
+        ${lesson.reflection ? `<div class="reflection"><strong>Post-Lesson Reflection</strong><br>${esc(lesson.reflection)}</div>` : ''}
+        <p style="color:#94a3b8;font-size:11px;margin-top:32px;">Exported from Co-Cher · ${new Date().toLocaleDateString('en-SG')}</p>
+      </body></html>`);
+    printWin.document.close();
+    printWin.print();
   });
 
   // Export / Share

@@ -211,6 +211,20 @@ export function renderDetail(container, { id }) {
             </div>
           </div>
 
+          <!-- Quick Actions for this class -->
+          <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-6);flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="plan-from-class-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              Plan a Lesson
+            </button>
+            ${students.length > 0 ? `
+              <button class="btn btn-secondary btn-sm" id="batch-e21cc-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Batch Update E21CC
+              </button>
+            ` : ''}
+          </div>
+
           <!-- Tabs -->
           <div class="tab-group" style="margin-bottom: var(--sp-6);">
             <button class="tab ${activeTab === 'students' ? 'active' : ''}" data-tab="students">Students</button>
@@ -241,6 +255,21 @@ export function renderDetail(container, { id }) {
     });
 
     container.querySelector('#edit-class-btn').addEventListener('click', () => showEditClassModal(freshCls, renderInner));
+
+    // Plan from Class — navigate to planner with class context
+    container.querySelector('#plan-from-class-btn')?.addEventListener('click', () => {
+      // Store class context so planner can pick it up
+      sessionStorage.setItem('cocher_plan_class_id', id);
+      sessionStorage.setItem('cocher_plan_class_name', freshCls.name);
+      sessionStorage.setItem('cocher_plan_class_subject', freshCls.subject || '');
+      sessionStorage.setItem('cocher_plan_class_level', freshCls.level || '');
+      navigate('/lesson-planner');
+    });
+
+    // Batch E21CC update
+    container.querySelector('#batch-e21cc-btn')?.addEventListener('click', () => {
+      showBatchE21CCModal(id, renderInner);
+    });
 
     container.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -582,6 +611,93 @@ function showEditE21CCModal(classId, student, onUpdate) {
       }
     });
     showToast('E21CC updated', 'success');
+    close();
+    onUpdate();
+  });
+}
+
+/* ── Batch E21CC Update ── */
+function showBatchE21CCModal(classId, onUpdate) {
+  const cls = Store.getClass(classId);
+  if (!cls || !cls.students?.length) return;
+
+  const { backdrop, close } = openModal({
+    title: `Batch Update E21CC — ${cls.name}`,
+    width: 560,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">
+        Adjust all students by the same amount. Use this after a class activity to shift competency levels up or down.
+      </p>
+      <div class="input-group">
+        <label class="input-label">Activity / Reason</label>
+        <input class="input" id="batch-reason" placeholder="e.g. Group project on climate change" />
+      </div>
+      <div class="input-group">
+        <label class="input-label" style="color:var(--e21cc-cait);">CAIT Adjustment</label>
+        <div style="display:flex;align-items:center;gap:var(--sp-3);">
+          <input type="range" id="batch-cait" min="-20" max="20" value="0" style="flex:1;" />
+          <span id="batch-cait-val" style="width:40px;text-align:right;font-weight:600;font-size:0.875rem;">0</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label class="input-label" style="color:var(--e21cc-cci);">CCI Adjustment</label>
+        <div style="display:flex;align-items:center;gap:var(--sp-3);">
+          <input type="range" id="batch-cci" min="-20" max="20" value="0" style="flex:1;" />
+          <span id="batch-cci-val" style="width:40px;text-align:right;font-weight:600;font-size:0.875rem;">0</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label class="input-label" style="color:var(--e21cc-cgc);">CGC Adjustment</label>
+        <div style="display:flex;align-items:center;gap:var(--sp-3);">
+          <input type="range" id="batch-cgc" min="-20" max="20" value="0" style="flex:1;" />
+          <span id="batch-cgc-val" style="width:40px;text-align:right;font-weight:600;font-size:0.875rem;">0</span>
+        </div>
+      </div>
+      <div style="background:var(--bg-subtle);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-md);font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">
+        This will adjust <strong>${cls.students.length} students</strong>. Values are clamped between 0–100.
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="apply">Apply to All Students</button>
+    `
+  });
+
+  // Live update values
+  ['cait', 'cci', 'cgc'].forEach(key => {
+    const slider = backdrop.querySelector(`#batch-${key}`);
+    const valSpan = backdrop.querySelector(`#batch-${key}-val`);
+    slider?.addEventListener('input', () => {
+      const v = parseInt(slider.value);
+      valSpan.textContent = (v > 0 ? '+' : '') + v;
+    });
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="apply"]').addEventListener('click', () => {
+    const dCait = parseInt(backdrop.querySelector('#batch-cait').value);
+    const dCci = parseInt(backdrop.querySelector('#batch-cci').value);
+    const dCgc = parseInt(backdrop.querySelector('#batch-cgc').value);
+
+    if (dCait === 0 && dCci === 0 && dCgc === 0) {
+      showToast('No changes to apply.', 'danger');
+      return;
+    }
+
+    const clamp = (v) => Math.max(0, Math.min(100, v));
+    const freshCls = Store.getClass(classId);
+    const updatedStudents = (freshCls.students || []).map(s => ({
+      ...s,
+      e21cc: {
+        cait: clamp((s.e21cc?.cait || 50) + dCait),
+        cci: clamp((s.e21cc?.cci || 50) + dCci),
+        cgc: clamp((s.e21cc?.cgc || 50) + dCgc)
+      }
+    }));
+
+    Store.updateClass(classId, { students: updatedStudents });
+    const reason = backdrop.querySelector('#batch-reason').value.trim();
+    showToast(`Updated ${updatedStudents.length} students${reason ? ` — ${reason}` : ''}`, 'success');
     close();
     onUpdate();
   });
