@@ -239,8 +239,11 @@ export function render(container) {
         </div>
       </div>
 
+      <!-- Resize Handle: Left → Center -->
+      <div class="resize-handle" id="spatial-resize-left"></div>
+
       <!-- Center: Canvas -->
-      <div style="display:flex;flex-direction:column;overflow:hidden;border-radius:var(--radius-xl);background:var(--surface);box-shadow:var(--shadow-card);">
+      <div id="spatial-canvas-col" style="display:flex;flex-direction:column;overflow:hidden;border-radius:var(--radius-xl);background:var(--surface);box-shadow:var(--shadow-card);">
         <svg id="spatial-svg" viewBox="0 0 ${VB_W} ${VB_H}" style="flex:1;cursor:crosshair;display:block;background:#fff;border-radius:var(--radius-xl);" xmlns="${SVG_NS}">
           <defs>
             <pattern id="grid" width="${UNIT}" height="${UNIT}" patternUnits="userSpaceOnUse">
@@ -277,8 +280,11 @@ export function render(container) {
         </svg>
       </div>
 
+      <!-- Resize Handle: Center → Right -->
+      <div class="resize-handle" id="spatial-resize-right"></div>
+
       <!-- Right: Analysis -->
-      <div class="panel" style="overflow-y:auto;padding:var(--sp-4);gap:0;position:relative;">
+      <div class="panel" id="spatial-right-panel" style="overflow-y:auto;padding:var(--sp-4);gap:0;position:relative;">
         <h3 class="panel-title" style="font-size:0.9375rem;margin-bottom:var(--sp-4);">Spatial Effectiveness</h3>
         <div style="position:relative;width:100%;max-width:240px;margin:0 auto var(--sp-4);">
           <canvas id="radar-chart" width="240" height="240"></canvas>
@@ -566,6 +572,9 @@ export function render(container) {
 
   /* ══════ Saved layouts ══════ */
   renderSavedLayouts();
+
+  /* ══════ Resizable panels ══════ */
+  initSpatialResize(container);
 
   /* ══════ SVG item creation ══════ */
   function createItem(def, x, y, rot = 0) {
@@ -1404,4 +1413,64 @@ export function render(container) {
     if (radarChart) { radarChart.destroy(); radarChart = null; }
     if (tooltipEl) tooltipEl.style.display = 'none';
   };
+}
+
+/* ══════════ Spatial Resize Handles ══════════ */
+function initSpatialResize(container) {
+  const threeCol = container.querySelector('.three-col');
+  if (!threeCol) return;
+
+  const leftPanel = threeCol.querySelector('.panel:first-child');
+  const canvasCol = threeCol.querySelector('#spatial-canvas-col');
+  const rightPanel = threeCol.querySelector('#spatial-right-panel');
+  const leftHandle = threeCol.querySelector('#spatial-resize-left');
+  const rightHandle = threeCol.querySelector('#spatial-resize-right');
+
+  function setupHandle(handle, beforePanel, afterPanel) {
+    if (!handle || !beforePanel || !afterPanel) return;
+    let isResizing = false, startX = 0, startBeforeW = 0, startAfterW = 0;
+
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      isResizing = true;
+      startX = e.clientX;
+      startBeforeW = beforePanel.getBoundingClientRect().width;
+      startAfterW = afterPanel.getBoundingClientRect().width;
+      handle.classList.add('active');
+      document.body.classList.add('resizing-panels');
+      handle.setPointerCapture(e.pointerId);
+    });
+
+    handle.addEventListener('pointermove', (e) => {
+      if (!isResizing) return;
+      const dx = e.clientX - startX;
+      const newBefore = startBeforeW + dx;
+      const newAfter = startAfterW - dx;
+      const minW = 160;
+      if (newBefore >= minW && newAfter >= minW) {
+        beforePanel.style.flex = `0 0 ${newBefore}px`;
+        afterPanel.style.flex = `0 0 ${newAfter}px`;
+      }
+    });
+
+    handle.addEventListener('pointerup', () => {
+      isResizing = false;
+      handle.classList.remove('active');
+      document.body.classList.remove('resizing-panels');
+    });
+
+    handle.addEventListener('lostpointercapture', () => {
+      isResizing = false;
+      handle.classList.remove('active');
+      document.body.classList.remove('resizing-panels');
+    });
+
+    handle.addEventListener('dblclick', () => {
+      beforePanel.style.flex = '';
+      afterPanel.style.flex = '';
+    });
+  }
+
+  setupHandle(leftHandle, leftPanel, canvasCol);
+  setupHandle(rightHandle, canvasCol, rightPanel);
 }

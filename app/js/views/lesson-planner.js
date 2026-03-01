@@ -208,6 +208,9 @@ export function render(container) {
         </div>
       </div>
 
+      <!-- Resize Handle -->
+      <div class="resize-handle" id="lp-resize-handle"></div>
+
       <!-- Plan Column -->
       <div class="lp-plan-col" style="background:var(--bg);">
         <div style="flex:1;overflow-y:auto;padding:var(--sp-6);">
@@ -291,6 +294,14 @@ export function render(container) {
   if (showChatBtn) {
     showChatBtn.addEventListener('click', () => layoutEl.classList.remove('show-plan'));
   }
+
+  // Resizable panels
+  initResizeHandle(
+    container.querySelector('#lp-resize-handle'),
+    container.querySelector('.lp-chat-col'),
+    container.querySelector('.lp-plan-col'),
+    layoutEl
+  );
 
   // New chat
   container.querySelector('#new-chat-btn').addEventListener('click', () => {
@@ -920,4 +931,58 @@ function renderSpatialSection(container, forceShow = false) {
       navigate('/spatial');
     });
   }
+}
+
+/* ══════════ Resizable Panel Handle ══════════ */
+function initResizeHandle(handle, leftPanel, rightPanel, parentContainer) {
+  if (!handle || !leftPanel || !rightPanel || !parentContainer) return;
+
+  let isResizing = false;
+  let startX = 0;
+  let startLeftWidth = 0;
+
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    isResizing = true;
+    startX = e.clientX;
+    startLeftWidth = leftPanel.getBoundingClientRect().width;
+    handle.classList.add('active');
+    document.body.classList.add('resizing-panels');
+    handle.setPointerCapture(e.pointerId);
+  });
+
+  handle.addEventListener('pointermove', (e) => {
+    if (!isResizing) return;
+    const dx = e.clientX - startX;
+    const containerWidth = parentContainer.getBoundingClientRect().width;
+    const handleWidth = 6;
+    const newLeftWidth = startLeftWidth + dx;
+    const minWidth = 320;
+    const maxWidth = containerWidth - minWidth - handleWidth;
+
+    if (newLeftWidth >= minWidth && newLeftWidth <= maxWidth) {
+      const leftPct = (newLeftWidth / containerWidth) * 100;
+      const rightPct = ((containerWidth - newLeftWidth - handleWidth) / containerWidth) * 100;
+      leftPanel.style.flex = `0 0 ${leftPct}%`;
+      rightPanel.style.flex = `0 0 ${rightPct}%`;
+    }
+  });
+
+  handle.addEventListener('pointerup', () => {
+    isResizing = false;
+    handle.classList.remove('active');
+    document.body.classList.remove('resizing-panels');
+  });
+
+  handle.addEventListener('lostpointercapture', () => {
+    isResizing = false;
+    handle.classList.remove('active');
+    document.body.classList.remove('resizing-panels');
+  });
+
+  // Double-click to reset to 50/50
+  handle.addEventListener('dblclick', () => {
+    leftPanel.style.flex = '1 1 50%';
+    rightPanel.style.flex = '1 1 50%';
+  });
 }

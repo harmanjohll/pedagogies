@@ -122,6 +122,8 @@ const EVENT_TASKS = [
 /* ── Standalone admin tools ── */
 const ADMIN_TOOLS = [
   { key: 'quick_aor', label: 'Quick AOR', desc: 'Submit a standalone Approval of Request for purchases or services.', icon: '📄' },
+  { key: 'aor_form', label: 'AOR Form', desc: 'Open the official Approval of Request form.', icon: '💰', href: 'https://go.gov.sg/btyaor' },
+  { key: 'bus_form', label: 'Bus Booking', desc: 'Open the official bus booking form.', icon: '🚌', href: 'https://go.gov.sg/btybus' },
   { key: 'relief_timetable', label: 'Relief Timetable', desc: 'Plan teacher relief assignments when staff are away.', icon: '🔄', href: 'btyrelief/relief.html' },
   { key: 'org_chart', label: 'Org Chart', desc: 'View and edit the school organisational chart.', icon: '🏢', href: 'btyrelief/orgstruc.html' },
   { key: 'framework', label: 'Framework Builder', desc: 'Create cycle-arrow diagrams for frameworks and processes.', icon: '🔃', href: 'btyrelief/framework.html' },
