@@ -615,10 +615,10 @@ select.input {
 }
 
 .chat-input-row {
-  padding: var(--sp-3) var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
   border-top: 1px solid var(--border-light);
   display: flex;
-  gap: var(--sp-2);
+  gap: var(--sp-3);
   align-items: flex-end;
   flex-shrink: 0;
   background: var(--surface);
@@ -628,33 +628,34 @@ select.input {
   flex: 1;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   resize: none;
-  min-height: 40px;
-  max-height: 120px;
+  min-height: 80px;
+  max-height: 160px;
   background: var(--bg);
   color: var(--ink);
   outline: none;
-  line-height: 1.5;
+  line-height: 1.6;
   transition: border-color var(--dur-fast);
 }
 .chat-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 
 .chat-send {
-  padding: var(--sp-2) var(--sp-4);
+  padding: var(--sp-3) var(--sp-5);
   background: var(--brand-navy);
   color: var(--brand-gold);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   font-weight: 600;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   align-self: flex-end;
   transition: all var(--dur-fast);
   font-family: inherit;
   white-space: nowrap;
+  min-height: 44px;
 }
 .chat-send:hover { background: #1a2980; }
 .chat-send:disabled { opacity: 0.5; cursor: not-allowed; }

@@ -5,7 +5,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { openModal } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -66,7 +66,7 @@ export function render(container) {
         <div class="chat-messages" id="chat-messages" style="flex:1;min-height:0;overflow-y:auto;"></div>
 
         <div class="chat-input-row" style="flex-shrink:0;">
-          <textarea class="chat-input" id="chat-input" placeholder="Describe your lesson idea, ask about spatial design, or explore frameworks..." rows="1"></textarea>
+          <textarea class="chat-input" id="chat-input" placeholder="Describe your lesson idea, ask about spatial design, or explore frameworks..." rows="3"></textarea>
           <button class="chat-send" id="chat-send" ${isGenerating ? 'disabled' : ''}>Send</button>
         </div>
       </div>
@@ -83,16 +83,40 @@ export function render(container) {
                   ${currentLessonId ? `Editing: ${Store.getLesson(currentLessonId)?.title || 'Lesson'}` : 'New lesson — save when ready'}
                 </p>
               </div>
-              <div style="display:flex;gap:var(--sp-2);">
+              <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
                 <button class="btn btn-secondary btn-sm" id="save-lesson-btn">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                   Save
                 </button>
+                <button class="btn btn-ghost btn-sm" id="export-pdf-btn" title="Export as printable page">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  Print
+                </button>
               </div>
+            </div>
+
+            <!-- AI Tools Bar -->
+            <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-bottom:var(--sp-4);padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-radius:var(--radius-lg);">
+              <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);align-self:center;margin-right:var(--sp-2);">AI Tools</span>
+              <button class="btn btn-ghost btn-sm" id="ai-review-btn" title="AI reviews your lesson plan for E21CC alignment">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                Review Plan
+              </button>
+              <button class="btn btn-ghost btn-sm" id="ai-rubric-btn" title="Generate an assessment rubric">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
+                Rubric
+              </button>
+              <button class="btn btn-ghost btn-sm" id="ai-group-btn" title="Suggest student groupings based on E21CC profiles">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Grouping
+              </button>
             </div>
 
             <!-- Plan Content -->
             <div id="plan-content"></div>
+
+            <!-- AI Result Panel -->
+            <div id="ai-result" style="margin-top:var(--sp-4);"></div>
           </div>
         </div>
       </div>
@@ -150,7 +174,7 @@ export function render(container) {
   });
   chatInput.addEventListener('input', () => {
     chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
   });
 
   // Quick prompts
@@ -161,6 +185,86 @@ export function render(container) {
 
   // Save lesson
   container.querySelector('#save-lesson-btn').addEventListener('click', () => showSaveModal(classes));
+
+  // Print / Export
+  container.querySelector('#export-pdf-btn').addEventListener('click', () => {
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('No lesson content to print yet.', 'danger'); return; }
+    const printWin = window.open('', '_blank');
+    const planHtml = aiMsgs.map(m => md(m.content)).join('<hr style="margin:24px 0;">');
+    printWin.document.write(`<!DOCTYPE html><html><head><title>Lesson Plan — Co-Cher</title>
+      <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.7;font-size:14px}
+      h1{font-size:18px;border-bottom:2px solid #000c53;padding-bottom:8px;color:#000c53}
+      h2,h3,h4{margin:16px 0 8px}strong{font-weight:600}ul,ol{padding-left:20px}
+      hr{border:none;border-top:1px solid #e2e8f0;margin:20px 0}
+      pre{background:#f1f5f9;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto}
+      @media print{body{margin:0;padding:16px}}</style></head>
+      <body><h1>Lesson Plan</h1><p style="color:#64748b;font-size:12px;">Exported from Co-Cher · ${new Date().toLocaleDateString('en-SG')}</p>${planHtml}</body></html>`);
+    printWin.document.close();
+    printWin.print();
+  });
+
+  // AI Review
+  container.querySelector('#ai-review-btn').addEventListener('click', async () => {
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Reviewing your lesson plan...</div></div>`;
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+      const planText = aiMsgs.map(m => m.content).join('\n\n');
+      const review = await reviewLesson(planText);
+      resultEl.innerHTML = `
+        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--accent);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+            <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Lesson Review</span>
+            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(review)}</div>
+        </div>`;
+      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Review failed: ${err.message}</div>`;
+    }
+  });
+
+  // AI Rubric
+  container.querySelector('#ai-rubric-btn').addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const topic = chatMessages.find(m => m.role === 'user')?.content || 'General lesson';
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Generating rubric...</div></div>`;
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+      const rubric = await generateRubric(topic);
+      resultEl.innerHTML = `
+        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--success);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+            <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Assessment Rubric</span>
+            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(rubric)}</div>
+        </div>`;
+      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Rubric generation failed: ${err.message}</div>`;
+    }
+  });
+
+  // AI Grouping
+  container.querySelector('#ai-group-btn').addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const allClasses = Store.getClasses();
+    if (allClasses.length === 0 || allClasses.every(c => !c.students?.length)) {
+      showToast('No students found. Add students to a class first.', 'danger');
+      return;
+    }
+    showGroupingModal(container, allClasses);
+  });
 }
 
 /* ── Messages render ── */
@@ -168,13 +272,13 @@ function renderMessages(el) {
   if (!el) return;
   if (chatMessages.length === 0) {
     el.innerHTML = `
-      <div style="flex:1;display:flex;align-items:center;justify-content:center;">
-        <div style="text-align:center;max-width:300px;">
-          <div style="width:48px;height:48px;margin:0 auto var(--sp-4);background:var(--accent-light);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:var(--accent);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div style="padding:var(--sp-6) var(--sp-4);">
+        <div style="text-align:center;max-width:340px;margin:0 auto;">
+          <div style="width:52px;height:52px;margin:0 auto var(--sp-4);background:var(--accent-light);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:var(--accent);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
-          <h3 style="font-size:1.0625rem;font-weight:600;margin-bottom:var(--sp-2);color:var(--ink);">Start a conversation</h3>
-          <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-5);">
+          <h3 style="font-size:1.125rem;font-weight:600;margin-bottom:var(--sp-2);color:var(--ink);">Chat with Co-Cher</h3>
+          <p style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-5);">
             Design engaging lesson experiences, spatial arrangements, and E21CC-aligned activities.
           </p>
           <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
@@ -328,3 +432,68 @@ function suggestTitle() {
 }
 
 function escAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
+
+/* ── AI Grouping Modal ── */
+function showGroupingModal(container, classes) {
+  const classesWithStudents = classes.filter(c => c.students?.length > 0);
+
+  const { backdrop, close } = openModal({
+    title: 'AI Student Grouping',
+    body: `
+      <div class="input-group">
+        <label class="input-label">Select Class</label>
+        <select class="input" id="group-class">
+          ${classesWithStudents.map(c => `<option value="${c.id}">${c.name} (${c.students.length} students)</option>`).join('')}
+        </select>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Activity Type</label>
+        <select class="input" id="group-activity">
+          <option value="Collaborative group work">Collaborative group work</option>
+          <option value="Peer tutoring">Peer tutoring</option>
+          <option value="Jigsaw activity">Jigsaw activity</option>
+          <option value="Debate or discussion">Debate / discussion</option>
+          <option value="Project-based learning">Project-based learning</option>
+          <option value="Competition">Competition</option>
+          <option value="Lab work">Lab / practical work</option>
+        </select>
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="generate">Generate Groups</button>
+    `
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="generate"]').addEventListener('click', async () => {
+    const classId = backdrop.querySelector('#group-class').value;
+    const activityType = backdrop.querySelector('#group-activity').value;
+    const cls = classes.find(c => c.id === classId);
+    if (!cls) return;
+
+    close();
+
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Analysing E21CC profiles and creating groups...</div></div>`;
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+      const grouping = await suggestGrouping(cls.students, activityType);
+      resultEl.innerHTML = `
+        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--e21cc-cci);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+            <div>
+              <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Student Groups</span>
+              <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:var(--sp-2);">${cls.name} · ${activityType}</span>
+            </div>
+            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(grouping)}</div>
+        </div>`;
+      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Grouping failed: ${err.message}</div>`;
+    }
+  });
+}
