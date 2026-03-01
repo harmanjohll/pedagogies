@@ -253,10 +253,17 @@ export function render(container) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Grouping
               </button>
+              <button class="btn btn-ghost btn-sm" id="spatial-layout-btn" title="Design or link a spatial classroom layout">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                Spatial Layout
+              </button>
             </div>
 
             <!-- Plan Content -->
             <div id="plan-content"></div>
+
+            <!-- Spatial Layout Section -->
+            <div id="spatial-section" style="margin-top:var(--sp-4);"></div>
 
             <!-- AI Result Panel -->
             <div id="ai-result" style="margin-top:var(--sp-4);"></div>
@@ -481,6 +488,14 @@ export function render(container) {
       return;
     }
     showGroupingModal(container, allClasses);
+  });
+
+  // Spatial Layout
+  renderSpatialSection(container);
+  container.querySelector('#spatial-layout-btn').addEventListener('click', () => {
+    const spatialSection = container.querySelector('#spatial-section');
+    spatialSection.scrollIntoView({ behavior: 'smooth' });
+    renderSpatialSection(container, true);
   });
 }
 
@@ -797,4 +812,112 @@ function showAttachKBModal(container) {
       showToast(`${attachedKBContext.length} resource${attachedKBContext.length > 1 ? 's' : ''} attached as context`, 'success');
     }
   });
+}
+
+/* ══════════ Spatial Layout Section ══════════ */
+
+const PRESET_ICONS = {
+  direct: '📣', pods: '🤝', stations: '🔄', ushape: '🗣️',
+  quiet: '📝', gallery: '🖼️', fishbowl: '🐟', maker: '🛠️'
+};
+const PRESET_NAMES = {
+  direct: 'Direct Instruction', pods: 'Collaborative Pods', stations: 'Stations',
+  ushape: 'U-Shape / Circle', quiet: 'Quiet Work', gallery: 'Gallery Walk',
+  fishbowl: 'Fishbowl / Socratic', maker: 'Makerspace'
+};
+
+function renderSpatialSection(container, forceShow = false) {
+  const el = container.querySelector('#spatial-section');
+  if (!el) return;
+
+  const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const linkedLayoutId = currentLesson?.spatialLayout;
+  const linkedLayout = linkedLayoutId ? Store.getSavedLayouts()?.find(l => l.id === linkedLayoutId) : null;
+  const savedLayouts = Store.getSavedLayouts() || [];
+
+  // If no layout linked and not forced open, show nothing or minimal prompt
+  if (!linkedLayout && !forceShow && savedLayouts.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  if (linkedLayout) {
+    // Show linked layout summary
+    el.innerHTML = `
+      <div class="card" style="padding:var(--sp-5);border-top:3px solid var(--e21cc-cci);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3);">
+          <div style="display:flex;align-items:center;gap:var(--sp-2);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--e21cc-cci)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            <span style="font-weight:600;font-size:0.9375rem;color:var(--ink);">Spatial Layout</span>
+          </div>
+          <div style="display:flex;gap:var(--sp-2);">
+            <button class="btn btn-ghost btn-sm" id="open-spatial-editor">Open in Designer</button>
+            <button class="btn btn-ghost btn-sm" id="unlink-spatial" style="color:var(--danger);">Unlink</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-md);">
+          <div style="font-size:2rem;">${PRESET_ICONS[linkedLayout.preset] || '📐'}</div>
+          <div>
+            <div style="font-weight:600;font-size:0.875rem;color:var(--ink);">${esc(linkedLayout.name)}</div>
+            <div style="font-size:0.75rem;color:var(--ink-muted);">
+              ${linkedLayout.studentCount || '?'} students · ${linkedLayout.items?.length || 0} items · ${PRESET_NAMES[linkedLayout.preset] || 'Custom'}
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    el.querySelector('#open-spatial-editor')?.addEventListener('click', () => {
+      navigate('/spatial');
+    });
+    el.querySelector('#unlink-spatial')?.addEventListener('click', () => {
+      if (currentLessonId) {
+        Store.updateLesson(currentLessonId, { spatialLayout: null });
+        showToast('Spatial layout unlinked', 'success');
+        renderSpatialSection(container);
+      }
+    });
+  } else {
+    // Show option to link an existing layout or go design one
+    el.innerHTML = `
+      <div class="card" style="padding:var(--sp-5);border:2px dashed var(--border);background:transparent;box-shadow:none;">
+        <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <span style="font-weight:600;font-size:0.9375rem;color:var(--ink);">Spatial Layout</span>
+        </div>
+        <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-3);">
+          Link a classroom layout to this lesson to plan how students will be arranged physically.
+        </p>
+        ${savedLayouts.length > 0 ? `
+          <div style="margin-bottom:var(--sp-3);">
+            <label class="input-label" style="font-size:0.75rem;">Link existing layout</label>
+            <select class="input" id="link-layout-select" style="font-size:0.8125rem;">
+              <option value="">Choose a saved layout...</option>
+              ${savedLayouts.map(l => `<option value="${l.id}">${l.name} (${l.studentCount || '?'} students)</option>`).join('')}
+            </select>
+          </div>
+        ` : ''}
+        <div style="display:flex;gap:var(--sp-2);">
+          ${savedLayouts.length > 0 ? `<button class="btn btn-primary btn-sm" id="link-layout-btn">Link Layout</button>` : ''}
+          <button class="btn btn-secondary btn-sm" id="design-new-spatial">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Design New in Spatial Designer
+          </button>
+        </div>
+      </div>`;
+
+    el.querySelector('#link-layout-btn')?.addEventListener('click', () => {
+      const layoutId = container.querySelector('#link-layout-select')?.value;
+      if (!layoutId) { showToast('Select a layout to link.', 'danger'); return; }
+      if (currentLessonId) {
+        Store.updateLesson(currentLessonId, { spatialLayout: layoutId });
+        showToast('Spatial layout linked!', 'success');
+        renderSpatialSection(container);
+      } else {
+        showToast('Save the lesson first, then link a layout.', 'danger');
+      }
+    });
+    el.querySelector('#design-new-spatial')?.addEventListener('click', () => {
+      navigate('/spatial');
+    });
+  }
 }

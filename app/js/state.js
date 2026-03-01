@@ -262,6 +262,7 @@ export const Store = {
       id: generateId(),
       name: data.name || 'Untitled Layout',
       items: data.items || [],
+      preset: data.preset || null,
       wallState: data.wallState || 'closed',
       studentCount: data.studentCount || 30,
       createdAt: Date.now()
