@@ -531,29 +531,24 @@ export function render(container) {
       const avgCgc = Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cgc || 50), 0) / cls.students.length);
       briefPrompt += `- Class E21CC profile: CAIT avg ${avgCait}, CCI avg ${avgCci}, CGC avg ${avgCgc}\n`;
     }
-    briefPrompt += `\nRespond with ONLY a JSON object with these keys:\n- "preset": one of "direct", "pods", "stations", "ushape", "quiet", "gallery", "fishbowl", "maker"\n- "wall_A": "close" or "stack"\n- "wall_B": "close" or "stack"\n- "rationale": 2-3 sentences explaining why this layout suits the brief\n- "tips": array of 2-3 short spatial tips for this specific lesson`;
-
     aiSuggestBtn.disabled = true;
     aiSuggestBtn.textContent = 'Thinking...';
 
     try {
+      const sysPrompt = `You are an expert in spatial pedagogy for Singapore schools. Analyze the lesson brief below. Respond with a JSON object that has these keys:
+- "preset": one of "direct", "pods", "stations", "ushape", "quiet", "gallery", "fishbowl", "maker"
+- "wall_A": "close" or "stack"
+- "wall_B": "close" or "stack"
+- "rationale": 2-3 sentences explaining why this layout suits the brief
+- "tips": array of 2-3 short spatial tips for this specific lesson
+- "insights": array of 3 objects, each with "title" (string), "affordance" (string describing how the layout supports learning), and "moves" (array of 2 suggested teaching moves)`;
+
       const response = await sendChat([{ role: 'user', content: briefPrompt }], {
-        systemPrompt: 'You are a spatial pedagogy expert for Singapore schools. Given a lesson brief, recommend the optimal classroom layout preset. Respond with a JSON object.',
-        temperature: 0.4,
-        maxTokens: 512,
+        systemPrompt: sysPrompt,
         jsonMode: true
       });
 
-      let suggestion;
-      try {
-        suggestion = typeof response === 'string' ? JSON.parse(response) : response;
-      } catch {
-        // Fallback: try to extract JSON from text
-        const cleaned = response.replace(/```(?:json)?\s*/gi, '').replace(/```\s*/g, '').trim();
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('AI returned unexpected text. Please try again.');
-        suggestion = JSON.parse(jsonMatch[0]);
-      }
+      const suggestion = JSON.parse(response);
 
       // Apply preset
       if (suggestion.preset) {
@@ -562,18 +557,26 @@ export function render(container) {
       if (suggestion.wall_A === 'stack') stackWall('A'); else closeWall('A');
       if (suggestion.wall_B === 'stack') stackWall('B'); else closeWall('B');
 
-      // Show rationale in insights panel
+      // Show rationale + AI insights in right panel
       const insightsEl = container.querySelector('#insights');
-      if (insightsEl && suggestion.rationale) {
+      if (insightsEl) {
         const tipsHtml = (suggestion.tips || []).map(t =>
           `<li style="margin-bottom:var(--sp-1);">${t}</li>`
         ).join('');
+        const aiInsightsHtml = (suggestion.insights || []).map(ins => `
+          <div style="margin-bottom:var(--sp-3);">
+            <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:var(--sp-1);">${ins.title}</div>
+            <div style="font-size:0.8125rem;color:var(--ink-secondary);margin-bottom:var(--sp-1);"><em>Affordance:</em> ${ins.affordance}</div>
+            ${ins.moves?.length ? `<ul style="margin:0;padding-left:var(--sp-4);font-size:0.8125rem;color:var(--ink-muted);">${ins.moves.map(m => `<li>${m}</li>`).join('')}</ul>` : ''}
+          </div>
+        `).join('');
         insightsEl.innerHTML = `
           <div style="background:var(--accent-light);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-md);border-left:3px solid var(--accent);margin-bottom:var(--sp-3);">
             <div style="font-weight:600;font-size:0.8125rem;color:var(--accent-dark);margin-bottom:var(--sp-1);">AI Suggestion</div>
-            <div style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;">${suggestion.rationale}</div>
-            ${tipsHtml ? `<ul style="margin:var(--sp-2) 0 0;padding-left:var(--sp-4);font-size:0.8125rem;color:var(--ink-secondary);">${tipsHtml}</ul>` : ''}
+            ${suggestion.rationale ? `<div style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;margin-bottom:var(--sp-2);">${suggestion.rationale}</div>` : ''}
+            ${tipsHtml ? `<ul style="margin:0 0 var(--sp-2);padding-left:var(--sp-4);font-size:0.8125rem;color:var(--ink-secondary);">${tipsHtml}</ul>` : ''}
           </div>
+          ${aiInsightsHtml}
         ` + insightsEl.innerHTML;
       }
 
@@ -693,33 +696,31 @@ export function render(container) {
     if (description) prompt += `- Description: ${description}\n`;
     if (e21ccFocus.length > 0) prompt += `- E21CC focus: ${e21ccFocus.map(f => E21CC_MAP[f] || f).join(', ')}\n`;
     if (considerations) prompt += `- Special considerations: ${considerations}\n`;
-    prompt += `\nAvailable presets: direct, pods, stations, ushape, quiet, gallery, fishbowl, maker\n`;
-    prompt += `\nRespond with ONLY a JSON array of 3 objects, each with:\n- "name": phase name (e.g. "Introduction", "Group Investigation", "Debrief")\n- "preset": one of the preset names above\n- "wall_A": "close" or "stack"\n- "wall_B": "close" or "stack"\n- "duration": suggested minutes (number)\n- "tip": one short teaching tip for this phase`;
+    prompt += `\nAvailable presets: direct, pods, stations, ushape, quiet, gallery, fishbowl, maker`;
 
     const timelineBtn = container.querySelector('#ai-timeline-btn');
     timelineBtn.disabled = true;
     timelineBtn.textContent = 'Thinking...';
 
     try {
+      const sysPrompt = `You are an expert in spatial pedagogy for Singapore schools. Given a lesson brief, suggest a 3-phase lesson timeline with different classroom layouts for each phase. Respond with a JSON object with a key "phases" containing an array of 3 objects. Each object must have:
+- "name": phase name (e.g. "Introduction", "Group Investigation", "Debrief")
+- "preset": one of the available presets
+- "wall_A": "close" or "stack"
+- "wall_B": "close" or "stack"
+- "duration": suggested minutes (number)
+- "tip": one short teaching tip for this phase`;
+
       const response = await sendChat([{ role: 'user', content: prompt }], {
-        systemPrompt: 'You are a spatial pedagogy expert for Singapore schools. Suggest a 3-phase lesson timeline with classroom layout changes. Respond with a JSON array.',
-        temperature: 0.4,
-        maxTokens: 512,
+        systemPrompt: sysPrompt,
         jsonMode: true
       });
 
-      let timeline;
-      try {
-        const parsed = typeof response === 'string' ? JSON.parse(response) : response;
-        // Handle both direct array and wrapped object { phases: [...] }
-        timeline = Array.isArray(parsed) ? parsed : (parsed.phases || parsed.timeline || Object.values(parsed).find(v => Array.isArray(v)) || []);
-      } catch {
-        // Fallback: try to extract JSON array from text
-        const cleaned = response.replace(/```(?:json)?\s*/gi, '').replace(/```\s*/g, '').trim();
-        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
-        if (!jsonMatch) throw new Error('AI returned unexpected text. Please try again.');
-        timeline = JSON.parse(jsonMatch[0]);
-      }
+      const parsed = JSON.parse(response);
+      // Handle both direct array and wrapped object { phases: [...] }
+      const timeline = Array.isArray(parsed)
+        ? parsed
+        : (parsed.phases || parsed.timeline || Object.values(parsed).find(v => Array.isArray(v)) || []);
       if (!Array.isArray(timeline) || timeline.length === 0) {
         throw new Error('AI did not return a valid timeline. Please try again.');
       }
