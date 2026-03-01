@@ -66,7 +66,7 @@ export function render(container) {
         <div class="chat-messages" id="chat-messages" style="flex:1;min-height:0;overflow-y:auto;"></div>
 
         <div class="chat-input-row" style="flex-shrink:0;">
-          <textarea class="chat-input" id="chat-input" placeholder="Describe your lesson idea, ask about spatial design, or explore frameworks..." rows="1"></textarea>
+          <textarea class="chat-input" id="chat-input" placeholder="Describe your lesson idea, ask about spatial design, or explore frameworks..." rows="3"></textarea>
           <button class="chat-send" id="chat-send" ${isGenerating ? 'disabled' : ''}>Send</button>
         </div>
       </div>
@@ -150,7 +150,7 @@ export function render(container) {
   });
   chatInput.addEventListener('input', () => {
     chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
   });
 
   // Quick prompts
@@ -168,13 +168,13 @@ function renderMessages(el) {
   if (!el) return;
   if (chatMessages.length === 0) {
     el.innerHTML = `
-      <div style="flex:1;display:flex;align-items:center;justify-content:center;">
-        <div style="text-align:center;max-width:300px;">
-          <div style="width:48px;height:48px;margin:0 auto var(--sp-4);background:var(--accent-light);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:var(--accent);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div style="padding:var(--sp-6) var(--sp-4);">
+        <div style="text-align:center;max-width:340px;margin:0 auto;">
+          <div style="width:52px;height:52px;margin:0 auto var(--sp-4);background:var(--accent-light);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:var(--accent);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
-          <h3 style="font-size:1.0625rem;font-weight:600;margin-bottom:var(--sp-2);color:var(--ink);">Start a conversation</h3>
-          <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-5);">
+          <h3 style="font-size:1.125rem;font-weight:600;margin-bottom:var(--sp-2);color:var(--ink);">Chat with Co-Cher</h3>
+          <p style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-5);">
             Design engaging lesson experiences, spatial arrangements, and E21CC-aligned activities.
           </p>
           <div style="display:flex;flex-direction:column;gap:var(--sp-2);">

@@ -270,7 +270,7 @@
 
 .lp-layout {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 0;
   height: 100%;
   min-height: 0;
