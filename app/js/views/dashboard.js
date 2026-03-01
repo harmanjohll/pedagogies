@@ -25,6 +25,112 @@ function timeAgo(ts) {
   return `${days}d ago`;
 }
 
+function renderInsights(classes, lessons) {
+  // Compute E21CC averages across all students
+  let totalCait = 0, totalCci = 0, totalCgc = 0, count = 0;
+  classes.forEach(cls => {
+    (cls.students || []).forEach(s => {
+      if (s.e21cc) {
+        totalCait += s.e21cc.cait || 0;
+        totalCci += s.e21cc.cci || 0;
+        totalCgc += s.e21cc.cgc || 0;
+        count++;
+      }
+    });
+  });
+
+  const avgCait = count > 0 ? Math.round(totalCait / count) : 0;
+  const avgCci = count > 0 ? Math.round(totalCci / count) : 0;
+  const avgCgc = count > 0 ? Math.round(totalCgc / count) : 0;
+
+  const barColor = (val) => val >= 65 ? 'var(--success)' : val >= 45 ? 'var(--warning)' : 'var(--danger)';
+
+  // Lesson focus analysis
+  const focusCounts = { cait: 0, cci: 0, cgc: 0 };
+  lessons.forEach(l => {
+    (l.e21ccFocus || []).forEach(f => { if (focusCounts[f] !== undefined) focusCounts[f]++; });
+  });
+  const totalFocus = focusCounts.cait + focusCounts.cci + focusCounts.cgc;
+
+  // Find strongest and weakest class
+  let strongest = null, weakest = null, maxAvg = -1, minAvg = 101;
+  classes.forEach(cls => {
+    const students = cls.students || [];
+    if (students.length === 0) return;
+    const avg = students.reduce((s, st) => {
+      const e = st.e21cc || {};
+      return s + ((e.cait || 0) + (e.cci || 0) + (e.cgc || 0)) / 3;
+    }, 0) / students.length;
+    if (avg > maxAvg) { maxAvg = avg; strongest = cls; }
+    if (avg < minAvg) { minAvg = avg; weakest = cls; }
+  });
+
+  return `
+    <div style="margin-bottom:var(--sp-8);">
+      <div class="section-header">
+        <h2 class="section-title" style="font-size:1.125rem;">Teaching Insights</h2>
+      </div>
+      <div class="grid-2 stagger">
+        <!-- E21CC Overview -->
+        <div class="card" style="padding:var(--sp-5) var(--sp-6);">
+          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-4);">E21CC Averages (All Students)</div>
+          <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px;">
+                <span style="font-weight:600;color:var(--ink);">CAIT</span>
+                <span style="color:var(--ink-muted);">${avgCait}/100</span>
+              </div>
+              <div style="height:8px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;">
+                <div style="width:${avgCait}%;height:100%;background:${barColor(avgCait)};border-radius:var(--radius-full);transition:width 0.6s;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px;">
+                <span style="font-weight:600;color:var(--ink);">CCI</span>
+                <span style="color:var(--ink-muted);">${avgCci}/100</span>
+              </div>
+              <div style="height:8px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;">
+                <div style="width:${avgCci}%;height:100%;background:${barColor(avgCci)};border-radius:var(--radius-full);transition:width 0.6s;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px;">
+                <span style="font-weight:600;color:var(--ink);">CGC</span>
+                <span style="color:var(--ink-muted);">${avgCgc}/100</span>
+              </div>
+              <div style="height:8px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;">
+                <div style="width:${avgCgc}%;height:100%;background:${barColor(avgCgc)};border-radius:var(--radius-full);transition:width 0.6s;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Insights -->
+        <div class="card" style="padding:var(--sp-5) var(--sp-6);">
+          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-4);">Quick Insights</div>
+          <div style="display:flex;flex-direction:column;gap:var(--sp-3);font-size:0.8125rem;">
+            ${strongest ? `<div style="display:flex;align-items:center;gap:var(--sp-2);">
+              <span style="color:var(--success);font-size:1rem;">&#9650;</span>
+              <span style="color:var(--ink-secondary);"><strong>${strongest.name}</strong> has the highest overall E21CC average (${Math.round(maxAvg)})</span>
+            </div>` : ''}
+            ${weakest && weakest !== strongest ? `<div style="display:flex;align-items:center;gap:var(--sp-2);">
+              <span style="color:var(--warning);font-size:1rem;">&#9660;</span>
+              <span style="color:var(--ink-secondary);"><strong>${weakest.name}</strong> could benefit from more E21CC focus (avg: ${Math.round(minAvg)})</span>
+            </div>` : ''}
+            ${totalFocus > 0 ? `<div style="display:flex;align-items:center;gap:var(--sp-2);">
+              <span style="color:var(--accent);font-size:1rem;">&#9679;</span>
+              <span style="color:var(--ink-secondary);">Lesson focus: CAIT (${focusCounts.cait}), CCI (${focusCounts.cci}), CGC (${focusCounts.cgc})</span>
+            </div>` : ''}
+            <div style="display:flex;align-items:center;gap:var(--sp-2);">
+              <span style="color:var(--ink-faint);font-size:1rem;">&#9679;</span>
+              <span style="color:var(--ink-secondary);">${count} students across ${classes.length} class${classes.length !== 1 ? 'es' : ''}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
 export function render(container) {
   const classes = Store.getClasses();
   const lessons = Store.getLessons();
@@ -97,6 +203,9 @@ export function render(container) {
             <div class="stat-value">${lessons.length}</div>
           </div>
         </div>
+
+        <!-- Teaching Insights -->
+        ${totalStudents > 0 ? renderInsights(classes, lessons) : ''}
 
         <!-- Two Column: Classes + Activity -->
         <div class="grid-2" style="margin-bottom: var(--sp-8);">

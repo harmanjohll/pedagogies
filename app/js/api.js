@@ -97,6 +97,98 @@ export async function summarizeNotes(notes) {
   });
 }
 
+/* ── AI Lesson Review ── */
+export async function reviewLesson(planText) {
+  const messages = [{
+    role: 'user',
+    content: `Please review this lesson plan and provide constructive feedback:\n\n${planText}`
+  }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's lesson review assistant for Singapore educators. Analyse lesson plans against:
+- E21CC alignment (CAIT, CCI, CGC) — which domains are addressed, which could be strengthened
+- STP alignment — lesson preparation, enactment, monitoring/feedback, positive culture
+- Differentiation — how well does the plan cater to diverse learners
+- Engagement — student-centred vs teacher-centred balance
+- Assessment — how understanding is checked
+
+Format your response as:
+## Strengths
+(2-3 bullet points)
+
+## Areas for Growth
+(2-3 bullet points with specific suggestions)
+
+## E21CC Alignment
+(Brief analysis of which domains are covered)
+
+## Quick Wins
+(1-2 small changes that would significantly improve the lesson)
+
+Be encouraging, specific, and practical. Speak as a fellow educator.`,
+    temperature: 0.5,
+    maxTokens: 2048
+  });
+}
+
+/* ── Generate Rubric ── */
+export async function generateRubric(lessonTopic, level, subject) {
+  const messages = [{
+    role: 'user',
+    content: `Create an assessment rubric for: ${lessonTopic}\nLevel: ${level || 'Secondary'}\nSubject: ${subject || 'General'}`
+  }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's assessment specialist for Singapore educators. Generate clear, practical rubrics.
+
+Format rubrics as markdown tables with:
+- 3-4 criteria rows
+- 4 achievement levels: Exemplary | Proficient | Developing | Beginning
+- Each cell should have a brief descriptor (1-2 sentences)
+- Include E21CC domains where relevant
+- Make criteria observable and measurable
+
+End with a brief "Teacher Notes" section with tips on using the rubric.`,
+    temperature: 0.5,
+    maxTokens: 2048
+  });
+}
+
+/* ── Student Grouping ── */
+export async function suggestGrouping(students, activityType) {
+  const studentSummary = students.map(s =>
+    `${s.name}: CAIT=${s.e21cc?.cait || 50}, CCI=${s.e21cc?.cci || 50}, CGC=${s.e21cc?.cgc || 50}`
+  ).join('\n');
+
+  const messages = [{
+    role: 'user',
+    content: `Suggest optimal student groupings for: ${activityType}\n\nStudents and their E21CC profiles:\n${studentSummary}`
+  }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's grouping specialist. Suggest student groups based on E21CC profiles and the activity type.
+
+Principles:
+- For collaborative work: mix strengths across domains for peer support
+- For competitive activities: balance groups for fairness
+- For differentiated tasks: cluster by readiness level
+- For jigsaw: assign roles based on individual strengths
+
+Format:
+## Suggested Groups
+Group 1: [names] — rationale
+Group 2: [names] — rationale
+...
+
+## Grouping Strategy
+Brief explanation of why this arrangement works for the activity.
+
+Keep groups of 3-5 students. Be practical and specific.`,
+    temperature: 0.6,
+    maxTokens: 2048
+  });
+}
+
 export function validateApiKey(key) {
   return key && key.trim().length >= 20;
 }

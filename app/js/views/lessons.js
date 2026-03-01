@@ -64,10 +64,16 @@ export function renderList(container) {
             <h1 class="page-title">Lessons</h1>
             <p class="page-subtitle">Your saved lesson plans and conversations with Co-Cher.</p>
           </div>
-          <button class="btn btn-primary" id="new-lesson-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New Lesson
-          </button>
+          <div style="display:flex;gap:var(--sp-2);">
+            <button class="btn btn-secondary btn-sm" id="import-lesson-btn" title="Import a shared lesson">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Import
+            </button>
+            <button class="btn btn-primary" id="new-lesson-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Lesson
+            </button>
+          </div>
         </div>
 
         ${lessons.length === 0 ? `
@@ -106,6 +112,38 @@ export function renderList(container) {
 
   (container.querySelector('#new-lesson-btn') || container.querySelector('#new-lesson-empty'))
     ?.addEventListener('click', () => navigate('/lesson-planner'));
+
+  // Import lesson
+  container.querySelector('#import-lesson-btn')?.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!data._cocher_lesson || !data.title) throw new Error('Invalid lesson file');
+          const lesson = Store.addLesson({
+            title: data.title + ' (imported)',
+            classId: null,
+            status: 'draft',
+            chatHistory: data.chatHistory || [],
+            plan: data.plan || '',
+            e21ccFocus: data.e21ccFocus || []
+          });
+          showToast(`Imported "${data.title}"!`, 'success');
+          navigate(`/lessons/${lesson.id}`);
+        } catch {
+          showToast('Invalid lesson file. Please use a Co-Cher exported .json file.', 'danger');
+        }
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  });
 }
 
 function renderCards(grid, lessons, classMap) {
@@ -194,9 +232,13 @@ export function renderDetail(container, { id }) {
           <p class="page-subtitle">Created ${fmtDate(lesson.createdAt)} &middot; Updated ${fmtDate(lesson.updatedAt)}</p>
         </div>
 
-        <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-6);">
+        <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-6);flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" id="edit-btn">Continue in Planner</button>
           <button class="btn btn-secondary btn-sm" id="status-btn">Change Status</button>
+          <button class="btn btn-ghost btn-sm" id="export-btn" title="Export lesson as shareable JSON file">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Share
+          </button>
         </div>
 
         <div class="card" style="margin-bottom:var(--sp-6);">
@@ -237,5 +279,27 @@ export function renderDetail(container, { id }) {
   container.querySelector('#save-ref').addEventListener('click', () => {
     Store.updateLesson(id, { reflection: container.querySelector('#reflection').value });
     showToast('Reflection saved!', 'success');
+  });
+
+  // Export / Share
+  container.querySelector('#export-btn')?.addEventListener('click', () => {
+    const exportData = {
+      _cocher_lesson: true,
+      exportedAt: Date.now(),
+      title: lesson.title,
+      status: lesson.status,
+      e21ccFocus: lesson.e21ccFocus || [],
+      chatHistory: lesson.chatHistory || [],
+      plan: lesson.plan || '',
+      reflection: lesson.reflection || ''
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${lesson.title.replace(/[^a-zA-Z0-9]/g, '_')}.cocher.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Lesson exported! Share the file with colleagues.', 'success');
   });
 }
