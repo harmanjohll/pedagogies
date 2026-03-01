@@ -233,8 +233,8 @@ export function render(container) {
             <button class="btn btn-ghost btn-sm" id="save-layout">Save Layout</button>
           </div>
           <p class="text-caption" style="color:var(--ink-faint);line-height:1.5;margin-top:var(--sp-1);">
-            <strong>R</strong> rotate &middot; <strong>Del</strong> delete &middot; <strong>Ctrl+D</strong> duplicate &middot; <strong>Ctrl+Z</strong> undo<br/>
-            <strong>Arrows</strong> nudge &middot; <strong>Shift</strong> multi-select
+            <strong>R</strong> rotate &middot; <strong>Del</strong> delete &middot; <strong>Ctrl+D</strong> dup &middot; <strong>Ctrl+Z/Y</strong> undo/redo<br/>
+            <strong>Arrows</strong> nudge &middot; <strong>Shift</strong> multi-select &middot; <strong>Dbl-click</strong> label
           </p>
         </div>
       </div>
@@ -580,9 +580,13 @@ export function render(container) {
   /* ══════ Saved layouts ══════ */
   renderSavedLayouts();
 
-  /* ══════ Scene Timeline ══════ */
-  let scenes = [];
-  let activeSceneIdx = -1;
+  /* ══════ Scene Timeline (persisted) ══════ */
+  let scenes = JSON.parse(localStorage.getItem('cocher_scenes') || '[]');
+  let activeSceneIdx = scenes.length > 0 ? 0 : -1;
+
+  function persistScenes() {
+    try { localStorage.setItem('cocher_scenes', JSON.stringify(scenes)); } catch {}
+  }
 
   function renderSceneCards() {
     const el = container.querySelector('#scene-cards');
@@ -618,6 +622,7 @@ export function render(container) {
         const idx = parseInt(btn.dataset.idx);
         scenes.splice(idx, 1);
         if (activeSceneIdx >= scenes.length) activeSceneIdx = scenes.length - 1;
+        persistScenes();
         renderSceneCards();
         showToast('Scene removed');
       });
@@ -638,6 +643,7 @@ export function render(container) {
     const wallState = panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed';
     scenes.push({ name, items, wallState, preset: currentPreset || null });
     activeSceneIdx = scenes.length - 1;
+    persistScenes();
     renderSceneCards();
     showToast(`Saved scene: ${name}`, 'success');
   });
@@ -650,11 +656,25 @@ export function render(container) {
     const count = parseInt(studentCountInput.value) || 32;
     const e21ccFocus = [...container.querySelectorAll('.brief-e21cc:checked')].map(cb => cb.value);
 
+    // Guide user if design brief is empty
+    if (!topic && !cls) {
+      showToast('Fill in the Design Brief first — add a topic and/or select a class so the AI has context.', 'danger');
+      container.querySelector('#design-brief')?.setAttribute('open', '');
+      briefTopic?.focus();
+      return;
+    }
+
+    const E21CC_MAP = {
+      cait: 'Critical, Adaptive & Inventive Thinking (CAIT)',
+      cci: 'Communication, Collaboration & Information (CCI)',
+      cgc: 'Civic, Global & Cross-cultural Literacy (CGC)'
+    };
+
     let prompt = `Suggest a 3-phase lesson timeline with optimal classroom layouts for each phase.\n`;
     prompt += `- Students: ${count}\n`;
-    if (cls) prompt += `- Class: ${cls.name}\n`;
-    if (topic) prompt += `- Topic: ${topic}\n`;
-    if (e21ccFocus.length > 0) prompt += `- E21CC focus: ${e21ccFocus.join(', ')}\n`;
+    if (cls) prompt += `- Class: ${cls.name} (${cls.level || ''} ${cls.subject || ''})\n`;
+    if (topic) prompt += `- Topic/Activity: ${topic}\n`;
+    if (e21ccFocus.length > 0) prompt += `- E21CC focus: ${e21ccFocus.map(f => E21CC_MAP[f] || f).join(', ')}\n`;
     prompt += `\nAvailable presets: direct, pods, stations, ushape, quiet, gallery, fishbowl, maker\n`;
     prompt += `\nRespond with ONLY a JSON array of 3 objects, each with:\n- "name": phase name (e.g. "Introduction", "Group Investigation", "Debrief")\n- "preset": one of the preset names above\n- "wall_A": "close" or "stack"\n- "wall_B": "close" or "stack"\n- "duration": suggested minutes (number)\n- "tip": one short teaching tip for this phase`;
 
@@ -696,6 +716,7 @@ export function render(container) {
         }
       }
 
+      persistScenes();
       renderSceneCards();
 
       // Show timeline summary in insights
@@ -720,7 +741,10 @@ export function render(container) {
 
       showToast('AI timeline generated — click scenes to switch layouts!', 'success');
     } catch (err) {
-      showToast(`Timeline failed: ${err.message}`, 'danger');
+      const hint = err.message.includes('API') || err.message.includes('key') || err.message.includes('401') || err.message.includes('403')
+        ? 'Check your API key in Settings.'
+        : 'Try adding more detail to the Design Brief (topic, class, E21CC focus).';
+      showToast(`Timeline failed: ${err.message}. ${hint}`, 'danger');
     } finally {
       timelineBtn.disabled = false;
       timelineBtn.textContent = 'AI Timeline';
@@ -802,6 +826,26 @@ export function render(container) {
     }
 
     makeDraggable(g);
+    // Double-click to add/edit custom label on any item
+    if (!def.text) {
+      g.addEventListener('dblclick', () => {
+        let t = g.querySelector('text.user-label');
+        if (!t) {
+          const lbl = prompt('Add label:');
+          if (!lbl) return;
+          t = document.createElementNS(SVG_NS, 'text');
+          setAttrs(t, { x: 0, y: -((def.h || def.w) / 2 + 8), 'text-anchor': 'middle', 'font-size': 10, fill: '#334155', 'font-family': 'var(--font-sans)', 'font-weight': '600' });
+          t.classList.add('user-label');
+          t.textContent = lbl;
+          g.appendChild(t);
+        } else {
+          const v = prompt('Edit label:', t.textContent);
+          if (v === null) return;
+          if (v === '') { t.remove(); return; }
+          t.textContent = v;
+        }
+      });
+    }
     return g;
   }
 
@@ -823,28 +867,53 @@ export function render(container) {
     return el;
   }
 
-  /* ══════ Undo ══════ */
+  /* ══════ Undo / Redo ══════ */
+  let redoStack = [];
+
   function pushUndo() {
     undoStack.push(layoutRoot.innerHTML);
     if (undoStack.length > 30) undoStack.shift();
+    redoStack = []; // clear redo on new action
+  }
+
+  function restoreState(html, label) {
+    layoutRoot.innerHTML = html;
+    [...layoutRoot.querySelectorAll('g[data-id]')].forEach(g => {
+      makeDraggable(g);
+      // Re-attach label editing on any item
+      g.addEventListener('dblclick', () => {
+        let t = g.querySelector('text.user-label');
+        if (!t) {
+          const lbl = prompt('Add label:');
+          if (!lbl) return;
+          t = document.createElementNS(SVG_NS, 'text');
+          setAttrs(t, { x: 0, y: -((g.getBBox?.()?.height || 30) / 2 + 8), 'text-anchor': 'middle', 'font-size': 10, fill: '#334155', 'font-family': 'var(--font-sans)', 'font-weight': '600' });
+          t.classList.add('user-label');
+          t.textContent = lbl;
+          g.appendChild(t);
+        } else {
+          const v = prompt('Edit label:', t.textContent);
+          if (v === null) return;
+          if (v === '') { t.remove(); return; }
+          t.textContent = v;
+        }
+      });
+    });
+    clearSelection();
+    updateMetrics();
+    showToast(label);
   }
 
   function popUndo() {
     if (undoStack.length === 0) return;
-    const html = undoStack.pop();
-    layoutRoot.innerHTML = html;
-    [...layoutRoot.querySelectorAll('g[data-id]')].forEach(g => {
-      makeDraggable(g);
-      if (g.getAttribute('data-id') === 'text_label') {
-        g.addEventListener('dblclick', () => {
-          const t = g.querySelector('text');
-          if (t) { const v = prompt('Edit label:', t.textContent); if (v !== null) t.textContent = v; }
-        });
-      }
-    });
-    clearSelection();
-    updateMetrics();
-    showToast('Undo');
+    redoStack.push(layoutRoot.innerHTML);
+    restoreState(undoStack.pop(), 'Undo');
+  }
+
+  function popRedo() {
+    if (redoStack.length === 0) return;
+    undoStack.push(layoutRoot.innerHTML);
+    restoreState(redoStack.pop(), 'Redo');
   }
 
   /* ══════ Drag & drop ══════ */
@@ -982,10 +1051,15 @@ export function render(container) {
   function onKey(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-    // Ctrl+Z undo
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    // Ctrl+Z undo, Ctrl+Shift+Z / Ctrl+Y redo
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
       e.preventDefault();
       popUndo();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey) || (e.key === 'Z'))) {
+      e.preventDefault();
+      popRedo();
       return;
     }
 

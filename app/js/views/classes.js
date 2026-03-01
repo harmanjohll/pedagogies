@@ -8,7 +8,7 @@ import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { showToast } from '../components/toast.js';
-import { summarizeNotes } from '../api.js';
+import { summarizeNotes, suggestGrouping } from '../api.js';
 
 /* ═══════════ Classes List ═══════════ */
 
@@ -222,6 +222,10 @@ export function renderDetail(container, { id }) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Batch Update E21CC
               </button>
+              <button class="btn btn-ghost btn-sm" id="group-students-btn" title="Auto-generate student groups">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Groups
+              </button>
             ` : ''}
           </div>
 
@@ -270,6 +274,11 @@ export function renderDetail(container, { id }) {
     // Batch E21CC update
     container.querySelector('#batch-e21cc-btn')?.addEventListener('click', () => {
       showBatchE21CCModal(id, renderInner);
+    });
+
+    // Student grouping
+    container.querySelector('#group-students-btn')?.addEventListener('click', () => {
+      showGroupingModal(id);
     });
 
     container.querySelectorAll('.tab').forEach(tab => {
@@ -359,6 +368,41 @@ export function renderDetail(container, { id }) {
           }
         });
       }
+    }
+
+    // Trends tab handlers
+    if (activeTab === 'trends') {
+      attachSparklineTips(container);
+
+      container.querySelector('#print-trends-btn')?.addEventListener('click', () => {
+        const fc = Store.getClass(id);
+        if (!fc) return;
+        const sts = fc.students || [];
+        const rows = sts.filter(s => s.e21ccHistory && s.e21ccHistory.length >= 2).map(s => {
+          const h = s.e21ccHistory, latest = h[h.length - 1], first = h[0];
+          return `<tr>
+            <td>${escapeHtml(s.name)}</td>
+            <td>${latest.cait} (${latest.cait - first.cait >= 0 ? '+' : ''}${latest.cait - first.cait})</td>
+            <td>${latest.cci} (${latest.cci - first.cci >= 0 ? '+' : ''}${latest.cci - first.cci})</td>
+            <td>${latest.cgc} (${latest.cgc - first.cgc >= 0 ? '+' : ''}${latest.cgc - first.cgc})</td>
+            <td>${h.length}</td>
+          </tr>`;
+        }).join('');
+        const pw = window.open('', '_blank');
+        pw.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(fc.name)} — E21CC Trends</title>
+          <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.7;font-size:14px}
+          h1{font-size:18px;border-bottom:2px solid #000c53;padding-bottom:8px;color:#000c53}
+          table{width:100%;border-collapse:collapse;margin:16px 0}th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0}th{font-weight:600;background:#f1f5f9}
+          @media print{body{margin:0;padding:16px}}</style></head>
+          <body>
+            <h1>${escapeHtml(fc.name)} — E21CC Trends Report</h1>
+            <p style="font-size:12px;color:#64748b;">${fc.level || ''} ${fc.subject || ''} &middot; ${sts.length} students &middot; ${new Date().toLocaleDateString('en-SG')}</p>
+            <table><thead><tr><th>Student</th><th>CAIT</th><th>CCI</th><th>CGC</th><th>Updates</th></tr></thead><tbody>${rows || '<tr><td colspan="5">No trend data</td></tr>'}</tbody></table>
+            <p style="color:#94a3b8;font-size:11px;margin-top:32px;">Exported from Co-Cher</p>
+          </body></html>`);
+        pw.document.close();
+        pw.print();
+      });
     }
   }
 
@@ -478,9 +522,11 @@ function renderNotesTab(cls) {
 }
 
 /* ── Trends Tab ── */
+let _sparkId = 0;
 function renderSparkline(history, key, color, width = 100, height = 28) {
   if (!history || history.length < 2) return `<span style="font-size:0.6875rem;color:var(--ink-faint);">Not enough data</span>`;
   const vals = history.map(h => h[key] || 0);
+  const timestamps = history.map(h => h.ts);
   const min = Math.min(...vals), max = Math.max(...vals);
   const range = max - min || 1;
   const step = width / (vals.length - 1);
@@ -490,14 +536,48 @@ function renderSparkline(history, key, color, width = 100, height = 28) {
   const diff = last - first;
   const arrow = diff > 0 ? '\u25B2' : diff < 0 ? '\u25BC' : '\u2500';
   const diffColor = diff > 0 ? 'var(--success)' : diff < 0 ? 'var(--danger)' : 'var(--ink-faint)';
+  const sid = `spark-${++_sparkId}`;
+
+  // Invisible circles for hover tooltips
+  const hoverCircles = vals.map((v, i) => {
+    const cx = i * step;
+    const cy = height - ((v - min) / range) * (height - 4) - 2;
+    const date = new Date(timestamps[i]).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+    return `<circle cx="${cx}" cy="${cy}" r="6" fill="transparent" stroke="none" data-tip="${key.toUpperCase()}: ${v} (${date})"/>
+            <circle cx="${cx}" cy="${cy}" r="2" fill="${color}" opacity="0" class="hover-dot"/>`;
+  }).join('');
+
   return `
-    <div style="display:flex;align-items:center;gap:var(--sp-2);">
-      <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;">
+    <div style="display:flex;align-items:center;gap:var(--sp-2);position:relative;" id="${sid}">
+      <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;overflow:visible;">
         <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         <circle cx="${(vals.length - 1) * step}" cy="${height - ((last - min) / range) * (height - 4) - 2}" r="2.5" fill="${color}"/>
+        ${hoverCircles}
       </svg>
       <span style="font-size:0.6875rem;font-weight:600;color:${diffColor};">${arrow}${Math.abs(diff)}</span>
+      <div class="spark-tip" style="display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:0.6875rem;padding:2px 8px;border-radius:4px;white-space:nowrap;pointer-events:none;z-index:10;"></div>
     </div>`;
+}
+
+function attachSparklineTips(container) {
+  container.querySelectorAll('[id^="spark-"]').forEach(wrapper => {
+    const tip = wrapper.querySelector('.spark-tip');
+    if (!tip) return;
+    wrapper.querySelectorAll('[data-tip]').forEach(circle => {
+      circle.addEventListener('mouseenter', () => {
+        tip.textContent = circle.dataset.tip;
+        tip.style.display = 'block';
+        const dots = wrapper.querySelectorAll('.hover-dot');
+        dots.forEach(d => d.setAttribute('opacity', '0'));
+        const idx = [...wrapper.querySelectorAll('[data-tip]')].indexOf(circle);
+        if (dots[idx]) dots[idx].setAttribute('opacity', '1');
+      });
+      circle.addEventListener('mouseleave', () => {
+        tip.style.display = 'none';
+        wrapper.querySelectorAll('.hover-dot').forEach(d => d.setAttribute('opacity', '0'));
+      });
+    });
+  });
 }
 
 function renderTrendsTab(cls) {
@@ -533,6 +613,12 @@ function renderTrendsTab(cls) {
   });
 
   return `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:var(--sp-4);">
+      <button class="btn btn-ghost btn-sm" id="print-trends-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print Trends Report
+      </button>
+    </div>
     <!-- Class Average Trends -->
     <div class="card" style="margin-bottom:var(--sp-6);">
       <h4 style="font-size:0.9375rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-3);">Class Average Trends</h4>
@@ -813,6 +899,113 @@ function showBatchE21CCModal(classId, onUpdate) {
     showToast(`Updated ${updatedStudents.length} students${reason ? ` — ${reason}` : ''}`, 'success');
     close();
     onUpdate();
+  });
+}
+
+/* ── Student Grouping ── */
+function showGroupingModal(classId) {
+  const cls = Store.getClass(classId);
+  if (!cls || !cls.students?.length) return;
+
+  const { backdrop, close } = openModal({
+    title: `Student Groups — ${cls.name}`,
+    width: 560,
+    body: `
+      <div class="input-group">
+        <label class="input-label">Group Size</label>
+        <select class="input" id="group-size">
+          <option value="2">Pairs (2)</option>
+          <option value="3">Trios (3)</option>
+          <option value="4" selected>Groups of 4</option>
+          <option value="5">Groups of 5</option>
+          <option value="6">Groups of 6</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Method</label>
+        <select class="input" id="group-method">
+          <option value="random">Random</option>
+          <option value="mixed">Mixed Ability (by E21CC)</option>
+          <option value="similar">Similar Ability</option>
+          <option value="ai">AI Suggested</option>
+        </select>
+      </div>
+      <div class="input-group" id="group-activity-row" style="display:none;">
+        <label class="input-label">Activity Type (for AI)</label>
+        <input class="input" id="group-activity" placeholder="e.g. debate, lab experiment, group project" />
+      </div>
+      <div id="group-result" style="margin-top:var(--sp-4);"></div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Close</button>
+      <button class="btn btn-primary" data-action="generate">Generate Groups</button>
+    `
+  });
+
+  const methodSelect = backdrop.querySelector('#group-method');
+  const activityRow = backdrop.querySelector('#group-activity-row');
+  methodSelect.addEventListener('change', () => {
+    activityRow.style.display = methodSelect.value === 'ai' ? 'block' : 'none';
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="generate"]').addEventListener('click', async () => {
+    const size = parseInt(backdrop.querySelector('#group-size').value);
+    const method = methodSelect.value;
+    const resultEl = backdrop.querySelector('#group-result');
+    const students = [...cls.students];
+
+    if (method === 'ai') {
+      const activity = backdrop.querySelector('#group-activity').value.trim() || 'group activity';
+      if (!Store.get('apiKey')) { showToast('API key needed for AI grouping.', 'danger'); return; }
+      resultEl.innerHTML = '<p style="font-size:0.8125rem;color:var(--ink-muted);">AI is thinking...</p>';
+      try {
+        const result = await suggestGrouping(students, activity);
+        resultEl.innerHTML = `<div style="font-size:0.8125rem;line-height:1.6;color:var(--ink-secondary);white-space:pre-wrap;">${escapeHtml(result)}</div>`;
+      } catch (err) {
+        resultEl.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">${escapeHtml(err.message)}</p>`;
+      }
+      return;
+    }
+
+    // Local grouping
+    let sorted;
+    if (method === 'mixed') {
+      sorted = students.sort((a, b) => {
+        const sa = ((a.e21cc?.cait || 0) + (a.e21cc?.cci || 0) + (a.e21cc?.cgc || 0));
+        const sb = ((b.e21cc?.cait || 0) + (b.e21cc?.cci || 0) + (b.e21cc?.cgc || 0));
+        return sb - sa;
+      });
+    } else if (method === 'similar') {
+      sorted = students.sort((a, b) => {
+        const sa = ((a.e21cc?.cait || 0) + (a.e21cc?.cci || 0) + (a.e21cc?.cgc || 0));
+        const sb = ((b.e21cc?.cait || 0) + (b.e21cc?.cci || 0) + (b.e21cc?.cgc || 0));
+        return sb - sa;
+      });
+    } else {
+      sorted = students.sort(() => Math.random() - 0.5);
+    }
+
+    const groups = [];
+    if (method === 'mixed') {
+      // Zigzag distribution for mixed ability
+      const numGroups = Math.ceil(sorted.length / size);
+      for (let i = 0; i < numGroups; i++) groups.push([]);
+      sorted.forEach((s, i) => groups[i % numGroups].push(s));
+    } else {
+      for (let i = 0; i < sorted.length; i += size) {
+        groups.push(sorted.slice(i, i + size));
+      }
+    }
+
+    resultEl.innerHTML = groups.map((g, i) => `
+      <div style="margin-bottom:var(--sp-3);padding:var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-md);">
+        <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:var(--sp-1);">Group ${i + 1}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+          ${g.map(s => `<span class="badge badge-blue" style="font-size:0.75rem;">${escapeHtml(s.name)}</span>`).join('')}
+        </div>
+      </div>
+    `).join('');
   });
 }
 

@@ -240,15 +240,16 @@ function renderCards(grid, lessons, classMap) {
     grid.innerHTML = `<div style="text-align:center;padding:var(--sp-8);color:var(--ink-muted);font-size:0.875rem;">No lessons match this filter.</div>`;
     return;
   }
-  grid.innerHTML = lessons.map(l => {
+  grid.innerHTML = lessons.map((l, idx) => {
     const s = STATUS_MAP[l.status] || STATUS_MAP.draft;
     const cn = l.classId ? classMap[l.classId] : null;
     const ex = (l.chatHistory || []).filter(m => m.role === 'assistant').length;
     return `
-      <div class="card card-hover card-interactive" data-lesson-id="${l.id}" style="padding:var(--sp-5) var(--sp-6);">
+      <div class="card card-hover card-interactive" data-lesson-id="${l.id}" draggable="true" data-order="${idx}" style="padding:var(--sp-5) var(--sp-6);cursor:grab;transition:opacity 0.15s,transform 0.15s;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-1);flex-wrap:wrap;">
+              <span style="color:var(--ink-faint);cursor:grab;margin-right:2px;" title="Drag to reorder">&#9776;</span>
               <span class="badge ${s.badge} badge-dot">${s.label}</span>
               ${cn ? `<span class="badge badge-gray">${esc(cn)}</span>` : ''}
               ${(l.e21ccFocus || []).map(f => `<span class="badge ${E21CC_BADGE[f]}">${E21CC_LABELS[f]}</span>`).join('')}
@@ -264,6 +265,9 @@ function renderCards(grid, lessons, classMap) {
             </button>
             <button class="btn btn-ghost btn-sm dup-btn" data-id="${l.id}" title="Duplicate">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+            <button class="btn btn-ghost btn-sm tmpl-btn" data-id="${l.id}" title="Use as Template">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             </button>
             <button class="btn btn-ghost btn-sm del-btn" data-id="${l.id}" title="Delete" style="color:var(--danger);">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -304,6 +308,67 @@ function renderCards(grid, lessons, classMap) {
       e.stopPropagation();
       const ok = await confirmDialog({ title: 'Delete Lesson', message: `Delete "${Store.getLesson(b.dataset.id)?.title}"? This cannot be undone.` });
       if (ok) { Store.deleteLesson(b.dataset.id); showToast('Lesson deleted'); navigate('/lessons'); }
+    });
+  });
+
+  // Use as Template
+  grid.querySelectorAll('.tmpl-btn').forEach(b => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      const original = Store.getLesson(b.dataset.id);
+      if (!original) return;
+      const tmpl = Store.addLesson({
+        title: original.title + ' (template)',
+        classId: null,
+        status: 'draft',
+        chatHistory: [...(original.chatHistory || [])],
+        plan: original.plan || '',
+        e21ccFocus: [...(original.e21ccFocus || [])]
+      });
+      showToast(`Template created from "${original.title}"`, 'success');
+      navigate(`/lesson-planner/${tmpl.id}`);
+    });
+  });
+
+  // Drag-and-drop reordering
+  let dragSrcEl = null;
+  grid.querySelectorAll('[draggable="true"]').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      dragSrcEl = card;
+      card.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.lessonId);
+    });
+    card.addEventListener('dragend', () => {
+      card.style.opacity = '1';
+      grid.querySelectorAll('[draggable]').forEach(c => c.style.borderTop = '');
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      card.style.borderTop = '2px solid var(--accent)';
+    });
+    card.addEventListener('dragleave', () => { card.style.borderTop = ''; });
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.style.borderTop = '';
+      if (dragSrcEl === card) return;
+      const allCards = [...grid.querySelectorAll('[draggable="true"]')];
+      const fromIdx = allCards.indexOf(dragSrcEl);
+      const toIdx = allCards.indexOf(card);
+      if (fromIdx < 0 || toIdx < 0) return;
+      // Reorder the lessons array in Store
+      const allLessons = Store.getLessons();
+      const orderedIds = lessons.map(l => l.id);
+      const [movedId] = orderedIds.splice(fromIdx, 1);
+      orderedIds.splice(toIdx, 0, movedId);
+      // Update timestamps to reflect new order
+      const now = Date.now();
+      orderedIds.forEach((lid, i) => {
+        Store.updateLesson(lid, { updatedAt: now - i });
+      });
+      showToast('Lessons reordered');
+      renderCards(grid, Store.getLessons().sort((a, b) => b.updatedAt - a.updatedAt), classMap);
     });
   });
 }

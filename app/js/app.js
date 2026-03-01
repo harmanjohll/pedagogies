@@ -17,6 +17,7 @@ import { render as renderLessonPlanner, renderForLesson } from './views/lesson-p
 import { render as renderSpatialDesigner } from './views/spatial-designer.js';
 import { renderList as renderLessonsList, renderDetail as renderLessonDetail } from './views/lessons.js';
 import { render as renderKnowledgeBase } from './views/knowledge-base.js';
+import { render as renderPdPortfolio, renderDetail as renderPdFolderDetail } from './views/pd-portfolio.js';
 import { render as renderAdmin } from './views/admin.js';
 import { render as renderSettings } from './views/settings.js';
 
@@ -81,6 +82,8 @@ function init() {
   registerRoute('/lessons', renderLessonsList);
   registerRoute('/lessons/:id', renderLessonDetail);
   registerRoute('/knowledge', renderKnowledgeBase);
+  registerRoute('/my-growth', renderPdPortfolio);
+  registerRoute('/my-growth/:id', renderPdFolderDetail);
   registerRoute('/admin', renderAdmin);
   registerRoute('/settings', renderSettings);
 

@@ -80,6 +80,7 @@ export const Store = {
       savedLayouts: _state.savedLayouts || [],
       adminEvents: _state.adminEvents || [],
       knowledgeUploads: _state.knowledgeUploads || [],
+      pdFolders: _state.pdFolders || [],
       recentActivity: _state.recentActivity
     });
     // Also keep legacy keys in sync
@@ -311,6 +312,7 @@ export const Store = {
       savedLayouts: _state.savedLayouts || [],
       adminEvents: _state.adminEvents || [],
       knowledgeUploads: _state.knowledgeUploads || [],
+      pdFolders: _state.pdFolders || [],
       recentActivity: _state.recentActivity
     }, null, 2);
   },
@@ -323,6 +325,7 @@ export const Store = {
       if (data.savedLayouts) _state.savedLayouts = data.savedLayouts;
       if (data.adminEvents) _state.adminEvents = data.adminEvents;
       if (data.knowledgeUploads) _state.knowledgeUploads = data.knowledgeUploads;
+      if (data.pdFolders) _state.pdFolders = data.pdFolders;
       if (data.recentActivity) _state.recentActivity = data.recentActivity;
       this._persist();
       this._notify();
@@ -338,6 +341,7 @@ export const Store = {
     _state.savedLayouts = [];
     _state.adminEvents = [];
     _state.knowledgeUploads = [];
+    _state.pdFolders = [];
     _state.recentActivity = [];
     _state.chatHistory = [];
     this._persist();
