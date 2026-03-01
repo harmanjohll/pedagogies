@@ -229,11 +229,12 @@ export function renderDetail(container, { id }) {
           <div class="tab-group" style="margin-bottom: var(--sp-6);">
             <button class="tab ${activeTab === 'students' ? 'active' : ''}" data-tab="students">Students</button>
             <button class="tab ${activeTab === 'notes' ? 'active' : ''}" data-tab="notes">Notes</button>
+            <button class="tab ${activeTab === 'trends' ? 'active' : ''}" data-tab="trends">Trends</button>
           </div>
 
           <!-- Tab Content -->
           <div id="tab-content">
-            ${activeTab === 'students' ? renderStudentsTab(freshCls) : renderNotesTab(freshCls)}
+            ${activeTab === 'students' ? renderStudentsTab(freshCls) : activeTab === 'trends' ? renderTrendsTab(freshCls) : renderNotesTab(freshCls)}
           </div>
         </div>
       </div>
@@ -476,6 +477,114 @@ function renderNotesTab(cls) {
   `;
 }
 
+/* ── Trends Tab ── */
+function renderSparkline(history, key, color, width = 100, height = 28) {
+  if (!history || history.length < 2) return `<span style="font-size:0.6875rem;color:var(--ink-faint);">Not enough data</span>`;
+  const vals = history.map(h => h[key] || 0);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = max - min || 1;
+  const step = width / (vals.length - 1);
+  const points = vals.map((v, i) => `${i * step},${height - ((v - min) / range) * (height - 4) - 2}`).join(' ');
+  const last = vals[vals.length - 1];
+  const first = vals[0];
+  const diff = last - first;
+  const arrow = diff > 0 ? '\u25B2' : diff < 0 ? '\u25BC' : '\u2500';
+  const diffColor = diff > 0 ? 'var(--success)' : diff < 0 ? 'var(--danger)' : 'var(--ink-faint)';
+  return `
+    <div style="display:flex;align-items:center;gap:var(--sp-2);">
+      <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;">
+        <polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="${(vals.length - 1) * step}" cy="${height - ((last - min) / range) * (height - 4) - 2}" r="2.5" fill="${color}"/>
+      </svg>
+      <span style="font-size:0.6875rem;font-weight:600;color:${diffColor};">${arrow}${Math.abs(diff)}</span>
+    </div>`;
+}
+
+function renderTrendsTab(cls) {
+  const students = cls.students || [];
+  const withHistory = students.filter(s => s.e21ccHistory && s.e21ccHistory.length >= 2);
+
+  if (withHistory.length === 0) {
+    return `
+      <div class="empty-state" style="padding: var(--sp-8);">
+        <div class="empty-state-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h3 class="empty-state-title">No trend data yet</h3>
+        <p class="empty-state-text">E21CC trends will appear after you update student scores at least twice. Use "Edit E21CC" or "Batch Update" to record changes over time.</p>
+      </div>`;
+  }
+
+  // Class-level averages over time
+  const allTimestamps = [...new Set(withHistory.flatMap(s => s.e21ccHistory.map(h => h.ts)))].sort();
+  const classHistory = allTimestamps.map(ts => {
+    let cait = 0, cci = 0, cgc = 0, count = 0;
+    students.forEach(s => {
+      const snapshot = (s.e21ccHistory || []).filter(h => h.ts <= ts);
+      if (snapshot.length > 0) {
+        const latest = snapshot[snapshot.length - 1];
+        cait += latest.cait || 0;
+        cci += latest.cci || 0;
+        cgc += latest.cgc || 0;
+        count++;
+      }
+    });
+    return { ts, cait: count ? Math.round(cait / count) : 0, cci: count ? Math.round(cci / count) : 0, cgc: count ? Math.round(cgc / count) : 0 };
+  });
+
+  return `
+    <!-- Class Average Trends -->
+    <div class="card" style="margin-bottom:var(--sp-6);">
+      <h4 style="font-size:0.9375rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-3);">Class Average Trends</h4>
+      <div style="display:flex;gap:var(--sp-6);flex-wrap:wrap;">
+        <div>
+          <span style="font-size:0.75rem;font-weight:600;color:var(--e21cc-cait);">CAIT</span>
+          ${renderSparkline(classHistory, 'cait', 'var(--e21cc-cait)', 120, 32)}
+        </div>
+        <div>
+          <span style="font-size:0.75rem;font-weight:600;color:var(--e21cc-cci);">CCI</span>
+          ${renderSparkline(classHistory, 'cci', 'var(--e21cc-cci)', 120, 32)}
+        </div>
+        <div>
+          <span style="font-size:0.75rem;font-weight:600;color:var(--e21cc-cgc);">CGC</span>
+          ${renderSparkline(classHistory, 'cgc', 'var(--e21cc-cgc)', 120, 32)}
+        </div>
+      </div>
+    </div>
+
+    <!-- Individual Student Trends -->
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>CAIT Trend</th>
+            <th>CCI Trend</th>
+            <th>CGC Trend</th>
+            <th style="width:80px;text-align:right;">Updates</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${withHistory.map(s => `
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:var(--sp-2);">
+                  <div class="avatar avatar-sm" style="background:${stringToColor(s.name)};">${initials(s.name)}</div>
+                  <span style="font-weight:500;">${s.name}</span>
+                </div>
+              </td>
+              <td>${renderSparkline(s.e21ccHistory, 'cait', 'var(--e21cc-cait)', 80, 24)}</td>
+              <td>${renderSparkline(s.e21ccHistory, 'cci', 'var(--e21cc-cci)', 80, 24)}</td>
+              <td>${renderSparkline(s.e21ccHistory, 'cgc', 'var(--e21cc-cgc)', 80, 24)}</td>
+              <td style="text-align:right;font-size:0.75rem;color:var(--ink-muted);">${s.e21ccHistory.length}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 /* ── Modals ── */
 function showEditClassModal(cls, onUpdate) {
   const { backdrop, close } = openModal({
@@ -686,14 +795,18 @@ function showBatchE21CCModal(classId, onUpdate) {
 
     const clamp = (v) => Math.max(0, Math.min(100, v));
     const freshCls = Store.getClass(classId);
-    const updatedStudents = (freshCls.students || []).map(s => ({
-      ...s,
-      e21cc: {
+    const now = Date.now();
+    const updatedStudents = (freshCls.students || []).map(s => {
+      const newE21cc = {
         cait: clamp((s.e21cc?.cait || 50) + dCait),
         cci: clamp((s.e21cc?.cci || 50) + dCci),
         cgc: clamp((s.e21cc?.cgc || 50) + dCgc)
-      }
-    }));
+      };
+      const history = [...(s.e21ccHistory || [])];
+      history.push({ ts: now, ...newE21cc });
+      if (history.length > 20) history.splice(0, history.length - 20);
+      return { ...s, e21cc: newE21cc, e21ccHistory: history };
+    });
 
     Store.updateClass(classId, { students: updatedStudents });
     const reason = backdrop.querySelector('#batch-reason').value.trim();

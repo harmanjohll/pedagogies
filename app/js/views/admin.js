@@ -612,16 +612,192 @@ function buildMailtoLink(to, subject, body, bcc) {
   return `mailto:${addr}${qs ? '?' + qs : ''}`;
 }
 
+/* ── Notification Templates ── */
+const NOTIFICATION_TEMPLATES = {
+  parent: [
+    {
+      label: 'Learning Journey',
+      subject: (ev) => `Learning Journey: ${ev}`,
+      body: (ev) => `Dear Parents/Guardians,
+
+Your child has been selected to participate in a Learning Journey: ${ev}.
+
+Details:
+- Date: [DATE]
+- Time: [TIME]
+- Venue: [VENUE]
+- Attire: School uniform / PE attire
+- Things to bring: Water bottle, writing materials
+
+Students will depart from school and return by [TIME]. Lunch will be provided / Students should bring their own lunch.
+
+Please provide your consent via Parents Gateway by [DEADLINE].
+
+Thank you for your support.
+
+Warm regards,
+[YOUR NAME]
+[DESIGNATION]`
+    },
+    {
+      label: 'Competition',
+      subject: (ev) => `Competition: ${ev}`,
+      body: (ev) => `Dear Parents/Guardians,
+
+Your child has been selected to represent the school in: ${ev}.
+
+Details:
+- Date: [DATE]
+- Venue: [VENUE]
+- Reporting time: [TIME]
+- Expected return: [TIME]
+
+Students will need: [ITEMS]
+
+Please confirm your child's participation and provide consent via Parents Gateway by [DEADLINE].
+
+Should you have any queries, please contact the undersigned.
+
+Thank you.
+
+Warm regards,
+[YOUR NAME]
+[DESIGNATION]`
+    },
+    {
+      label: 'Camp',
+      subject: (ev) => `Camp: ${ev}`,
+      body: (ev) => `Dear Parents/Guardians,
+
+Your child will be participating in: ${ev}.
+
+Camp Details:
+- Date: [START DATE] to [END DATE]
+- Venue: [VENUE]
+- Reporting time (Day 1): [TIME]
+- Dismissal time (Last Day): [TIME]
+
+Packing List:
+- Clothes for [X] days
+- Toiletries
+- Water bottle
+- Medications (if any — please inform teachers)
+- Sleeping bag / mat (if applicable)
+
+Emergency Contact: [NAME] — [NUMBER]
+
+Please submit the medical declaration form and consent via Parents Gateway by [DEADLINE].
+
+Thank you.
+
+Warm regards,
+[YOUR NAME]
+[DESIGNATION]`
+    },
+    {
+      label: 'Workshop',
+      subject: (ev) => `Workshop: ${ev}`,
+      body: (ev) => `Dear Parents/Guardians,
+
+Your child will be attending a workshop: ${ev}.
+
+Details:
+- Date: [DATE]
+- Time: [TIME]
+- Venue: [VENUE / Online]
+
+No special items are required unless stated otherwise.
+
+Please acknowledge via Parents Gateway.
+
+Thank you.
+
+Warm regards,
+[YOUR NAME]
+[DESIGNATION]`
+    }
+  ],
+  teacher: [
+    {
+      label: 'Lesson Coverage',
+      subject: (ev) => `Lesson Coverage Required — ${ev}`,
+      body: (ev) => `Dear Colleague,
+
+The following students will be away from your lessons due to: ${ev}.
+
+Affected:
+- Date: [DATE]
+- Periods: [PERIODS]
+- Classes: [CLASSES]
+- Number of students: [COUNT]
+
+Please set independent work or adjust your lesson plan accordingly. The student attendance list has been attached / shared separately.
+
+Apologies for any inconvenience. Thank you for your understanding.
+
+Regards,
+[YOUR NAME]`
+    },
+    {
+      label: 'Duty Assignment',
+      subject: (ev) => `Duty Assignment — ${ev}`,
+      body: (ev) => `Dear Colleague,
+
+You have been assigned to accompany students for: ${ev}.
+
+Details:
+- Date: [DATE]
+- Reporting time: [TIME]
+- Venue: [VENUE]
+- Role: [ROLE]
+
+Please confirm your availability with the undersigned. A briefing will be held on [DATE/TIME].
+
+Thank you for your support.
+
+Regards,
+[YOUR NAME]`
+    },
+    {
+      label: 'Event Update',
+      subject: (ev) => `Update — ${ev}`,
+      body: (ev) => `Dear Colleagues,
+
+Please note the following update regarding: ${ev}.
+
+[UPDATE DETAILS]
+
+Thank you for your attention.
+
+Regards,
+[YOUR NAME]`
+    }
+  ]
+};
+
 /**
  * Show a Notify modal for an event task, letting the user send via Teams or Email.
  */
 function showNotifyModal(eventName, taskLabel, recipientType) {
+  const templates = NOTIFICATION_TEMPLATES[recipientType] || [];
   const { backdrop, close } = openModal({
     title: `Notify — ${taskLabel}`,
     body: `
       <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);">
         Send a notification about <strong>${esc(eventName)}</strong> via MS Teams or Email.
       </p>
+
+      ${templates.length > 0 ? `
+        <div style="margin-bottom:var(--sp-4);">
+          <label class="input-label" style="margin-bottom:var(--sp-2);display:block;">Quick Templates</label>
+          <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
+            ${templates.map((t, i) => `
+              <button class="btn btn-ghost btn-sm tmpl-btn" data-tmpl="${i}" style="font-size:0.75rem;border:1px solid var(--border);">${t.label}</button>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
       <div class="input-group">
         <label class="input-label">Recipient Email(s)</label>
         <input class="input" id="notify-emails" placeholder="e.g. teacher@school.edu.sg, teacher2@school.edu.sg" />
@@ -633,7 +809,7 @@ function showNotifyModal(eventName, taskLabel, recipientType) {
       </div>
       <div class="input-group">
         <label class="input-label">Message</label>
-        <textarea class="input" id="notify-body" rows="5" placeholder="Type your message here...">${recipientType === 'parent' ? `Dear Parents/Guardians,\n\nPlease be informed about the upcoming event: ${eventName}.\n\nDetails will be shared via Parents Gateway.\n\nThank you.` : `Dear Colleague,\n\nPlease be informed about the upcoming event: ${eventName}.\n\nKindly note the affected periods and make the necessary arrangements.\n\nThank you.`}</textarea>
+        <textarea class="input" id="notify-body" rows="8" placeholder="Type your message here...">${recipientType === 'parent' ? `Dear Parents/Guardians,\n\nPlease be informed about the upcoming event: ${eventName}.\n\nDetails will be shared via Parents Gateway.\n\nThank you.` : `Dear Colleague,\n\nPlease be informed about the upcoming event: ${eventName}.\n\nKindly note the affected periods and make the necessary arrangements.\n\nThank you.`}</textarea>
       </div>
       <div class="input-group">
         <label class="input-label">BCC (optional)</label>
@@ -654,6 +830,25 @@ function showNotifyModal(eventName, taskLabel, recipientType) {
   });
 
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+
+  // Template buttons
+  backdrop.querySelectorAll('.tmpl-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.tmpl);
+      const tmpl = templates[idx];
+      if (!tmpl) return;
+      backdrop.querySelector('#notify-subject').value = tmpl.subject(eventName);
+      backdrop.querySelector('#notify-body').value = tmpl.body(eventName);
+      // Highlight active template
+      backdrop.querySelectorAll('.tmpl-btn').forEach(b => {
+        b.style.borderColor = 'var(--border)';
+        b.style.background = '';
+      });
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.background = 'var(--accent-light)';
+      showToast(`Applied "${tmpl.label}" template`);
+    });
+  });
 
   backdrop.querySelector('[data-action="teams"]').addEventListener('click', () => {
     const emails = backdrop.querySelector('#notify-emails').value.trim();
