@@ -30,6 +30,7 @@ const EVENT_TASKS = [
     label: 'Bus Booking',
     desc: 'Arrange transport for students to and from the venue.',
     icon: '🚌',
+    externalLink: { url: 'https://go.gov.sg/btybus', label: 'Open Bus Booking Form' },
     fields: [
       { id: 'pickup_point', label: 'Pick-up Point', type: 'text', placeholder: 'e.g. School Main Gate' },
       { id: 'destination', label: 'Destination', type: 'text', placeholder: 'e.g. Singapore Science Centre' },
@@ -82,6 +83,7 @@ const EVENT_TASKS = [
     label: 'Approval of Request (AOR)',
     desc: 'Submit finance-related approval for activity costs.',
     icon: '💰',
+    externalLink: { url: 'https://go.gov.sg/btyaor', label: 'Open AOR Form' },
     fields: [
       { id: 'budget_code', label: 'Budget Code', type: 'text', placeholder: 'e.g. SC-MATH-2026' },
       { id: 'estimated_cost', label: 'Estimated Total Cost', type: 'text', placeholder: 'e.g. $850.00' },
@@ -405,8 +407,14 @@ function showEventDetail(pageContainer, ev) {
                 <button class="btn ${isComplete ? 'btn-secondary' : 'btn-accent'} btn-sm toggle-complete-btn">
                   ${isComplete ? 'Mark Incomplete' : 'Mark Complete'}
                 </button>
+                ${tmpl.externalLink ? `
+                  <a href="${tmpl.externalLink.url}" target="_blank" rel="noopener" class="btn btn-sm" style="background:var(--info);color:#fff;text-decoration:none;margin-left:auto;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    ${tmpl.externalLink.label}
+                  </a>
+                ` : ''}
                 ${(task.key === 'parent_notification' || task.key === 'teacher_notification')
-                  ? `<button class="btn btn-sm notify-teams-btn" style="background:#6264A7;color:#fff;margin-left:auto;" data-task-key="${task.key}">
+                  ? `<button class="btn btn-sm notify-teams-btn" style="background:#6264A7;color:#fff;${tmpl.externalLink ? '' : 'margin-left:auto;'}" data-task-key="${task.key}">
                       Teams
                     </button>
                     <button class="btn btn-sm btn-secondary notify-email-btn" data-task-key="${task.key}">

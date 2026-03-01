@@ -14,6 +14,8 @@
 import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
+import { sendChat } from '../api.js';
+import { navigate } from '../router.js';
 
 /* ═══════════ Constants ═══════════ */
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -140,6 +142,51 @@ export function render(container) {
     <div class="three-col" style="height:100%;">
       <!-- Left: Palette -->
       <div class="panel" style="overflow-y:auto;padding:var(--sp-4);gap:0;">
+        <!-- Design Brief -->
+        <details id="design-brief" open style="margin-bottom:var(--sp-4);">
+          <summary style="cursor:pointer;font-size:0.9375rem;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Design Brief
+          </summary>
+          <div style="display:flex;flex-direction:column;gap:var(--sp-2);font-size:0.8125rem;">
+            <div class="input-group" style="margin-bottom:0;">
+              <label class="input-label" style="font-size:0.75rem;">Class</label>
+              <select class="input" id="brief-class" style="font-size:0.8125rem;padding:var(--sp-1) var(--sp-2);">
+                <option value="">Select class...</option>
+                ${Store.getClasses().map(c => `<option value="${c.id}">${c.name}${c.subject ? ' · ' + c.subject : ''}</option>`).join('')}
+              </select>
+            </div>
+            <div class="input-group" style="margin-bottom:0;">
+              <label class="input-label" style="font-size:0.75rem;">Topic / Activity</label>
+              <input class="input" id="brief-topic" style="font-size:0.8125rem;padding:var(--sp-1) var(--sp-2);" placeholder="e.g. Group investigation on acids" />
+            </div>
+            <div class="input-group" style="margin-bottom:0;">
+              <label class="input-label" style="font-size:0.75rem;">Lesson Intention (E21CC Focus)</label>
+              <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
+                <label style="display:flex;gap:3px;align-items:center;font-size:0.75rem;cursor:pointer;">
+                  <input type="checkbox" value="cait" class="brief-e21cc" /> CAIT
+                </label>
+                <label style="display:flex;gap:3px;align-items:center;font-size:0.75rem;cursor:pointer;">
+                  <input type="checkbox" value="cci" class="brief-e21cc" checked /> CCI
+                </label>
+                <label style="display:flex;gap:3px;align-items:center;font-size:0.75rem;cursor:pointer;">
+                  <input type="checkbox" value="cgc" class="brief-e21cc" /> CGC
+                </label>
+              </div>
+            </div>
+            <div class="input-group" style="margin-bottom:0;">
+              <label class="input-label" style="font-size:0.75rem;">Special Considerations</label>
+              <textarea class="input" id="brief-considerations" rows="2" style="font-size:0.8125rem;padding:var(--sp-1) var(--sp-2);" placeholder="e.g. 2 wheelchair users, visual impairment, mixed ability"></textarea>
+            </div>
+            <button class="btn btn-primary btn-sm" id="ai-suggest-layout" style="margin-top:var(--sp-1);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Suggest Layout
+            </button>
+          </div>
+        </details>
+
+        <hr class="divider" />
+
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3);">
           <h3 class="panel-title" style="font-size:0.9375rem;">Item Library</h3>
           <span class="text-caption" style="color:var(--ink-faint);">Click to add</span>
@@ -418,6 +465,103 @@ export function render(container) {
     btn.innerHTML = `<div style="display:flex;align-items:center;gap:var(--sp-2);"><span style="font-size:1.1rem;">${p.icon}</span><div><div style="font-weight:600;font-size:0.8125rem;color:var(--ink);">${p.label}</div><div style="font-size:0.6875rem;color:var(--ink-muted);">${p.desc}</div></div></div>`;
     btn.addEventListener('click', () => applyPreset(p.id));
     presetsEl.appendChild(btn);
+  });
+
+  /* ══════ Design Brief — AI Suggest Layout ══════ */
+  const briefClassSelect = container.querySelector('#brief-class');
+  const briefTopic = container.querySelector('#brief-topic');
+  const briefConsiderations = container.querySelector('#brief-considerations');
+  const aiSuggestBtn = container.querySelector('#ai-suggest-layout');
+
+  // Sync class → student count
+  briefClassSelect?.addEventListener('change', () => {
+    const cls = Store.getClass(briefClassSelect.value);
+    if (cls?.students?.length) {
+      studentCountInput.value = cls.students.length;
+    }
+  });
+
+  aiSuggestBtn?.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) {
+      showToast('Please set your Gemini API key in Settings first.', 'danger');
+      return;
+    }
+
+    const cls = briefClassSelect.value ? Store.getClass(briefClassSelect.value) : null;
+    const topic = briefTopic.value.trim();
+    const considerations = briefConsiderations.value.trim();
+    const e21ccFocus = [...container.querySelectorAll('.brief-e21cc:checked')].map(cb => cb.value);
+    const count = parseInt(studentCountInput.value) || 32;
+
+    const E21CC_MAP = {
+      cait: 'Critical, Adaptive & Inventive Thinking (CAIT)',
+      cci: 'Communication, Collaboration & Information (CCI)',
+      cgc: 'Civic, Global & Cross-cultural Literacy (CGC)'
+    };
+
+    // Build the prompt
+    let briefPrompt = `Suggest the best classroom spatial layout for this lesson:\n`;
+    briefPrompt += `- Students: ${count}\n`;
+    if (cls) briefPrompt += `- Class: ${cls.name} (${cls.level || ''} ${cls.subject || ''})\n`;
+    if (topic) briefPrompt += `- Topic/Activity: ${topic}\n`;
+    if (e21ccFocus.length > 0) briefPrompt += `- E21CC Focus: ${e21ccFocus.map(f => E21CC_MAP[f]).join(', ')}\n`;
+    if (considerations) briefPrompt += `- Special considerations: ${considerations}\n`;
+    if (cls?.students?.length) {
+      const avgCait = Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cait || 50), 0) / cls.students.length);
+      const avgCci = Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cci || 50), 0) / cls.students.length);
+      const avgCgc = Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cgc || 50), 0) / cls.students.length);
+      briefPrompt += `- Class E21CC profile: CAIT avg ${avgCait}, CCI avg ${avgCci}, CGC avg ${avgCgc}\n`;
+    }
+    briefPrompt += `\nRespond with ONLY a JSON object with these keys:\n- "preset": one of "direct", "pods", "stations", "ushape", "quiet", "gallery", "fishbowl", "maker"\n- "wall_A": "close" or "stack"\n- "wall_B": "close" or "stack"\n- "rationale": 2-3 sentences explaining why this layout suits the brief\n- "tips": array of 2-3 short spatial tips for this specific lesson`;
+
+    aiSuggestBtn.disabled = true;
+    aiSuggestBtn.textContent = 'Thinking...';
+
+    try {
+      const response = await sendChat([{ role: 'user', content: briefPrompt }], {
+        systemPrompt: 'You are a spatial pedagogy expert for Singapore schools. Given a lesson brief, recommend the optimal classroom layout preset. Respond ONLY with valid JSON, no markdown.',
+        temperature: 0.4,
+        maxTokens: 512
+      });
+
+      // Parse JSON from response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Could not parse layout suggestion.');
+      const suggestion = JSON.parse(jsonMatch[0]);
+
+      // Apply preset
+      if (suggestion.preset) {
+        applyPreset(suggestion.preset);
+      }
+      if (suggestion.wall_A === 'stack') stackWall('A'); else closeWall('A');
+      if (suggestion.wall_B === 'stack') stackWall('B'); else closeWall('B');
+
+      // Show rationale in insights panel
+      const insightsEl = container.querySelector('#insights');
+      if (insightsEl && suggestion.rationale) {
+        const tipsHtml = (suggestion.tips || []).map(t =>
+          `<li style="margin-bottom:var(--sp-1);">${t}</li>`
+        ).join('');
+        insightsEl.innerHTML = `
+          <div style="background:var(--accent-light);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-md);border-left:3px solid var(--accent);margin-bottom:var(--sp-3);">
+            <div style="font-weight:600;font-size:0.8125rem;color:var(--accent-dark);margin-bottom:var(--sp-1);">AI Suggestion</div>
+            <div style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;">${suggestion.rationale}</div>
+            ${tipsHtml ? `<ul style="margin:var(--sp-2) 0 0;padding-left:var(--sp-4);font-size:0.8125rem;color:var(--ink-secondary);">${tipsHtml}</ul>` : ''}
+          </div>
+        ` + insightsEl.innerHTML;
+      }
+
+      showToast(`Applied "${suggestion.preset}" layout based on your brief`, 'success');
+
+      // Collapse the brief after successful suggestion
+      container.querySelector('#design-brief')?.removeAttribute('open');
+
+    } catch (err) {
+      showToast(`Layout suggestion failed: ${err.message}`, 'danger');
+    } finally {
+      aiSuggestBtn.disabled = false;
+      aiSuggestBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Suggest Layout`;
+    }
   });
 
   /* ══════ Saved layouts ══════ */
@@ -1171,6 +1315,7 @@ export function render(container) {
       const name = backdrop.querySelector('#layout-name').value.trim() || 'Untitled Layout';
       Store.saveLayout({
         name, items,
+        preset: currentPreset || null,
         wallState: panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed',
         studentCount: parseInt(studentCountInput.value) || 32
       });
