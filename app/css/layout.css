@@ -269,9 +269,7 @@
 /* ═══════════ Lesson Planner Layout ═══════════ */
 
 .lp-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
+  display: flex;
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -284,6 +282,8 @@
   min-height: 0;
   overflow: hidden;
   background: var(--surface);
+  flex: 1 1 50%;
+  min-width: 320px;
 }
 
 .lp-plan-col {
@@ -291,22 +291,93 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  flex: 1 1 50%;
+  min-width: 320px;
 }
 
 /* ═══════════ Three-Column Layout (for spatial) ═══════════ */
 
 .three-col {
-  display: grid;
-  grid-template-columns: 240px 1fr 280px;
-  gap: var(--sp-3);
+  display: flex;
   height: 100%;
   min-height: 0;
   padding: var(--sp-3);
   overflow: hidden;
+  gap: 0;
+}
+
+.three-col > .panel:first-child {
+  flex: 0 0 240px;
+  min-width: 180px;
+  max-width: 400px;
+}
+
+/* Canvas column (child 3, after left handle) */
+.three-col > #spatial-canvas-col {
+  flex: 1 1 auto;
+  min-width: 200px;
+}
+
+/* Right analysis panel (child 5, after right handle) */
+.three-col > #spatial-right-panel {
+  flex: 0 0 280px;
+  min-width: 200px;
+  max-width: 460px;
 }
 
 @media (max-width: 1200px) {
-  .three-col { grid-template-columns: 200px 1fr 240px; }
+  .three-col > .panel:first-child { flex: 0 0 200px; }
+  .three-col > #spatial-right-panel { flex: 0 0 240px; }
+}
+
+/* ═══════════ Resizable Panel Divider ═══════════ */
+
+.resize-handle {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 10;
+  transition: background 0.15s;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--accent-light);
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 32px;
+  background: var(--border);
+  border-radius: 1px;
+  transition: background 0.15s, height 0.15s;
+}
+
+.resize-handle:hover::after,
+.resize-handle.active::after {
+  background: var(--accent);
+  height: 48px;
+}
+
+body.resizing-panels {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.resizing-panels * {
+  cursor: col-resize !important;
+  user-select: none !important;
+  pointer-events: none !important;
+}
+
+body.resizing-panels .resize-handle {
+  pointer-events: auto !important;
 }
 
 /* ═══════════ Panels ═══════════ */

@@ -239,8 +239,11 @@ export function render(container) {
         </div>
       </div>
 
+      <!-- Resize Handle: Left → Center -->
+      <div class="resize-handle" id="spatial-resize-left"></div>
+
       <!-- Center: Canvas -->
-      <div style="display:flex;flex-direction:column;overflow:hidden;border-radius:var(--radius-xl);background:var(--surface);box-shadow:var(--shadow-card);">
+      <div id="spatial-canvas-col" style="display:flex;flex-direction:column;overflow:hidden;border-radius:var(--radius-xl);background:var(--surface);box-shadow:var(--shadow-card);">
         <svg id="spatial-svg" viewBox="0 0 ${VB_W} ${VB_H}" style="flex:1;cursor:crosshair;display:block;background:#fff;border-radius:var(--radius-xl);" xmlns="${SVG_NS}">
           <defs>
             <pattern id="grid" width="${UNIT}" height="${UNIT}" patternUnits="userSpaceOnUse">
@@ -275,10 +278,20 @@ export function render(container) {
           <g id="layout-root"></g>
           <g id="selection-box" style="pointer-events:none;"></g>
         </svg>
+        <!-- Scene Timeline -->
+        <div id="scene-timeline" style="flex:0 0 auto;border-top:1px solid var(--border-light);padding:var(--sp-2) var(--sp-3);background:var(--surface);display:flex;align-items:center;gap:var(--sp-2);overflow-x:auto;">
+          <span style="font-size:0.6875rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;flex-shrink:0;">Scenes</span>
+          <div id="scene-cards" style="display:flex;gap:var(--sp-2);flex:1;overflow-x:auto;"></div>
+          <button class="btn btn-ghost btn-sm" id="add-scene-btn" title="Save current layout as a scene" style="flex-shrink:0;font-size:0.75rem;">+ Scene</button>
+          <button class="btn btn-ghost btn-sm" id="ai-timeline-btn" title="AI suggests a lesson timeline" style="flex-shrink:0;font-size:0.75rem;">AI Timeline</button>
+        </div>
       </div>
 
+      <!-- Resize Handle: Center → Right -->
+      <div class="resize-handle" id="spatial-resize-right"></div>
+
       <!-- Right: Analysis -->
-      <div class="panel" style="overflow-y:auto;padding:var(--sp-4);gap:0;position:relative;">
+      <div class="panel" id="spatial-right-panel" style="overflow-y:auto;padding:var(--sp-4);gap:0;position:relative;">
         <h3 class="panel-title" style="font-size:0.9375rem;margin-bottom:var(--sp-4);">Spatial Effectiveness</h3>
         <div style="position:relative;width:100%;max-width:240px;margin:0 auto var(--sp-4);">
           <canvas id="radar-chart" width="240" height="240"></canvas>
@@ -566,6 +579,156 @@ export function render(container) {
 
   /* ══════ Saved layouts ══════ */
   renderSavedLayouts();
+
+  /* ══════ Scene Timeline ══════ */
+  let scenes = [];
+  let activeSceneIdx = -1;
+
+  function renderSceneCards() {
+    const el = container.querySelector('#scene-cards');
+    if (!el) return;
+    if (scenes.length === 0) {
+      el.innerHTML = '<span style="font-size:0.6875rem;color:var(--ink-faint);white-space:nowrap;">No scenes yet — save the current layout as a scene.</span>';
+      return;
+    }
+    el.innerHTML = scenes.map((scene, i) => `
+      <div class="scene-card" data-idx="${i}" style="flex-shrink:0;padding:var(--sp-1) var(--sp-2);border-radius:var(--radius-md);border:1.5px solid ${i === activeSceneIdx ? 'var(--accent)' : 'var(--border)'};background:${i === activeSceneIdx ? 'var(--accent-light)' : 'var(--surface)'};cursor:pointer;display:flex;align-items:center;gap:var(--sp-1);font-size:0.75rem;transition:border-color 0.15s, background 0.15s;">
+        <span style="font-weight:600;color:${i === activeSceneIdx ? 'var(--accent-dark)' : 'var(--ink)'};">${i + 1}.</span>
+        <span style="color:${i === activeSceneIdx ? 'var(--accent-dark)' : 'var(--ink-secondary)'};">${scene.name}</span>
+        <span style="font-size:0.625rem;color:var(--ink-faint);margin-left:2px;">${scene.items.length} items</span>
+        <button class="scene-del" data-idx="${i}" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:0.75rem;padding:0 2px;line-height:1;">&times;</button>
+      </div>
+    `).join('');
+
+    el.querySelectorAll('.scene-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.classList.contains('scene-del')) return;
+        const idx = parseInt(card.dataset.idx);
+        activeSceneIdx = idx;
+        loadLayout(scenes[idx].items, scenes[idx].wallState);
+        if (scenes[idx].preset) currentPreset = scenes[idx].preset;
+        renderSceneCards();
+        showToast(`Loaded scene: ${scenes[idx].name}`);
+      });
+    });
+
+    el.querySelectorAll('.scene-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.dataset.idx);
+        scenes.splice(idx, 1);
+        if (activeSceneIdx >= scenes.length) activeSceneIdx = scenes.length - 1;
+        renderSceneCards();
+        showToast('Scene removed');
+      });
+    });
+  }
+
+  renderSceneCards();
+
+  container.querySelector('#add-scene-btn')?.addEventListener('click', () => {
+    const items = serializeLayout();
+    if (items.length === 0) { showToast('Add items to the canvas first.', 'danger'); return; }
+
+    const defaultNames = ['Introduction', 'Group Work', 'Debrief', 'Assessment', 'Closure'];
+    const suggestedName = defaultNames[scenes.length] || `Scene ${scenes.length + 1}`;
+    const name = prompt('Scene name:', suggestedName);
+    if (!name) return;
+
+    const wallState = panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed';
+    scenes.push({ name, items, wallState, preset: currentPreset || null });
+    activeSceneIdx = scenes.length - 1;
+    renderSceneCards();
+    showToast(`Saved scene: ${name}`, 'success');
+  });
+
+  container.querySelector('#ai-timeline-btn')?.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your Gemini API key in Settings first.', 'danger'); return; }
+
+    const topic = briefTopic?.value.trim() || '';
+    const cls = briefClassSelect?.value ? Store.getClass(briefClassSelect.value) : null;
+    const count = parseInt(studentCountInput.value) || 32;
+    const e21ccFocus = [...container.querySelectorAll('.brief-e21cc:checked')].map(cb => cb.value);
+
+    let prompt = `Suggest a 3-phase lesson timeline with optimal classroom layouts for each phase.\n`;
+    prompt += `- Students: ${count}\n`;
+    if (cls) prompt += `- Class: ${cls.name}\n`;
+    if (topic) prompt += `- Topic: ${topic}\n`;
+    if (e21ccFocus.length > 0) prompt += `- E21CC focus: ${e21ccFocus.join(', ')}\n`;
+    prompt += `\nAvailable presets: direct, pods, stations, ushape, quiet, gallery, fishbowl, maker\n`;
+    prompt += `\nRespond with ONLY a JSON array of 3 objects, each with:\n- "name": phase name (e.g. "Introduction", "Group Investigation", "Debrief")\n- "preset": one of the preset names above\n- "wall_A": "close" or "stack"\n- "wall_B": "close" or "stack"\n- "duration": suggested minutes (number)\n- "tip": one short teaching tip for this phase`;
+
+    const timelineBtn = container.querySelector('#ai-timeline-btn');
+    timelineBtn.disabled = true;
+    timelineBtn.textContent = 'Thinking...';
+
+    try {
+      const response = await sendChat([{ role: 'user', content: prompt }], {
+        systemPrompt: 'You are a spatial pedagogy expert for Singapore schools. Suggest a 3-phase lesson timeline with classroom layout changes. Respond ONLY with valid JSON, no markdown.',
+        temperature: 0.4,
+        maxTokens: 512
+      });
+
+      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) throw new Error('Could not parse timeline.');
+      const timeline = JSON.parse(jsonMatch[0]);
+
+      // Generate scenes from AI timeline
+      scenes = [];
+      for (const phase of timeline) {
+        // Apply preset temporarily to capture items
+        applyPreset(phase.preset);
+        if (phase.wall_A === 'stack') stackWall('A'); else closeWall('A');
+        if (phase.wall_B === 'stack') stackWall('B'); else closeWall('B');
+        const items = serializeLayout();
+        const wallState = phase.wall_A === 'stack' || phase.wall_B === 'stack' ? 'stacked' : 'closed';
+        const name = `${phase.name}${phase.duration ? ` (${phase.duration}min)` : ''}`;
+        scenes.push({ name, items, wallState, preset: phase.preset, tip: phase.tip || '' });
+      }
+
+      // Load the first scene
+      if (scenes.length > 0) {
+        activeSceneIdx = 0;
+        loadLayout(scenes[0].items, scenes[0].wallState);
+        if (scenes[0].preset) {
+          currentPreset = scenes[0].preset;
+          renderInsights(null, PRESET_INSIGHTS[scenes[0].preset] || []);
+        }
+      }
+
+      renderSceneCards();
+
+      // Show timeline summary in insights
+      const insightsEl = container.querySelector('#insights');
+      if (insightsEl) {
+        const summaryHtml = timeline.map((p, i) => `
+          <div style="display:flex;gap:var(--sp-2);align-items:flex-start;font-size:0.8125rem;">
+            <span style="font-weight:700;color:var(--accent);flex-shrink:0;">${i + 1}.</span>
+            <div>
+              <div style="font-weight:600;color:var(--ink);">${p.name}${p.duration ? ` — ${p.duration}min` : ''}</div>
+              <div style="color:var(--ink-muted);">${p.preset} layout${p.tip ? ` · ${p.tip}` : ''}</div>
+            </div>
+          </div>
+        `).join('');
+        insightsEl.innerHTML = `
+          <div style="background:var(--accent-light);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-md);border-left:3px solid var(--accent);margin-bottom:var(--sp-3);">
+            <div style="font-weight:600;font-size:0.8125rem;color:var(--accent-dark);margin-bottom:var(--sp-2);">AI Lesson Timeline</div>
+            <div style="display:flex;flex-direction:column;gap:var(--sp-2);">${summaryHtml}</div>
+          </div>
+        ` + insightsEl.innerHTML;
+      }
+
+      showToast('AI timeline generated — click scenes to switch layouts!', 'success');
+    } catch (err) {
+      showToast(`Timeline failed: ${err.message}`, 'danger');
+    } finally {
+      timelineBtn.disabled = false;
+      timelineBtn.textContent = 'AI Timeline';
+    }
+  });
+
+  /* ══════ Resizable panels ══════ */
+  initSpatialResize(container);
 
   /* ══════ SVG item creation ══════ */
   function createItem(def, x, y, rot = 0) {
@@ -1404,4 +1567,64 @@ export function render(container) {
     if (radarChart) { radarChart.destroy(); radarChart = null; }
     if (tooltipEl) tooltipEl.style.display = 'none';
   };
+}
+
+/* ══════════ Spatial Resize Handles ══════════ */
+function initSpatialResize(container) {
+  const threeCol = container.querySelector('.three-col');
+  if (!threeCol) return;
+
+  const leftPanel = threeCol.querySelector('.panel:first-child');
+  const canvasCol = threeCol.querySelector('#spatial-canvas-col');
+  const rightPanel = threeCol.querySelector('#spatial-right-panel');
+  const leftHandle = threeCol.querySelector('#spatial-resize-left');
+  const rightHandle = threeCol.querySelector('#spatial-resize-right');
+
+  function setupHandle(handle, beforePanel, afterPanel) {
+    if (!handle || !beforePanel || !afterPanel) return;
+    let isResizing = false, startX = 0, startBeforeW = 0, startAfterW = 0;
+
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      isResizing = true;
+      startX = e.clientX;
+      startBeforeW = beforePanel.getBoundingClientRect().width;
+      startAfterW = afterPanel.getBoundingClientRect().width;
+      handle.classList.add('active');
+      document.body.classList.add('resizing-panels');
+      handle.setPointerCapture(e.pointerId);
+    });
+
+    handle.addEventListener('pointermove', (e) => {
+      if (!isResizing) return;
+      const dx = e.clientX - startX;
+      const newBefore = startBeforeW + dx;
+      const newAfter = startAfterW - dx;
+      const minW = 160;
+      if (newBefore >= minW && newAfter >= minW) {
+        beforePanel.style.flex = `0 0 ${newBefore}px`;
+        afterPanel.style.flex = `0 0 ${newAfter}px`;
+      }
+    });
+
+    handle.addEventListener('pointerup', () => {
+      isResizing = false;
+      handle.classList.remove('active');
+      document.body.classList.remove('resizing-panels');
+    });
+
+    handle.addEventListener('lostpointercapture', () => {
+      isResizing = false;
+      handle.classList.remove('active');
+      document.body.classList.remove('resizing-panels');
+    });
+
+    handle.addEventListener('dblclick', () => {
+      beforePanel.style.flex = '';
+      afterPanel.style.flex = '';
+    });
+  }
+
+  setupHandle(leftHandle, leftPanel, canvasCol);
+  setupHandle(rightHandle, canvasCol, rightPanel);
 }

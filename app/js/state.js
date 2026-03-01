@@ -151,9 +151,18 @@ export const Store = {
   updateStudent(classId, studentId, data) {
     const cls = this.getClass(classId);
     if (!cls) return;
-    const students = cls.students.map(s =>
-      s.id === studentId ? { ...s, ...data } : s
-    );
+    const students = cls.students.map(s => {
+      if (s.id !== studentId) return s;
+      const updated = { ...s, ...data };
+      // Record E21CC history when scores change
+      if (data.e21cc) {
+        const history = [...(s.e21ccHistory || [])];
+        history.push({ ts: Date.now(), cait: data.e21cc.cait, cci: data.e21cc.cci, cgc: data.e21cc.cgc });
+        if (history.length > 20) history.splice(0, history.length - 20);
+        updated.e21ccHistory = history;
+      }
+      return updated;
+    });
     this.updateClass(classId, { students });
   },
 
