@@ -169,9 +169,17 @@ export function render(container) {
             <span class="toggle-track"></span>
             <span class="toggle-label">Operable walls</span>
           </label>
-          <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-top:var(--sp-2);">
-            <button class="btn btn-ghost btn-sm" id="close-walls-btn">Close Walls</button>
-            <button class="btn btn-ghost btn-sm" id="stack-walls-btn">Stack Walls</button>
+          <div style="margin-top:var(--sp-2);">
+            <div style="font-size:0.75rem;font-weight:600;color:var(--ink-faint);margin-bottom:var(--sp-1);">Wall A (x=720)</div>
+            <div style="display:flex;gap:var(--sp-1);margin-bottom:var(--sp-2);">
+              <button class="btn btn-ghost btn-sm" id="close-wall-a">Close A</button>
+              <button class="btn btn-ghost btn-sm" id="stack-wall-a">Stack A</button>
+            </div>
+            <div style="font-size:0.75rem;font-weight:600;color:var(--ink-faint);margin-bottom:var(--sp-1);">Wall B (x=1080)</div>
+            <div style="display:flex;gap:var(--sp-1);">
+              <button class="btn btn-ghost btn-sm" id="close-wall-b">Close B</button>
+              <button class="btn btn-ghost btn-sm" id="stack-wall-b">Stack B</button>
+            </div>
           </div>
           <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" id="clear-canvas">Clear All</button>
@@ -227,8 +235,11 @@ export function render(container) {
         <h3 class="panel-title" style="font-size:0.9375rem;margin-bottom:var(--sp-4);">Spatial Effectiveness</h3>
         <div style="position:relative;width:100%;max-width:240px;margin:0 auto var(--sp-4);">
           <canvas id="radar-chart" width="240" height="240"></canvas>
-          <div id="chart-tooltip" style="position:absolute;display:none;background:rgba(0,12,83,0.92);color:#fff;border-radius:var(--radius-md);padding:var(--sp-3);font-size:0.75rem;pointer-events:none;z-index:10;width:200px;box-shadow:var(--shadow-lg);line-height:1.4;"></div>
         </div>
+
+        <div id="score-summary" style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;margin-bottom:var(--sp-3);"></div>
+
+        <div id="recommendations" style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-3);"></div>
 
         <hr class="divider" />
 
@@ -318,17 +329,57 @@ export function render(container) {
 
   buildWalls();
 
+  /* ══════ Wall panel drag & rotate ══════ */
+  function makeWallPanelDraggable(panel) {
+    let offset = { x: 0, y: 0 }, isDragging = false, startPos = null;
+    panel.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      isDragging = true;
+      panel.setPointerCapture(e.pointerId);
+      panel.style.cursor = 'grabbing';
+      if (!e.shiftKey && !selected.has(panel)) { clearSelection(); selected.add(panel); drawSelectionBox(); }
+      const p = getMouseSVG(e);
+      startPos = getTranslate(panel);
+      offset = { x: p.x - startPos[0], y: p.y - startPos[1] };
+    });
+    panel.addEventListener('pointermove', e => {
+      if (!isDragging) return;
+      const p = getMouseSVG(e);
+      let nx = p.x - offset.x, ny = p.y - offset.y;
+      const rect = panel.querySelector('rect');
+      const h = +rect.getAttribute('height');
+      ny = clamp(ny, h / 2, VB_H - h / 2);
+      nx = clamp(nx, 0, VB_W);
+      panel.setAttribute('transform', `translate(${nx},${ny}) rotate(${getRotate(panel)})`);
+      drawSelectionBox();
+    });
+    panel.addEventListener('pointerup', () => {
+      isDragging = false;
+      panel.style.cursor = 'grab';
+      updateMetrics();
+    });
+  }
+
+  // Attach drag handlers to all wall panels
+  [...panelState.A, ...panelState.B].forEach(st => makeWallPanelDraggable(st.node));
+
   wallToggle.addEventListener('change', () => {
     const show = wallToggle.checked;
     owLayer.setAttribute('opacity', show ? '1' : '0');
     svg.querySelector('#trackA').setAttribute('opacity', show ? '0.35' : '0');
     svg.querySelector('#trackB').setAttribute('opacity', show ? '0.35' : '0');
   });
-  container.querySelector('#close-walls-btn').addEventListener('click', () => {
-    closeWall('A'); closeWall('B'); showToast('Walls closed'); updateMetrics();
+  container.querySelector('#close-wall-a').addEventListener('click', () => {
+    closeWall('A'); showToast('Wall A closed'); updateMetrics();
   });
-  container.querySelector('#stack-walls-btn').addEventListener('click', () => {
-    stackWall('A'); stackWall('B'); showToast('Walls stacked — room expanded'); updateMetrics();
+  container.querySelector('#stack-wall-a').addEventListener('click', () => {
+    stackWall('A'); showToast('Wall A stacked open'); updateMetrics();
+  });
+  container.querySelector('#close-wall-b').addEventListener('click', () => {
+    closeWall('B'); showToast('Wall B closed'); updateMetrics();
+  });
+  container.querySelector('#stack-wall-b').addEventListener('click', () => {
+    stackWall('B'); showToast('Wall B stacked open'); updateMetrics();
   });
 
   /* ══════ Palette ══════ */
@@ -664,18 +715,33 @@ export function render(container) {
       const step = e.altKey ? 1 : (e.shiftKey ? 15 : 45);
       selected.forEach(g => {
         const [tx, ty] = getTranslate(g);
-        let nextRot = getRotate(g) + step;
-        // Snap rotation for desks
-        if (!e.altKey && snapToggle.checked) {
-          const mode = g.getAttribute('data-snap');
-          if (mode === 'tri60' || mode === 'edge60') {
-            nextRot = Math.round(nextRot / 60) * 60;
-          } else if (mode === 'edge90') {
-            const n = Math.round(nextRot / 90) * 90;
-            if (Math.abs(n - nextRot) <= 12) nextRot = n;
+
+        // Wall panel rotation: toggle between 0° and 90° and swap rect dimensions
+        if (g.getAttribute('data-wall')) {
+          const currentRot = getRotate(g);
+          const nextRot = currentRot === 0 ? 90 : 0;
+          g.setAttribute('transform', `translate(${tx},${ty}) rotate(${nextRot})`);
+          const rect = g.querySelector('rect');
+          const rw = +rect.getAttribute('width');
+          const rh = +rect.getAttribute('height');
+          rect.setAttribute('width', rh);
+          rect.setAttribute('height', rw);
+          rect.setAttribute('x', -rh / 2);
+          rect.setAttribute('y', -rw / 2);
+        } else {
+          let nextRot = getRotate(g) + step;
+          // Snap rotation for desks
+          if (!e.altKey && snapToggle.checked) {
+            const mode = g.getAttribute('data-snap');
+            if (mode === 'tri60' || mode === 'edge60') {
+              nextRot = Math.round(nextRot / 60) * 60;
+            } else if (mode === 'edge90') {
+              const n = Math.round(nextRot / 90) * 90;
+              if (Math.abs(n - nextRot) <= 12) nextRot = n;
+            }
           }
+          g.setAttribute('transform', `translate(${tx},${ty}) rotate(${normAngle(nextRot)})`);
         }
-        g.setAttribute('transform', `translate(${tx},${ty}) rotate(${normAngle(nextRot)})`);
       });
       drawSelectionBox();
       updateMetrics();
@@ -819,6 +885,15 @@ export function render(container) {
   }
 
   /* ══════ Radar Chart ══════ */
+  // Create a body-level tooltip so it isn't clipped by overflow:auto panels
+  let tooltipEl = document.getElementById('cocher-chart-tooltip');
+  if (!tooltipEl) {
+    tooltipEl = document.createElement('div');
+    tooltipEl.id = 'cocher-chart-tooltip';
+    tooltipEl.style.cssText = 'position:fixed;display:none;background:rgba(0,12,83,0.94);color:#fff;border-radius:8px;padding:12px 14px;font-size:0.75rem;pointer-events:none;z-index:9999;width:220px;box-shadow:0 8px 24px rgba(0,0,0,0.25);line-height:1.5;font-family:var(--font-sans);';
+    document.body.appendChild(tooltipEl);
+  }
+
   function initChart() {
     const canvas = container.querySelector('#radar-chart');
     if (!canvas || typeof Chart === 'undefined') return;
@@ -829,11 +904,8 @@ export function render(container) {
     const datasetBG = isDark ? 'rgba(255,226,0,0.3)' : 'rgba(0,12,83,0.2)';
     const datasetBorder = isDark ? '#FFE200' : '#000C53';
 
-    const tooltipEl = container.querySelector('#chart-tooltip');
-    const panelEl = tooltipEl.parentElement.parentElement;
-
     const externalTooltip = (context) => {
-      const { tooltip } = context;
+      const { chart, tooltip } = context;
       if (tooltip.opacity === 0) { tooltipEl.style.display = 'none'; return; }
       const point = tooltip.dataPoints?.[0];
       if (!point) return;
@@ -841,13 +913,22 @@ export function render(container) {
       const score = point.raw;
       const def = CHART_DEFINITIONS[label];
       if (!def) return;
-      tooltipEl.innerHTML = `<div style="font-weight:600;font-size:0.8125rem;margin-bottom:4px;">${label} (${score})</div><div style="margin-bottom:4px;">${def.definition}</div><div style="font-style:italic;opacity:0.85;">▶ ${def.reading}</div>`;
-      const chartRect = canvas.getBoundingClientRect();
-      const panelRect = panelEl.getBoundingClientRect();
-      let left = chartRect.left - panelRect.left + tooltip.caretX + 15;
-      let top = chartRect.top - panelRect.top + tooltip.caretY;
-      if (left + 210 > panelRect.width) left -= 230;
-      if (top + tooltipEl.offsetHeight > panelRect.height) top -= tooltipEl.offsetHeight;
+
+      const rating = score >= 75 ? '🟢 Strong' : score >= 50 ? '🟡 Moderate' : '🔴 Needs attention';
+      tooltipEl.innerHTML = `
+        <div style="font-weight:700;font-size:0.875rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:6px;">${label}: ${score}/100 ${rating}</div>
+        <div style="margin-bottom:6px;">${def.definition}</div>
+        <div style="font-style:italic;opacity:0.85;border-top:1px solid rgba(255,255,255,0.15);padding-top:6px;">▶ ${def.reading}</div>`;
+
+      // Position relative to viewport using chart canvas bounding rect
+      const chartRect = chart.canvas.getBoundingClientRect();
+      let left = chartRect.left + tooltip.caretX + 12;
+      let top = chartRect.top + tooltip.caretY - 10;
+      // Prevent overflow off right edge
+      if (left + 230 > window.innerWidth) left = chartRect.left + tooltip.caretX - 235;
+      // Prevent overflow off bottom
+      if (top + 180 > window.innerHeight) top = window.innerHeight - 190;
+      if (top < 10) top = 10;
       tooltipEl.style.left = `${left}px`;
       tooltipEl.style.top = `${top}px`;
       tooltipEl.style.display = 'block';
@@ -862,16 +943,19 @@ export function render(container) {
           fill: true, backgroundColor: datasetBG, borderColor: datasetBorder,
           pointBackgroundColor: datasetBorder, pointBorderColor: '#fff',
           pointHoverBackgroundColor: '#fff', pointHoverBorderColor: datasetBorder,
+          pointRadius: 5, pointHoverRadius: 7,
           borderWidth: 2
         }]
       },
       options: {
+        responsive: true,
+        maintainAspectRatio: true,
         scales: {
           r: {
             angleLines: { color: gridColor }, grid: { color: gridColor },
             suggestedMin: 0, suggestedMax: 100,
             ticks: { display: false, stepSize: 25 },
-            pointLabels: { font: { size: 10 }, color: labelColor }
+            pointLabels: { font: { size: 10, weight: '600' }, color: labelColor }
           }
         },
         plugins: {
@@ -986,6 +1070,48 @@ export function render(container) {
     if (radarChart) {
       radarChart.data.datasets[0].data = scores;
       radarChart.update();
+    }
+
+    // Score summary
+    const summaryEl = container.querySelector('#score-summary');
+    if (summaryEl) {
+      const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      const rating = avg >= 75 ? '🟢 Excellent' : avg >= 55 ? '🟡 Good' : avg >= 35 ? '🟠 Fair' : '🔴 Needs work';
+      summaryEl.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-2);">
+          <span style="font-weight:600;color:var(--ink);">Overall: ${avg}/100</span>
+          <span>${rating}</span>
+        </div>
+        ${METRIC_LABELS.map((label, i) => {
+          const s = scores[i];
+          const color = s >= 70 ? 'var(--success)' : s >= 45 ? 'var(--warning)' : 'var(--danger)';
+          return `<div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:3px;">
+            <span style="width:70px;font-size:0.6875rem;color:var(--ink-muted);text-align:right;flex-shrink:0;">${label}</span>
+            <div style="flex:1;height:6px;background:var(--bg-subtle);border-radius:3px;overflow:hidden;">
+              <div style="width:${s}%;height:100%;background:${color};border-radius:3px;transition:width 0.4s;"></div>
+            </div>
+            <span style="width:24px;font-size:0.6875rem;color:var(--ink-faint);text-align:right;">${s}</span>
+          </div>`;
+        }).join('')}
+      `;
+    }
+
+    // Recommendations
+    const recsEl = container.querySelector('#recommendations');
+    if (recsEl) {
+      const recs = [];
+      if (scores[0] < 50) recs.push({ icon: '👀', text: 'Add a whiteboard or TV and orient desks towards it for better sightlines.' });
+      if (scores[1] < 40) recs.push({ icon: '🚶', text: 'Layout feels dense — remove items or open walls for better mobility.' });
+      if (scores[2] < 40) recs.push({ icon: '🔄', text: 'Add mobile items (whiteboards, partitions, chairs) for more flexibility.' });
+      if (scores[3] < 40) recs.push({ icon: '📏', text: 'Too many desks for the space — open walls or reduce desk count.' });
+      if (scores[4] < 40) recs.push({ icon: '🎯', text: 'Cluster desks or add group tables to support multiple learning modes.' });
+      if (scores[5] < 40) recs.push({ icon: '🌿', text: 'Add plants and position desks near windows for a better environment.' });
+      if (scores[0] >= 70 && scores[1] >= 70 && scores[4] >= 70) recs.push({ icon: '✨', text: 'Great balance of sightlines, mobility, and modality!' });
+
+      recsEl.innerHTML = recs.length > 0
+        ? `<div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-faint);margin-bottom:var(--sp-1);">Recommendations</div>
+           ${recs.map(r => `<div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-1);align-items:flex-start;"><span>${r.icon}</span><span>${r.text}</span></div>`).join('')}`
+        : '';
     }
 
     // Render insights if no preset-specific ones
@@ -1131,5 +1257,6 @@ export function render(container) {
   return () => {
     document.removeEventListener('keydown', onKey);
     if (radarChart) { radarChart.destroy(); radarChart = null; }
+    if (tooltipEl) tooltipEl.style.display = 'none';
   };
 }
