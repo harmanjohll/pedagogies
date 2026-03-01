@@ -5,16 +5,16 @@
  */
 
 import { Store } from './state.js';
-import { registerRoute, initRouter, navigate } from './router.js';
+import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome } from './components/welcome.js';
 
 /* ── Views ── */
 import { render as renderDashboard } from './views/dashboard.js';
 import { renderList as renderClassesList, renderDetail as renderClassDetail } from './views/classes.js';
-import { render as renderLessonPlanner } from './views/lesson-planner.js';
+import { render as renderLessonPlanner, renderForLesson } from './views/lesson-planner.js';
 import { render as renderSpatialDesigner } from './views/spatial-designer.js';
-import { render as renderLessons } from './views/lessons.js';
+import { renderList as renderLessonsList, renderDetail as renderLessonDetail } from './views/lessons.js';
 import { render as renderKnowledgeBase } from './views/knowledge-base.js';
 import { render as renderSettings } from './views/settings.js';
 
@@ -39,10 +39,12 @@ function init() {
   // Register routes
   registerRoute('/', renderDashboard);
   registerRoute('/lesson-planner', renderLessonPlanner);
+  registerRoute('/lesson-planner/:id', renderForLesson);
   registerRoute('/spatial', renderSpatialDesigner);
   registerRoute('/classes', renderClassesList);
   registerRoute('/classes/:id', renderClassDetail);
-  registerRoute('/lessons', renderLessons);
+  registerRoute('/lessons', renderLessonsList);
+  registerRoute('/lessons/:id', renderLessonDetail);
   registerRoute('/knowledge', renderKnowledgeBase);
   registerRoute('/settings', renderSettings);
 

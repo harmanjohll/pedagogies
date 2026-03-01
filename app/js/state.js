@@ -77,6 +77,7 @@ export const Store = {
       darkMode: _state.darkMode,
       classes: _state.classes,
       lessons: _state.lessons,
+      savedLayouts: _state.savedLayouts || [],
       recentActivity: _state.recentActivity
     });
     // Also keep legacy keys in sync
@@ -196,14 +197,84 @@ export const Store = {
     });
   },
 
-  /* ══════════ Lessons CRUD (stub for Phase 3) ══════════ */
+  /* ══════════ Lessons CRUD ══════════ */
 
   getLessons() {
     return _state.lessons || [];
   },
 
+  getLesson(id) {
+    return (_state.lessons || []).find(l => l.id === id) || null;
+  },
+
   getLessonsForClass(classId) {
     return (_state.lessons || []).filter(l => l.classId === classId);
+  },
+
+  addLesson(data) {
+    const lesson = {
+      id: generateId(),
+      title: data.title || 'Untitled Lesson',
+      classId: data.classId || null,
+      status: 'draft',
+      chatHistory: data.chatHistory || [],
+      plan: data.plan || '',
+      spatialLayout: data.spatialLayout || null,
+      objectives: data.objectives || '',
+      e21ccFocus: data.e21ccFocus || [],
+      reflection: '',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    _state.lessons = [...(_state.lessons || []), lesson];
+    this._addActivity('lesson_created', `Created lesson "${lesson.title}"`);
+    this._persist();
+    this._notify();
+    return lesson;
+  },
+
+  updateLesson(id, data) {
+    _state.lessons = (_state.lessons || []).map(l =>
+      l.id === id ? { ...l, ...data, updatedAt: Date.now() } : l
+    );
+    this._persist();
+    this._notify();
+  },
+
+  deleteLesson(id) {
+    const lesson = this.getLesson(id);
+    _state.lessons = (_state.lessons || []).filter(l => l.id !== id);
+    if (lesson) this._addActivity('lesson_deleted', `Deleted lesson "${lesson.title}"`);
+    this._persist();
+    this._notify();
+  },
+
+  /* ══════════ Spatial Layouts ══════════ */
+
+  getSavedLayouts() {
+    return _state.savedLayouts || [];
+  },
+
+  saveLayout(data) {
+    const layout = {
+      id: generateId(),
+      name: data.name || 'Untitled Layout',
+      items: data.items || [],
+      wallState: data.wallState || 'closed',
+      studentCount: data.studentCount || 30,
+      createdAt: Date.now()
+    };
+    _state.savedLayouts = [...(_state.savedLayouts || []), layout];
+    this._addActivity('layout_saved', `Saved layout "${layout.name}"`);
+    this._persist();
+    this._notify();
+    return layout;
+  },
+
+  deleteLayout(id) {
+    _state.savedLayouts = (_state.savedLayouts || []).filter(l => l.id !== id);
+    this._persist();
+    this._notify();
   },
 
   /* ══════════ Activity Feed ══════════ */
@@ -225,6 +296,7 @@ export const Store = {
       exportedAt: Date.now(),
       classes: _state.classes,
       lessons: _state.lessons,
+      savedLayouts: _state.savedLayouts || [],
       recentActivity: _state.recentActivity
     }, null, 2);
   },
@@ -234,6 +306,7 @@ export const Store = {
       const data = JSON.parse(jsonStr);
       if (data.classes) _state.classes = data.classes;
       if (data.lessons) _state.lessons = data.lessons;
+      if (data.savedLayouts) _state.savedLayouts = data.savedLayouts;
       if (data.recentActivity) _state.recentActivity = data.recentActivity;
       this._persist();
       this._notify();
@@ -246,6 +319,7 @@ export const Store = {
   clearAllData() {
     _state.classes = [];
     _state.lessons = [];
+    _state.savedLayouts = [];
     _state.recentActivity = [];
     _state.chatHistory = [];
     this._persist();
