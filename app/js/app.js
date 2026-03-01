@@ -8,7 +8,7 @@ import { Store } from './state.js';
 import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome } from './components/welcome.js';
-import { seedIfNeeded } from './seed-data.js';
+import { seedIfNeeded, seedPdIfNeeded } from './seed-data.js';
 
 /* ── Views ── */
 import { render as renderDashboard } from './views/dashboard.js';
@@ -25,8 +25,9 @@ function init() {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // Seed sample classes on first run
+  // Seed sample data on first run
   seedIfNeeded();
+  seedPdIfNeeded();
 
   app.innerHTML = `
     <aside class="sidebar" id="sidebar"></aside>

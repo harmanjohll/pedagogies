@@ -48,29 +48,35 @@ export async function sendChat(messages, options = {}) {
   const temperature = options.temperature ?? 0.8;
   const maxTokens = options.maxTokens ?? 4096;
 
-  const contents = messages.map(m => ({
-    role: m.role === 'assistant' ? 'model' : m.role,
-    parts: [{ text: m.content }]
-  }));
+  let body;
 
-  const generationConfig = {
-    temperature,
-    maxOutputTokens: maxTokens
-  };
-
-  // When callers need structured JSON, use Gemini's native JSON mode
   if (options.jsonMode) {
-    generationConfig.responseMimeType = 'application/json';
+    // JSON mode: match the proven pattern from the original spatial planner.
+    // Embed system prompt in the user message (no systemInstruction) and
+    // only set responseMimeType — this is what Gemini reliably responds to.
+    const userText = messages.map(m => m.content).join('\n\n');
+    const combined = `${systemPrompt}\n\nUser request:\n${userText}`;
+    body = {
+      contents: [{ role: 'user', parts: [{ text: combined }] }],
+      generationConfig: { responseMimeType: 'application/json' }
+    };
+  } else {
+    // Normal text mode: use systemInstruction for richer conversations
+    const contents = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : m.role,
+      parts: [{ text: m.content }]
+    }));
+    body = {
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents,
+      generationConfig: { temperature, maxOutputTokens: maxTokens }
+    };
   }
 
   const res = await fetch(`${ENDPOINT}/${model}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents,
-      generationConfig
-    })
+    body: JSON.stringify(body)
   });
 
   if (!res.ok) {
@@ -80,11 +86,15 @@ export async function sendChat(messages, options = {}) {
   }
 
   const data = await res.json();
+  const parts = data?.candidates?.[0]?.content?.parts;
 
-  // Gemini 2.5 thinking models return multiple parts — the thinking/reasoning
-  // comes first, and the actual answer is the LAST text part.
-  const parts = data?.candidates?.[0]?.content?.parts || [];
-  const textParts = parts.filter(p => p.text);
+  if (!parts || parts.length === 0) {
+    throw new Error('No response from model.');
+  }
+
+  // For thinking models the answer is the last text part;
+  // for standard models there is only one part — either way last works.
+  const textParts = parts.filter(p => p.text != null);
   const text = textParts.length > 0 ? textParts[textParts.length - 1].text : null;
 
   if (!text) {
