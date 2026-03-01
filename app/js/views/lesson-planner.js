@@ -47,10 +47,10 @@ export function render(container) {
   const classes = Store.getClasses();
 
   container.innerHTML = `
-    <div class="lp-layout" style="height:100%;">
+    <div class="lp-layout" style="height:100%;overflow:hidden;">
       <!-- Chat Column -->
-      <div class="lp-chat-col">
-        <div class="chat-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="lp-chat-col" style="display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;">
+        <div class="chat-header" style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
           <div>
             <div class="chat-header-title">Co-Cher Assistant</div>
             <div class="chat-header-subtitle">Lesson experience, design & planning</div>
@@ -63,9 +63,9 @@ export function render(container) {
           </div>
         </div>
 
-        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-messages" id="chat-messages" style="flex:1;min-height:0;overflow-y:auto;"></div>
 
-        <div class="chat-input-row">
+        <div class="chat-input-row" style="flex-shrink:0;">
           <textarea class="chat-input" id="chat-input" placeholder="Describe your lesson idea, ask about spatial design, or explore frameworks..." rows="1"></textarea>
           <button class="chat-send" id="chat-send" ${isGenerating ? 'disabled' : ''}>Send</button>
         </div>
