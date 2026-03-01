@@ -62,7 +62,7 @@ const EVENT_TASKS = [
       { id: 'affected_periods', label: 'Affected Periods', type: 'text', placeholder: 'e.g. Periods 3–6' },
       { id: 'teacher_message', label: 'Message to Teachers', type: 'textarea', placeholder: 'Draft notification to affected subject teachers...' },
       { id: 'classes_affected', label: 'Classes Affected', type: 'text', placeholder: 'e.g. 4A, 4B Pure Chemistry' },
-      { id: 'notification_channel', label: 'Channel', type: 'select', options: ['Email', 'Staff Portal', 'WhatsApp Group', 'Hardcopy'] }
+      { id: 'notification_channel', label: 'Channel', type: 'select', options: ['MS Teams', 'Email', 'Staff Portal', 'WhatsApp Group', 'Hardcopy'] }
     ]
   },
   {
@@ -120,7 +120,9 @@ const EVENT_TASKS = [
 /* ── Standalone admin tools ── */
 const ADMIN_TOOLS = [
   { key: 'quick_aor', label: 'Quick AOR', desc: 'Submit a standalone Approval of Request for purchases or services.', icon: '📄' },
-  { key: 'relief_timetable', label: 'Relief Timetable', desc: 'Plan teacher relief assignments when staff are away.', icon: '🔄' },
+  { key: 'relief_timetable', label: 'Relief Timetable', desc: 'Plan teacher relief assignments when staff are away.', icon: '🔄', href: '../btyrelief/relief.html' },
+  { key: 'org_chart', label: 'Org Chart', desc: 'View and edit the school organisational chart.', icon: '🏢', href: '../btyrelief/orgstruc.html' },
+  { key: 'framework', label: 'Framework Builder', desc: 'Create cycle-arrow diagrams for frameworks and processes.', icon: '🔃', href: '../btyrelief/framework.html' },
   { key: 'inventory', label: 'Resource Inventory', desc: 'Track department resources, equipment, and consumables.', icon: '📦' },
   { key: 'calendar', label: 'Department Calendar', desc: 'View and plan department events, deadlines, and milestones.', icon: '📅' }
 ];
@@ -148,7 +150,7 @@ export function render(container) {
           <div class="section-header">
             <span class="section-title">Quick Tools</span>
           </div>
-          <div class="grid-4 stagger" id="admin-tools"></div>
+          <div class="grid-3 stagger" id="admin-tools"></div>
         </div>
 
         <!-- Active Events -->
@@ -182,7 +184,14 @@ function renderQuickTools(el) {
   el.addEventListener('click', e => {
     const card = e.target.closest('[data-tool]');
     if (!card) return;
-    showToast(`${card.querySelector('.action-card-title').textContent} — coming in the next update!`, 'success');
+    const tool = ADMIN_TOOLS.find(t => t.key === card.dataset.tool);
+    if (tool?.href) {
+      window.open(tool.href, '_blank');
+    } else if (tool?.key === 'quick_aor') {
+      showQuickAOR();
+    } else {
+      showToast(`${card.querySelector('.action-card-title').textContent} — coming in the next update!`, 'success');
+    }
   });
 }
 
@@ -391,11 +400,19 @@ function showEventDetail(pageContainer, ev) {
                   </div>
                 `).join('')}
               </div>
-              <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-4);">
+              <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-4);">
                 <button class="btn btn-primary btn-sm save-task-btn">Save</button>
                 <button class="btn ${isComplete ? 'btn-secondary' : 'btn-accent'} btn-sm toggle-complete-btn">
                   ${isComplete ? 'Mark Incomplete' : 'Mark Complete'}
                 </button>
+                ${(task.key === 'parent_notification' || task.key === 'teacher_notification')
+                  ? `<button class="btn btn-sm notify-teams-btn" style="background:#6264A7;color:#fff;margin-left:auto;" data-task-key="${task.key}">
+                      Teams
+                    </button>
+                    <button class="btn btn-sm btn-secondary notify-email-btn" data-task-key="${task.key}">
+                      Email
+                    </button>`
+                  : ''}
               </div>
             </div>
           </div>`;
@@ -462,6 +479,190 @@ function showEventDetail(pageContainer, ev) {
         showEventDetail(pageContainer, ev);
       }
     });
+  });
+
+  // Teams notify buttons
+  pageContainer.querySelectorAll('.notify-teams-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.taskKey;
+      const recipientType = key === 'parent_notification' ? 'parent' : 'teacher';
+      const tmpl = EVENT_TASKS.find(et => et.key === key);
+      showNotifyModal(ev.name, tmpl?.label || key, recipientType);
+    });
+  });
+
+  // Email notify buttons
+  pageContainer.querySelectorAll('.notify-email-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.taskKey;
+      const recipientType = key === 'parent_notification' ? 'parent' : 'teacher';
+      const tmpl = EVENT_TASKS.find(et => et.key === key);
+      showNotifyModal(ev.name, tmpl?.label || key, recipientType);
+    });
+  });
+}
+
+/* ══════════ Quick AOR (standalone) ══════════ */
+function showQuickAOR() {
+  const { backdrop, close } = openModal({
+    title: 'Quick Approval of Request (AOR)',
+    body: `
+      <div class="input-group">
+        <label class="input-label">Description</label>
+        <input class="input" id="aor-desc" placeholder="e.g. Purchase of calculators for Math Dept" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Budget Code</label>
+        <input class="input" id="aor-code" placeholder="e.g. SC-MATH-2026" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Estimated Cost ($)</label>
+        <input class="input" id="aor-cost" placeholder="e.g. 350.00" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Funding Source</label>
+        <select class="input" id="aor-source">
+          <option value="School Budget">School Budget</option>
+          <option value="Department Budget">Department Budget</option>
+          <option value="MOE Grant">MOE Grant</option>
+          <option value="Student Fee">Student Fee</option>
+          <option value="External Sponsor">External Sponsor</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Approving Officer</label>
+        <input class="input" id="aor-approver" placeholder="e.g. HOD Mathematics" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Justification</label>
+        <textarea class="input" id="aor-justification" rows="3" placeholder="Why is this purchase needed?"></textarea>
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="submit">Submit AOR</button>
+    `
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="submit"]').addEventListener('click', () => {
+    const desc = backdrop.querySelector('#aor-desc').value.trim();
+    if (!desc) { showToast('Please enter a description.', 'danger'); return; }
+    const cost = backdrop.querySelector('#aor-cost').value.trim();
+    const code = backdrop.querySelector('#aor-code').value.trim();
+    const source = backdrop.querySelector('#aor-source').value;
+    const approver = backdrop.querySelector('#aor-approver').value.trim();
+    const justification = backdrop.querySelector('#aor-justification').value.trim();
+
+    // Save to state
+    const aors = Store.get('adminAORs') || [];
+    aors.push({
+      id: generateId(),
+      desc, cost, code, source, approver, justification,
+      status: 'pending',
+      createdAt: Date.now()
+    });
+    Store.set('adminAORs', aors);
+
+    showToast('AOR submitted successfully!', 'success');
+    close();
+  });
+}
+
+/* ══════════ MS Teams & Email Notification Helpers ══════════ */
+
+/**
+ * Build a Microsoft Teams deep-link URL that opens a chat with the given email(s)
+ * and pre-fills a message.
+ * @param {string|string[]} emails - one email or an array
+ * @param {string} message - pre-filled message text
+ * @returns {string} teams deep link
+ */
+function buildTeamsLink(emails, message) {
+  const users = Array.isArray(emails) ? emails.join(',') : emails;
+  const encoded = encodeURIComponent(message || '');
+  return `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(users)}&message=${encoded}`;
+}
+
+/**
+ * Build a mailto: link with optional BCC, subject, and body.
+ * @param {string|string[]} to
+ * @param {string} subject
+ * @param {string} body
+ * @param {string} [bcc]
+ * @returns {string}
+ */
+function buildMailtoLink(to, subject, body, bcc) {
+  const addr = Array.isArray(to) ? to.join(',') : to;
+  const params = new URLSearchParams();
+  if (subject) params.set('subject', subject);
+  if (body) params.set('body', body);
+  if (bcc) params.set('bcc', bcc);
+  const qs = params.toString();
+  return `mailto:${addr}${qs ? '?' + qs : ''}`;
+}
+
+/**
+ * Show a Notify modal for an event task, letting the user send via Teams or Email.
+ */
+function showNotifyModal(eventName, taskLabel, recipientType) {
+  const { backdrop, close } = openModal({
+    title: `Notify — ${taskLabel}`,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);">
+        Send a notification about <strong>${esc(eventName)}</strong> via MS Teams or Email.
+      </p>
+      <div class="input-group">
+        <label class="input-label">Recipient Email(s)</label>
+        <input class="input" id="notify-emails" placeholder="e.g. teacher@school.edu.sg, teacher2@school.edu.sg" />
+        <span style="font-size:0.6875rem;color:var(--ink-faint);">Comma-separated for multiple recipients</span>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Subject</label>
+        <input class="input" id="notify-subject" value="${escAttr(eventName + ' — ' + taskLabel)}" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Message</label>
+        <textarea class="input" id="notify-body" rows="5" placeholder="Type your message here...">${recipientType === 'parent' ? `Dear Parents/Guardians,\n\nPlease be informed about the upcoming event: ${eventName}.\n\nDetails will be shared via Parents Gateway.\n\nThank you.` : `Dear Colleague,\n\nPlease be informed about the upcoming event: ${eventName}.\n\nKindly note the affected periods and make the necessary arrangements.\n\nThank you.`}</textarea>
+      </div>
+      <div class="input-group">
+        <label class="input-label">BCC (optional)</label>
+        <input class="input" id="notify-bcc" placeholder="e.g. admin@school.edu.sg" />
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="teams" style="background:#6264A7;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.24 4.76A7.42 7.42 0 0 0 14 2.5c-2.03 0-3.93.8-5.36 2.26A7.51 7.51 0 0 0 6.5 10c0 2.03.78 3.93 2.14 5.36l5.36 5.36 5.24-5.24A7.58 7.58 0 0 0 21.5 10c0-2.03-.8-3.93-2.26-5.24z"/></svg>
+        Send via Teams
+      </button>
+      <button class="btn btn-primary" data-action="email">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Send via Email
+      </button>
+    `
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+
+  backdrop.querySelector('[data-action="teams"]').addEventListener('click', () => {
+    const emails = backdrop.querySelector('#notify-emails').value.trim();
+    const body = backdrop.querySelector('#notify-body').value.trim();
+    if (!emails) { showToast('Please enter at least one email.', 'danger'); return; }
+    const link = buildTeamsLink(emails, body);
+    window.open(link, '_blank');
+    showToast('Opening MS Teams...', 'success');
+  });
+
+  backdrop.querySelector('[data-action="email"]').addEventListener('click', () => {
+    const emails = backdrop.querySelector('#notify-emails').value.trim();
+    const subject = backdrop.querySelector('#notify-subject').value.trim();
+    const body = backdrop.querySelector('#notify-body').value.trim();
+    const bcc = backdrop.querySelector('#notify-bcc').value.trim();
+    if (!emails) { showToast('Please enter at least one email.', 'danger'); return; }
+    const link = buildMailtoLink(emails, subject, body, bcc);
+    window.open(link, '_self');
+    showToast('Opening email client...', 'success');
   });
 }
 
