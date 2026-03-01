@@ -73,7 +73,12 @@ export async function sendChat(messages, options = {}) {
   }
 
   const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+  // Gemini 2.5 models may return multiple parts: a "thought" part and the
+  // actual response.  We need the non-thought part.
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const responsePart = parts.find(p => !p.thought) || parts[parts.length - 1] || parts[0];
+  const text = responsePart?.text;
 
   if (!text) {
     throw new Error('No response from model.');
