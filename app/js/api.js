@@ -177,35 +177,255 @@ End with a brief "Teacher Notes" section with tips on using the rubric.`,
 }
 
 /* ── Student Grouping ── */
-export async function suggestGrouping(students, activityType) {
-  const studentSummary = students.map(s =>
+export async function suggestGrouping(students, activityType, options = {}) {
+  const groupSize = options.groupSize || 4;
+  const considerations = options.considerations || '';
+
+  const studentSummary = students.map((s, i) =>
+    `${i + 1}. ${s.name}: CAIT=${s.e21cc?.cait || 50}, CCI=${s.e21cc?.cci || 50}, CGC=${s.e21cc?.cgc || 50}`
+  ).join('\n');
+
+  const totalStudents = students.length;
+  const expectedGroups = Math.ceil(totalStudents / groupSize);
+
+  let userContent = `Create student groupings for: ${activityType}
+Preferred group size: ${groupSize} students per group (approximately ${expectedGroups} groups)
+Total students: ${totalStudents}
+
+${considerations ? `Teacher's additional considerations:\n${considerations}\n\n` : ''}Students and their E21CC profiles:
+${studentSummary}`;
+
+  const messages = [{ role: 'user', content: userContent }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's grouping specialist for Singapore educators. Suggest student groups based on E21CC profiles, the activity type, and teacher considerations.
+
+CRITICAL RULES:
+- You MUST assign EVERY student to exactly one group. No student may be left out.
+- There are exactly ${totalStudents} students. Your groups must account for all ${totalStudents}.
+- Target ${groupSize} students per group. If students don't divide evenly, some groups may have ${groupSize - 1} or ${groupSize + 1}.
+- After listing all groups, include a checklist confirming total students assigned equals ${totalStudents}.
+
+Principles:
+- For collaborative work: mix strengths across E21CC domains so each group has varied support
+- For peer tutoring: pair stronger students with those who would benefit from support
+- For competitive activities: balance average E21CC scores for fairness
+- For differentiated tasks: cluster by readiness level for targeted instruction
+- For jigsaw: assign roles based on individual strengths
+- For lab/practical work: ensure each group has students comfortable with hands-on tasks
+- For debate/discussion: balance perspectives and communication skills (CCI)
+- For project-based learning: ensure diverse strengths for comprehensive project coverage
+
+Format your response EXACTLY like this:
+
+## Suggested Groups
+
+### Group 1: [Descriptive name for group]
+**Members:** [Full name 1], [Full name 2], [Full name 3], [Full name 4]
+**Rationale:** [Why these students work well together for this activity]
+
+### Group 2: [Descriptive name for group]
+**Members:** [Full name 1], [Full name 2], [Full name 3], [Full name 4]
+**Rationale:** [Why these students work well together for this activity]
+
+(continue for ALL groups...)
+
+## Grouping Strategy
+Brief explanation of the overall approach and why this arrangement works for ${activityType}.
+
+## Verification
+Total students assigned: [number] / ${totalStudents}
+
+Be practical, specific, and use every student's full name as provided.`,
+    temperature: 0.6,
+    maxTokens: 4096
+  });
+}
+
+/* ── Exit Ticket / Quick Check Generator ── */
+export async function generateExitTicket(planText, subject, level) {
+  const messages = [{
+    role: 'user',
+    content: `Generate exit ticket questions for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+  }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's assessment specialist for Singapore educators. Generate quick formative assessment questions (exit tickets) that teachers can use at the end of a lesson to check understanding.
+
+Create exactly 3–4 questions:
+1. **Recall** — a factual question checking basic understanding
+2. **Apply** — a question requiring students to apply what they learned
+3. **Think Deeper (CAIT)** — a higher-order thinking question that develops Critical, Adaptive & Inventive Thinking
+4. (Optional) **Reflect (CGC/CCI)** — a reflection question connecting to values, collaboration, or real-world application
+
+Format:
+## Exit Ticket
+
+### Q1: Recall
+[Question]
+*Expected response:* [Brief expected answer]
+
+### Q2: Apply
+[Question]
+*Expected response:* [Brief expected answer]
+
+### Q3: Think Deeper
+[Question]
+*What to look for:* [Key indicators of understanding]
+
+### Q4: Reflect (optional)
+[Question]
+
+## Teacher Notes
+- How to use these questions (verbal, written, digital)
+- What responses might indicate misconceptions
+- Quick follow-up actions based on results
+
+Keep questions age-appropriate and aligned to Singapore curriculum standards.`,
+    temperature: 0.5,
+    maxTokens: 2048
+  });
+}
+
+/* ── Differentiation Suggestions ── */
+export async function suggestDifferentiation(students, planText) {
+  const profileSummary = students.map(s =>
     `${s.name}: CAIT=${s.e21cc?.cait || 50}, CCI=${s.e21cc?.cci || 50}, CGC=${s.e21cc?.cgc || 50}`
   ).join('\n');
 
   const messages = [{
     role: 'user',
-    content: `Suggest optimal student groupings for: ${activityType}\n\nStudents and their E21CC profiles:\n${studentSummary}`
+    content: `Analyse these student E21CC profiles against the lesson plan and suggest differentiation strategies.
+
+Lesson Plan:
+${planText}
+
+Student Profiles (${students.length} students):
+${profileSummary}`
   }];
 
   return sendChat(messages, {
-    systemPrompt: `You are Co-Cher's grouping specialist. Suggest student groups based on E21CC profiles and the activity type.
+    systemPrompt: `You are Co-Cher's differentiation specialist for Singapore educators. Analyse student E21CC profiles and identify which students may need additional support or extension for a given lesson.
 
-Principles:
-- For collaborative work: mix strengths across domains for peer support
-- For competitive activities: balance groups for fairness
-- For differentiated tasks: cluster by readiness level
-- For jigsaw: assign roles based on individual strengths
+E21CC score interpretation:
+- Below 40: May need scaffolding and structured support in this domain
+- 40–60: Developing; benefits from guided practice
+- 60–80: Competent; ready for standard-level activities
+- Above 80: Strong; can take on extension tasks or peer mentoring
+
+Format your response as:
+
+## Class Profile Overview
+Brief summary of the class's E21CC strengths and areas for growth.
+
+## Students Needing Scaffolding
+For each relevant student (scores below 40 in any domain):
+- **[Name]** — [domain] at [score]: [specific suggestion for this lesson]
+
+## Students Ready for Extension
+For each relevant student (scores above 75 in key domains):
+- **[Name]** — [domain] at [score]: [extension opportunity for this lesson]
+
+## Differentiation Strategies
+3–4 practical strategies the teacher can embed in this lesson:
+1. [Strategy with specific example]
+2. [Strategy with specific example]
+3. [Strategy with specific example]
+
+## Quick Adjustments
+2–3 small tweaks to the lesson plan that would better serve diverse learners.
+
+Be practical, name specific students, and tie suggestions to the actual lesson content. Reference STP Area 3 (Monitoring & Feedback) where relevant.`,
+    temperature: 0.5,
+    maxTokens: 3072
+  });
+}
+
+/* ── Lesson Timeline / Pacing ── */
+export async function generateTimeline(planText, totalMinutes, subject) {
+  const messages = [{
+    role: 'user',
+    content: `Create a lesson timeline/pacing guide for this lesson:\n\n${planText}\n\nTotal lesson duration: ${totalMinutes} minutes\nSubject: ${subject || 'General'}`
+  }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's lesson pacing specialist for Singapore educators. Create a clear, practical lesson timeline that breaks the lesson into timed segments.
+
+Guidelines:
+- Total time must add up to exactly ${totalMinutes} minutes
+- Include transition time between activities (1–2 min)
+- Suggest spatial arrangement for each segment where relevant (e.g., "rows", "pods", "U-shape", "stations")
+- Reference E21CC domains being developed in each segment
+- Include what the teacher and students are doing in each segment
 
 Format:
-## Suggested Groups
-Group 1: [names] — rationale
-Group 2: [names] — rationale
-...
 
-## Grouping Strategy
-Brief explanation of why this arrangement works for the activity.
+## Lesson Timeline (${totalMinutes} min)
 
-Keep groups of 3-5 students. Be practical and specific.`,
+| Time | Duration | Segment | Spatial Setup | Activity | E21CC Focus |
+|------|----------|---------|---------------|----------|-------------|
+| 0:00 | 5 min | Opening | Rows | [description] | — |
+| 0:05 | 10 min | [name] | [arrangement] | [description] | CAIT |
+| ... | ... | ... | ... | ... | ... |
+
+## Pacing Notes
+- Key transition points and what to prepare
+- Where to add buffer time if needed
+- Checkpoint moments (when to check understanding)
+
+## Spatial Flow
+Brief description of how the room arrangement changes during the lesson (if applicable). This helps the teacher plan physical transitions.
+
+Be specific and practical. Teachers need minute-by-minute clarity.`,
+    temperature: 0.5,
+    maxTokens: 2048
+  });
+}
+
+/* ── Seat Assignment (Who Sits Where) ── */
+export async function suggestSeatAssignment(groups, layoutPreset, studentCount) {
+  const groupSummary = groups.map((g, i) =>
+    `Group ${i + 1}: ${g.members.join(', ')}`
+  ).join('\n');
+
+  const messages = [{
+    role: 'user',
+    content: `Assign seating positions for these student groups in a "${layoutPreset}" classroom arrangement with ${studentCount} students.
+
+Groups:
+${groupSummary}`
+  }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's spatial arrangement specialist. Given student groups and a classroom layout preset, suggest where each group should sit.
+
+Layout presets and their spatial features:
+- direct: Rows facing front — assign by row position (front, middle, back)
+- pods: Triangular clusters — assign to specific pod/cluster numbers
+- stations: Rotation stations — assign home base stations
+- ushape: U-shape / circle — assign by position along the U (left arm, curve, right arm)
+- quiet: Individual desks — assign by zone (window side, door side, center)
+- gallery: Exhibition displays — assign gallery stations
+- fishbowl: Inner + outer circle — assign inner/outer positions
+- maker: Makerspace tables — assign workbench areas
+
+Format:
+
+## Seating Plan
+
+### Group 1: [group name]
+**Position:** [Specific location in the room, e.g., "Front-left pod", "Station A (Blue)"]
+**Members:** [names with seat positions if applicable]
+**Why here:** [Brief rationale — e.g., "Near whiteboard for presentations", "Close to materials"]
+
+(continue for all groups...)
+
+## Room Notes
+- Where the teacher should position themselves
+- Sightline considerations
+- Any students who should face specific directions
+
+Be practical and visual — help the teacher picture exactly where each group goes.`,
     temperature: 0.6,
     maxTokens: 2048
   });

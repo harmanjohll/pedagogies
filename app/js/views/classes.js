@@ -960,7 +960,7 @@ function showGroupingModal(classId) {
       if (!Store.get('apiKey')) { showToast('API key needed for AI grouping.', 'danger'); return; }
       resultEl.innerHTML = '<p style="font-size:0.8125rem;color:var(--ink-muted);">AI is thinking...</p>';
       try {
-        const result = await suggestGrouping(students, activity);
+        const result = await suggestGrouping(students, activity, { groupSize: size });
         resultEl.innerHTML = `<div style="font-size:0.8125rem;line-height:1.6;color:var(--ink-secondary);white-space:pre-wrap;">${escapeHtml(result)}</div>`;
       } catch (err) {
         resultEl.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">${escapeHtml(err.message)}</p>`;

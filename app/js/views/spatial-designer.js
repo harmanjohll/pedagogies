@@ -1667,6 +1667,29 @@ export function render(container) {
   updateMetrics();
   renderInsights(null, null, [50, 50, 50, 50, 50, 50]);
 
+  // Pick up context from Lesson Planner (grouping → "Arrange Classroom" flow)
+  const spatialPresetFromPlanner = sessionStorage.getItem('cocher_spatial_preset');
+  const spatialStudentCount = sessionStorage.getItem('cocher_spatial_student_count');
+  const spatialActivity = sessionStorage.getItem('cocher_spatial_activity');
+  if (spatialPresetFromPlanner) {
+    sessionStorage.removeItem('cocher_spatial_preset');
+    sessionStorage.removeItem('cocher_spatial_student_count');
+    sessionStorage.removeItem('cocher_spatial_activity');
+
+    // Set student count if provided
+    if (spatialStudentCount) {
+      studentCountInput.value = spatialStudentCount;
+    }
+    // Pre-fill activity in brief
+    if (spatialActivity) {
+      const topicEl = container.querySelector('#brief-topic');
+      if (topicEl) topicEl.value = spatialActivity;
+    }
+    // Apply preset
+    applyPreset(spatialPresetFromPlanner);
+    showToast(`Layout set to "${PRESETS.find(p => p.id === spatialPresetFromPlanner)?.label || spatialPresetFromPlanner}" from Lesson Planner`, 'success');
+  }
+
   // Cleanup on route change
   return () => {
     document.removeEventListener('keydown', onKey);

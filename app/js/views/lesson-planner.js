@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -246,7 +246,7 @@ export function render(container) {
               <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);align-self:center;margin-right:var(--sp-2);">AI Tools</span>
               <button class="btn btn-ghost btn-sm" id="ai-review-btn" title="AI reviews your lesson plan for E21CC alignment">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                Review Plan
+                Review
               </button>
               <button class="btn btn-ghost btn-sm" id="ai-rubric-btn" title="Generate an assessment rubric">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
@@ -256,11 +256,26 @@ export function render(container) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Grouping
               </button>
+              <button class="btn btn-ghost btn-sm" id="ai-timeline-btn" title="Generate a lesson timeline with pacing">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Timeline
+              </button>
+              <button class="btn btn-ghost btn-sm" id="ai-exit-ticket-btn" title="Generate exit ticket questions">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Exit Ticket
+              </button>
+              <button class="btn btn-ghost btn-sm" id="ai-differentiation-btn" title="Get differentiation suggestions based on student profiles">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                Differentiate
+              </button>
               <button class="btn btn-ghost btn-sm" id="spatial-layout-btn" title="Design or link a spatial classroom layout">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
                 Spatial Layout
               </button>
             </div>
+
+            <!-- Spatial Context Bar (when layout linked) -->
+            <div id="spatial-context-bar" style="display:none;margin-bottom:var(--sp-4);"></div>
 
             <!-- Plan Content -->
             <div id="plan-content"></div>
@@ -353,6 +368,18 @@ export function render(container) {
     let contextParts = [];
     if (planClassContext && chatMessages.length === 0) {
       contextParts.push(`[Class Context: ${planClassContext.name}, ${planClassContext.level} ${planClassContext.subject}]`);
+    }
+    // Inject spatial layout context if linked
+    if (chatMessages.length === 0) {
+      const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+      const linkedLayoutId = currentLesson?.spatialLayout;
+      if (linkedLayoutId) {
+        const layout = (Store.getSavedLayouts() || []).find(l => l.id === linkedLayoutId);
+        if (layout) {
+          const presetLabel = PRESET_NAMES[layout.preset] || 'Custom';
+          contextParts.push(`[Spatial Layout: ${presetLabel} arrangement, ${layout.studentCount || '?'} students, ${layout.items?.length || 0} furniture items]`);
+        }
+      }
     }
     if (attachedKBContext.length > 0) {
       contextParts.push(...attachedKBContext.map(kb =>
@@ -501,8 +528,59 @@ export function render(container) {
     showGroupingModal(container, allClasses);
   });
 
+  // AI Timeline
+  container.querySelector('#ai-timeline-btn').addEventListener('click', () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    showTimelineModal(container);
+  });
+
+  // AI Exit Ticket
+  container.querySelector('#ai-exit-ticket-btn').addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Generating exit ticket questions...</div></div>`;
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+      const planText = aiMsgs.map(m => m.content).join('\n\n');
+      const subject = planClassContext?.subject || '';
+      const level = planClassContext?.level || '';
+      const ticket = await generateExitTicket(planText, subject, level);
+      resultEl.innerHTML = `
+        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--e21cc-cait);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+            <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Exit Ticket</span>
+            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(ticket)}</div>
+        </div>`;
+      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Exit ticket generation failed: ${err.message}</div>`;
+    }
+  });
+
+  // AI Differentiation
+  container.querySelector('#ai-differentiation-btn').addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+
+    // Need a class with students for differentiation
+    const allClasses = Store.getClasses().filter(c => c.students?.length > 0);
+    if (allClasses.length === 0) { showToast('No students found. Add students to a class first.', 'danger'); return; }
+
+    showDifferentiationModal(container, allClasses);
+  });
+
   // Spatial Layout
   renderSpatialSection(container);
+  renderSpatialContextBar(container);
   container.querySelector('#spatial-layout-btn').addEventListener('click', () => {
     const spatialSection = container.querySelector('#spatial-section');
     spatialSection.scrollIntoView({ behavior: 'smooth' });
@@ -678,9 +756,16 @@ function suggestTitle() {
 
 function escAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
 
+/* ── Last grouping result for seat assignment ── */
+let lastGroupingResult = null;
+let lastGroupingMeta = null;
+
 /* ── AI Grouping Modal ── */
 function showGroupingModal(container, classes) {
   const classesWithStudents = classes.filter(c => c.students?.length > 0);
+
+  // Auto-select class from context
+  const contextClassId = planClassContext?.id || '';
 
   const { backdrop, close } = openModal({
     title: 'AI Student Grouping',
@@ -688,7 +773,7 @@ function showGroupingModal(container, classes) {
       <div class="input-group">
         <label class="input-label">Select Class</label>
         <select class="input" id="group-class">
-          ${classesWithStudents.map(c => `<option value="${c.id}">${c.name} (${c.students.length} students)</option>`).join('')}
+          ${classesWithStudents.map(c => `<option value="${c.id}" ${c.id === contextClassId ? 'selected' : ''}>${c.name} (${c.students.length} students)</option>`).join('')}
         </select>
       </div>
       <div class="input-group">
@@ -703,6 +788,21 @@ function showGroupingModal(container, classes) {
           <option value="Lab work">Lab / practical work</option>
         </select>
       </div>
+      <div class="input-group">
+        <label class="input-label">Preferred Group Size</label>
+        <div style="display:flex;align-items:center;gap:var(--sp-3);">
+          <input type="range" id="group-size" min="2" max="6" value="4" style="flex:1;" />
+          <span id="group-size-label" style="font-size:0.875rem;font-weight:600;color:var(--ink);min-width:80px;text-align:center;">4 students</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.6875rem;color:var(--ink-faint);margin-top:2px;">
+          <span>Pairs</span><span>Trios</span><span>Quads</span><span>Fives</span><span>Sixes</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Grouping Considerations <span style="font-weight:400;color:var(--ink-faint);">(optional)</span></label>
+        <textarea class="input" id="group-considerations" rows="3" placeholder="E.g. 'Keep Ahmad and Wei Lin in separate groups', 'Priya needs a confident English speaker in her group', 'Balance genders where possible', 'Seat students with vision needs near the front'..." style="resize:vertical;font-size:0.8125rem;"></textarea>
+        <div style="font-size:0.6875rem;color:var(--ink-faint);margin-top:4px;">Share any seating preferences, student dynamics, or special needs the AI should factor in.</div>
+      </div>
     `,
     footer: `
       <button class="btn btn-secondary" data-action="cancel">Cancel</button>
@@ -710,37 +810,367 @@ function showGroupingModal(container, classes) {
     `
   });
 
+  // Group size slider label
+  const sizeSlider = backdrop.querySelector('#group-size');
+  const sizeLabel = backdrop.querySelector('#group-size-label');
+  sizeSlider.addEventListener('input', () => {
+    sizeLabel.textContent = `${sizeSlider.value} students`;
+  });
+
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
   backdrop.querySelector('[data-action="generate"]').addEventListener('click', async () => {
     const classId = backdrop.querySelector('#group-class').value;
     const activityType = backdrop.querySelector('#group-activity').value;
+    const groupSize = parseInt(sizeSlider.value);
+    const considerations = backdrop.querySelector('#group-considerations').value.trim();
     const cls = classes.find(c => c.id === classId);
     if (!cls) return;
 
     close();
 
     const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Analysing E21CC profiles and creating groups...</div></div>`;
+    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Analysing E21CC profiles and creating groups for ${cls.students.length} students...</div></div>`;
     resultEl.scrollIntoView({ behavior: 'smooth' });
 
     try {
-      const grouping = await suggestGrouping(cls.students, activityType);
+      const grouping = await suggestGrouping(cls.students, activityType, { groupSize, considerations });
+
+      // Store for seat assignment feature
+      lastGroupingResult = grouping;
+      lastGroupingMeta = { classId, className: cls.name, activityType, groupSize, studentCount: cls.students.length };
+
+      // Check if there are saved layouts for the "arrange classroom" button
+      const savedLayouts = Store.getSavedLayouts() || [];
+      const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+      const linkedLayout = currentLesson?.spatialLayout ? savedLayouts.find(l => l.id === currentLesson.spatialLayout) : null;
+
       resultEl.innerHTML = `
         <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--e21cc-cci);">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
             <div>
               <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Student Groups</span>
-              <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:var(--sp-2);">${cls.name} · ${activityType}</span>
+              <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:var(--sp-2);">${cls.name} · ${activityType} · groups of ${groupSize}</span>
             </div>
             <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
           <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(grouping)}</div>
+          <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--border-light);flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" id="seat-assignment-btn" title="Get AI suggestions for where each group should sit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              Who Sits Where
+            </button>
+            <button class="btn btn-secondary btn-sm" id="arrange-classroom-btn" title="Open spatial designer with a layout suited for this activity">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              Arrange Classroom
+            </button>
+          </div>
         </div>`;
+
       resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+
+      // Who Sits Where button
+      resultEl.querySelector('#seat-assignment-btn')?.addEventListener('click', () => {
+        showSeatAssignmentModal(container, lastGroupingResult, lastGroupingMeta);
+      });
+
+      // Arrange Classroom button — navigate to spatial with context
+      resultEl.querySelector('#arrange-classroom-btn')?.addEventListener('click', () => {
+        // Store grouping context for spatial designer to pick up
+        const presetMap = {
+          'Collaborative group work': 'pods',
+          'Peer tutoring': 'pods',
+          'Jigsaw activity': 'stations',
+          'Debate or discussion': 'fishbowl',
+          'Project-based learning': 'pods',
+          'Competition': 'pods',
+          'Lab work': 'stations'
+        };
+        sessionStorage.setItem('cocher_spatial_preset', presetMap[activityType] || 'pods');
+        sessionStorage.setItem('cocher_spatial_student_count', cls.students.length.toString());
+        sessionStorage.setItem('cocher_spatial_activity', activityType);
+        navigate('/spatial');
+      });
     } catch (err) {
       resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Grouping failed: ${err.message}</div>`;
     }
   });
+}
+
+/* ── Seat Assignment Modal ── */
+function showSeatAssignmentModal(container, groupingText, meta) {
+  if (!groupingText || !meta) {
+    showToast('Generate groups first before assigning seats.', 'danger');
+    return;
+  }
+
+  const savedLayouts = Store.getSavedLayouts() || [];
+  const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const linkedLayoutId = currentLesson?.spatialLayout;
+
+  const { backdrop, close } = openModal({
+    title: 'Who Sits Where',
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-4);">
+        Choose a classroom layout and the AI will suggest where each group should sit.
+      </p>
+      <div class="input-group">
+        <label class="input-label">Classroom Layout</label>
+        <select class="input" id="seat-layout">
+          <option value="direct">Direct Instruction (Rows)</option>
+          <option value="pods" selected>Collaborative Pods</option>
+          <option value="stations">Stations</option>
+          <option value="ushape">U-Shape / Circle</option>
+          <option value="quiet">Quiet Work (Individual)</option>
+          <option value="gallery">Gallery Walk</option>
+          <option value="fishbowl">Fishbowl / Socratic</option>
+          <option value="maker">Makerspace</option>
+        </select>
+      </div>
+      ${savedLayouts.length > 0 ? `
+        <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:-8px;margin-bottom:var(--sp-3);">
+          ${linkedLayoutId ? 'Using your linked layout\'s preset.' : 'Or choose based on your saved layouts.'}
+        </div>
+      ` : ''}
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="assign">Assign Seats</button>
+    `
+  });
+
+  // Pre-select based on linked layout or activity type
+  const layoutSelect = backdrop.querySelector('#seat-layout');
+  if (linkedLayoutId) {
+    const linkedLayout = savedLayouts.find(l => l.id === linkedLayoutId);
+    if (linkedLayout?.preset) layoutSelect.value = linkedLayout.preset;
+  } else {
+    const presetMap = {
+      'Collaborative group work': 'pods', 'Peer tutoring': 'pods',
+      'Jigsaw activity': 'stations', 'Debate or discussion': 'fishbowl',
+      'Project-based learning': 'pods', 'Competition': 'pods', 'Lab work': 'stations'
+    };
+    layoutSelect.value = presetMap[meta.activityType] || 'pods';
+  }
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="assign"]').addEventListener('click', async () => {
+    const layoutPreset = layoutSelect.value;
+    close();
+
+    // Parse groups from grouping text
+    const groups = parseGroupsFromText(groupingText);
+
+    const resultEl = container.querySelector('#ai-result');
+    const existingContent = resultEl.innerHTML;
+    resultEl.innerHTML += `<div class="card" style="padding:var(--sp-5);margin-top:var(--sp-3);"><div class="chat-typing">Assigning seats for ${groups.length} groups in ${PRESET_NAMES[layoutPreset] || layoutPreset} layout...</div></div>`;
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+    try {
+      const seatPlan = await suggestSeatAssignment(groups, layoutPreset, meta.studentCount);
+      // Append seat assignment below existing grouping
+      const seatCard = document.createElement('div');
+      seatCard.className = 'card';
+      seatCard.style.cssText = 'padding:var(--sp-6);border-top:3px solid var(--e21cc-cgc);margin-top:var(--sp-3);';
+      seatCard.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+          <div>
+            <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Seating Plan</span>
+            <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:var(--sp-2);">${PRESET_NAMES[layoutPreset] || layoutPreset}</span>
+          </div>
+          <button class="btn btn-ghost btn-sm close-seat-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+        <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(seatPlan)}</div>`;
+
+      // Remove the loading card and append seat card
+      resultEl.innerHTML = existingContent;
+      resultEl.appendChild(seatCard);
+      seatCard.querySelector('.close-seat-result')?.addEventListener('click', () => seatCard.remove());
+    } catch (err) {
+      resultEl.innerHTML = existingContent;
+      resultEl.insertAdjacentHTML('beforeend', `<div class="card" style="padding:var(--sp-4);color:var(--danger);margin-top:var(--sp-3);">Seat assignment failed: ${err.message}</div>`);
+    }
+  });
+}
+
+/* ── Parse groups from AI grouping text ── */
+function parseGroupsFromText(text) {
+  const groups = [];
+  // Match "### Group N:" or "Group N:" patterns followed by members
+  const groupPattern = /(?:###?\s*)?Group\s*\d+[^]*?(?:\*\*Members?:\*\*|Members?:)\s*([^\n]+)/gi;
+  let match;
+  while ((match = groupPattern.exec(text)) !== null) {
+    const membersLine = match[1].trim();
+    const members = membersLine.split(/,\s*/).map(n => n.replace(/\*\*/g, '').trim()).filter(Boolean);
+    if (members.length > 0) {
+      groups.push({ members });
+    }
+  }
+  // Fallback: if parsing didn't find structured groups, try simpler patterns
+  if (groups.length === 0) {
+    const lines = text.split('\n');
+    let currentMembers = [];
+    for (const line of lines) {
+      const groupMatch = line.match(/Group\s*\d+\s*:/i);
+      if (groupMatch) {
+        if (currentMembers.length > 0) groups.push({ members: currentMembers });
+        currentMembers = [];
+        // Try to extract names from the same line
+        const namesAfterColon = line.split(':').slice(1).join(':').trim();
+        if (namesAfterColon) {
+          currentMembers = namesAfterColon.split(/,\s*/).map(n => n.replace(/\*\*/g, '').replace(/—.*$/, '').trim()).filter(Boolean);
+        }
+      }
+    }
+    if (currentMembers.length > 0) groups.push({ members: currentMembers });
+  }
+  return groups;
+}
+
+/* ══════════ Timeline Modal ══════════ */
+function showTimelineModal(container) {
+  const { backdrop, close } = openModal({
+    title: 'Lesson Timeline / Pacing Guide',
+    body: `
+      <div class="input-group">
+        <label class="input-label">Total Lesson Duration</label>
+        <div style="display:flex;align-items:center;gap:var(--sp-3);">
+          <input type="range" id="timeline-duration" min="15" max="120" value="45" step="5" style="flex:1;" />
+          <span id="timeline-duration-label" style="font-size:0.875rem;font-weight:600;color:var(--ink);min-width:60px;text-align:center;">45 min</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.6875rem;color:var(--ink-faint);margin-top:2px;">
+          <span>15 min</span><span>45 min</span><span>60 min</span><span>90 min</span><span>120 min</span>
+        </div>
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="generate">Generate Timeline</button>
+    `
+  });
+
+  const durationSlider = backdrop.querySelector('#timeline-duration');
+  const durationLabel = backdrop.querySelector('#timeline-duration-label');
+  durationSlider.addEventListener('input', () => {
+    durationLabel.textContent = `${durationSlider.value} min`;
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="generate"]').addEventListener('click', async () => {
+    const totalMinutes = parseInt(durationSlider.value);
+    close();
+
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Creating ${totalMinutes}-minute lesson timeline...</div></div>`;
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+      const planText = chatMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n\n');
+      const subject = planClassContext?.subject || '';
+      const timeline = await generateTimeline(planText, totalMinutes, subject);
+
+      resultEl.innerHTML = `
+        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--accent);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+            <div>
+              <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Lesson Timeline</span>
+              <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:var(--sp-2);">${totalMinutes} minutes</span>
+            </div>
+            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(timeline)}</div>
+        </div>`;
+      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Timeline generation failed: ${err.message}</div>`;
+    }
+  });
+}
+
+/* ══════════ Differentiation Modal ══════════ */
+function showDifferentiationModal(container, classes) {
+  const contextClassId = planClassContext?.id || '';
+
+  const { backdrop, close } = openModal({
+    title: 'Differentiation Suggestions',
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-4);">
+        Analyse student E21CC profiles against your lesson plan to identify who needs scaffolding and who is ready for extension.
+      </p>
+      <div class="input-group">
+        <label class="input-label">Select Class</label>
+        <select class="input" id="diff-class">
+          ${classes.map(c => `<option value="${c.id}" ${c.id === contextClassId ? 'selected' : ''}>${c.name} (${c.students.length} students)</option>`).join('')}
+        </select>
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="analyse">Analyse & Suggest</button>
+    `
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="analyse"]').addEventListener('click', async () => {
+    const classId = backdrop.querySelector('#diff-class').value;
+    const cls = classes.find(c => c.id === classId);
+    if (!cls) return;
+    close();
+
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Analysing ${cls.students.length} student profiles for differentiation opportunities...</div></div>`;
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+      const planText = chatMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n\n');
+      const diff = await suggestDifferentiation(cls.students, planText);
+
+      resultEl.innerHTML = `
+        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--e21cc-cait);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+            <div>
+              <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Differentiation Suggestions</span>
+              <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:var(--sp-2);">${cls.name}</span>
+            </div>
+            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(diff)}</div>
+        </div>`;
+      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Differentiation analysis failed: ${err.message}</div>`;
+    }
+  });
+}
+
+/* ══════════ Spatial Context Bar (coupling) ══════════ */
+function renderSpatialContextBar(container) {
+  const barEl = container.querySelector('#spatial-context-bar');
+  if (!barEl) return;
+
+  const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const linkedLayoutId = currentLesson?.spatialLayout;
+  if (!linkedLayoutId) { barEl.style.display = 'none'; return; }
+
+  const savedLayouts = Store.getSavedLayouts() || [];
+  const layout = savedLayouts.find(l => l.id === linkedLayoutId);
+  if (!layout) { barEl.style.display = 'none'; return; }
+
+  barEl.style.display = '';
+  barEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);background:linear-gradient(135deg, rgba(0,12,83,0.04), rgba(167,243,208,0.08));border:1px solid var(--border-light);border-radius:var(--radius-lg);">
+      <div style="font-size:1.25rem;">${PRESET_ICONS[layout.preset] || '📐'}</div>
+      <div style="flex:1;">
+        <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);">
+          ${PRESET_NAMES[layout.preset] || 'Custom'} Layout Linked
+        </div>
+        <div style="font-size:0.6875rem;color:var(--ink-muted);">
+          ${layout.name} · ${layout.studentCount || '?'} students · ${layout.items?.length || 0} items
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="spatial-context-open" style="font-size:0.75rem;">Open</button>
+    </div>`;
+
+  barEl.querySelector('#spatial-context-open')?.addEventListener('click', () => navigate('/spatial'));
 }
 
 /* ══════════ KB Context Attachment ══════════ */
