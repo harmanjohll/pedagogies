@@ -2,36 +2,109 @@
  * Co-Cher Lesson Planner
  * ======================
  * AI chat + plan canvas with save / link-to-class / export.
+ * Phase 3: Subject-aware prompts, status badge, undo, mobile toggle, improved markdown.
  */
 
 import { Store } from '../state.js';
 import { sendChat, reviewLesson, generateRubric, suggestGrouping } from '../api.js';
 import { showToast } from '../components/toast.js';
-import { openModal } from '../components/modals.js';
+import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
 
 let chatMessages = [];
 let isGenerating = false;
 let currentLessonId = null;  // if editing a saved lesson
 
-/* ── Markdown renderer ── */
+/* ── Markdown renderer (improved — supports tables and ordered lists) ── */
 function md(text) {
   return text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // Code blocks
     .replace(/```([\s\S]*?)```/g, '<pre style="background:rgba(0,0,0,0.06);padding:8px 12px;border-radius:8px;font-size:0.8rem;overflow-x:auto;margin:6px 0;font-family:var(--font-mono);"><code>$1</code></pre>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Bold, italic
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Headers
+    .replace(/^#### (.+)$/gm, '<h5 style="font-size:0.85rem;font-weight:600;margin:6px 0 3px;">$1</h5>')
     .replace(/^### (.+)$/gm, '<h4 style="font-size:0.9rem;font-weight:600;margin:8px 0 4px;">$1</h4>')
     .replace(/^## (.+)$/gm, '<h3 style="font-size:1rem;font-weight:600;margin:10px 0 4px;">$1</h3>')
     .replace(/^# (.+)$/gm, '<h3 style="font-size:1.05rem;font-weight:700;margin:12px 0 4px;">$1</h3>')
+    // Horizontal rule
+    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--border-light);margin:12px 0;">')
+    // Tables
+    .replace(/^(\|.+\|)\n(\|[-:| ]+\|)\n((?:\|.+\|\n?)+)/gm, (match, headerRow, sepRow, bodyRows) => {
+      const headers = headerRow.split('|').filter(c => c.trim());
+      const alignments = sepRow.split('|').filter(c => c.trim()).map(c => {
+        c = c.trim();
+        if (c.startsWith(':') && c.endsWith(':')) return 'center';
+        if (c.endsWith(':')) return 'right';
+        return 'left';
+      });
+      const rows = bodyRows.trim().split('\n').map(r => r.split('|').filter(c => c.trim()));
+      return `<div style="overflow-x:auto;margin:8px 0;"><table style="width:100%;border-collapse:collapse;font-size:0.8125rem;">
+        <thead><tr>${headers.map((h, i) => `<th style="text-align:${alignments[i] || 'left'};padding:6px 10px;border-bottom:2px solid var(--border);font-weight:600;color:var(--ink);background:var(--bg-subtle);">${h.trim()}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(row => `<tr>${row.map((cell, i) => `<td style="text-align:${alignments[i] || 'left'};padding:5px 10px;border-bottom:1px solid var(--border-light);">${cell.trim()}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table></div>`;
+    })
+    // Unordered lists
     .replace(/^[-*] (.+)$/gm, '<li style="margin:2px 0;">$1</li>')
-    .replace(/(<li[^>]*>.*<\/li>\n?)+/g, m => `<ul style="padding-left:1.25rem;margin:4px 0;">${m}</ul>`)
+    .replace(/(<li[^>]*>.*<\/li>\n?)+/g, m => {
+      if (m.match(/^\d+\./m)) return m;
+      return `<ul style="padding-left:1.25rem;margin:4px 0;">${m}</ul>`;
+    })
+    // Ordered lists
     .replace(/^\d+\. (.+)$/gm, '<li style="margin:2px 0;">$1</li>')
+    .replace(/(<li style="margin:2px 0;">[^<]*<\/li>\n?){2,}/g, m => {
+      if (m.includes('<ul') || m.includes('<ol')) return m;
+      return `<ol style="padding-left:1.25rem;margin:4px 0;">${m}</ol>`;
+    })
+    // Paragraphs
     .replace(/\n{2,}/g, '</p><p style="margin:4px 0;">')
     .replace(/\n/g, '<br>');
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+/* ── Build quick prompts based on classes/subjects ── */
+function buildQuickPrompts(classes) {
+  const prompts = [];
+
+  // Subject-specific prompts based on existing classes
+  const subjects = [...new Set(classes.map(c => c.subject).filter(Boolean))];
+  const levels = [...new Set(classes.map(c => c.level).filter(Boolean))];
+
+  if (subjects.length > 0) {
+    const subj = subjects[0];
+    const level = levels[0] || '';
+    const subjectPrompts = {
+      'Mathematics': `Help me plan an engaging ${level} Mathematics lesson with hands-on activities`,
+      'Science': `Design a ${level} Science lesson with inquiry-based learning and experiments`,
+      'Chemistry': `Plan a ${level} Chemistry lesson connecting concepts to real-world applications`,
+      'Physics': `Create a ${level} Physics lesson with demonstrations and problem-solving`,
+      'Biology': `Design a ${level} Biology lesson with collaborative investigation activities`,
+      'English': `Plan a ${level} English lesson focused on creative writing and peer feedback`,
+      'History': `Create a ${level} History lesson using source analysis and discussion`,
+      'Geography': `Design a ${level} Geography lesson with data analysis and fieldwork skills`,
+    };
+    // Match by partial subject name
+    for (const [key, prompt] of Object.entries(subjectPrompts)) {
+      if (subj.toLowerCase().includes(key.toLowerCase())) {
+        prompts.push({ label: `Plan a ${key} lesson`, prompt: prompt });
+        break;
+      }
+    }
+  }
+
+  // Default prompts
+  if (prompts.length === 0) {
+    prompts.push({ label: 'Plan an engaging lesson', prompt: 'Help me plan an engaging lesson with hands-on activities and collaborative work' });
+  }
+  prompts.push({ label: 'Best layouts for group work', prompt: 'What spatial arrangement works best for collaborative group work?' });
+  prompts.push({ label: 'Develop CAIT in a lesson', prompt: 'How can I develop Critical and Inventive Thinking (CAIT) in my lesson?' });
+  prompts.push({ label: 'E21CC activity ideas', prompt: 'Suggest activities that build all three E21CC domains: CAIT, CCI, and CGC' });
+
+  return prompts.slice(0, 4);
+}
 
 /* ══════════ Load existing lesson ══════════ */
 export function renderForLesson(container, { id }) {
@@ -45,17 +118,37 @@ export function renderForLesson(container, { id }) {
 /* ══════════ Main render ══════════ */
 export function render(container) {
   const classes = Store.getClasses();
+  const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+
+  // Status badge for current lesson
+  const statusBadgeHTML = currentLesson ? (() => {
+    const colors = { draft: 'badge-gray', ready: 'badge-blue', completed: 'badge-green' };
+    const labels = { draft: 'Draft', ready: 'Ready', completed: 'Done' };
+    return `<span class="badge ${colors[currentLesson.status] || 'badge-gray'} badge-dot">${labels[currentLesson.status] || 'Draft'}</span>`;
+  })() : '';
 
   container.innerHTML = `
-    <div class="lp-layout" style="height:100%;overflow:hidden;">
+    <div class="lp-layout" id="lp-layout" style="height:100%;overflow:hidden;">
       <!-- Chat Column -->
       <div class="lp-chat-col" style="display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;">
         <div class="chat-header" style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-          <div>
-            <div class="chat-header-title">Co-Cher Assistant</div>
-            <div class="chat-header-subtitle">Lesson experience, design & planning</div>
+          <div style="display:flex;align-items:center;gap:var(--sp-2);">
+            <div>
+              <div class="chat-header-title">Co-Cher Assistant</div>
+              <div class="chat-header-subtitle">Lesson experience, design & planning</div>
+            </div>
+            ${statusBadgeHTML}
           </div>
-          <div style="display:flex;gap:var(--sp-2);">
+          <div style="display:flex;gap:var(--sp-2);align-items:center;">
+            <button class="lp-panel-toggle" id="show-plan-btn" title="View plan canvas">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Canvas
+            </button>
+            ${chatMessages.length >= 2 ? `
+              <button class="btn btn-ghost btn-sm" id="undo-btn" title="Undo last exchange">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              </button>
+            ` : ''}
             <button class="btn btn-ghost btn-sm" id="new-chat-btn" title="New conversation">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               New
@@ -76,12 +169,18 @@ export function render(container) {
         <div style="flex:1;overflow-y:auto;padding:var(--sp-6);">
           <div style="max-width:680px;margin:0 auto;">
             <!-- Header -->
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-6);">
-              <div>
-                <h2 style="font-size:1.125rem;font-weight:600;color:var(--ink);">Lesson Canvas</h2>
-                <p style="font-size:0.8125rem;color:var(--ink-muted);">
-                  ${currentLessonId ? `Editing: ${Store.getLesson(currentLessonId)?.title || 'Lesson'}` : 'New lesson — save when ready'}
-                </p>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-6);flex-wrap:wrap;gap:var(--sp-2);">
+              <div style="display:flex;align-items:center;gap:var(--sp-2);">
+                <button class="lp-panel-toggle" id="show-chat-btn" title="Back to chat">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                  Chat
+                </button>
+                <div>
+                  <h2 style="font-size:1.125rem;font-weight:600;color:var(--ink);">Lesson Canvas</h2>
+                  <p style="font-size:0.8125rem;color:var(--ink-muted);">
+                    ${currentLessonId ? `Editing: ${currentLesson?.title || 'Lesson'}` : 'New lesson — save when ready'}
+                  </p>
+                </div>
               </div>
               <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
                 <button class="btn btn-secondary btn-sm" id="save-lesson-btn">
@@ -126,10 +225,21 @@ export function render(container) {
   const messagesEl = container.querySelector('#chat-messages');
   const chatInput = container.querySelector('#chat-input');
   const chatSend = container.querySelector('#chat-send');
+  const layoutEl = container.querySelector('#lp-layout');
 
   // Render initial messages
-  renderMessages(messagesEl);
+  renderMessages(messagesEl, classes);
   renderPlanContent(container.querySelector('#plan-content'));
+
+  // Mobile panel toggle
+  const showPlanBtn = container.querySelector('#show-plan-btn');
+  const showChatBtn = container.querySelector('#show-chat-btn');
+  if (showPlanBtn) {
+    showPlanBtn.addEventListener('click', () => layoutEl.classList.add('show-plan'));
+  }
+  if (showChatBtn) {
+    showChatBtn.addEventListener('click', () => layoutEl.classList.remove('show-plan'));
+  }
 
   // New chat
   container.querySelector('#new-chat-btn').addEventListener('click', () => {
@@ -138,6 +248,38 @@ export function render(container) {
     isGenerating = false;
     render(container);
   });
+
+  // Undo last exchange
+  const undoBtn = container.querySelector('#undo-btn');
+  if (undoBtn) {
+    undoBtn.addEventListener('click', async () => {
+      const confirmed = await confirmDialog({
+        title: 'Undo Last Exchange',
+        message: 'Remove the last user message and AI response?',
+        confirmLabel: 'Undo',
+        cancelLabel: 'Cancel'
+      });
+      if (!confirmed) return;
+
+      // Remove last AI message and last user message
+      if (chatMessages.length >= 2) {
+        const lastAi = chatMessages.length - 1;
+        const lastUser = chatMessages.length - 2;
+        if (chatMessages[lastAi]?.role === 'assistant' && chatMessages[lastUser]?.role === 'user') {
+          chatMessages.splice(lastUser, 2);
+        } else {
+          chatMessages.pop();
+        }
+      } else if (chatMessages.length === 1) {
+        chatMessages.pop();
+      }
+      if (currentLessonId) {
+        Store.updateLesson(currentLessonId, { chatHistory: [...chatMessages] });
+      }
+      render(container);
+      showToast('Last exchange removed.', 'success');
+    });
+  }
 
   // Send message
   async function sendMessage() {
@@ -149,7 +291,7 @@ export function render(container) {
     chatInput.value = '';
     chatInput.style.height = 'auto';
     isGenerating = true;
-    renderMessages(messagesEl);
+    renderMessages(messagesEl, classes);
 
     try {
       const response = await sendChat(chatMessages);
@@ -159,7 +301,7 @@ export function render(container) {
       showToast(err.message, 'danger');
     } finally {
       isGenerating = false;
-      renderMessages(messagesEl);
+      renderMessages(messagesEl, classes);
       renderPlanContent(container.querySelector('#plan-content'));
       // Auto-save if editing existing lesson
       if (currentLessonId) {
@@ -197,6 +339,7 @@ export function render(container) {
       h1{font-size:18px;border-bottom:2px solid #000c53;padding-bottom:8px;color:#000c53}
       h2,h3,h4{margin:16px 0 8px}strong{font-weight:600}ul,ol{padding-left:20px}
       hr{border:none;border-top:1px solid #e2e8f0;margin:20px 0}
+      table{width:100%;border-collapse:collapse;margin:12px 0}th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0}th{font-weight:600;background:#f1f5f9}
       pre{background:#f1f5f9;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto}
       @media print{body{margin:0;padding:16px}}</style></head>
       <body><h1>Lesson Plan</h1><p style="color:#64748b;font-size:12px;">Exported from Co-Cher · ${new Date().toLocaleDateString('en-SG')}</p>${planHtml}</body></html>`);
@@ -268,12 +411,13 @@ export function render(container) {
 }
 
 /* ── Messages render ── */
-function renderMessages(el) {
+function renderMessages(el, classes) {
   if (!el) return;
   if (chatMessages.length === 0) {
+    const prompts = buildQuickPrompts(classes || Store.getClasses());
     el.innerHTML = `
       <div style="padding:var(--sp-6) var(--sp-4);">
-        <div style="text-align:center;max-width:340px;margin:0 auto;">
+        <div style="text-align:center;max-width:380px;margin:0 auto;">
           <div style="width:52px;height:52px;margin:0 auto var(--sp-4);background:var(--accent-light);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:var(--accent);">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
@@ -282,9 +426,7 @@ function renderMessages(el) {
             Design engaging lesson experiences, spatial arrangements, and E21CC-aligned activities.
           </p>
           <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
-            <button class="chat-option quick-prompt" data-prompt="Help me plan an engaging lesson on fractions for Primary 4">Plan a fractions lesson</button>
-            <button class="chat-option quick-prompt" data-prompt="What spatial arrangement works best for collaborative group work?">Best layouts for group work</button>
-            <button class="chat-option quick-prompt" data-prompt="How can I develop CAIT in a Science lesson?">Develop CAIT in Science</button>
+            ${prompts.map(p => `<button class="chat-option quick-prompt" data-prompt="${esc(p.prompt)}">${p.label}</button>`).join('')}
           </div>
         </div>
       </div>`;
@@ -352,6 +494,9 @@ function showSaveModal(classes) {
 
   const existing = currentLessonId ? Store.getLesson(currentLessonId) : null;
 
+  // Auto-suggest class linkage if there's context
+  const suggestedClassId = existing?.classId || '';
+
   const { backdrop, close } = openModal({
     title: existing ? 'Update Lesson' : 'Save Lesson',
     body: `
@@ -363,7 +508,7 @@ function showSaveModal(classes) {
         <label class="input-label">Link to Class (optional)</label>
         <select class="input" id="save-class">
           <option value="">No class</option>
-          ${classes.map(c => `<option value="${c.id}" ${existing?.classId === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+          ${classes.map(c => `<option value="${c.id}" ${suggestedClassId === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
         </select>
       </div>
       <div class="input-group">
