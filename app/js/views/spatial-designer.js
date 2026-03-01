@@ -1,8 +1,14 @@
 /*
- * Co-Cher Spatial Designer
- * ========================
- * Full drag-and-drop SVG classroom layout designer with
- * furniture library, presets, and effectiveness analysis.
+ * Co-Cher Spatial Designer (Enhanced)
+ * ====================================
+ * Full drag-and-drop SVG classroom layout designer with:
+ * - Operable walls (A & B tracks, close/stack states)
+ * - Spider-web radar chart (Chart.js) with definitions & tooltips
+ * - Pedagogical insights with E21CC/STP ties per preset
+ * - 8 presets: Direct, Pods, Stations, U-Shape, Quiet, Gallery, Fishbowl, Makerspace
+ * - Triangular desks, VR Station, coloured station desks
+ * - Proper sightline calculation with desk facing angle
+ * - Duplicate (Ctrl+D), Undo (Ctrl+Z)
  */
 
 import { Store } from '../state.js';
@@ -11,53 +17,122 @@ import { openModal, confirmDialog } from '../components/modals.js';
 
 /* ═══════════ Constants ═══════════ */
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const VB_W = 1200, VB_H = 660;
-const UNIT = 55;
-const GRID_SNAP = UNIT / 2;
-const COLS = Math.floor(VB_W / UNIT);
-const ROWS = Math.floor(VB_H / UNIT);
+const VB_W = 1440, VB_H = 720;
+const UNIT = 60;
+const GRID_SNAP = UNIT;
+const WALL_A_X = 720, WALL_B_X = 1080;
+const PANEL_COUNT = 8, PANEL_THICKNESS = 10;
+const TRI_S = UNIT * 0.98;
+const TRI_H = Math.sin(Math.PI / 3) * TRI_S;
 
-/* ═══════════ Palette definition ═══════════ */
+/* ═══════════ Palette ═══════════ */
 const PALETTE = [
   // Furniture
-  { cat: 'Furniture', id: 'desk_rect', label: 'Desk (rect)', w: UNIT, h: UNIT * 0.65, color: '#e5e7eb' },
-  { cat: 'Furniture', id: 'desk_round', label: 'Table (round)', w: UNIT, h: UNIT, color: '#d1fae5', round: true },
-  { cat: 'Furniture', id: 'desk_trap', label: 'Desk (trapezoid)', w: UNIT, h: UNIT * 0.65, color: '#fef3c7', trap: true },
-  { cat: 'Furniture', id: 'chair', label: 'Chair', w: UNIT * 0.4, h: UNIT * 0.4, color: '#dbeafe' },
-  { cat: 'Furniture', id: 'stand_table', label: 'Standing table', w: UNIT * 2.5, h: UNIT * 0.6, color: '#fde68a' },
-  { cat: 'Furniture', id: 'teacher_desk', label: 'Teacher desk', w: UNIT * 1.4, h: UNIT * 0.7, color: '#c7d2fe' },
+  { cat: 'Furniture', id: 'desk_rect', label: 'Desk (rect)', w: UNIT, h: UNIT * 0.7, color: '#e5e7eb', snap: 'edge90' },
+  { cat: 'Furniture', id: 'desk_round', label: 'Table (round)', w: UNIT * 1.1, h: UNIT * 1.1, color: '#d1fae5', round: true },
+  { cat: 'Furniture', id: 'desk_trap', label: 'Desk (trapezoid)', w: UNIT, h: UNIT * 0.7, color: '#fee2e2', trap: true, snap: 'edge60' },
+  { cat: 'Furniture', id: 'desk_tri', label: 'Desk (triangle)', w: TRI_S, h: TRI_H, color: '#e0f2fe', tri: true, snap: 'tri60' },
+  { cat: 'Furniture', id: 'chair', label: 'Chair', w: UNIT * 0.55, h: UNIT * 0.55, color: '#e5e7eb' },
+  { cat: 'Furniture', id: 'stand_table', label: 'Standing table', w: UNIT * 2.4, h: UNIT * 0.6, color: '#fde68a', snap: 'edge90' },
+  { cat: 'Furniture', id: 'teacher_desk', label: 'Teacher desk', w: UNIT * 1.6, h: UNIT * 0.8, color: '#bfdbfe', snap: 'edge90' },
   // Tech
-  { cat: 'Tech', id: 'writable_tv', label: 'Writable TV', w: UNIT * 1.8, h: UNIT * 0.2, color: '#1e293b' },
-  { cat: 'Tech', id: 'tablet_cart', label: 'Tablet Cart', w: UNIT * 0.6, h: UNIT * 0.6, color: '#a5b4fc' },
-  { cat: 'Tech', id: 'printer_3d', label: '3D Printer', w: UNIT * 0.6, h: UNIT * 0.6, color: '#c084fc' },
+  { cat: 'Tech', id: 'writable_tv', label: 'Writable TV', w: UNIT * 1.6, h: UNIT * 0.9, color: '#e5e7eb', snap: 'edge90' },
+  { cat: 'Tech', id: 'vr_station', label: 'VR Station', w: UNIT, h: UNIT, color: '#dbeafe', round: true },
+  { cat: 'Tech', id: 'tablet_cart', label: 'Tablet Cart', w: UNIT * 0.9, h: UNIT * 0.7, color: '#e0e7ff' },
+  { cat: 'Tech', id: 'printer_3d', label: '3D Printer', w: UNIT * 0.8, h: UNIT * 0.8, color: '#d1d5db' },
   // Cognitive
-  { cat: 'Cognitive', id: 'whiteboard', label: 'Mobile whiteboard', w: UNIT * 1.5, h: UNIT * 0.15, color: '#f1f5f9' },
-  { cat: 'Cognitive', id: 'tool_cabinet', label: 'Tool cabinet', w: UNIT * 0.7, h: UNIT * 0.5, color: '#a8a29e' },
+  { cat: 'Cognitive', id: 'whiteboard', label: 'Mobile whiteboard', w: UNIT * 1.1, h: UNIT * 1.6, color: '#93c5fd', snap: 'edge90' },
+  { cat: 'Cognitive', id: 'tool_cabinet', label: 'Tool cabinet', w: UNIT * 1.5, h: UNIT * 0.6, color: '#e5e7eb', snap: 'edge90' },
   // Social
-  { cat: 'Social', id: 'group_table', label: 'Group table (6)', w: UNIT * 1.8, h: UNIT * 1.2, color: '#bbf7d0', round: true },
-  { cat: 'Social', id: 'partition', label: 'Mobile partition', w: UNIT * 1.5, h: UNIT * 0.1, color: '#94a3b8' },
+  { cat: 'Social', id: 'group_table', label: 'Group table (6)', w: UNIT * 1.6, h: UNIT * 1.6, color: '#a7f3d0', round: true },
+  { cat: 'Social', id: 'partition', label: 'Mobile partition', w: UNIT * 0.3, h: UNIT * 1.8, color: '#34d399', snap: 'edge90' },
   // Emotional
-  { cat: 'Emotional', id: 'couch', label: 'Couch', w: UNIT * 1.5, h: UNIT * 0.7, color: '#fca5a5' },
-  { cat: 'Emotional', id: 'beanbag', label: 'Beanbag', w: UNIT * 0.6, h: UNIT * 0.6, color: '#f9a8d4', round: true },
-  { cat: 'Emotional', id: 'plant', label: 'Plant', w: UNIT * 0.4, h: UNIT * 0.4, color: '#86efac', round: true },
+  { cat: 'Emotional', id: 'couch', label: 'Couch', w: UNIT * 1.8, h: UNIT * 0.8, color: '#fdba74', snap: 'edge90' },
+  { cat: 'Emotional', id: 'beanbag', label: 'Beanbag', w: UNIT * 1.1, h: UNIT * 1.1, color: '#fde68a', round: true },
+  { cat: 'Emotional', id: 'plant', label: 'Plant', w: UNIT * 0.9, h: UNIT * 0.9, color: '#bbf7d0', round: true },
+  // Stations
+  { cat: 'Stations', id: 'desk_blue', label: 'Desk (Blue)', w: UNIT, h: UNIT * 0.7, color: '#bfdbfe', snap: 'edge90' },
+  { cat: 'Stations', id: 'desk_green', label: 'Desk (Green)', w: UNIT, h: UNIT * 0.7, color: '#bbf7d0', snap: 'edge90' },
+  { cat: 'Stations', id: 'desk_orange', label: 'Desk (Orange)', w: UNIT, h: UNIT * 0.7, color: '#fed7aa', snap: 'edge90' },
   // Zones
-  { cat: 'Zones', id: 'zone_cog', label: 'Zone: Cognitive', w: UNIT * 3, h: UNIT * 3, color: 'rgba(59,130,246,0.1)', zone: true, border: '#3b82f6' },
-  { cat: 'Zones', id: 'zone_soc', label: 'Zone: Social', w: UNIT * 3, h: UNIT * 3, color: 'rgba(16,185,129,0.1)', zone: true, border: '#10b981' },
-  { cat: 'Zones', id: 'zone_emo', label: 'Zone: Emotional', w: UNIT * 3, h: UNIT * 3, color: 'rgba(245,158,11,0.1)', zone: true, border: '#f59e0b' },
-  { cat: 'Zones', id: 'text_label', label: 'Text label', w: UNIT * 2, h: UNIT * 0.6, color: 'transparent', text: true },
+  { cat: 'Zones', id: 'zone_cog', label: 'Zone: Cognitive', w: UNIT * 3, h: UNIT * 2, color: 'rgba(147,197,253,0.16)', zone: true, border: '#93c5fd' },
+  { cat: 'Zones', id: 'zone_soc', label: 'Zone: Social', w: UNIT * 3, h: UNIT * 2, color: 'rgba(167,243,208,0.16)', zone: true, border: '#a7f3d0' },
+  { cat: 'Zones', id: 'zone_emo', label: 'Zone: Emotional', w: UNIT * 3, h: UNIT * 2, color: 'rgba(253,230,138,0.16)', zone: true, border: '#fde68a' },
+  { cat: 'Zones', id: 'text_label', label: 'Text label', w: UNIT * 2, h: UNIT * 0.8, color: 'transparent', text: true },
 ];
 
 /* ═══════════ Presets ═══════════ */
 const PRESETS = [
   { id: 'direct', label: 'Direct Instruction', desc: 'Rows facing front', icon: '📣' },
-  { id: 'pods', label: 'Collaborative Pods', desc: '6-person clusters', icon: '🤝' },
+  { id: 'pods', label: 'Collaborative Pods', desc: 'Triangular clusters', icon: '🤝' },
   { id: 'stations', label: 'Stations', desc: 'Activity rotation', icon: '🔄' },
-  { id: 'ushape', label: 'U-Shape', desc: 'Discussion-friendly', icon: '🗣️' },
+  { id: 'ushape', label: 'U-Shape / Circle', desc: 'Discussion-friendly', icon: '🗣️' },
   { id: 'quiet', label: 'Quiet Work', desc: 'Individual focus', icon: '📝' },
   { id: 'gallery', label: 'Gallery Walk', desc: 'Exhibition displays', icon: '🖼️' },
+  { id: 'fishbowl', label: 'Fishbowl / Socratic', desc: 'Inner + outer circle', icon: '🐟' },
+  { id: 'maker', label: 'Makerspace', desc: 'Hands-on creation', icon: '🛠️' },
 ];
 
+/* ═══════════ Preset Insights (E21CC + STP ties) ═══════════ */
+const PRESET_INSIGHTS = {
+  direct: [
+    { title: '📣 Clear Communication', affordance: 'Rows facing a clear focal point ensures all students have a direct line of sight for instruction.', moves: ['Use direct instruction for introducing new concepts.', 'Employ call-and-response to maintain engagement.'], e21cc: 'CAIT — focused attention supports individual critical thinking.' },
+    { title: '🧑‍🏫 Teacher Mobility', affordance: 'Aisles allow the teacher to circulate, monitor progress, and provide individual support.', moves: ['Walk the room during independent work to check understanding.', 'Use proximity to manage off-task behavior non-verbally.'], e21cc: 'CCI — teacher circulation enables timely communication support.' },
+    { title: '👀 Focused Attention', affordance: 'Structured layout minimises distractions, encouraging individual focus.', moves: ['Set clear time limits for tasks.', 'Use think-pair-share for brief structured peer interaction.'], e21cc: 'CAIT — minimised distraction supports deep analytical thinking.' }
+  ],
+  pods: [
+    { title: '🤝 Enhanced Collaboration', affordance: 'Clustered seating creates natural pods for group work, peer teaching, and co-construction of knowledge.', moves: ['Use jigsaw activities where each pod becomes an expert on one topic.', 'Assign group roles to ensure equitable participation.'], e21cc: 'CCI — collaborative pods are the foundation for communication and teamwork.' },
+    { title: '💬 Peer-to-Peer Learning', affordance: 'Proximity within pods encourages spontaneous discussion and problem-solving.', moves: ['Provide complex problems requiring multiple perspectives.', 'Encourage groups to present findings to the class.'], e21cc: 'CAIT — peer discourse deepens critical and inventive thinking.' },
+    { title: '💡 Shared Cognitive Load', affordance: 'Students can easily share resources, breaking down complex tasks into manageable parts.', moves: ['Use large paper or mini-whiteboards for group brainstorming.', 'Facilitate group goal-setting at start of activity.'], e21cc: 'CCI — shared resources build information literacy skills.' }
+  ],
+  stations: [
+    { title: '🔄 Differentiated Instruction', affordance: 'Multiple stations allow variety catering to different learning styles, paces, and levels.', moves: ['Design tasks at each station targeting specific skills.', 'Allow students to self-select stations based on learning goals.'], e21cc: 'CAIT — stations enable adaptive, self-directed learning paths.' },
+    { title: '🏃‍♀️ Active Learning', affordance: 'Physical movement between stations keeps students engaged and breaks sedentary periods.', moves: ['Use a timer for structured rotations.', 'Provide clear instructions and materials at each station.'], e21cc: 'CGC — movement and variety support holistic student wellbeing.' },
+    { title: '🧑‍🏫 Targeted Support', affordance: 'Teacher can work intensively with a small group while others work independently.', moves: ['Create a teacher-led station for re-teaching or enrichment.', 'Circulate among independent stations for targeted feedback.'], e21cc: 'CCI — small-group instruction supports differentiated communication.' }
+  ],
+  ushape: [
+    { title: '💬 Democratic Dialogue', affordance: 'Circle/U-shape puts all participants on equal footing with clear sightlines to everyone.', moves: ['Facilitate Socratic seminars or philosophical chairs debates.', 'Establish norms for respectful listening and turn-taking.'], e21cc: 'CGC — equal footing fosters civic literacy and cross-cultural respect.' },
+    { title: '👁️ Full Class Visibility', affordance: 'Every student is visible to teacher and peers, encouraging active participation.', moves: ['Use non-verbal cues to gauge understanding across the group.', 'Pose open-ended questions inviting multiple viewpoints.'], e21cc: 'CCI — full visibility supports accountable talk and active listening.' },
+    { title: '🤝 Community Building', affordance: 'No "front" breaks traditional hierarchies, promoting collaborative shared learning.', moves: ['Start class with a community-building check-in circle.', 'Use format for storytelling or shared reading experiences.'], e21cc: 'CGC — community circles build global and cross-cultural awareness.' }
+  ],
+  quiet: [
+    { title: '🧠 Deep Focus', affordance: 'Individual desks minimise distractions, providing each student with personal workspace.', moves: ['Use for summative assessments or timed writing.', 'Play quiet background music for concentration.'], e21cc: 'CAIT — uninterrupted focus enables deep critical analysis.' },
+    { title: '🧘‍♀️ Self-Paced Learning', affordance: 'Ideal for tasks requiring sustained, independent concentration and self-pacing.', moves: ['Provide playlists of online resources to work through.', 'Offer extension activities for early finishers.'], e21cc: 'CAIT — self-pacing develops adaptive, inventive problem-solving.' },
+    { title: '📝 Individual Accountability', affordance: 'Separated workspaces ensure each student is responsible for their own work.', moves: ['Circulate for one-on-one feedback and support.', 'Use mini-whiteboards for quick checks for understanding.'], e21cc: 'CCI — individual work builds personal information management skills.' }
+  ],
+  gallery: [
+    { title: '🚶‍♀️ Peer Feedback & Review', affordance: 'Spreading work around the room enables structured peer-to-peer feedback.', moves: ['Provide sticky notes for students to leave comments at each station.', 'Use protocols like "I like, I wonder, What if" to guide feedback.'], e21cc: 'CCI — peer feedback develops constructive communication skills.' },
+    { title: '🎨 Showcasing Process', affordance: 'Perfect for displaying multiple stages of a project, showing thinking processes.', moves: ['Have students display drafts and final versions side-by-side.', 'Ask students to present their "exhibit" to small groups.'], e21cc: 'CAIT — showcasing process makes thinking visible and inventive.' },
+    { title: '🔄 Synthesising Information', affordance: 'Each station presents different information, requiring students to synthesise.', moves: ['Use for analysing different documents, data sets, or interpretations.', 'Provide a graphic organiser for students to complete as they visit each station.'], e21cc: 'CAIT — synthesis across sources builds critical information literacy.' }
+  ],
+  fishbowl: [
+    { title: '🗣️ Focused Dialogue', affordance: 'Inner circle creates a stage for active speakers; outer circle for active listeners.', moves: ['Use for structured debates, Socratic seminars, or role-playing.', 'Provide the outer circle with observation tasks or note-taking guides.'], e21cc: 'CGC — fishbowl develops civic discourse and respectful argumentation.' },
+    { title: '👂 Active Listening', affordance: 'Distinct speaker/listener roles make active listening explicit and purposeful.', moves: ['Have outer circle provide feedback on discussion quality.', 'Rotate students between inner and outer circles.'], e21cc: 'CCI — explicit listening roles strengthen communication competencies.' },
+    { title: '🏛️ Structured Participation', affordance: 'Clear structure manages full-class discussion, keeping conversation focused.', moves: ['Use a "hot seat" model for one student answering group questions.', 'Establish clear norms for entering and exiting the inner circle.'], e21cc: 'CGC — structured dialogue models democratic civic participation.' }
+  ],
+  maker: [
+    { title: '🛠️ Hands-On Creation', affordance: 'Large work surfaces and diverse tools empower hands-on design and prototyping.', moves: ['Pose design challenges requiring physical solutions.', 'Set up a tinkering station for open-ended exploration.'], e21cc: 'CAIT — making develops inventive thinking through tangible creation.' },
+    { title: '🏃‍♂️ Flexible Movement', affordance: 'Open-plan design allows easy movement between ideation and fabrication zones.', moves: ['Encourage design thinking: empathise, define, ideate, prototype, test.', 'Use mobile whiteboards for teams to share design processes.'], e21cc: 'CAIT — iterative design cycles develop adaptive problem-solving.' },
+    { title: '💡 Interdisciplinary Thinking', affordance: 'Space blends art, design, engineering, and technology across subjects.', moves: ['Partner with other subject teachers for cross-curricular projects.', 'Invite community experts to mentor student projects.'], e21cc: 'CGC — cross-disciplinary work builds global and cross-cultural literacy.' }
+  ]
+};
+
+/* ═══════════ Chart Metric Definitions ═══════════ */
+const CHART_DEFINITIONS = {
+  Sightlines: { definition: 'Measures how clearly students can see instructional focal points (e.g., whiteboards, teacher).', reading: 'Higher scores mean better visibility and focus. Lower scores suggest potential obstructions.' },
+  Mobility: { definition: 'Assesses the ease with which teachers and students can move around the classroom.', reading: 'Higher scores indicate more open space for circulation. Lower scores suggest a cramped layout.' },
+  Flexibility: { definition: 'Evaluates furniture variety and the ease of reconfiguring the space for different activities.', reading: 'Higher scores mean the space is highly adaptable. Lower scores indicate a static setup.' },
+  Density: { definition: 'Gauges the amount of personal and group space available to each student.', reading: 'Higher scores mean more space per student. Lower scores suggest overcrowding.' },
+  Modality: { definition: 'Rates the space\'s ability to support various learning modes (group, individual, presentation).', reading: 'Higher scores indicate a multi-functional space. Lower scores mean optimised for one activity.' },
+  Environment: { definition: 'Considers natural light and biophilic elements (plants) that contribute to wellbeing.', reading: 'Higher scores suggest a calming atmosphere. Lower scores indicate a less stimulating environment.' }
+};
+
 const METRIC_LABELS = ['Sightlines', 'Mobility', 'Flexibility', 'Density', 'Modality', 'Environment'];
+
+/* ═══════════ Helper ═══════════ */
+const rad = d => d * Math.PI / 180;
+const deg = r => r * 180 / Math.PI;
+const normAngle = a => ((a % 360) + 360) % 360;
 
 /* ═══════════ Render ═══════════ */
 export function render(container) {
@@ -66,8 +141,8 @@ export function render(container) {
       <!-- Left: Palette -->
       <div class="panel" style="overflow-y:auto;padding:var(--sp-4);gap:0;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3);">
-          <h3 class="panel-title" style="font-size:0.9375rem;">Furniture</h3>
-          <span class="text-caption" style="color:var(--ink-faint);">Drag to canvas</span>
+          <h3 class="panel-title" style="font-size:0.9375rem;">Item Library</h3>
+          <span class="text-caption" style="color:var(--ink-faint);">Click to add</span>
         </div>
         <div id="palette"></div>
 
@@ -82,19 +157,29 @@ export function render(container) {
         <div style="display:flex;flex-direction:column;gap:var(--sp-2);font-size:0.8125rem;">
           <div style="display:flex;align-items:center;gap:var(--sp-2);">
             <label class="input-label" style="min-width:70px;">Students:</label>
-            <input type="number" id="student-count" class="input" style="width:70px;padding:var(--sp-1) var(--sp-2);font-size:0.8125rem;" value="30" min="1" max="60" />
+            <input type="number" id="student-count" class="input" style="width:70px;padding:var(--sp-1) var(--sp-2);font-size:0.8125rem;" value="32" min="1" max="60" />
           </div>
           <label class="toggle" style="font-size:0.8125rem;">
             <input type="checkbox" class="toggle-input" id="snap-toggle" checked />
             <span class="toggle-track"></span>
             <span class="toggle-label">Snap to grid</span>
           </label>
+          <label class="toggle" style="font-size:0.8125rem;">
+            <input type="checkbox" class="toggle-input" id="wall-toggle" checked />
+            <span class="toggle-track"></span>
+            <span class="toggle-label">Operable walls</span>
+          </label>
           <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-top:var(--sp-2);">
+            <button class="btn btn-ghost btn-sm" id="close-walls-btn">Close Walls</button>
+            <button class="btn btn-ghost btn-sm" id="stack-walls-btn">Stack Walls</button>
+          </div>
+          <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" id="clear-canvas">Clear All</button>
             <button class="btn btn-ghost btn-sm" id="save-layout">Save Layout</button>
           </div>
           <p class="text-caption" style="color:var(--ink-faint);line-height:1.5;margin-top:var(--sp-1);">
-            <strong>R</strong> rotate &middot; <strong>Del</strong> delete &middot; <strong>Arrows</strong> nudge &middot; <strong>Shift</strong> multi-select
+            <strong>R</strong> rotate &middot; <strong>Del</strong> delete &middot; <strong>Ctrl+D</strong> duplicate &middot; <strong>Ctrl+Z</strong> undo<br/>
+            <strong>Arrows</strong> nudge &middot; <strong>Shift</strong> multi-select
           </p>
         </div>
       </div>
@@ -104,35 +189,51 @@ export function render(container) {
         <svg id="spatial-svg" viewBox="0 0 ${VB_W} ${VB_H}" style="flex:1;cursor:crosshair;display:block;background:#fff;border-radius:var(--radius-xl);" xmlns="${SVG_NS}">
           <defs>
             <pattern id="grid" width="${UNIT}" height="${UNIT}" patternUnits="userSpaceOnUse">
-              <path d="M ${UNIT} 0 L 0 0 0 ${UNIT}" fill="none" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2,4"/>
+              <rect width="${UNIT}" height="${UNIT}" fill="none"/>
+              <path d="M ${UNIT} 0 V ${UNIT} H 0" fill="none" stroke="#e5e7eb" stroke-width="1"/>
             </pattern>
-            <filter id="dshadow"><feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.15"/></filter>
+            <filter id="dshadow"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.2"/></filter>
+            <linearGradient id="deskGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5"/>
+              <stop offset="100%" stop-color="#000000" stop-opacity="0.05"/>
+            </linearGradient>
           </defs>
-          <rect width="${VB_W}" height="${VB_H}" fill="url(#grid)"/>
-          <!-- Room walls -->
-          <rect x="1" y="1" width="${VB_W - 2}" height="${VB_H - 2}" fill="none" stroke="#94a3b8" stroke-width="2" rx="4"/>
-          <!-- Door -->
-          <rect x="${VB_W - 60}" y="${VB_H - 2}" width="50" height="3" fill="#f59e0b" rx="1"/>
-          <text x="${VB_W - 35}" y="${VB_H - 6}" font-size="8" fill="#b45309" text-anchor="middle" font-family="var(--font-sans)">Door</text>
+          <!-- Room sections -->
+          <rect id="roomA" x="0" y="0" width="720" height="720" fill="url(#grid)"/>
+          <line id="trackA" x1="${WALL_A_X}" y1="0" x2="${WALL_A_X}" y2="720" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.35"/>
+          <line id="trackB" x1="${WALL_B_X}" y1="0" x2="${WALL_B_X}" y2="720" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.35"/>
+          <rect id="roomB" x="720" y="0" width="720" height="720" fill="url(#grid)" opacity="0.08"/>
+          <!-- Room shell -->
+          <rect x="0" y="0" width="${VB_W}" height="${VB_H}" fill="none" stroke="#94a3b8" stroke-width="4" rx="2"/>
+          <text x="50" y="22" font-size="13" fill="#64748b" font-family="var(--font-sans)" font-weight="600">FRONT</text>
+          <!-- Doors -->
+          <rect x="300" y="-1" width="60" height="8" fill="#b45309" rx="2"/>
+          <rect x="1000" y="-1" width="60" height="8" fill="#b45309" rx="2"/>
           <!-- Windows -->
-          <rect x="0" y="1" width="2" height="${VB_H - 2}" fill="#60a5fa" opacity="0.3"/>
-          <text x="8" y="14" font-size="8" fill="#3b82f6" font-family="var(--font-sans)">Windows</text>
-          <!-- Front label -->
-          <text x="${VB_W / 2}" y="14" font-size="9" fill="#94a3b8" text-anchor="middle" font-family="var(--font-sans)" font-weight="600">FRONT OF CLASSROOM</text>
+          <rect x="130" y="-1" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
+          <rect x="780" y="-1" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
+          <rect x="130" y="${VB_H - 5}" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
+          <rect x="780" y="${VB_H - 5}" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
+          <!-- Operable walls -->
+          <g id="operable-walls"></g>
+          <!-- Layout items -->
           <g id="layout-root"></g>
           <g id="selection-box" style="pointer-events:none;"></g>
         </svg>
       </div>
 
       <!-- Right: Analysis -->
-      <div class="panel" style="overflow-y:auto;padding:var(--sp-4);gap:0;">
-        <h3 class="panel-title" style="font-size:0.9375rem;margin-bottom:var(--sp-4);">Effectiveness Analysis</h3>
-        <div id="metrics-bars" style="display:flex;flex-direction:column;gap:var(--sp-4);"></div>
+      <div class="panel" style="overflow-y:auto;padding:var(--sp-4);gap:0;position:relative;">
+        <h3 class="panel-title" style="font-size:0.9375rem;margin-bottom:var(--sp-4);">Spatial Effectiveness</h3>
+        <div style="position:relative;width:100%;max-width:240px;margin:0 auto var(--sp-4);">
+          <canvas id="radar-chart" width="240" height="240"></canvas>
+          <div id="chart-tooltip" style="position:absolute;display:none;background:rgba(0,12,83,0.92);color:#fff;border-radius:var(--radius-md);padding:var(--sp-3);font-size:0.75rem;pointer-events:none;z-index:10;width:200px;box-shadow:var(--shadow-lg);line-height:1.4;"></div>
+        </div>
 
         <hr class="divider" />
 
-        <h3 class="panel-title" style="font-size:0.9375rem;margin-bottom:var(--sp-3);">Insights</h3>
-        <div id="insights" style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;"></div>
+        <h3 class="panel-title" style="font-size:0.9375rem;margin-bottom:var(--sp-3);">Pedagogical Insights</h3>
+        <div id="insights" style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;display:flex;flex-direction:column;gap:var(--sp-4);"></div>
 
         <hr class="divider" />
 
@@ -145,15 +246,92 @@ export function render(container) {
   const svg = container.querySelector('#spatial-svg');
   const layoutRoot = svg.querySelector('#layout-root');
   const selBox = svg.querySelector('#selection-box');
+  const owLayer = svg.querySelector('#operable-walls');
   const snapToggle = container.querySelector('#snap-toggle');
+  const wallToggle = container.querySelector('#wall-toggle');
   const studentCountInput = container.querySelector('#student-count');
 
   let selected = new Set();
-  let dragging = null;
   let marquee = null;
   let currentPreset = null;
+  let radarChart = null;
+  let undoStack = [];
+  let panelState = { A: [], B: [] };
 
-  /* ── Palette ── */
+  /* ══════ Operable Walls ══════ */
+  function buildWalls() {
+    owLayer.innerHTML = '';
+    panelState = { A: [], B: [] };
+    [{ x: WALL_A_X, id: 'A' }, { x: WALL_B_X, id: 'B' }].forEach(({ x, id }) => {
+      for (let i = 0; i < PANEL_COUNT; i++) {
+        const panel = document.createElementNS(SVG_NS, 'g');
+        panel.setAttribute('data-wall', id);
+        panel.style.cursor = 'grab';
+        const r = document.createElementNS(SVG_NS, 'rect');
+        r.setAttribute('rx', 2);
+        r.setAttribute('fill', '#dbeafe');
+        r.setAttribute('stroke', '#334155');
+        r.setAttribute('stroke-width', '1');
+        r.setAttribute('filter', 'url(#dshadow)');
+        panel.appendChild(r);
+        owLayer.appendChild(panel);
+        panelState[id].push({ node: panel });
+      }
+    });
+    closeWall('A');
+    closeWall('B');
+  }
+
+  function closeWall(which) {
+    const arr = panelState[which];
+    const x = which === 'A' ? WALL_A_X : WALL_B_X;
+    const segH = (VB_H - (PANEL_COUNT - 1) * 2) / PANEL_COUNT;
+    arr.forEach((st, i) => {
+      const y = (segH / 2) + (i * (segH + 2));
+      st.node.setAttribute('transform', `translate(${x},${y}) rotate(0)`);
+      const rect = st.node.querySelector('rect');
+      rect.setAttribute('width', PANEL_THICKNESS);
+      rect.setAttribute('height', segH);
+      rect.setAttribute('x', -PANEL_THICKNESS / 2);
+      rect.setAttribute('y', -segH / 2);
+    });
+  }
+
+  function stackWall(which) {
+    const arr = panelState[which];
+    const x = which === 'A' ? WALL_A_X : WALL_B_X;
+    const segH = (VB_H - (PANEL_COUNT - 1) * 2) / PANEL_COUNT;
+    const topX = x - segH;
+    arr.forEach((st, i) => {
+      const rect = st.node.querySelector('rect');
+      rect.setAttribute('width', segH);
+      rect.setAttribute('height', PANEL_THICKNESS);
+      rect.setAttribute('x', 0);
+      rect.setAttribute('y', 0);
+      if (i < 4) {
+        st.node.setAttribute('transform', `translate(${topX},${10 + i * (PANEL_THICKNESS + 2)}) rotate(0)`);
+      } else {
+        st.node.setAttribute('transform', `translate(${x},${VB_H - 10 - (PANEL_COUNT - i) * (PANEL_THICKNESS + 2)}) rotate(0)`);
+      }
+    });
+  }
+
+  buildWalls();
+
+  wallToggle.addEventListener('change', () => {
+    const show = wallToggle.checked;
+    owLayer.setAttribute('opacity', show ? '1' : '0');
+    svg.querySelector('#trackA').setAttribute('opacity', show ? '0.35' : '0');
+    svg.querySelector('#trackB').setAttribute('opacity', show ? '0.35' : '0');
+  });
+  container.querySelector('#close-walls-btn').addEventListener('click', () => {
+    closeWall('A'); closeWall('B'); showToast('Walls closed'); updateMetrics();
+  });
+  container.querySelector('#stack-walls-btn').addEventListener('click', () => {
+    stackWall('A'); stackWall('B'); showToast('Walls stacked — room expanded'); updateMetrics();
+  });
+
+  /* ══════ Palette ══════ */
   const paletteEl = container.querySelector('#palette');
   let currentCat = null;
   PALETTE.forEach(item => {
@@ -164,12 +342,14 @@ export function render(container) {
     const btn = document.createElement('button');
     btn.className = 'sidebar-item';
     btn.style.cssText = 'padding:var(--sp-1) var(--sp-2);font-size:0.8125rem;gap:var(--sp-2);';
+    const swatchColor = item.zone ? item.border : item.color;
     btn.innerHTML = `
-      <span style="width:18px;height:14px;border-radius:3px;background:${item.zone ? item.border : item.color};border:1px solid rgba(0,0,0,0.1);flex-shrink:0;${item.round ? 'border-radius:50%;' : ''}"></span>
+      <span style="width:18px;height:14px;border-radius:${item.round ? '50%' : '3px'};background:${swatchColor};border:1px solid rgba(0,0,0,0.1);flex-shrink:0;"></span>
       ${item.label}
     `;
     btn.addEventListener('click', () => {
-      const g = createItem(item, VB_W / 2 - item.w / 2, VB_H / 2 - (item.h || item.w) / 2);
+      pushUndo();
+      const g = createItem(item, VB_W / 4 - item.w / 2, VB_H / 2 - (item.h || item.w) / 2);
       layoutRoot.appendChild(g);
       clearSelection();
       selectItem(g);
@@ -178,7 +358,7 @@ export function render(container) {
     paletteEl.appendChild(btn);
   });
 
-  /* ── Presets ── */
+  /* ══════ Presets ══════ */
   const presetsEl = container.querySelector('#presets');
   PRESETS.forEach(p => {
     const btn = document.createElement('button');
@@ -189,7 +369,7 @@ export function render(container) {
     presetsEl.appendChild(btn);
   });
 
-  /* ── Saved layouts ── */
+  /* ══════ Saved layouts ══════ */
   renderSavedLayouts();
 
   /* ══════ SVG item creation ══════ */
@@ -198,6 +378,7 @@ export function render(container) {
     g.setAttribute('transform', `translate(${x},${y}) rotate(${rot})`);
     g.setAttribute('data-id', def.id);
     g.setAttribute('data-cat', def.cat);
+    if (def.snap) g.setAttribute('data-snap', def.snap);
     g.style.cursor = 'grab';
     g.setAttribute('filter', 'url(#dshadow)');
 
@@ -205,88 +386,114 @@ export function render(container) {
 
     if (def.zone) {
       const r = document.createElementNS(SVG_NS, 'rect');
-      Object.entries({ x: 0, y: 0, width: w, height: h, fill: def.color, stroke: def.border, 'stroke-width': 1.5, 'stroke-dasharray': '6,3', rx: 8 }).forEach(([k, v]) => r.setAttribute(k, v));
+      setAttrs(r, { x: -w / 2, y: -h / 2, width: w, height: h, fill: def.color, stroke: def.border, 'stroke-width': 1.5, 'stroke-dasharray': '6,3', rx: 8 });
       g.appendChild(r);
-      const t = document.createElementNS(SVG_NS, 'text');
-      t.setAttribute('x', w / 2); t.setAttribute('y', 16);
-      t.setAttribute('text-anchor', 'middle');
-      t.setAttribute('font-size', '9'); t.setAttribute('fill', def.border);
-      t.setAttribute('font-family', 'var(--font-sans)'); t.setAttribute('font-weight', '600');
-      t.textContent = def.label.replace('Zone: ', '');
+      const t = svgText(0, 4, def.label.replace('Zone: ', ''), 11, def.border);
+      t.setAttribute('font-weight', '600');
       g.appendChild(t);
     } else if (def.text) {
       const r = document.createElementNS(SVG_NS, 'rect');
-      Object.entries({ x: 0, y: 0, width: w, height: h, fill: 'rgba(0,0,0,0.03)', stroke: '#cbd5e1', 'stroke-width': 0.5, 'stroke-dasharray': '3,3', rx: 4 }).forEach(([k, v]) => r.setAttribute(k, v));
+      setAttrs(r, { x: -w / 2, y: -h / 2, width: w, height: h, fill: 'rgba(0,0,0,0.03)', stroke: '#cbd5e1', 'stroke-width': 0.5, 'stroke-dasharray': '3,3', rx: 4 });
       g.appendChild(r);
-      const t = document.createElementNS(SVG_NS, 'text');
-      t.setAttribute('x', w / 2); t.setAttribute('y', h / 2 + 4);
-      t.setAttribute('text-anchor', 'middle');
-      t.setAttribute('font-size', '10'); t.setAttribute('fill', '#64748b');
-      t.setAttribute('font-family', 'var(--font-sans)');
-      t.textContent = 'Label';
+      const t = svgText(0, 4, 'Label', 12, '#64748b');
       g.appendChild(t);
       g.addEventListener('dblclick', () => {
         const newText = prompt('Enter label text:', t.textContent);
         if (newText !== null) t.textContent = newText;
       });
+    } else if (def.tri) {
+      const s = TRI_S, th = TRI_H;
+      const p = document.createElementNS(SVG_NS, 'path');
+      p.setAttribute('d', `M${-s / 2},${th / 2} L0,${-th / 2} L${s / 2},${th / 2} Z`);
+      setAttrs(p, { fill: def.color, stroke: '#0f172a', 'stroke-width': 1 });
+      g.appendChild(p);
+      // Front edge
+      svgLine(-s * 0.4, th / 2 - 0.1, s * 0.4, th / 2 - 0.1, '#0f172a', 3, g);
     } else if (def.round) {
-      const c = document.createElementNS(SVG_NS, 'ellipse');
       const rx = w / 2, ry = h / 2;
-      Object.entries({ cx: rx, cy: ry, rx, ry, fill: def.color, stroke: '#0f172a', 'stroke-width': 1 }).forEach(([k, v]) => c.setAttribute(k, v));
+      const c = document.createElementNS(SVG_NS, 'ellipse');
+      setAttrs(c, { cx: 0, cy: 0, rx, ry, fill: def.color, stroke: '#0f172a', 'stroke-width': 1 });
       g.appendChild(c);
-      if (def.id === 'plant') {
-        const t = document.createElementNS(SVG_NS, 'text');
-        t.setAttribute('x', rx); t.setAttribute('y', ry + 5); t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '14');
-        t.textContent = '🌿';
-        g.appendChild(t);
-      }
+      if (def.id === 'plant') g.appendChild(svgText(0, 5, '🌿', 16));
+      if (def.id === 'vr_station') g.appendChild(svgText(0, 4, 'VR', 12, '#334155'));
     } else if (def.trap) {
-      const poly = document.createElementNS(SVG_NS, 'polygon');
-      const inset = w * 0.15;
-      poly.setAttribute('points', `${inset},0 ${w - inset},0 ${w},${h} 0,${h}`);
-      poly.setAttribute('fill', def.color); poly.setAttribute('stroke', '#0f172a'); poly.setAttribute('stroke-width', '1');
+      const poly = document.createElementNS(SVG_NS, 'path');
+      const inset = w * 0.2;
+      poly.setAttribute('d', `M${-w / 2},${-h / 2} L${w / 2},${-h / 2} L${w / 2 - inset},${h / 2} L${-w / 2 + inset},${h / 2} Z`);
+      setAttrs(poly, { fill: def.color, stroke: '#0f172a', 'stroke-width': 1 });
       g.appendChild(poly);
+      svgLine(-w / 2 + 2, -h / 2 + 2, w / 2 - 2, -h / 2 + 2, '#0f172a', 3, g);
     } else {
-      // Rectangle
+      // Rectangle desk/furniture
       const r = document.createElementNS(SVG_NS, 'rect');
-      Object.entries({ x: 0, y: 0, width: w, height: h, fill: def.color, stroke: '#0f172a', 'stroke-width': 1, rx: 3 }).forEach(([k, v]) => r.setAttribute(k, v));
+      setAttrs(r, { x: -w / 2, y: -h / 2, width: w, height: h, fill: def.color, stroke: '#0f172a', 'stroke-width': 1, rx: 3 });
       g.appendChild(r);
-      // Desk edge indicator (front)
+      // Gloss overlay
+      const gloss = document.createElementNS(SVG_NS, 'rect');
+      setAttrs(gloss, { x: -w / 2, y: -h / 2, width: w, height: h, fill: 'url(#deskGrad)', 'fill-opacity': 0.4, 'pointer-events': 'none', rx: 3 });
+      g.appendChild(gloss);
+      // Front edge for desks
       if (def.id.startsWith('desk') || def.id === 'teacher_desk' || def.id === 'stand_table') {
-        const edge = document.createElementNS(SVG_NS, 'rect');
-        Object.entries({ x: 2, y: 0, width: w - 4, height: 3, fill: '#0f172a', rx: 1 }).forEach(([k, v]) => edge.setAttribute(k, v));
-        g.appendChild(edge);
+        svgLine(-w / 2 + 2, -h / 2 + 2, w / 2 - 2, -h / 2 + 2, '#0f172a', 3, g);
       }
-      if (def.id === 'writable_tv') {
-        const t = document.createElementNS(SVG_NS, 'text');
-        t.setAttribute('x', w / 2); t.setAttribute('y', h + 12);
-        t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '7'); t.setAttribute('fill', '#64748b');
-        t.textContent = 'TV'; g.appendChild(t);
-      }
-    }
-
-    // Label
-    if (!def.zone && !def.text) {
-      const lbl = document.createElementNS(SVG_NS, 'text');
-      lbl.setAttribute('x', w / 2); lbl.setAttribute('y', (def.round ? h / 2 + 4 : h + 10));
-      lbl.setAttribute('text-anchor', 'middle');
-      lbl.setAttribute('font-size', '7'); lbl.setAttribute('fill', '#94a3b8');
-      lbl.setAttribute('font-family', 'var(--font-sans)');
-      lbl.textContent = def.label;
-      if (!def.round) g.appendChild(lbl);
+      // Labels for special items
+      if (def.id === 'writable_tv') g.appendChild(svgText(0, 4, 'wTV', 10, '#64748b'));
+      if (def.id === 'tablet_cart') g.appendChild(svgText(0, 4, 'iPads', 9, '#64748b'));
+      if (def.id === 'printer_3d') g.appendChild(svgText(0, 4, '3D', 10, '#64748b'));
+      if (def.id === 'teacher_desk') g.appendChild(svgText(0, 4, 'TDesk', 9, '#64748b'));
     }
 
     makeDraggable(g);
     return g;
   }
 
+  function setAttrs(el, attrs) {
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, String(v)));
+  }
+
+  function svgText(x, y, str, size = 12, fill = '#64748b') {
+    const el = document.createElementNS(SVG_NS, 'text');
+    setAttrs(el, { x, y, 'text-anchor': 'middle', 'font-size': size, fill, 'font-family': 'var(--font-sans)' });
+    el.textContent = str;
+    return el;
+  }
+
+  function svgLine(x1, y1, x2, y2, color, sw, parent) {
+    const el = document.createElementNS(SVG_NS, 'line');
+    setAttrs(el, { x1, y1, x2, y2, stroke: color, 'stroke-width': sw });
+    if (parent) parent.appendChild(el);
+    return el;
+  }
+
+  /* ══════ Undo ══════ */
+  function pushUndo() {
+    undoStack.push(layoutRoot.innerHTML);
+    if (undoStack.length > 30) undoStack.shift();
+  }
+
+  function popUndo() {
+    if (undoStack.length === 0) return;
+    const html = undoStack.pop();
+    layoutRoot.innerHTML = html;
+    [...layoutRoot.querySelectorAll('g[data-id]')].forEach(g => {
+      makeDraggable(g);
+      if (g.getAttribute('data-id') === 'text_label') {
+        g.addEventListener('dblclick', () => {
+          const t = g.querySelector('text');
+          if (t) { const v = prompt('Edit label:', t.textContent); if (v !== null) t.textContent = v; }
+        });
+      }
+    });
+    clearSelection();
+    updateMetrics();
+    showToast('Undo');
+  }
+
   /* ══════ Drag & drop ══════ */
   function getMouseSVG(e) {
     const pt = svg.createSVGPoint();
     pt.x = e.clientX; pt.y = e.clientY;
-    const ctm = svg.getScreenCTM().inverse();
-    const svgPt = pt.matrixTransform(ctm);
-    return { x: svgPt.x, y: svgPt.y };
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
   }
 
   function getTranslate(g) {
@@ -302,7 +509,6 @@ export function render(container) {
   }
 
   function snap(v) { return snapToggle.checked ? Math.round(v / GRID_SNAP) * GRID_SNAP : v; }
-
   function clamp(v, min, max) { return Math.max(min, Math.min(v, max)); }
 
   function makeDraggable(g) {
@@ -317,16 +523,19 @@ export function render(container) {
       if (!e.shiftKey && !selected.has(g)) { clearSelection(); selectItem(g); }
       else if (e.shiftKey) { toggleSelect(g); }
 
-      const { x, y } = getMouseSVG(e);
+      pushUndo();
+      const p = getMouseSVG(e);
       groupStart = [...selected].map(n => ({ n, t: getTranslate(n) }));
       const me = groupStart.find(s => s.n === g)?.t || getTranslate(g);
-      offset = { x: x - me[0], y: y - me[1] };
+      offset = { x: p.x - me[0], y: p.y - me[1] };
     });
 
     g.addEventListener('pointermove', e => {
       if (!isDragging) return;
-      const { x, y } = getMouseSVG(e);
-      let nx = snap(x - offset.x), ny = snap(y - offset.y);
+      const p = getMouseSVG(e);
+      const bypass = e.altKey || !snapToggle.checked;
+      let nx = bypass ? p.x - offset.x : snap(p.x - offset.x);
+      let ny = bypass ? p.y - offset.y : snap(p.y - offset.y);
       nx = clamp(nx, 0, VB_W - UNIT * 0.5);
       ny = clamp(ny, 0, VB_H - UNIT * 0.5);
 
@@ -359,44 +568,44 @@ export function render(container) {
   function drawSelectionBox() {
     selBox.innerHTML = '';
     selected.forEach(g => {
-      const [tx, ty] = getTranslate(g);
       const bb = g.getBBox();
+      const [tx, ty] = getTranslate(g);
       const r = document.createElementNS(SVG_NS, 'rect');
-      Object.entries({ x: tx + bb.x - 3, y: ty + bb.y - 3, width: bb.width + 6, height: bb.height + 6, fill: 'none', stroke: '#3b82f6', 'stroke-width': 1.5, 'stroke-dasharray': '4,3', rx: 4 }).forEach(([k, v]) => r.setAttribute(k, v));
+      setAttrs(r, { x: tx + bb.x - 4, y: ty + bb.y - 4, width: bb.width + 8, height: bb.height + 8, fill: 'none', stroke: '#3b82f6', 'stroke-width': 1.5, 'stroke-dasharray': '4,3', rx: 4 });
       selBox.appendChild(r);
     });
   }
 
   /* ── Marquee select ── */
   svg.addEventListener('pointerdown', e => {
-    if (e.target !== svg && e.target.tagName !== 'rect') return;
+    if (e.target !== svg && !['rect', 'line', 'path'].includes(e.target.tagName)) return;
+    // Check if clicked on an item
     const items = layoutRoot.querySelectorAll('g[data-id]');
     let hit = false;
     items.forEach(g => { if (g.contains(e.target)) hit = true; });
     if (hit) return;
 
     clearSelection();
-    const { x, y } = getMouseSVG(e);
-    marquee = { x, y, el: null };
+    const p = getMouseSVG(e);
+    marquee = { x: p.x, y: p.y, el: null };
     const r = document.createElementNS(SVG_NS, 'rect');
-    Object.entries({ x, y, width: 0, height: 0, fill: 'rgba(59,130,246,0.08)', stroke: '#3b82f6', 'stroke-width': 0.8, rx: 2 }).forEach(([k, v]) => r.setAttribute(k, v));
+    setAttrs(r, { x: p.x, y: p.y, width: 0, height: 0, fill: 'rgba(59,130,246,0.08)', stroke: '#3b82f6', 'stroke-width': 0.8, rx: 2 });
     selBox.appendChild(r);
     marquee.el = r;
 
     function onMove(ev) {
       if (!marquee) return;
-      const p = getMouseSVG(ev);
-      const mx = Math.min(marquee.x, p.x), my = Math.min(marquee.y, p.y);
-      const mw = Math.abs(p.x - marquee.x), mh = Math.abs(p.y - marquee.y);
-      marquee.el.setAttribute('x', mx); marquee.el.setAttribute('y', my);
-      marquee.el.setAttribute('width', mw); marquee.el.setAttribute('height', mh);
+      const c = getMouseSVG(ev);
+      const mx = Math.min(marquee.x, c.x), my = Math.min(marquee.y, c.y);
+      const mw = Math.abs(c.x - marquee.x), mh = Math.abs(c.y - marquee.y);
+      setAttrs(marquee.el, { x: mx, y: my, width: mw, height: mh });
     }
 
     function onUp(ev) {
       if (!marquee) return;
-      const p = getMouseSVG(ev);
-      const mx = Math.min(marquee.x, p.x), my = Math.min(marquee.y, p.y);
-      const mw = Math.abs(p.x - marquee.x), mh = Math.abs(p.y - marquee.y);
+      const c = getMouseSVG(ev);
+      const mx = Math.min(marquee.x, c.x), my = Math.min(marquee.y, c.y);
+      const mw = Math.abs(c.x - marquee.x), mh = Math.abs(c.y - marquee.y);
       items.forEach(g => {
         const [tx, ty] = getTranslate(g);
         if (tx >= mx && ty >= my && tx <= mx + mw && ty <= my + mh) selectItem(g);
@@ -414,26 +623,65 @@ export function render(container) {
   /* ── Keyboard ── */
   function onKey(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    // Ctrl+Z undo
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      popUndo();
+      return;
+    }
+
+    // Ctrl+D duplicate
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd' && selected.size > 0) {
+      e.preventDefault();
+      pushUndo();
+      const newSel = [];
+      selected.forEach(g => {
+        const clone = g.cloneNode(true);
+        const [tx, ty] = getTranslate(g);
+        clone.setAttribute('transform', `translate(${tx + UNIT * 0.5},${ty + UNIT * 0.5}) rotate(${getRotate(g)})`);
+        layoutRoot.appendChild(clone);
+        makeDraggable(clone);
+        newSel.push(clone);
+      });
+      clearSelection();
+      newSel.forEach(n => selectItem(n));
+      updateMetrics();
+      showToast('Duplicated');
+      return;
+    }
+
     if (selected.size === 0) return;
 
     if (e.key === 'Delete' || e.key === 'Backspace') {
+      pushUndo();
       selected.forEach(g => g.remove());
       clearSelection();
       updateMetrics();
       e.preventDefault();
     }
     if (e.key === 'r' || e.key === 'R') {
-      const step = e.shiftKey ? 15 : 45;
+      const step = e.altKey ? 1 : (e.shiftKey ? 15 : 45);
       selected.forEach(g => {
         const [tx, ty] = getTranslate(g);
-        const r = getRotate(g) + step;
-        g.setAttribute('transform', `translate(${tx},${ty}) rotate(${r % 360})`);
+        let nextRot = getRotate(g) + step;
+        // Snap rotation for desks
+        if (!e.altKey && snapToggle.checked) {
+          const mode = g.getAttribute('data-snap');
+          if (mode === 'tri60' || mode === 'edge60') {
+            nextRot = Math.round(nextRot / 60) * 60;
+          } else if (mode === 'edge90') {
+            const n = Math.round(nextRot / 90) * 90;
+            if (Math.abs(n - nextRot) <= 12) nextRot = n;
+          }
+        }
+        g.setAttribute('transform', `translate(${tx},${ty}) rotate(${normAngle(nextRot)})`);
       });
       drawSelectionBox();
       updateMetrics();
     }
     if (e.key.startsWith('Arrow')) {
-      const step = e.shiftKey ? GRID_SNAP : 5;
+      const step = e.shiftKey ? GRID_SNAP : (e.altKey ? 5 : 15);
       const dx = e.key === 'ArrowRight' ? step : e.key === 'ArrowLeft' ? -step : 0;
       const dy = e.key === 'ArrowDown' ? step : e.key === 'ArrowUp' ? -step : 0;
       selected.forEach(g => {
@@ -451,231 +699,335 @@ export function render(container) {
 
   /* ══════ Presets ══════ */
   function applyPreset(name) {
+    pushUndo();
     layoutRoot.innerHTML = '';
     clearSelection();
     currentPreset = name;
-    const count = parseInt(studentCountInput.value) || 30;
+    const count = parseInt(studentCountInput.value) || 32;
+
+    // Wall states: direct/quiet keep walls closed; others stack them open
+    if (name === 'direct' || name === 'quiet') {
+      closeWall('A'); closeWall('B');
+    } else {
+      stackWall('A'); stackWall('B');
+    }
 
     function place(def, x, y, rot = 0) {
       layoutRoot.appendChild(createItem(def, x, y, rot));
     }
-    const desk = PALETTE.find(p => p.id === 'desk_rect');
-    const chair = PALETTE.find(p => p.id === 'chair');
-    const tv = PALETTE.find(p => p.id === 'writable_tv');
-    const wb = PALETTE.find(p => p.id === 'whiteboard');
-    const td = PALETTE.find(p => p.id === 'teacher_desk');
-    const gt = PALETTE.find(p => p.id === 'group_table');
-    const bb = PALETTE.find(p => p.id === 'beanbag');
+    const find = id => PALETTE.find(p => p.id === id);
 
     if (name === 'direct') {
-      place(td, VB_W / 2 - td.w / 2, 30);
-      place(tv, VB_W / 2 - tv.w / 2, 10);
-      const cols = Math.min(6, Math.ceil(count / 5));
-      const rows = Math.ceil(count / cols);
-      const startX = (VB_W - cols * (UNIT + 20)) / 2;
+      place(find('teacher_desk'), UNIT * 1.2, UNIT * 3, 90);
+      place(find('writable_tv'), UNIT * 2.8, UNIT * 2.8, 90);
+      const cols = 5, rows = Math.ceil(count / cols);
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols && r * cols + c < count; c++) {
-          place(desk, startX + c * (UNIT + 20), 120 + r * (UNIT + 15));
+          const cx = c + (c >= 3 ? 0.4 : 0);
+          place(find('desk_rect'), UNIT * (6 + cx * 1.3), UNIT * (2 + r * 1.2), 90);
         }
       }
     } else if (name === 'pods') {
-      place(tv, VB_W / 2 - tv.w / 2, 10);
       const pods = Math.ceil(count / 6);
-      const podCols = Math.min(3, pods);
-      const podRows = Math.ceil(pods / podCols);
-      const gapX = VB_W / (podCols + 1), gapY = (VB_H - 80) / (podRows + 1);
-      for (let i = 0; i < pods; i++) {
-        const col = i % podCols, row = Math.floor(i / podCols);
-        const cx = gapX * (col + 1), cy = 80 + gapY * (row + 1);
-        place(gt, cx - gt.w / 2, cy - gt.h / 2);
+      const centers = [[UNIT * 5, UNIT * 3], [UNIT * 9, UNIT * 3], [UNIT * 13, UNIT * 3],
+                       [UNIT * 5, UNIT * 7.5], [UNIT * 9, UNIT * 7.5], [UNIT * 13, UNIT * 7.5]];
+      for (let i = 0; i < pods && i < centers.length; i++) {
+        const [cx, cy] = centers[i];
+        const radius = TRI_H * 0.6;
         for (let j = 0; j < 6 && i * 6 + j < count; j++) {
-          const angle = (j * 60 - 90) * Math.PI / 180;
-          const radius = UNIT * 1.2;
-          place(chair, cx + Math.cos(angle) * radius - chair.w / 2, cy + Math.sin(angle) * radius - chair.h / 2);
+          const angle = j * 60;
+          const x = cx + radius * Math.cos(rad(angle));
+          const y = cy + radius * Math.sin(rad(angle));
+          place(find('desk_tri'), x, y, angle - 90);
         }
       }
+      place(find('whiteboard'), UNIT * 1.2, UNIT * 1.2, 90);
     } else if (name === 'stations') {
-      const stationDefs = [
-        { label: 'Cognitive', def: wb },
-        { label: 'Tech', def: PALETTE.find(p => p.id === 'tablet_cart') },
-        { label: 'Creative', def: PALETTE.find(p => p.id === 'stand_table') },
-        { label: 'Discussion', def: gt }
-      ];
-      const cols = 2, rows = 2;
-      const gapX = VB_W / (cols + 1), gapY = VB_H / (rows + 1);
-      stationDefs.forEach((st, i) => {
-        const col = i % cols, row = Math.floor(i / cols);
-        const cx = gapX * (col + 1), cy = gapY * (row + 1);
-        const zone = PALETTE.find(p => p.id === 'zone_cog');
-        place(zone, cx - zone.w / 2, cy - zone.h / 2);
-        if (st.def) place(st.def, cx - st.def.w / 2, cy - st.def.h / 2);
-        const perStation = Math.ceil(count / stationDefs.length);
-        for (let j = 0; j < Math.min(perStation, 4); j++) {
-          place(chair, cx - UNIT + j * (chair.w + 10), cy + UNIT * 0.8);
-        }
-      });
+      place(find('teacher_desk'), UNIT * 11.5, UNIT * 10, 180);
+      place(find('writable_tv'), UNIT * 3, UNIT * 1.5, 0);
+      place(find('group_table'), UNIT * 3, UNIT * 4);
+      place(find('chair'), UNIT * 2, UNIT * 3.5);
+      place(find('chair'), UNIT * 4, UNIT * 3.5);
+      place(find('chair'), UNIT * 3, UNIT * 5);
+      place(find('couch'), UNIT * 21, UNIT * 2, 0);
+      place(find('beanbag'), UNIT * 22.5, UNIT * 3.5);
+      place(find('beanbag'), UNIT * 19.5, UNIT * 3.5);
+      place(find('plant'), UNIT * 21, UNIT * 4);
+      place(find('stand_table'), UNIT * 20, UNIT * 9, 90);
+      place(find('printer_3d'), UNIT * 22, UNIT * 8);
+      place(find('tool_cabinet'), UNIT * 22, UNIT * 10, 180);
+      place(find('desk_trap'), UNIT * 10, UNIT * 8, 0);
+      place(find('desk_trap'), UNIT * 11.5, UNIT * 8, 0);
+      place(find('desk_trap'), UNIT * 13, UNIT * 8, 0);
     } else if (name === 'ushape') {
-      place(td, VB_W / 2 - td.w / 2, 30);
-      place(tv, VB_W / 2 - tv.w / 2, 10);
-      const sideCount = Math.floor(count / 3);
-      const bottomCount = count - sideCount * 2;
-      const margin = 60;
-      // Left side
-      for (let i = 0; i < sideCount; i++) {
-        place(desk, margin, 100 + i * (UNIT + 10), 90);
+      const cx = UNIT * 12, cy = UNIT * 6;
+      const radius = Math.min(UNIT * 5, (count / 18) * UNIT * 5);
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * 2 * Math.PI;
+        place(find('desk_rect'), cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, deg(angle) + 90);
       }
-      // Right side
-      for (let i = 0; i < sideCount; i++) {
-        place(desk, VB_W - margin - desk.h, 100 + i * (UNIT + 10), 90);
-      }
-      // Bottom
-      const bStart = (VB_W - bottomCount * (UNIT + 10)) / 2;
-      for (let i = 0; i < bottomCount; i++) {
-        place(desk, bStart + i * (UNIT + 10), VB_H - margin - desk.h, 180);
-      }
+      place(find('whiteboard'), UNIT * 1.2, UNIT * 2, 90);
     } else if (name === 'quiet') {
-      const cols = Math.min(8, Math.ceil(Math.sqrt(count * 1.5)));
-      const rows = Math.ceil(count / cols);
-      const gapX = (VB_W - 120) / cols, gapY = (VB_H - 80) / rows;
+      place(find('teacher_desk'), UNIT * 1.2, UNIT * 3, 90);
+      const cols = 5, rows = Math.ceil(count / cols);
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols && r * cols + c < count; c++) {
-          place(desk, 60 + c * gapX, 40 + r * gapY);
+          place(find('desk_rect'), UNIT * (4 + c * 1.4), UNIT * (1.8 + r * 1.2), 90);
         }
       }
     } else if (name === 'gallery') {
-      // Whiteboards around edges
-      const spacing = VB_W / 5;
-      for (let i = 0; i < 4; i++) {
-        place(wb, spacing * (i + 0.5), 25, 0);
+      const stations = Math.min(count, 10);
+      for (let i = 0; i < stations; i++) {
+        if (i < 5) place(find('whiteboard'), UNIT * 1.5 + i * UNIT * 2.5, UNIT * 1.5, 0);
+        else place(find('whiteboard'), UNIT * 1.5 + (i - 5) * UNIT * 2.5, VB_H - UNIT * 1.5, 180);
       }
-      place(wb, 15, VB_H / 3, 90);
-      place(wb, 15, VB_H * 2 / 3, 90);
-      // Central discussion area
+      // Central chairs
       for (let i = 0; i < Math.min(count, 20); i++) {
         const angle = (i / Math.min(count, 20)) * Math.PI * 2;
-        const cx = VB_W / 2 + Math.cos(angle) * UNIT * 3.5;
-        const cy = VB_H / 2 + Math.sin(angle) * UNIT * 2.5;
-        place(chair, cx - chair.w / 2, cy - chair.h / 2);
+        place(find('chair'), VB_W / 3 + Math.cos(angle) * UNIT * 3.5, VB_H / 2 + Math.sin(angle) * UNIT * 2.5);
       }
+    } else if (name === 'fishbowl') {
+      const innerCount = Math.min(8, Math.floor(count / 3));
+      const outerCount = count - innerCount;
+      const cx = UNIT * 12, cy = UNIT * 6;
+      for (let i = 0; i < innerCount; i++) {
+        const angle = (i / innerCount) * 2 * Math.PI;
+        place(find('desk_rect'), cx + Math.cos(angle) * UNIT * 2.5, cy + Math.sin(angle) * UNIT * 2.5, deg(angle) + 90);
+      }
+      for (let i = 0; i < outerCount; i++) {
+        const angle = (i / outerCount) * 2 * Math.PI;
+        place(find('desk_rect'), cx + Math.cos(angle) * UNIT * 4.5, cy + Math.sin(angle) * UNIT * 4.5, deg(angle) + 90);
+      }
+    } else if (name === 'maker') {
+      place(find('whiteboard'), UNIT * 1.5, UNIT * 2, 90);
+      place(find('group_table'), UNIT * 4, UNIT * 3);
+      place(find('stand_table'), UNIT * 10, UNIT * 3.5, 0);
+      place(find('stand_table'), UNIT * 10, UNIT * 6.5, 0);
+      place(find('printer_3d'), UNIT * 13.5, UNIT * 2.5);
+      place(find('tool_cabinet'), UNIT * 13.5, UNIT * 8.5, 180);
+      place(find('writable_tv'), UNIT * 22, UNIT * 5, -90);
+      place(find('desk_rect'), UNIT * 19, UNIT * 2);
+      place(find('desk_rect'), UNIT * 19, UNIT * 4);
+      place(find('desk_rect'), UNIT * 19, UNIT * 6);
+      place(find('tablet_cart'), UNIT * 1.5, UNIT * 9);
+      place(find('vr_station'), UNIT * 18, UNIT * 9);
     }
 
     updateMetrics();
+    renderInsights(null, PRESET_INSIGHTS[name] || []);
     showToast(`Applied "${PRESETS.find(p => p.id === name)?.label}" preset`);
   }
+
+  /* ══════ Radar Chart ══════ */
+  function initChart() {
+    const canvas = container.querySelector('#radar-chart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(107,114,128,0.5)' : 'rgba(209,213,219,1)';
+    const labelColor = isDark ? '#9ca3af' : '#4b5563';
+    const datasetBG = isDark ? 'rgba(255,226,0,0.3)' : 'rgba(0,12,83,0.2)';
+    const datasetBorder = isDark ? '#FFE200' : '#000C53';
+
+    const tooltipEl = container.querySelector('#chart-tooltip');
+    const panelEl = tooltipEl.parentElement.parentElement;
+
+    const externalTooltip = (context) => {
+      const { tooltip } = context;
+      if (tooltip.opacity === 0) { tooltipEl.style.display = 'none'; return; }
+      const point = tooltip.dataPoints?.[0];
+      if (!point) return;
+      const label = point.label;
+      const score = point.raw;
+      const def = CHART_DEFINITIONS[label];
+      if (!def) return;
+      tooltipEl.innerHTML = `<div style="font-weight:600;font-size:0.8125rem;margin-bottom:4px;">${label} (${score})</div><div style="margin-bottom:4px;">${def.definition}</div><div style="font-style:italic;opacity:0.85;">▶ ${def.reading}</div>`;
+      const chartRect = canvas.getBoundingClientRect();
+      const panelRect = panelEl.getBoundingClientRect();
+      let left = chartRect.left - panelRect.left + tooltip.caretX + 15;
+      let top = chartRect.top - panelRect.top + tooltip.caretY;
+      if (left + 210 > panelRect.width) left -= 230;
+      if (top + tooltipEl.offsetHeight > panelRect.height) top -= tooltipEl.offsetHeight;
+      tooltipEl.style.left = `${left}px`;
+      tooltipEl.style.top = `${top}px`;
+      tooltipEl.style.display = 'block';
+    };
+
+    radarChart = new Chart(canvas, {
+      type: 'radar',
+      data: {
+        labels: METRIC_LABELS,
+        datasets: [{
+          label: 'Effectiveness', data: [50, 50, 50, 50, 50, 50],
+          fill: true, backgroundColor: datasetBG, borderColor: datasetBorder,
+          pointBackgroundColor: datasetBorder, pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff', pointHoverBorderColor: datasetBorder,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        scales: {
+          r: {
+            angleLines: { color: gridColor }, grid: { color: gridColor },
+            suggestedMin: 0, suggestedMax: 100,
+            ticks: { display: false, stepSize: 25 },
+            pointLabels: { font: { size: 10 }, color: labelColor }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false, position: 'nearest', external: externalTooltip }
+        },
+        animation: { duration: 400 }
+      }
+    });
+  }
+
+  initChart();
 
   /* ══════ Metrics calculation ══════ */
   function updateMetrics() {
     const items = [...layoutRoot.querySelectorAll('g[data-id]')];
     const desks = items.filter(g => {
       const id = g.getAttribute('data-id');
-      return id.startsWith('desk') || id === 'stand_table';
+      return /desk_/.test(id) || id === 'chair';
     });
-    const roomArea = VB_W * VB_H;
-    const scores = [];
 
-    // 1. Sightlines
-    let sightlines = 30;
-    const teachPoints = items.filter(g => ['teacher_desk', 'writable_tv', 'whiteboard'].includes(g.getAttribute('data-id'))).map(g => getTranslate(g));
-    if (teachPoints.length === 0) teachPoints.push([VB_W / 2, 20]);
+    // Calculate room area based on wall state
+    const isWallAOpen = panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X);
+    const isWallBOpen = panelState.B.some(p => getTranslate(p.node)[0] !== WALL_B_X);
+    let totalWidth = 720;
+    if (isWallAOpen) totalWidth += 360;
+    if (isWallBOpen) totalWidth += 360;
+    const roomArea = totalWidth * VB_H;
+
+    const itemIds = new Set(items.map(n => n.getAttribute('data-id')));
+    const countOf = id => items.filter(i => i.getAttribute('data-id') === id).length;
+
+    // 1. Sightlines (with desk facing angle)
+    let sightlineScore = 20;
+    const teachPoints = items
+      .filter(i => ['teacher_desk', 'writable_tv', 'whiteboard'].includes(i.getAttribute('data-id')))
+      .map(g => getTranslate(g));
+    if (teachPoints.length === 0) teachPoints.push([720, 10]);
+
     if (desks.length > 0) {
       let good = 0;
-      desks.forEach(d => {
-        const [dx, dy] = getTranslate(d);
-        const nearest = teachPoints.reduce((best, tp) => Math.hypot(tp[0] - dx, tp[1] - dy) < Math.hypot(best[0] - dx, best[1] - dy) ? tp : best);
-        const dist = Math.hypot(nearest[0] - dx, nearest[1] - dy);
-        if (dist < VB_W * 0.7) good++;
+      desks.forEach(desk => {
+        const [dx, dy] = getTranslate(desk);
+        const deskAngle = rad(getRotate(desk) + 90);
+        const facingVec = { x: Math.cos(deskAngle), y: Math.sin(deskAngle) };
+        const bestTP = teachPoints.reduce((best, tp) =>
+          Math.hypot(tp[0] - dx, tp[1] - dy) < Math.hypot(best[0] - dx, best[1] - dy) ? tp : best
+        );
+        const toTP = { x: bestTP[0] - dx, y: bestTP[1] - dy };
+        const mag = Math.hypot(toTP.x, toTP.y);
+        if (mag === 0) return;
+        const dot = facingVec.x * toTP.x + facingVec.y * toTP.y;
+        const angleDiff = Math.acos(clamp(dot / mag, -1, 1));
+        if (deg(angleDiff) < 45) good++;
       });
-      sightlines = 20 + Math.round((good / desks.length) * 80);
+      sightlineScore = 20 + Math.round((good / desks.length) * 80);
     }
-    scores.push(Math.min(100, sightlines));
 
     // 2. Mobility
     let occupiedArea = items.reduce((acc, g) => {
       try { const b = g.getBBox(); return acc + b.width * b.height; } catch { return acc; }
     }, 0);
-    scores.push(Math.min(100, Math.max(10, Math.round((1 - occupiedArea / roomArea) * 140 - 5))));
+    const mobilityScore = Math.max(0, Math.min(100, (1 - occupiedArea / roomArea) * 150 - 10));
 
     // 3. Flexibility
-    const types = new Set(items.map(g => g.getAttribute('data-id')));
-    const mobile = ['whiteboard', 'partition', 'chair', 'beanbag', 'tablet_cart'];
-    const mobileCount = items.filter(g => mobile.includes(g.getAttribute('data-id'))).length;
-    let flex = 25 + types.size * 4 + (items.length > 0 ? (mobileCount / items.length) * 50 : 0);
-    if (items.some(g => g.getAttribute('data-id').startsWith('zone_'))) flex += 10;
-    scores.push(Math.min(100, Math.round(flex)));
+    const mobileItems = ['whiteboard', 'partition', 'chair', 'beanbag', 'tablet_cart'];
+    const mobileCount = mobileItems.reduce((sum, id) => sum + countOf(id), 0);
+    let flexScore = 20 + (itemIds.size * 5) + (items.length > 0 ? (mobileCount / items.length) * 50 : 0);
+    if (items.some(i => i.getAttribute('data-id').startsWith('zone_'))) flexScore += 10;
+    flexScore = Math.min(100, flexScore);
 
     // 4. Density
-    const cap = desks.length;
-    let density = 50;
-    if (cap > 0) {
-      const perStudent = roomArea / cap;
-      density = 10 + Math.round(Math.min(90, ((Math.min(perStudent, 40000) - 8000) / 32000) * 90));
+    let densityScore = 50;
+    if (desks.length > 0) {
+      const areaPerStudent = roomArea / desks.length;
+      const clamped = clamp(areaPerStudent, 12000, 45000);
+      densityScore = 10 + ((clamped - 12000) / 33000) * 90;
     }
-    scores.push(Math.min(100, Math.max(10, density)));
 
     // 5. Modality
-    let clustered = 0;
+    let inCluster = 0;
     desks.forEach((d, i) => {
       const [dx, dy] = getTranslate(d);
       for (let j = i + 1; j < desks.length; j++) {
         const [ox, oy] = getTranslate(desks[j]);
-        if (Math.hypot(dx - ox, dy - oy) < UNIT * 1.8) { clustered++; break; }
+        if (Math.hypot(dx - ox, dy - oy) <= UNIT * 1.5) { inCluster++; break; }
       }
     });
-    let modality = 15;
-    if (desks.length > 0 && clustered / desks.length > 0.4) modality += 30;
-    if (types.has('writable_tv') || types.has('whiteboard')) modality += 25;
-    if (types.has('group_table')) modality += 15;
-    if (types.has('beanbag') || types.has('couch')) modality += 10;
-    scores.push(Math.min(100, Math.round(modality)));
+    let modalityScore = 10;
+    if (desks.length > 0 && inCluster / desks.length > 0.5) modalityScore += 30;
+    if (itemIds.has('writable_tv') || itemIds.has('whiteboard')) modalityScore += 25;
+    if (itemIds.has('group_table')) modalityScore += 15;
+    if (itemIds.has('stand_table')) modalityScore += 15;
+    if (itemIds.has('couch') || itemIds.has('beanbag')) modalityScore += 10;
+    modalityScore = Math.min(100, modalityScore);
 
     // 6. Environment
-    let env = 20;
-    const plantCount = items.filter(g => g.getAttribute('data-id') === 'plant').length;
-    env += Math.min(30, plantCount * 12);
+    const plantCount = countOf('plant');
+    let lightScore = 0;
     if (desks.length > 0) {
-      const nearWindow = desks.filter(d => getTranslate(d)[0] < UNIT * 2).length;
-      env += Math.round((nearWindow / desks.length) * 40);
+      const nearWindow = desks.filter(d => {
+        const pos = getTranslate(d);
+        return pos[1] < UNIT * 2 || pos[1] > VB_H - UNIT * 2;
+      }).length;
+      lightScore = (nearWindow / desks.length) * 50;
     }
-    scores.push(Math.min(100, Math.round(env)));
+    const envScore = Math.min(100, 20 + plantCount * 15 + lightScore);
 
-    renderMetrics(scores);
-    renderInsights(items, scores);
+    const scores = [sightlineScore, mobilityScore, flexScore, densityScore, modalityScore, envScore].map(s => Math.round(clamp(s, 0, 100)));
+
+    // Update radar chart
+    if (radarChart) {
+      radarChart.data.datasets[0].data = scores;
+      radarChart.update();
+    }
+
+    // Render insights if no preset-specific ones
+    if (!currentPreset || !PRESET_INSIGHTS[currentPreset]) {
+      renderInsights(items, null, scores);
+    }
   }
 
-  function renderMetrics(scores) {
-    const barsEl = container.querySelector('#metrics-bars');
-    const colors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4'];
-    barsEl.innerHTML = scores.map((s, i) => `
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
-          <span style="font-size:0.8125rem;font-weight:600;color:var(--ink);">${METRIC_LABELS[i]}</span>
-          <span style="font-size:0.8125rem;font-weight:700;color:${colors[i]};">${s}</span>
-        </div>
-        <div style="height:8px;background:var(--bg-subtle);border-radius:99px;overflow:hidden;">
-          <div style="height:100%;width:${s}%;background:${colors[i]};border-radius:99px;transition:width 0.5s var(--ease);"></div>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function renderInsights(items, scores) {
+  /* ══════ Insights rendering ══════ */
+  function renderInsights(items, presetInsights, scores) {
     const el = container.querySelector('#insights');
-    const tips = [];
-    if (scores[0] < 50) tips.push('Add a teaching point (TV / whiteboard) and orient desks towards it.');
-    if (scores[1] < 40) tips.push('Room feels crowded. Remove some items or use a wider layout.');
-    if (scores[2] < 40) tips.push('Add mobile items (whiteboards, partitions) for more flexibility.');
-    if (scores[4] < 40) tips.push('Cluster some desks for collaborative work, or add group tables.');
-    if (scores[5] < 40) tips.push('Add plants and position desks near windows for a better environment.');
-    if (items.length === 0) tips.push('Start by selecting a preset or dragging items from the palette.');
 
-    if (currentPreset) {
-      const meta = PRESETS.find(p => p.id === currentPreset);
-      if (meta) tips.unshift(`<strong>${meta.icon} ${meta.label}</strong>: ${meta.desc}. Customise further by dragging items.`);
+    if (presetInsights && presetInsights.length > 0) {
+      el.innerHTML = presetInsights.map(ins => `
+        <div style="border-left:3px solid var(--accent);padding-left:var(--sp-3);transition:border-color 0.3s;">
+          <div style="font-weight:600;font-size:0.875rem;color:var(--ink);margin-bottom:var(--sp-1);">${ins.title}</div>
+          <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-faint);margin-bottom:var(--sp-1);">Affordances</div>
+          <p style="margin:0 0 var(--sp-2);">${ins.affordance}</p>
+          <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-faint);margin-bottom:var(--sp-1);">Suggested Teacher Moves (STP)</div>
+          <ul style="padding-left:1rem;margin:0 0 var(--sp-2);list-style:none;">
+            ${ins.moves.map(m => `<li style="position:relative;padding-left:1.2rem;margin-bottom:var(--sp-1);"><span style="position:absolute;left:0;color:var(--success);font-weight:600;">✓</span>${m}</li>`).join('')}
+          </ul>
+          ${ins.e21cc ? `<div style="font-size:0.75rem;color:var(--accent);font-style:italic;">E21CC: ${ins.e21cc}</div>` : ''}
+        </div>
+      `).join('');
+      return;
     }
+
+    // Generic insights based on scores
+    const tips = [];
+    if (scores) {
+      if (scores[0] < 50) tips.push('Add a teaching point (TV / whiteboard) and orient desks towards it for better sightlines.');
+      if (scores[1] < 40) tips.push('Room feels crowded. Remove items or use a wider layout for better mobility.');
+      if (scores[2] < 40) tips.push('Add mobile items (whiteboards, partitions) for more flexibility.');
+      if (scores[4] < 40) tips.push('Cluster desks for collaborative work, or add group tables for better modality.');
+      if (scores[5] < 40) tips.push('Add plants and position desks near windows for a better environment.');
+    }
+    if (!items || items.length === 0) tips.push('Start by selecting a preset or clicking items from the palette.');
 
     el.innerHTML = tips.length > 0
       ? `<ul style="padding-left:1rem;margin:0;display:flex;flex-direction:column;gap:var(--sp-2);">${tips.map(t => `<li>${t}</li>`).join('')}</ul>`
-      : `<p style="color:var(--success);">Looking great! Your layout scores well across all metrics.</p>`;
+      : `<p style="color:var(--success);font-weight:500;">Looking great! Your layout scores well across all metrics.</p>`;
   }
 
   /* ══════ Save / Load layouts ══════ */
@@ -691,7 +1043,11 @@ export function render(container) {
     backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
     backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
       const name = backdrop.querySelector('#layout-name').value.trim() || 'Untitled Layout';
-      Store.saveLayout({ name, items, studentCount: parseInt(studentCountInput.value) || 30 });
+      Store.saveLayout({
+        name, items,
+        wallState: panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed',
+        studentCount: parseInt(studentCountInput.value) || 32
+      });
       showToast('Layout saved!', 'success');
       close();
       renderSavedLayouts();
@@ -702,7 +1058,15 @@ export function render(container) {
   container.querySelector('#clear-canvas').addEventListener('click', async () => {
     if (layoutRoot.children.length === 0) return;
     const ok = await confirmDialog({ title: 'Clear Canvas', message: 'Remove all items from the canvas?' });
-    if (ok) { layoutRoot.innerHTML = ''; clearSelection(); currentPreset = null; updateMetrics(); }
+    if (ok) {
+      pushUndo();
+      layoutRoot.innerHTML = '';
+      clearSelection();
+      currentPreset = null;
+      closeWall('A'); closeWall('B');
+      updateMetrics();
+      renderInsights(null, null, [0, 0, 0, 0, 0, 0]);
+    }
   });
 
   function serializeLayout() {
@@ -714,13 +1078,15 @@ export function render(container) {
     }));
   }
 
-  function loadLayout(items) {
+  function loadLayout(items, wallState) {
     layoutRoot.innerHTML = '';
     clearSelection();
     items.forEach(item => {
       const def = PALETTE.find(p => p.id === item.id);
       if (def) layoutRoot.appendChild(createItem(def, item.x, item.y, item.r || 0));
     });
+    if (wallState === 'stacked') { stackWall('A'); stackWall('B'); }
+    else { closeWall('A'); closeWall('B'); }
     updateMetrics();
   }
 
@@ -741,7 +1107,11 @@ export function render(container) {
     el.querySelectorAll('.load-layout').forEach(btn => {
       btn.addEventListener('click', () => {
         const layout = layouts.find(l => l.id === btn.dataset.idx);
-        if (layout) { loadLayout(layout.items); showToast(`Loaded "${layout.name}"`); }
+        if (layout) {
+          loadLayout(layout.items, layout.wallState);
+          if (layout.studentCount) studentCountInput.value = layout.studentCount;
+          showToast(`Loaded "${layout.name}"`);
+        }
       });
     });
     el.querySelectorAll('.del-layout').forEach(btn => {
@@ -755,7 +1125,11 @@ export function render(container) {
 
   // Initial metrics
   updateMetrics();
+  renderInsights(null, null, [50, 50, 50, 50, 50, 50]);
 
   // Cleanup on route change
-  return () => { document.removeEventListener('keydown', onKey); };
+  return () => {
+    document.removeEventListener('keydown', onKey);
+    if (radarChart) { radarChart.destroy(); radarChart = null; }
+  };
 }

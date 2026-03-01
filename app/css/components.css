@@ -537,6 +537,7 @@ select.input {
 
 .chat-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--sp-5);
   display: flex;

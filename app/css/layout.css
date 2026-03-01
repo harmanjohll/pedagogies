@@ -273,6 +273,7 @@
   grid-template-columns: 380px 1fr;
   gap: 0;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -280,7 +281,7 @@
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
   overflow: hidden;
   background: var(--surface);
 }
@@ -288,7 +289,7 @@
 .lp-plan-col {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -296,15 +297,16 @@
 
 .three-col {
   display: grid;
-  grid-template-columns: 240px 1fr 260px;
+  grid-template-columns: 240px 1fr 280px;
   gap: var(--sp-3);
   height: 100%;
+  min-height: 0;
   padding: var(--sp-3);
   overflow: hidden;
 }
 
 @media (max-width: 1200px) {
-  .three-col { grid-template-columns: 200px 1fr 220px; }
+  .three-col { grid-template-columns: 200px 1fr 240px; }
 }
 
 /* ═══════════ Panels ═══════════ */

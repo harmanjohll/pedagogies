@@ -8,6 +8,7 @@ import { Store } from './state.js';
 import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome } from './components/welcome.js';
+import { seedIfNeeded } from './seed-data.js';
 
 /* ── Views ── */
 import { render as renderDashboard } from './views/dashboard.js';
@@ -21,6 +22,9 @@ import { render as renderSettings } from './views/settings.js';
 function init() {
   const app = document.getElementById('app');
   if (!app) return;
+
+  // Seed sample classes on first run
+  seedIfNeeded();
 
   app.innerHTML = `
     <aside class="sidebar" id="sidebar"></aside>
