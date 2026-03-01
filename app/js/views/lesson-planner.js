@@ -17,6 +17,112 @@ let currentLessonId = null;  // if editing a saved lesson
 let planClassContext = null;  // class context from "Plan from Class"
 let attachedKBContext = [];   // attached knowledge base resources
 
+/* ── Lesson Components: persistent AI tool results integrated into the plan ── */
+let lessonComponents = {};    // { review, rubric, grouping, timeline, exitTicket, differentiation, seatPlan }
+
+const COMPONENT_META = {
+  timeline:        { label: 'Timeline / Pacing',       color: 'var(--accent)',      icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', order: 1 },
+  grouping:        { label: 'Student Groups',          color: 'var(--e21cc-cci)',   icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', order: 2 },
+  seatPlan:        { label: 'Seating Plan',            color: 'var(--e21cc-cgc)',   icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', order: 3 },
+  differentiation: { label: 'Differentiation',         color: 'var(--e21cc-cait)',  icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>', order: 4 },
+  rubric:          { label: 'Assessment Rubric',       color: 'var(--success)',     icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>', order: 5 },
+  exitTicket:      { label: 'Exit Ticket',             color: 'var(--e21cc-cait)',  icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', order: 6 },
+  review:          { label: 'Lesson Review',           color: 'var(--accent)',      icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>', order: 7 },
+};
+
+function setComponent(key, content, meta = '') {
+  lessonComponents[key] = { content, meta, updatedAt: Date.now() };
+  autoSaveComponents();
+}
+
+function removeComponent(key) {
+  delete lessonComponents[key];
+  autoSaveComponents();
+}
+
+function autoSaveComponents() {
+  if (currentLessonId) {
+    Store.updateLesson(currentLessonId, { components: { ...lessonComponents } });
+  }
+}
+
+function renderComponents(container) {
+  const el = container.querySelector('#lesson-components');
+  if (!el) return;
+
+  const keys = Object.keys(lessonComponents)
+    .filter(k => lessonComponents[k]?.content)
+    .sort((a, b) => (COMPONENT_META[a]?.order || 99) - (COMPONENT_META[b]?.order || 99));
+
+  if (keys.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = `
+    <div style="margin-top:var(--sp-5);">
+      <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);">
+        <span class="text-overline" style="color:var(--ink-faint);">Lesson Components</span>
+        <span class="badge badge-blue" style="font-size:0.6875rem;">${keys.length}</span>
+      </div>
+      ${keys.map(key => {
+        const comp = lessonComponents[key];
+        const m = COMPONENT_META[key] || { label: key, color: 'var(--ink-muted)', icon: '', order: 99 };
+        return `
+          <details class="lesson-component-card" open style="margin-bottom:var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius-lg);border-top:3px solid ${m.color};overflow:hidden;">
+            <summary style="display:flex;align-items:center;justify-content:space-between;padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);cursor:pointer;user-select:none;">
+              <div style="display:flex;align-items:center;gap:var(--sp-2);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${m.color}" stroke-width="2">${m.icon}</svg>
+                <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">${m.label}</span>
+                ${comp.meta ? `<span style="font-size:0.6875rem;color:var(--ink-faint);">${esc(comp.meta)}</span>` : ''}
+              </div>
+              <div style="display:flex;align-items:center;gap:var(--sp-1);">
+                <button class="btn btn-ghost btn-sm component-refresh" data-key="${key}" title="Regenerate" style="padding:2px 4px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                </button>
+                <button class="btn btn-ghost btn-sm component-remove" data-key="${key}" title="Remove" style="padding:2px 4px;color:var(--danger);">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </summary>
+            <div style="padding:var(--sp-4);font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">
+              ${md(comp.content)}
+            </div>
+          </details>`;
+      }).join('')}
+    </div>`;
+
+  // Wire remove buttons
+  el.querySelectorAll('.component-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const key = btn.dataset.key;
+      removeComponent(key);
+      renderComponents(container);
+    });
+  });
+
+  // Wire refresh buttons
+  el.querySelectorAll('.component-refresh').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const key = btn.dataset.key;
+      // Trigger the corresponding tool
+      const toolBtnMap = {
+        review: '#ai-review-btn',
+        rubric: '#ai-rubric-btn',
+        grouping: '#ai-group-btn',
+        timeline: '#ai-timeline-btn',
+        exitTicket: '#ai-exit-ticket-btn',
+        differentiation: '#ai-differentiation-btn',
+      };
+      if (toolBtnMap[key]) container.querySelector(toolBtnMap[key])?.click();
+    });
+  });
+}
+
 /* ── Markdown renderer (improved — supports tables and ordered lists) ── */
 function md(text) {
   return text
@@ -214,7 +320,7 @@ export function render(container) {
       <!-- Plan Column -->
       <div class="lp-plan-col" style="background:var(--bg);">
         <div style="flex:1;overflow-y:auto;padding:var(--sp-6);">
-          <div style="max-width:680px;margin:0 auto;">
+          <div style="max-width:680px;margin:0 auto;width:100%;box-sizing:border-box;">
             <!-- Header -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-6);flex-wrap:wrap;gap:var(--sp-2);">
               <div style="display:flex;align-items:center;gap:var(--sp-2);">
@@ -280,10 +386,13 @@ export function render(container) {
             <!-- Plan Content -->
             <div id="plan-content"></div>
 
+            <!-- Integrated Lesson Components (persistent AI tool results) -->
+            <div id="lesson-components"></div>
+
             <!-- Spatial Layout Section -->
             <div id="spatial-section" style="margin-top:var(--sp-4);"></div>
 
-            <!-- AI Result Panel -->
+            <!-- Temporary loading/status area -->
             <div id="ai-result" style="margin-top:var(--sp-4);"></div>
           </div>
         </div>
@@ -296,9 +405,18 @@ export function render(container) {
   const chatSend = container.querySelector('#chat-send');
   const layoutEl = container.querySelector('#lp-layout');
 
+  // Load components from existing lesson
+  if (currentLessonId) {
+    const existingLesson = Store.getLesson(currentLessonId);
+    if (existingLesson?.components) {
+      lessonComponents = { ...existingLesson.components };
+    }
+  }
+
   // Render initial messages
   renderMessages(messagesEl, classes);
   renderPlanContent(container.querySelector('#plan-content'));
+  renderComponents(container);
 
   // Mobile panel toggle
   const showPlanBtn = container.querySelector('#show-plan-btn');
@@ -323,6 +441,7 @@ export function render(container) {
     chatMessages = [];
     currentLessonId = null;
     isGenerating = false;
+    lessonComponents = {};
     render(container);
   });
 
@@ -447,12 +566,27 @@ export function render(container) {
   // Save lesson
   container.querySelector('#save-lesson-btn').addEventListener('click', () => showSaveModal(classes));
 
-  // Print / Export
+  // Print / Export (includes all components)
   container.querySelector('#export-pdf-btn').addEventListener('click', () => {
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
-    if (aiMsgs.length === 0) { showToast('No lesson content to print yet.', 'danger'); return; }
+    if (aiMsgs.length === 0 && Object.keys(lessonComponents).length === 0) {
+      showToast('No lesson content to print yet.', 'danger'); return;
+    }
     const printWin = window.open('', '_blank');
     const planHtml = aiMsgs.map(m => md(m.content)).join('<hr style="margin:24px 0;">');
+
+    // Build components HTML for print
+    const compKeys = Object.keys(lessonComponents)
+      .filter(k => lessonComponents[k]?.content)
+      .sort((a, b) => (COMPONENT_META[a]?.order || 99) - (COMPONENT_META[b]?.order || 99));
+    const componentsHtml = compKeys.length > 0
+      ? `<hr style="margin:32px 0;border-top:2px solid #000c53;"><h2>Lesson Components</h2>` +
+        compKeys.map(key => {
+          const m = COMPONENT_META[key] || { label: key };
+          return `<h3>${m.label}</h3>${md(lessonComponents[key].content)}`;
+        }).join('<hr style="margin:24px 0;">')
+      : '';
+
     printWin.document.write(`<!DOCTYPE html><html><head><title>Lesson Plan — Co-Cher</title>
       <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.7;font-size:14px}
       h1{font-size:18px;border-bottom:2px solid #000c53;padding-bottom:8px;color:#000c53}
@@ -461,7 +595,7 @@ export function render(container) {
       table{width:100%;border-collapse:collapse;margin:12px 0}th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0}th{font-weight:600;background:#f1f5f9}
       pre{background:#f1f5f9;padding:12px;border-radius:6px;font-size:12px;overflow-x:auto}
       @media print{body{margin:0;padding:16px}}</style></head>
-      <body><h1>Lesson Plan</h1><p style="color:#64748b;font-size:12px;">Exported from Co-Cher · ${new Date().toLocaleDateString('en-SG')}</p>${planHtml}</body></html>`);
+      <body><h1>Lesson Plan</h1><p style="color:#64748b;font-size:12px;">Exported from Co-Cher · ${new Date().toLocaleDateString('en-SG')}</p>${planHtml}${componentsHtml}</body></html>`);
     printWin.document.close();
     printWin.print();
   });
@@ -472,24 +606,19 @@ export function render(container) {
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
 
-    const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Reviewing your lesson plan...</div></div>`;
-    resultEl.scrollIntoView({ behavior: 'smooth' });
+    const statusEl = container.querySelector('#ai-result');
+    statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Reviewing your lesson plan...</div></div>`;
+    statusEl.scrollIntoView({ behavior: 'smooth' });
 
     try {
       const planText = aiMsgs.map(m => m.content).join('\n\n');
       const review = await reviewLesson(planText);
-      resultEl.innerHTML = `
-        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--accent);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
-            <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Lesson Review</span>
-            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-          </div>
-          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(review)}</div>
-        </div>`;
-      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+      setComponent('review', review);
+      statusEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Lesson review added to components.', 'success');
     } catch (err) {
-      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Review failed: ${err.message}</div>`;
+      statusEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Review failed: ${err.message}</div>`;
     }
   });
 
@@ -497,23 +626,18 @@ export function render(container) {
   container.querySelector('#ai-rubric-btn').addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const topic = chatMessages.find(m => m.role === 'user')?.content || 'General lesson';
-    const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Generating rubric...</div></div>`;
-    resultEl.scrollIntoView({ behavior: 'smooth' });
+    const statusEl = container.querySelector('#ai-result');
+    statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Generating rubric...</div></div>`;
+    statusEl.scrollIntoView({ behavior: 'smooth' });
 
     try {
       const rubric = await generateRubric(topic);
-      resultEl.innerHTML = `
-        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--success);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
-            <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Assessment Rubric</span>
-            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-          </div>
-          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(rubric)}</div>
-        </div>`;
-      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+      setComponent('rubric', rubric);
+      statusEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Rubric added to components.', 'success');
     } catch (err) {
-      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Rubric generation failed: ${err.message}</div>`;
+      statusEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Rubric generation failed: ${err.message}</div>`;
     }
   });
 
@@ -542,26 +666,21 @@ export function render(container) {
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
 
-    const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Generating exit ticket questions...</div></div>`;
-    resultEl.scrollIntoView({ behavior: 'smooth' });
+    const statusEl = container.querySelector('#ai-result');
+    statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Generating exit ticket questions...</div></div>`;
+    statusEl.scrollIntoView({ behavior: 'smooth' });
 
     try {
       const planText = aiMsgs.map(m => m.content).join('\n\n');
       const subject = planClassContext?.subject || '';
       const level = planClassContext?.level || '';
       const ticket = await generateExitTicket(planText, subject, level);
-      resultEl.innerHTML = `
-        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--e21cc-cait);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
-            <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Exit Ticket</span>
-            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-          </div>
-          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(ticket)}</div>
-        </div>`;
-      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+      setComponent('exitTicket', ticket);
+      statusEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Exit ticket added to components.', 'success');
     } catch (err) {
-      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Exit ticket generation failed: ${err.message}</div>`;
+      statusEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Exit ticket generation failed: ${err.message}</div>`;
     }
   });
 
@@ -730,6 +849,7 @@ function showSaveModal(classes) {
       classId,
       status,
       e21ccFocus,
+      components: { ...lessonComponents },
       chatHistory: [...chatMessages],
       plan: chatMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n\n---\n\n')
     };
@@ -828,9 +948,9 @@ function showGroupingModal(container, classes) {
 
     close();
 
-    const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Analysing E21CC profiles and creating groups for ${cls.students.length} students...</div></div>`;
-    resultEl.scrollIntoView({ behavior: 'smooth' });
+    const statusEl = container.querySelector('#ai-result');
+    statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Analysing E21CC profiles and creating groups for ${cls.students.length} students...</div></div>`;
+    statusEl.scrollIntoView({ behavior: 'smooth' });
 
     try {
       const grouping = await suggestGrouping(cls.students, activityType, { groupSize, considerations });
@@ -839,22 +959,15 @@ function showGroupingModal(container, classes) {
       lastGroupingResult = grouping;
       lastGroupingMeta = { classId, className: cls.name, activityType, groupSize, studentCount: cls.students.length };
 
-      // Check if there are saved layouts for the "arrange classroom" button
-      const savedLayouts = Store.getSavedLayouts() || [];
-      const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
-      const linkedLayout = currentLesson?.spatialLayout ? savedLayouts.find(l => l.id === currentLesson.spatialLayout) : null;
+      // Save as persistent component
+      setComponent('grouping', grouping, `${cls.name} · ${activityType} · groups of ${groupSize}`);
+      renderComponents(container);
 
-      resultEl.innerHTML = `
-        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--e21cc-cci);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
-            <div>
-              <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Student Groups</span>
-              <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:var(--sp-2);">${cls.name} · ${activityType} · groups of ${groupSize}</span>
-            </div>
-            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-          </div>
-          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(grouping)}</div>
-          <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--border-light);flex-wrap:wrap;">
+      // Show action buttons in status area
+      statusEl.innerHTML = `
+        <div class="card" style="padding:var(--sp-4);background:var(--bg-subtle);border:1px dashed var(--border);">
+          <div style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">Groups saved to lesson components. Next steps:</div>
+          <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
             <button class="btn btn-secondary btn-sm" id="seat-assignment-btn" title="Get AI suggestions for where each group should sit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
               Who Sits Where
@@ -863,19 +976,19 @@ function showGroupingModal(container, classes) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
               Arrange Classroom
             </button>
+            <button class="btn btn-ghost btn-sm" id="dismiss-actions" style="margin-left:auto;">Dismiss</button>
           </div>
         </div>`;
 
-      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+      statusEl.querySelector('#dismiss-actions')?.addEventListener('click', () => { statusEl.innerHTML = ''; });
 
       // Who Sits Where button
-      resultEl.querySelector('#seat-assignment-btn')?.addEventListener('click', () => {
+      statusEl.querySelector('#seat-assignment-btn')?.addEventListener('click', () => {
         showSeatAssignmentModal(container, lastGroupingResult, lastGroupingMeta);
       });
 
       // Arrange Classroom button — navigate to spatial with context
-      resultEl.querySelector('#arrange-classroom-btn')?.addEventListener('click', () => {
-        // Store grouping context for spatial designer to pick up
+      statusEl.querySelector('#arrange-classroom-btn')?.addEventListener('click', () => {
         const presetMap = {
           'Collaborative group work': 'pods',
           'Peer tutoring': 'pods',
@@ -891,7 +1004,7 @@ function showGroupingModal(container, classes) {
         navigate('/spatial');
       });
     } catch (err) {
-      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Grouping failed: ${err.message}</div>`;
+      statusEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Grouping failed: ${err.message}</div>`;
     }
   });
 }
@@ -960,34 +1073,18 @@ function showSeatAssignmentModal(container, groupingText, meta) {
     // Parse groups from grouping text
     const groups = parseGroupsFromText(groupingText);
 
-    const resultEl = container.querySelector('#ai-result');
-    const existingContent = resultEl.innerHTML;
-    resultEl.innerHTML += `<div class="card" style="padding:var(--sp-5);margin-top:var(--sp-3);"><div class="chat-typing">Assigning seats for ${groups.length} groups in ${PRESET_NAMES[layoutPreset] || layoutPreset} layout...</div></div>`;
-    resultEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const statusEl = container.querySelector('#ai-result');
+    statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Assigning seats for ${groups.length} groups in ${PRESET_NAMES[layoutPreset] || layoutPreset} layout...</div></div>`;
+    statusEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
     try {
       const seatPlan = await suggestSeatAssignment(groups, layoutPreset, meta.studentCount);
-      // Append seat assignment below existing grouping
-      const seatCard = document.createElement('div');
-      seatCard.className = 'card';
-      seatCard.style.cssText = 'padding:var(--sp-6);border-top:3px solid var(--e21cc-cgc);margin-top:var(--sp-3);';
-      seatCard.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
-          <div>
-            <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Seating Plan</span>
-            <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:var(--sp-2);">${PRESET_NAMES[layoutPreset] || layoutPreset}</span>
-          </div>
-          <button class="btn btn-ghost btn-sm close-seat-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-        </div>
-        <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(seatPlan)}</div>`;
-
-      // Remove the loading card and append seat card
-      resultEl.innerHTML = existingContent;
-      resultEl.appendChild(seatCard);
-      seatCard.querySelector('.close-seat-result')?.addEventListener('click', () => seatCard.remove());
+      setComponent('seatPlan', seatPlan, PRESET_NAMES[layoutPreset] || layoutPreset);
+      statusEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Seating plan added to components.', 'success');
     } catch (err) {
-      resultEl.innerHTML = existingContent;
-      resultEl.insertAdjacentHTML('beforeend', `<div class="card" style="padding:var(--sp-4);color:var(--danger);margin-top:var(--sp-3);">Seat assignment failed: ${err.message}</div>`);
+      statusEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Seat assignment failed: ${err.message}</div>`;
     }
   });
 }
@@ -1059,29 +1156,20 @@ function showTimelineModal(container) {
     const totalMinutes = parseInt(durationSlider.value);
     close();
 
-    const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Creating ${totalMinutes}-minute lesson timeline...</div></div>`;
-    resultEl.scrollIntoView({ behavior: 'smooth' });
+    const statusEl = container.querySelector('#ai-result');
+    statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Creating ${totalMinutes}-minute lesson timeline...</div></div>`;
+    statusEl.scrollIntoView({ behavior: 'smooth' });
 
     try {
       const planText = chatMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n\n');
       const subject = planClassContext?.subject || '';
       const timeline = await generateTimeline(planText, totalMinutes, subject);
-
-      resultEl.innerHTML = `
-        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--accent);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
-            <div>
-              <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Lesson Timeline</span>
-              <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:var(--sp-2);">${totalMinutes} minutes</span>
-            </div>
-            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-          </div>
-          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(timeline)}</div>
-        </div>`;
-      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+      setComponent('timeline', timeline, `${totalMinutes} minutes`);
+      statusEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Timeline added to components.', 'success');
     } catch (err) {
-      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Timeline generation failed: ${err.message}</div>`;
+      statusEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Timeline generation failed: ${err.message}</div>`;
     }
   });
 }
@@ -1116,28 +1204,19 @@ function showDifferentiationModal(container, classes) {
     if (!cls) return;
     close();
 
-    const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Analysing ${cls.students.length} student profiles for differentiation opportunities...</div></div>`;
-    resultEl.scrollIntoView({ behavior: 'smooth' });
+    const statusEl = container.querySelector('#ai-result');
+    statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Analysing ${cls.students.length} student profiles for differentiation opportunities...</div></div>`;
+    statusEl.scrollIntoView({ behavior: 'smooth' });
 
     try {
       const planText = chatMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n\n');
       const diff = await suggestDifferentiation(cls.students, planText);
-
-      resultEl.innerHTML = `
-        <div class="card" style="padding:var(--sp-6);border-top:3px solid var(--e21cc-cait);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
-            <div>
-              <span style="font-size:0.9375rem;font-weight:600;color:var(--ink);">Differentiation Suggestions</span>
-              <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:var(--sp-2);">${cls.name}</span>
-            </div>
-            <button class="btn btn-ghost btn-sm close-ai-result"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-          </div>
-          <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(diff)}</div>
-        </div>`;
-      resultEl.querySelector('.close-ai-result')?.addEventListener('click', () => { resultEl.innerHTML = ''; });
+      setComponent('differentiation', diff, cls.name);
+      statusEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Differentiation suggestions added to components.', 'success');
     } catch (err) {
-      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Differentiation analysis failed: ${err.message}</div>`;
+      statusEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Differentiation analysis failed: ${err.message}</div>`;
     }
   });
 }

@@ -922,3 +922,74 @@ select.input {
 .w-full { width: 100%; }
 .mt-2 { margin-top: var(--sp-2); } .mt-4 { margin-top: var(--sp-4); } .mt-6 { margin-top: var(--sp-6); }
 .mb-2 { margin-bottom: var(--sp-2); } .mb-4 { margin-bottom: var(--sp-4); } .mb-6 { margin-bottom: var(--sp-6); }
+
+/* ═══════════ Responsive — Tablet (≤ 1024px) ═══════════ */
+
+@media (max-width: 1024px) {
+  .modal-backdrop { padding: var(--sp-4); }
+  .modal { max-width: 440px; }
+  .modal-header { padding: var(--sp-4) var(--sp-5) var(--sp-3); }
+  .modal-body { padding: var(--sp-4) var(--sp-5); }
+  .modal-footer { padding: var(--sp-3) var(--sp-5) var(--sp-4); }
+
+  .chat-msg { max-width: 92%; }
+}
+
+/* ═══════════ Responsive — Tablet portrait / iPad portrait (≤ 768px) ═══════════ */
+
+@media (max-width: 768px) {
+  .modal-backdrop { padding: var(--sp-3); }
+  .modal { max-width: calc(100% - 16px); }
+  .modal-header { padding: var(--sp-4); }
+  .modal-body { padding: var(--sp-3) var(--sp-4); }
+  .modal-footer { padding: var(--sp-3) var(--sp-4); gap: var(--sp-2); }
+  .modal-title { font-size: 1rem; }
+
+  .chat-msg { max-width: 95%; font-size: 0.8125rem; }
+  .chat-messages { padding: var(--sp-3); }
+
+  .chat-header { padding: var(--sp-3) var(--sp-4); }
+  .chat-header-title { font-size: 0.875rem; }
+
+  /* Tables scroll horizontally */
+  .chat-msg table { display: block; overflow-x: auto; white-space: nowrap; }
+
+  .e21cc-bar-label { width: 30px; font-size: 0.625rem; }
+
+  .stat-card { padding: var(--sp-4); }
+  .stat-value { font-size: 1.375rem; }
+
+  /* Ensure inline tool buttons wrap */
+  .btn-sm { font-size: 0.75rem; padding: var(--sp-1) var(--sp-2); }
+}
+
+/* ═══════════ Responsive — Phone (≤ 480px) ═══════════ */
+
+@media (max-width: 480px) {
+  .modal-backdrop { padding: var(--sp-2); }
+  .modal {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: var(--radius-lg);
+  }
+  .modal-header { padding: var(--sp-3); }
+  .modal-body { padding: var(--sp-2) var(--sp-3); }
+  .modal-footer { padding: var(--sp-2) var(--sp-3); flex-wrap: wrap; }
+  .modal-title { font-size: 0.9375rem; }
+
+  .chat-msg { max-width: 98%; padding: var(--sp-2) var(--sp-3); }
+  .chat-messages { padding: var(--sp-2); }
+
+  .btn { font-size: 0.8125rem; padding: var(--sp-2) var(--sp-3); min-height: 44px; }
+  .btn-sm { font-size: 0.6875rem; padding: 4px 8px; min-height: 36px; }
+
+  .input { font-size: 0.875rem; padding: var(--sp-2); }
+  .input-label { font-size: 0.75rem; }
+  textarea.input { min-height: 60px; }
+
+  .card { padding: var(--sp-3); }
+
+  /* Badge and toast adjustments */
+  .badge { font-size: 0.625rem; padding: 2px 6px; }
+  .toast { font-size: 0.8125rem; max-width: calc(100vw - 32px); }
+}

@@ -516,6 +516,7 @@ body.resizing-panels .resize-handle {
 
 /* ═══════════ Responsive ═══════════ */
 
+/* ── Tablet / iPad landscape (≤ 1024px) ── */
 @media (max-width: 1024px) {
   .mobile-header { display: flex; }
 
@@ -530,27 +531,26 @@ body.resizing-panels .resize-handle {
   }
   .sidebar.open { transform: translateX(0); }
 
-  .main-content {
-    width: 100%;
-  }
+  .main-content { width: 100%; }
+  .main-header { padding: var(--sp-3) var(--sp-4); }
 
-  /* Lesson planner: stack columns */
-  .lp-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr;
-  }
-  .lp-chat-col { border-right: none; border-bottom: 1px solid var(--border); }
+  /* Lesson planner: show both panels but allow flexible sizing */
+  .lp-chat-col { min-width: 280px; flex: 1 1 45%; }
+  .lp-plan-col { min-width: 280px; flex: 1 1 45%; }
 
-  /* Spatial: stack columns */
-  .three-col { grid-template-columns: 1fr; }
+  /* Spatial: compress panels */
+  .three-col > .panel:first-child { flex: 0 0 200px; min-width: 160px; }
+  .three-col > #spatial-right-panel { flex: 0 0 220px; min-width: 180px; }
+
+  .welcome-card { max-width: 400px; padding: var(--sp-8) var(--sp-6); }
 }
 
+/* ── Tablet portrait / iPad portrait (≤ 768px) ── */
 @media (max-width: 768px) {
   .main-scroll { padding: var(--sp-4); }
+  .main-header { padding: var(--sp-3); }
 
-  .greeting-card {
-    padding: var(--sp-6);
-  }
+  .greeting-card { padding: var(--sp-6); }
   .greeting-title { font-size: 1.375rem; }
 
   .page-header {
@@ -559,14 +559,53 @@ body.resizing-panels .resize-handle {
     gap: var(--sp-3);
   }
 
-  .lp-layout {
-    grid-template-rows: 1fr;
-  }
-  .lp-plan-col { display: none; }
+  /* Lesson planner: toggle between chat and plan (only show one at a time) */
+  .lp-chat-col { min-width: 0; flex: 1 1 100%; }
+  .lp-plan-col { display: none; min-width: 0; flex: 1 1 100%; }
+  .lp-chat-col { border-right: none; }
   .lp-layout.show-plan .lp-chat-col { display: none; }
   .lp-layout.show-plan .lp-plan-col { display: flex; }
+
+  /* Hide resize handle on mobile */
+  .resize-handle { display: none; }
+
+  /* Spatial: stack panels vertically */
+  .three-col {
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--sp-2);
+    gap: var(--sp-2);
+  }
+  .three-col > .panel:first-child {
+    flex: 0 0 auto;
+    min-width: 100%;
+    max-width: 100%;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+  .three-col > #spatial-canvas-col {
+    flex: 0 0 auto;
+    min-width: 100%;
+    min-height: 50vh;
+  }
+  .three-col > #spatial-right-panel {
+    flex: 0 0 auto;
+    min-width: 100%;
+    max-width: 100%;
+    max-height: none;
+  }
+
+  /* Hide spatial resize handles on mobile */
+  #spatial-resize-left,
+  #spatial-resize-right { display: none; }
+
+  .welcome-card { max-width: 100%; padding: var(--sp-6) var(--sp-4); }
+
+  .panel { padding: var(--sp-4); }
 }
 
+/* ── Phone (≤ 480px) ── */
 @media (max-width: 480px) {
   .main-scroll { padding: var(--sp-3); }
   .greeting-card { padding: var(--sp-5) var(--sp-4); }
@@ -582,5 +621,16 @@ body.resizing-panels .resize-handle {
 
   .chat-input-row { padding: var(--sp-3); }
   .chat-input { min-height: 60px; font-size: 0.875rem; }
-  .chat-send { padding: var(--sp-2) var(--sp-4); font-size: 0.875rem; min-height: 40px; }
+  .chat-send { padding: var(--sp-2) var(--sp-4); font-size: 0.875rem; min-height: 44px; }
+
+  .panel { padding: var(--sp-3); border-radius: var(--radius-md); }
+
+  /* Spatial canvas gets more vertical space on phone */
+  .three-col > #spatial-canvas-col {
+    min-height: 60vh;
+  }
+  .three-col > .panel:first-child {
+    max-height: 30vh;
+    padding: var(--sp-2);
+  }
 }

@@ -8,6 +8,7 @@
 import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { openModal } from '../components/modals.js';
+import { sendChat } from '../api.js';
 
 /* ── Admin task templates (checked by default) ── */
 const EVENT_TASKS = [
@@ -260,7 +261,7 @@ function renderEventsList(el, events) {
   });
 }
 
-/* ══════════ New Event Modal ══════════ */
+/* ══════════ New Event Modal — Single-Point Entry with AI ══════════ */
 function showNewEventModal(container) {
   const { backdrop, close } = openModal({
     title: 'New Event / Activity',
@@ -286,8 +287,15 @@ function showNewEventModal(container) {
         </select>
       </div>
       <div class="input-group">
-        <label class="input-label">Required Tasks</label>
-        <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-2);">All tasks are selected by default. Deselect what you don't need.</p>
+        <label class="input-label">Describe the Event</label>
+        <textarea class="input" id="event-description" rows="5" placeholder="Tell us the key details and Co-Cher will draft all event documents for you.
+
+E.g. 'Taking 4A and 4B Pure Chemistry students (32 students) to NUS Science Faculty for a lab tour on 20 Mar 2026. Departing school at 8am, returning by 1pm. 2 teachers accompanying. Budget of $500 for bus. Need parent consent by 15 Mar.'"></textarea>
+        <div style="font-size:0.6875rem;color:var(--ink-faint);margin-top:4px;">The more detail you provide, the better the AI drafts will be. Include dates, venues, student numbers, costs, and any special needs.</div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Which documents do you need?</label>
+        <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-2);">Select the tasks you need. The AI will draft content for each.</p>
         <div style="display:flex;flex-direction:column;gap:var(--sp-2);" id="task-checklist">
           ${EVENT_TASKS.map(t => `
             <label style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-md);cursor:pointer;transition:background 0.15s;">
@@ -304,44 +312,168 @@ function showNewEventModal(container) {
     `,
     footer: `
       <button class="btn btn-secondary" data-action="cancel">Cancel</button>
-      <button class="btn btn-primary" data-action="create">Create Event</button>
+      <button class="btn btn-secondary" data-action="create-blank">Create Blank</button>
+      <button class="btn btn-primary" data-action="create-ai">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Generate with AI
+      </button>
     `
   });
 
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
-  backdrop.querySelector('[data-action="create"]').addEventListener('click', () => {
+
+  // Create blank (no AI)
+  backdrop.querySelector('[data-action="create-blank"]').addEventListener('click', () => {
     const name = backdrop.querySelector('#event-name').value.trim();
     if (!name) { showToast('Please enter an event name.', 'danger'); return; }
+    createEventFromModal(backdrop, container, close, null);
+  });
+
+  // Create with AI
+  backdrop.querySelector('[data-action="create-ai"]').addEventListener('click', async () => {
+    const name = backdrop.querySelector('#event-name').value.trim();
+    if (!name) { showToast('Please enter an event name.', 'danger'); return; }
+
+    const description = backdrop.querySelector('#event-description').value.trim();
+    if (!description) { showToast('Please describe the event so the AI can draft the documents.', 'danger'); return; }
+
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
 
     const date = backdrop.querySelector('#event-date').value;
     const eventType = backdrop.querySelector('#event-type').value;
     const checks = [...backdrop.querySelectorAll('.event-task-check')];
-    const tasks = EVENT_TASKS.map(t => ({
-      key: t.key,
-      enabled: checks.find(c => c.value === t.key)?.checked || false,
-      status: 'pending',
-      data: {}
-    }));
+    const enabledKeys = checks.filter(c => c.checked).map(c => c.value);
+    const enabledTasks = EVENT_TASKS.filter(t => enabledKeys.includes(t.key));
 
-    const event = {
-      id: generateId(),
-      name,
-      date,
-      eventType,
-      status: 'planning',
-      tasks,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
+    // Disable buttons, show loading
+    const aiBtn = backdrop.querySelector('[data-action="create-ai"]');
+    aiBtn.disabled = true;
+    aiBtn.innerHTML = '<span class="chat-typing" style="font-size:0.8125rem;">AI is drafting all documents...</span>';
 
-    const events = [...(Store.get('adminEvents') || []), event];
-    Store.set('adminEvents', events);
-    showToast(`Event "${name}" created!`, 'success');
-    close();
-    render(container);
+    try {
+      const aiData = await generateEventContent(name, date, eventType, description, enabledTasks);
+      close();
+      createEventFromModal(backdrop, container, () => {}, aiData, name, date, eventType, enabledKeys);
+    } catch (err) {
+      aiBtn.disabled = false;
+      aiBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generate with AI`;
+      showToast(`AI generation failed: ${err.message}`, 'danger');
+    }
   });
 
   setTimeout(() => backdrop.querySelector('#event-name')?.focus(), 100);
+}
+
+/* ── Create event from modal data ── */
+function createEventFromModal(backdrop, container, close, aiData, nameOverride, dateOverride, typeOverride, enabledKeysOverride) {
+  const name = nameOverride || backdrop?.querySelector('#event-name')?.value?.trim();
+  const date = dateOverride || backdrop?.querySelector('#event-date')?.value || '';
+  const eventType = typeOverride || backdrop?.querySelector('#event-type')?.value || 'Other';
+
+  let enabledKeys;
+  if (enabledKeysOverride) {
+    enabledKeys = enabledKeysOverride;
+  } else {
+    const checks = [...(backdrop?.querySelectorAll('.event-task-check') || [])];
+    enabledKeys = checks.filter(c => c.checked).map(c => c.value);
+  }
+
+  const tasks = EVENT_TASKS.map(t => {
+    const enabled = enabledKeys.includes(t.key);
+    const data = {};
+    // Pre-fill from AI data if available
+    if (aiData && enabled && aiData[t.key]) {
+      const aiTaskData = aiData[t.key];
+      t.fields.forEach(f => {
+        if (aiTaskData[f.id]) data[f.id] = aiTaskData[f.id];
+      });
+    }
+    return { key: t.key, enabled, status: 'pending', data };
+  });
+
+  const event = {
+    id: generateId(),
+    name,
+    date,
+    eventType,
+    status: aiData ? 'in_progress' : 'planning',
+    tasks,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+
+  const events = [...(Store.get('adminEvents') || []), event];
+  Store.set('adminEvents', events);
+
+  if (aiData) {
+    showToast(`Event "${name}" created with AI-drafted content! Review each task to confirm.`, 'success');
+  } else {
+    showToast(`Event "${name}" created!`, 'success');
+  }
+  close();
+  render(container);
+}
+
+/* ── AI: Generate all event task content from description ── */
+async function generateEventContent(name, date, eventType, description, enabledTasks) {
+  // Build a field schema for the AI to fill
+  const taskSchema = enabledTasks.map(t => ({
+    key: t.key,
+    label: t.label,
+    fields: t.fields.map(f => ({ id: f.id, label: f.label, type: f.type, options: f.options || null }))
+  }));
+
+  const messages = [{
+    role: 'user',
+    content: `Generate content for all event planning documents based on this event description.
+
+Event Name: ${name}
+Date: ${date || 'Not specified'}
+Type: ${eventType}
+Description: ${description}
+
+Please fill in all fields for each of the following task categories:
+
+${taskSchema.map(t => `
+### ${t.label} (key: ${t.key})
+Fields to fill:
+${t.fields.map(f => `- ${f.label} (id: ${f.id})${f.type === 'select' ? ` [options: ${f.options.join(', ')}]` : ''}`).join('\n')}`).join('\n')}
+
+IMPORTANT: Respond ONLY with valid JSON. No markdown, no explanation. The JSON structure must be:
+{
+  "${enabledTasks[0]?.key || 'rams'}": {
+    "field_id": "field value",
+    ...
+  },
+  ...
+}
+
+For select fields, use one of the provided options exactly. For text/textarea fields, provide practical, realistic content based on the event description. If information is missing from the description, make reasonable assumptions for a Singapore school context and use [PLACEHOLDER] markers where the teacher needs to fill in specific details.`
+  }];
+
+  const response = await sendChat(messages, {
+    systemPrompt: `You are Co-Cher's event planning assistant for Singapore schools. Generate complete, practical event planning documents based on teacher descriptions. Always respond with valid JSON only. Be specific, professional, and follow Singapore MOE conventions for school communications.`,
+    temperature: 0.4,
+    maxTokens: 4096
+  });
+
+  // Parse JSON from response (handle potential markdown wrapping)
+  let jsonStr = response.trim();
+  // Strip markdown code blocks if present
+  if (jsonStr.startsWith('```')) {
+    jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+  }
+
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    // Try to extract JSON from response
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error('Failed to parse AI response as JSON. Please try again.');
+  }
 }
 
 /* ══════════ Event Detail View ══════════ */
