@@ -53,16 +53,23 @@ export async function sendChat(messages, options = {}) {
     parts: [{ text: m.content }]
   }));
 
+  const generationConfig = {
+    temperature,
+    maxOutputTokens: maxTokens
+  };
+
+  // When callers need structured JSON, use Gemini's native JSON mode
+  if (options.jsonMode) {
+    generationConfig.responseMimeType = 'application/json';
+  }
+
   const res = await fetch(`${ENDPOINT}/${model}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents,
-      generationConfig: {
-        temperature,
-        maxOutputTokens: maxTokens
-      }
+      generationConfig
     })
   });
 
@@ -74,11 +81,11 @@ export async function sendChat(messages, options = {}) {
 
   const data = await res.json();
 
-  // Gemini 2.5 models may return multiple parts: a "thought" part and the
-  // actual response.  We need the non-thought part.
+  // Gemini 2.5 thinking models return multiple parts — the thinking/reasoning
+  // comes first, and the actual answer is the LAST text part.
   const parts = data?.candidates?.[0]?.content?.parts || [];
-  const responsePart = parts.find(p => !p.thought) || parts[parts.length - 1] || parts[0];
-  const text = responsePart?.text;
+  const textParts = parts.filter(p => p.text);
+  const text = textParts.length > 0 ? textParts[textParts.length - 1].text : null;
 
   if (!text) {
     throw new Error('No response from model.');

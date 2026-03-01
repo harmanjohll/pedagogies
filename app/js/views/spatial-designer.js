@@ -538,18 +538,21 @@ export function render(container) {
 
     try {
       const response = await sendChat([{ role: 'user', content: briefPrompt }], {
-        systemPrompt: 'You are a spatial pedagogy expert for Singapore schools. Given a lesson brief, recommend the optimal classroom layout preset. Respond ONLY with valid JSON, no markdown.',
+        systemPrompt: 'You are a spatial pedagogy expert for Singapore schools. Given a lesson brief, recommend the optimal classroom layout preset. Respond with a JSON object.',
         temperature: 0.4,
-        maxTokens: 512
+        maxTokens: 512,
+        jsonMode: true
       });
 
-      // Strip markdown code fences if present (e.g. ```json ... ```)
-      const cleaned = response.replace(/```(?:json)?\s*/gi, '').replace(/```\s*/g, '').trim();
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('AI returned an unexpected format. Please try again.');
       let suggestion;
-      try { suggestion = JSON.parse(jsonMatch[0]); } catch (parseErr) {
-        throw new Error('AI response contained malformed JSON. Please try again.');
+      try {
+        suggestion = typeof response === 'string' ? JSON.parse(response) : response;
+      } catch {
+        // Fallback: try to extract JSON from text
+        const cleaned = response.replace(/```(?:json)?\s*/gi, '').replace(/```\s*/g, '').trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('AI returned unexpected text. Please try again.');
+        suggestion = JSON.parse(jsonMatch[0]);
       }
 
       // Apply preset
@@ -699,18 +702,26 @@ export function render(container) {
 
     try {
       const response = await sendChat([{ role: 'user', content: prompt }], {
-        systemPrompt: 'You are a spatial pedagogy expert for Singapore schools. Suggest a 3-phase lesson timeline with classroom layout changes. Respond ONLY with valid JSON, no markdown.',
+        systemPrompt: 'You are a spatial pedagogy expert for Singapore schools. Suggest a 3-phase lesson timeline with classroom layout changes. Respond with a JSON array.',
         temperature: 0.4,
-        maxTokens: 512
+        maxTokens: 512,
+        jsonMode: true
       });
 
-      // Strip markdown code fences if present
-      const cleaned = response.replace(/```(?:json)?\s*/gi, '').replace(/```\s*/g, '').trim();
-      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) throw new Error('AI returned an unexpected format. Please try again.');
       let timeline;
-      try { timeline = JSON.parse(jsonMatch[0]); } catch (parseErr) {
-        throw new Error('AI response contained malformed JSON. Please try again.');
+      try {
+        const parsed = typeof response === 'string' ? JSON.parse(response) : response;
+        // Handle both direct array and wrapped object { phases: [...] }
+        timeline = Array.isArray(parsed) ? parsed : (parsed.phases || parsed.timeline || Object.values(parsed).find(v => Array.isArray(v)) || []);
+      } catch {
+        // Fallback: try to extract JSON array from text
+        const cleaned = response.replace(/```(?:json)?\s*/gi, '').replace(/```\s*/g, '').trim();
+        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) throw new Error('AI returned unexpected text. Please try again.');
+        timeline = JSON.parse(jsonMatch[0]);
+      }
+      if (!Array.isArray(timeline) || timeline.length === 0) {
+        throw new Error('AI did not return a valid timeline. Please try again.');
       }
 
       // Generate scenes from AI timeline
