@@ -371,9 +371,83 @@
   background: var(--surface);
 }
 
+/* ═══════════ Mobile Header ═══════════ */
+
+.mobile-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--surface);
+  flex-shrink: 0;
+  min-height: 52px;
+}
+
+.hamburger-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background var(--dur-fast);
+}
+.hamburger-btn:hover { background: var(--bg-subtle); }
+
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.mobile-brand-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--brand-gradient);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  box-shadow: 0 2px 6px rgba(0, 12, 83, 0.2);
+}
+
+.mobile-brand-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--brand-navy);
+}
+.dark .mobile-brand-name { color: var(--brand-gold); }
+
+/* ═══════════ Sidebar Overlay ═══════════ */
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 90;
+  opacity: 0;
+  transition: opacity var(--dur-normal) var(--ease);
+}
+.sidebar-overlay.visible {
+  display: block;
+  opacity: 1;
+}
+
 /* ═══════════ Responsive ═══════════ */
 
 @media (max-width: 1024px) {
+  .mobile-header { display: flex; }
+
   .sidebar {
     position: fixed;
     left: 0;
@@ -381,8 +455,61 @@
     transform: translateX(-100%);
     box-shadow: var(--shadow-xl);
     z-index: 100;
+    transition: transform var(--dur-normal) var(--ease);
   }
   .sidebar.open { transform: translateX(0); }
+
+  .main-content {
+    width: 100%;
+  }
+
+  /* Lesson planner: stack columns */
+  .lp-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+  .lp-chat-col { border-right: none; border-bottom: 1px solid var(--border); }
+
+  /* Spatial: stack columns */
   .three-col { grid-template-columns: 1fr; }
-  .lp-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .main-scroll { padding: var(--sp-4); }
+
+  .greeting-card {
+    padding: var(--sp-6);
+  }
+  .greeting-title { font-size: 1.375rem; }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+
+  .lp-layout {
+    grid-template-rows: 1fr;
+  }
+  .lp-plan-col { display: none; }
+  .lp-layout.show-plan .lp-chat-col { display: none; }
+  .lp-layout.show-plan .lp-plan-col { display: flex; }
+}
+
+@media (max-width: 480px) {
+  .main-scroll { padding: var(--sp-3); }
+  .greeting-card { padding: var(--sp-5) var(--sp-4); }
+  .greeting-title { font-size: 1.25rem; }
+  .greeting-subtitle { font-size: 0.8125rem; }
+
+  .action-card { padding: var(--sp-4); }
+  .action-card-icon { width: 36px; height: 36px; }
+  .action-card-title { font-size: 0.875rem; }
+
+  .stat-card { padding: var(--sp-4); }
+  .stat-value { font-size: 1.375rem; }
+
+  .chat-input-row { padding: var(--sp-3); }
+  .chat-input { min-height: 60px; font-size: 0.875rem; }
+  .chat-send { padding: var(--sp-2) var(--sp-4); font-size: 0.875rem; min-height: 40px; }
 }

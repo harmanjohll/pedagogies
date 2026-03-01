@@ -662,6 +662,29 @@ select.input {
 .dark .chat-send { background: var(--brand-gold); color: var(--brand-navy); }
 .dark .chat-send:hover { background: #e6cc00; }
 
+/* Mobile panel toggle for lesson planner */
+.lp-panel-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--dur-fast);
+}
+.lp-panel-toggle:hover { background: var(--accent-light); color: var(--accent); }
+
+@media (max-width: 768px) {
+  .lp-panel-toggle { display: inline-flex; }
+}
+
 /* ═══════════ Stat Cards ═══════════ */
 
 .stat-card {

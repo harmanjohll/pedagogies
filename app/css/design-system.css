@@ -140,8 +140,14 @@ body {
   line-height: 1.6;
   color: var(--ink);
   background: var(--bg);
-  transition: background-color var(--dur-slow) var(--ease), color var(--dur-slow) var(--ease);
+  transition: background-color 0.4s ease, color 0.4s ease;
   overflow: hidden;
+}
+
+/* Smooth dark mode transitions for all themed elements */
+.card, .sidebar, .surface, .main-content, .stat-card, .action-card,
+.modal, .chat-input-row, .chat-header, .mobile-header {
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.3s ease;
 }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }

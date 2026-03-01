@@ -29,7 +29,18 @@ function init() {
 
   app.innerHTML = `
     <aside class="sidebar" id="sidebar"></aside>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
     <main class="main-content">
+      <div class="mobile-header" id="mobile-header">
+        <button class="hamburger-btn" id="hamburger-btn" aria-label="Open menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="mobile-brand">
+          <span class="mobile-brand-icon">C</span>
+          <span class="mobile-brand-name">Co-Cher</span>
+        </div>
+        <div style="width:36px;"></div>
+      </div>
       <div id="main-view" style="height: 100%; display: flex; flex-direction: column;"></div>
     </main>
   `;
@@ -40,6 +51,25 @@ function init() {
 
   // Re-render sidebar on state changes (badges, theme)
   Store.subscribe(() => renderSidebar(sidebarEl));
+
+  // Mobile sidebar toggle
+  const overlay = document.getElementById('sidebar-overlay');
+  const hamburger = document.getElementById('hamburger-btn');
+
+  function openSidebar() {
+    sidebarEl.classList.add('open');
+    overlay.classList.add('visible');
+  }
+  function closeSidebar() {
+    sidebarEl.classList.remove('open');
+    overlay.classList.remove('visible');
+  }
+
+  hamburger.addEventListener('click', openSidebar);
+  overlay.addEventListener('click', closeSidebar);
+
+  // Close sidebar on navigation (mobile)
+  window.addEventListener('hashchange', closeSidebar);
 
   // Register routes
   registerRoute('/', renderDashboard);
