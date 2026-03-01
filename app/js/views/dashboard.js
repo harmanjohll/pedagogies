@@ -9,9 +9,9 @@ import { navigate } from '../router.js';
 
 function getGreeting() {
   const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (h < 12) return 'Good Morning';
+  if (h < 17) return 'Good Afternoon';
+  return 'Good Evening';
 }
 
 function timeAgo(ts) {
@@ -38,7 +38,7 @@ export function render(container) {
 
         <!-- Greeting -->
         <div class="greeting-card animate-fade-in-up">
-          <div class="greeting-title">${getGreeting()}, Teacher!</div>
+          <div class="greeting-title">${getGreeting()}, Cher!</div>
           <div class="greeting-subtitle">
             What would you like to create today? Design a lesson, explore spatial arrangements, or manage your classes.
           </div>
