@@ -161,6 +161,10 @@ export function render(container) {
               <input class="input" id="brief-topic" style="font-size:0.8125rem;padding:var(--sp-1) var(--sp-2);" placeholder="e.g. Group investigation on acids" />
             </div>
             <div class="input-group" style="margin-bottom:0;">
+              <label class="input-label" style="font-size:0.75rem;">Description / Activity Notes</label>
+              <textarea class="input" id="brief-description" rows="3" style="font-size:0.8125rem;padding:var(--sp-1) var(--sp-2);" placeholder="Describe the lesson activity, learning goals, or pedagogical approach you have in mind..."></textarea>
+            </div>
+            <div class="input-group" style="margin-bottom:0;">
               <label class="input-label" style="font-size:0.75rem;">Lesson Intention (E21CC Focus)</label>
               <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
                 <label style="display:flex;gap:3px;align-items:center;font-size:0.75rem;cursor:pointer;">
@@ -502,6 +506,7 @@ export function render(container) {
 
     const cls = briefClassSelect.value ? Store.getClass(briefClassSelect.value) : null;
     const topic = briefTopic.value.trim();
+    const description = (container.querySelector('#brief-description')?.value || '').trim();
     const considerations = briefConsiderations.value.trim();
     const e21ccFocus = [...container.querySelectorAll('.brief-e21cc:checked')].map(cb => cb.value);
     const count = parseInt(studentCountInput.value) || 32;
@@ -517,6 +522,7 @@ export function render(container) {
     briefPrompt += `- Students: ${count}\n`;
     if (cls) briefPrompt += `- Class: ${cls.name} (${cls.level || ''} ${cls.subject || ''})\n`;
     if (topic) briefPrompt += `- Topic/Activity: ${topic}\n`;
+    if (description) briefPrompt += `- Description: ${description}\n`;
     if (e21ccFocus.length > 0) briefPrompt += `- E21CC Focus: ${e21ccFocus.map(f => E21CC_MAP[f]).join(', ')}\n`;
     if (considerations) briefPrompt += `- Special considerations: ${considerations}\n`;
     if (cls?.students?.length) {
@@ -537,10 +543,14 @@ export function render(container) {
         maxTokens: 512
       });
 
-      // Parse JSON from response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('Could not parse layout suggestion.');
-      const suggestion = JSON.parse(jsonMatch[0]);
+      // Strip markdown code fences if present (e.g. ```json ... ```)
+      const cleaned = response.replace(/```(?:json)?\s*/gi, '').replace(/```\s*/g, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('AI returned an unexpected format. Please try again.');
+      let suggestion;
+      try { suggestion = JSON.parse(jsonMatch[0]); } catch (parseErr) {
+        throw new Error('AI response contained malformed JSON. Please try again.');
+      }
 
       // Apply preset
       if (suggestion.preset) {
@@ -670,11 +680,16 @@ export function render(container) {
       cgc: 'Civic, Global & Cross-cultural Literacy (CGC)'
     };
 
+    const description = (container.querySelector('#brief-description')?.value || '').trim();
+    const considerations = (briefConsiderations?.value || '').trim();
+
     let prompt = `Suggest a 3-phase lesson timeline with optimal classroom layouts for each phase.\n`;
     prompt += `- Students: ${count}\n`;
     if (cls) prompt += `- Class: ${cls.name} (${cls.level || ''} ${cls.subject || ''})\n`;
     if (topic) prompt += `- Topic/Activity: ${topic}\n`;
+    if (description) prompt += `- Description: ${description}\n`;
     if (e21ccFocus.length > 0) prompt += `- E21CC focus: ${e21ccFocus.map(f => E21CC_MAP[f] || f).join(', ')}\n`;
+    if (considerations) prompt += `- Special considerations: ${considerations}\n`;
     prompt += `\nAvailable presets: direct, pods, stations, ushape, quiet, gallery, fishbowl, maker\n`;
     prompt += `\nRespond with ONLY a JSON array of 3 objects, each with:\n- "name": phase name (e.g. "Introduction", "Group Investigation", "Debrief")\n- "preset": one of the preset names above\n- "wall_A": "close" or "stack"\n- "wall_B": "close" or "stack"\n- "duration": suggested minutes (number)\n- "tip": one short teaching tip for this phase`;
 
@@ -689,9 +704,14 @@ export function render(container) {
         maxTokens: 512
       });
 
-      const jsonMatch = response.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) throw new Error('Could not parse timeline.');
-      const timeline = JSON.parse(jsonMatch[0]);
+      // Strip markdown code fences if present
+      const cleaned = response.replace(/```(?:json)?\s*/gi, '').replace(/```\s*/g, '').trim();
+      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) throw new Error('AI returned an unexpected format. Please try again.');
+      let timeline;
+      try { timeline = JSON.parse(jsonMatch[0]); } catch (parseErr) {
+        throw new Error('AI response contained malformed JSON. Please try again.');
+      }
 
       // Generate scenes from AI timeline
       scenes = [];
