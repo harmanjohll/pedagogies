@@ -27,6 +27,14 @@ const PANEL_COUNT = 8, PANEL_THICKNESS = 10;
 const TRI_S = UNIT * 0.98;
 const TRI_H = Math.sin(Math.PI / 3) * TRI_S;
 
+/* ═══════════ Venue Types ═══════════ */
+const VENUE_TYPES = [
+  { id: 'classroom', label: 'Classroom', icon: '🏫', color: '#ffffff', gridColor: '#e5e7eb', desc: 'Standard classroom with operable walls' },
+  { id: 'field', label: 'School Field', icon: '🏟️', color: '#d1fae5', gridColor: '#86efac', desc: 'Open grass field for outdoor PE' },
+  { id: 'basketball', label: 'Basketball Court', icon: '🏀', color: '#fef3c7', gridColor: '#fcd34d', desc: 'Hard court with basketball markings' },
+  { id: 'hall', label: 'School Hall', icon: '🏸', color: '#ede9fe', gridColor: '#c4b5fd', desc: 'Indoor hall with badminton courts' }
+];
+
 /* ═══════════ Palette ═══════════ */
 const PALETTE = [
   // Furniture
@@ -56,6 +64,16 @@ const PALETTE = [
   { cat: 'Stations', id: 'desk_blue', label: 'Desk (Blue)', w: UNIT, h: UNIT * 0.7, color: '#bfdbfe', snap: 'edge90' },
   { cat: 'Stations', id: 'desk_green', label: 'Desk (Green)', w: UNIT, h: UNIT * 0.7, color: '#bbf7d0', snap: 'edge90' },
   { cat: 'Stations', id: 'desk_orange', label: 'Desk (Orange)', w: UNIT, h: UNIT * 0.7, color: '#fed7aa', snap: 'edge90' },
+  // PE Equipment
+  { cat: 'PE Equipment', id: 'cone', label: 'Cone / Marker', w: UNIT * 0.5, h: UNIT * 0.5, color: '#fb923c', round: true, pe: true },
+  { cat: 'PE Equipment', id: 'gym_mat', label: 'Gym Mat', w: UNIT * 2, h: UNIT * 1.2, color: '#93c5fd', pe: true },
+  { cat: 'PE Equipment', id: 'hoop', label: 'Hula Hoop', w: UNIT * 1.2, h: UNIT * 1.2, color: '#f9a8d4', round: true, pe: true },
+  { cat: 'PE Equipment', id: 'net', label: 'Net / Barrier', w: UNIT * 4, h: UNIT * 0.2, color: '#374151', snap: 'edge90', pe: true },
+  { cat: 'PE Equipment', id: 'goal', label: 'Goal Post', w: UNIT * 2.5, h: UNIT * 0.5, color: '#e5e7eb', snap: 'edge90', pe: true },
+  { cat: 'PE Equipment', id: 'bench', label: 'Bench', w: UNIT * 3, h: UNIT * 0.5, color: '#d6b88a', snap: 'edge90', pe: true },
+  { cat: 'PE Equipment', id: 'water_station', label: 'Water Station', w: UNIT * 0.8, h: UNIT * 0.8, color: '#67e8f9', round: true, pe: true },
+  { cat: 'PE Equipment', id: 'equipment_box', label: 'Equipment Box', w: UNIT * 1.2, h: UNIT * 0.8, color: '#a3a3a3', pe: true },
+  { cat: 'PE Equipment', id: 'speaker', label: 'Speaker / Whistle Point', w: UNIT * 0.6, h: UNIT * 0.6, color: '#1e293b', round: true, pe: true },
   // Zones
   { cat: 'Zones', id: 'zone_cog', label: 'Zone: Cognitive', w: UNIT * 3, h: UNIT * 2, color: 'rgba(147,197,253,0.16)', zone: true, border: '#93c5fd' },
   { cat: 'Zones', id: 'zone_soc', label: 'Zone: Social', w: UNIT * 3, h: UNIT * 2, color: 'rgba(167,243,208,0.16)', zone: true, border: '#a7f3d0' },
@@ -73,6 +91,10 @@ const PRESETS = [
   { id: 'gallery', label: 'Gallery Walk', desc: 'Exhibition displays', icon: '🖼️' },
   { id: 'fishbowl', label: 'Fishbowl / Socratic', desc: 'Inner + outer circle', icon: '🐟' },
   { id: 'maker', label: 'Makerspace', desc: 'Hands-on creation', icon: '🛠️' },
+  // PE presets
+  { id: 'circuit', label: 'Circuit Training', desc: 'Station-based fitness rotation', icon: '🏃', pe: true },
+  { id: 'team_game', label: 'Team Game', desc: 'Two-team court/field setup', icon: '⚽', pe: true },
+  { id: 'warmup', label: 'Warm-up Formation', desc: 'Lines facing instructor', icon: '🤸', pe: true },
 ];
 
 /* ═══════════ Preset Insights (E21CC + STP ties) ═══════════ */
@@ -116,6 +138,21 @@ const PRESET_INSIGHTS = {
     { title: '🛠️ Hands-On Creation', affordance: 'Large work surfaces and diverse tools empower hands-on design and prototyping.', moves: ['Pose design challenges requiring physical solutions.', 'Set up a tinkering station for open-ended exploration.'], e21cc: 'CAIT — making develops inventive thinking through tangible creation.' },
     { title: '🏃‍♂️ Flexible Movement', affordance: 'Open-plan design allows easy movement between ideation and fabrication zones.', moves: ['Encourage design thinking: empathise, define, ideate, prototype, test.', 'Use mobile whiteboards for teams to share design processes.'], e21cc: 'CAIT — iterative design cycles develop adaptive problem-solving.' },
     { title: '💡 Interdisciplinary Thinking', affordance: 'Space blends art, design, engineering, and technology across subjects.', moves: ['Partner with other subject teachers for cross-curricular projects.', 'Invite community experts to mentor student projects.'], e21cc: 'CGC — cross-disciplinary work builds global and cross-cultural literacy.' }
+  ],
+  circuit: [
+    { title: '🏃 Active Station Rotation', affordance: 'Multiple equipment stations spread around the space promote continuous physical activity and prevent idle time.', moves: ['Set timed rotations (e.g. 2 min per station) with a whistle signal.', 'Include a rest/water station in the circuit.'], e21cc: 'CAIT — self-paced stations develop adaptive physical literacy.' },
+    { title: '💪 Differentiated Fitness', affordance: 'Each station can target different muscle groups or skill levels, catering to all abilities.', moves: ['Offer modified exercises at each station (beginner/advanced).', 'Use peer coaching — pair stronger students with those who need support.'], e21cc: 'CCI — peer coaching at stations builds communication and collaboration.' },
+    { title: '📋 Student Ownership', affordance: 'Students track their own progress through stations, building responsibility and self-management.', moves: ['Provide station cards with exercise instructions and rep targets.', 'Debrief at the end: which station was hardest and why?'], e21cc: 'CGC — self-tracking develops personal responsibility and wellness awareness.' }
+  ],
+  team_game: [
+    { title: '⚽ Strategic Teamwork', affordance: 'Divided court creates clear team territories, encouraging strategic positioning and communication.', moves: ['Assign positions and rotate roles each quarter.', 'Use time-outs to discuss team strategy collaboratively.'], e21cc: 'CCI — team sports are a natural setting for communication and collaboration.' },
+    { title: '🤝 Fair Play & Sportsmanship', affordance: 'Structured game setup with visible boundaries and goals reinforces rules and fair play.', moves: ['Appoint student referees to practise rule enforcement.', 'Debrief on sportsmanship after each game.'], e21cc: 'CGC — fair play develops civic responsibility and respect for others.' },
+    { title: '🧠 Tactical Thinking', affordance: 'Game scenarios require real-time decision-making, spatial awareness, and adaptive strategies.', moves: ['Pause play to highlight good tactical decisions.', 'Use "freeze" moments to ask students what they would do next.'], e21cc: 'CAIT — game tactics develop critical and inventive thinking under pressure.' }
+  ],
+  warmup: [
+    { title: '🤸 Structured Movement', affordance: 'Lines facing the instructor ensure all students can see demonstrations clearly for correct form.', moves: ['Demonstrate each exercise, then have students mirror you.', 'Walk through rows to correct posture and technique.'], e21cc: 'CCI — clear demonstration supports visual communication and modelling.' },
+    { title: '🫀 Injury Prevention', affordance: 'Organised formation with adequate spacing ensures safe movement during dynamic warm-ups.', moves: ['Start with gentle cardio, progress to dynamic stretches.', 'Call out body parts systematically: neck, shoulders, arms, core, legs.'], e21cc: 'CGC — safe warm-up habits develop lifelong physical wellness.' },
+    { title: '🎵 Engagement & Routine', affordance: 'Familiar formation signals the start of PE, building routine and readiness to learn.', moves: ['Use music to energise the warm-up.', 'Let students lead the warm-up on a rotating basis.'], e21cc: 'CAIT — student-led warm-ups develop adaptive leadership skills.' }
   ]
 };
 
@@ -149,6 +186,12 @@ export function render(container) {
             Design Brief
           </summary>
           <div style="display:flex;flex-direction:column;gap:var(--sp-2);font-size:0.8125rem;">
+            <div class="input-group" style="margin-bottom:0;">
+              <label class="input-label" style="font-size:0.75rem;">Venue</label>
+              <select class="input" id="brief-venue" style="font-size:0.8125rem;padding:var(--sp-1) var(--sp-2);">
+                ${VENUE_TYPES.map(v => `<option value="${v.id}">${v.icon} ${v.label}</option>`).join('')}
+              </select>
+            </div>
             <div class="input-group" style="margin-bottom:0;">
               <label class="input-label" style="font-size:0.75rem;">Class</label>
               <select class="input" id="brief-class" style="font-size:0.8125rem;padding:var(--sp-1) var(--sp-2);">
@@ -215,21 +258,23 @@ export function render(container) {
             <span class="toggle-track"></span>
             <span class="toggle-label">Snap to grid</span>
           </label>
-          <label class="toggle" style="font-size:0.8125rem;">
-            <input type="checkbox" class="toggle-input" id="wall-toggle" checked />
-            <span class="toggle-track"></span>
-            <span class="toggle-label">Operable walls</span>
-          </label>
-          <div style="margin-top:var(--sp-2);">
-            <div style="font-size:0.75rem;font-weight:600;color:var(--ink-faint);margin-bottom:var(--sp-1);">Wall A (x=720)</div>
-            <div style="display:flex;gap:var(--sp-1);margin-bottom:var(--sp-2);">
-              <button class="btn btn-ghost btn-sm" id="close-wall-a">Close A</button>
-              <button class="btn btn-ghost btn-sm" id="stack-wall-a">Stack A</button>
-            </div>
-            <div style="font-size:0.75rem;font-weight:600;color:var(--ink-faint);margin-bottom:var(--sp-1);">Wall B (x=1080)</div>
-            <div style="display:flex;gap:var(--sp-1);">
-              <button class="btn btn-ghost btn-sm" id="close-wall-b">Close B</button>
-              <button class="btn btn-ghost btn-sm" id="stack-wall-b">Stack B</button>
+          <div id="wall-controls">
+            <label class="toggle" style="font-size:0.8125rem;">
+              <input type="checkbox" class="toggle-input" id="wall-toggle" checked />
+              <span class="toggle-track"></span>
+              <span class="toggle-label">Operable walls</span>
+            </label>
+            <div style="margin-top:var(--sp-2);">
+              <div style="font-size:0.75rem;font-weight:600;color:var(--ink-faint);margin-bottom:var(--sp-1);">Wall A (x=720)</div>
+              <div style="display:flex;gap:var(--sp-1);margin-bottom:var(--sp-2);">
+                <button class="btn btn-ghost btn-sm" id="close-wall-a">Close A</button>
+                <button class="btn btn-ghost btn-sm" id="stack-wall-a">Stack A</button>
+              </div>
+              <div style="font-size:0.75rem;font-weight:600;color:var(--ink-faint);margin-bottom:var(--sp-1);">Wall B (x=1080)</div>
+              <div style="display:flex;gap:var(--sp-1);">
+                <button class="btn btn-ghost btn-sm" id="close-wall-b">Close B</button>
+                <button class="btn btn-ghost btn-sm" id="stack-wall-b">Stack B</button>
+              </div>
             </div>
           </div>
           <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
@@ -262,20 +307,20 @@ export function render(container) {
           </defs>
           <!-- Room sections -->
           <rect id="roomA" x="0" y="0" width="720" height="720" fill="url(#grid)"/>
-          <line id="trackA" x1="${WALL_A_X}" y1="0" x2="${WALL_A_X}" y2="720" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.35"/>
-          <line id="trackB" x1="${WALL_B_X}" y1="0" x2="${WALL_B_X}" y2="720" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.35"/>
+          <line class="classroom-only" id="trackA" x1="${WALL_A_X}" y1="0" x2="${WALL_A_X}" y2="720" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.35"/>
+          <line class="classroom-only" id="trackB" x1="${WALL_B_X}" y1="0" x2="${WALL_B_X}" y2="720" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.35"/>
           <rect id="roomB" x="720" y="0" width="720" height="720" fill="url(#grid)" opacity="0.08"/>
           <!-- Room shell -->
           <rect x="0" y="0" width="${VB_W}" height="${VB_H}" fill="none" stroke="#94a3b8" stroke-width="4" rx="2"/>
-          <text x="50" y="22" font-size="13" fill="#64748b" font-family="var(--font-sans)" font-weight="600">FRONT</text>
+          <text class="classroom-only" x="50" y="22" font-size="13" fill="#64748b" font-family="var(--font-sans)" font-weight="600">FRONT</text>
           <!-- Doors -->
-          <rect x="300" y="-1" width="60" height="8" fill="#b45309" rx="2"/>
-          <rect x="1000" y="-1" width="60" height="8" fill="#b45309" rx="2"/>
+          <rect class="classroom-only" x="300" y="-1" width="60" height="8" fill="#b45309" rx="2"/>
+          <rect class="classroom-only" x="1000" y="-1" width="60" height="8" fill="#b45309" rx="2"/>
           <!-- Windows -->
-          <rect x="130" y="-1" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
-          <rect x="780" y="-1" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
-          <rect x="130" y="${VB_H - 5}" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
-          <rect x="780" y="${VB_H - 5}" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
+          <rect class="classroom-only" x="130" y="-1" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
+          <rect class="classroom-only" x="780" y="-1" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
+          <rect class="classroom-only" x="130" y="${VB_H - 5}" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
+          <rect class="classroom-only" x="780" y="${VB_H - 5}" width="160" height="6" fill="#60a5fa" opacity="0.5" rx="1"/>
           <!-- Operable walls -->
           <g id="operable-walls"></g>
           <!-- Layout items -->
@@ -329,9 +374,167 @@ export function render(container) {
   let selected = new Set();
   let marquee = null;
   let currentPreset = null;
+  let currentVenue = 'classroom';
   let radarChart = null;
   let undoStack = [];
   let panelState = { A: [], B: [] };
+
+  /* ══════ Venue Rendering ══════ */
+  function applyVenue(venueId) {
+    currentVenue = venueId;
+    const venue = VENUE_TYPES.find(v => v.id === venueId) || VENUE_TYPES[0];
+    const svg = container.querySelector('#spatial-svg');
+    const roomA = svg.querySelector('#roomA');
+    const roomB = svg.querySelector('#roomB');
+
+    // Remove any previous venue overlay
+    svg.querySelector('#venue-overlay')?.remove();
+
+    // Update grid pattern colour
+    const gridPath = svg.querySelector('#grid path');
+    if (gridPath) gridPath.setAttribute('stroke', venue.gridColor);
+
+    // Walls & classroom-specific elements
+    const wallControls = container.querySelector('#wall-controls');
+    const classroomElements = svg.querySelector('#classroom-elements');
+    const isClassroom = venueId === 'classroom';
+
+    // Show/hide wall controls
+    if (wallControls) wallControls.style.display = isClassroom ? '' : 'none';
+    // Show/hide operable walls, doors, windows, room shell labels
+    svg.querySelector('#operable-walls').style.display = isClassroom ? '' : 'none';
+    svg.querySelectorAll('.classroom-only').forEach(el => el.style.display = isClassroom ? '' : 'none');
+
+    // Set room backgrounds
+    roomA.setAttribute('fill', isClassroom ? 'url(#grid)' : venue.color);
+    roomB.setAttribute('fill', isClassroom ? 'url(#grid)' : venue.color);
+    roomB.setAttribute('opacity', isClassroom ? '0.08' : '1');
+
+    // Update SVG background
+    svg.style.background = isClassroom ? '#fff' : venue.color;
+
+    // Add venue-specific overlay
+    const overlay = document.createElementNS(SVG_NS, 'g');
+    overlay.id = 'venue-overlay';
+    overlay.style.pointerEvents = 'none';
+
+    if (venueId === 'field') {
+      // Field: centre circle, halfway line, boundary
+      const lineAttr = { fill: 'none', stroke: '#fff', 'stroke-width': 3, opacity: 0.6 };
+      const border = document.createElementNS(SVG_NS, 'rect');
+      setAttrs(border, { x: 40, y: 40, width: VB_W - 80, height: VB_H - 80, rx: 8, ...lineAttr });
+      overlay.appendChild(border);
+      const half = document.createElementNS(SVG_NS, 'line');
+      setAttrs(half, { x1: VB_W / 2, y1: 40, x2: VB_W / 2, y2: VB_H - 40, ...lineAttr });
+      overlay.appendChild(half);
+      const circle = document.createElementNS(SVG_NS, 'circle');
+      setAttrs(circle, { cx: VB_W / 2, cy: VB_H / 2, r: 100, ...lineAttr });
+      overlay.appendChild(circle);
+    } else if (venueId === 'basketball') {
+      // Basketball court markings
+      const lineAttr = { fill: 'none', stroke: '#92400e', 'stroke-width': 2.5, opacity: 0.5 };
+      // Outer boundary
+      const border = document.createElementNS(SVG_NS, 'rect');
+      setAttrs(border, { x: 60, y: 40, width: VB_W - 120, height: VB_H - 80, rx: 4, ...lineAttr });
+      overlay.appendChild(border);
+      // Half-court line
+      const half = document.createElementNS(SVG_NS, 'line');
+      setAttrs(half, { x1: VB_W / 2, y1: 40, x2: VB_W / 2, y2: VB_H - 40, ...lineAttr });
+      overlay.appendChild(half);
+      // Centre circle
+      const cc = document.createElementNS(SVG_NS, 'circle');
+      setAttrs(cc, { cx: VB_W / 2, cy: VB_H / 2, r: 80, ...lineAttr });
+      overlay.appendChild(cc);
+      // Left key (3-point arc + rectangle)
+      const lKey = document.createElementNS(SVG_NS, 'rect');
+      setAttrs(lKey, { x: 60, y: VB_H / 2 - 100, width: 180, height: 200, ...lineAttr });
+      overlay.appendChild(lKey);
+      const lArc = document.createElementNS(SVG_NS, 'path');
+      lArc.setAttribute('d', `M 60 ${VB_H / 2 - 200} A 200 200 0 0 1 60 ${VB_H / 2 + 200}`);
+      setAttrs(lArc, lineAttr);
+      overlay.appendChild(lArc);
+      // Right key
+      const rKey = document.createElementNS(SVG_NS, 'rect');
+      setAttrs(rKey, { x: VB_W - 240, y: VB_H / 2 - 100, width: 180, height: 200, ...lineAttr });
+      overlay.appendChild(rKey);
+      const rArc = document.createElementNS(SVG_NS, 'path');
+      rArc.setAttribute('d', `M ${VB_W - 60} ${VB_H / 2 - 200} A 200 200 0 0 0 ${VB_W - 60} ${VB_H / 2 + 200}`);
+      setAttrs(rArc, lineAttr);
+      overlay.appendChild(rArc);
+    } else if (venueId === 'hall') {
+      // School hall with 2 badminton courts side by side
+      const lineAttr = { fill: 'none', stroke: '#6d28d9', 'stroke-width': 2, opacity: 0.4 };
+      // Hall boundary
+      const border = document.createElementNS(SVG_NS, 'rect');
+      setAttrs(border, { x: 30, y: 30, width: VB_W - 60, height: VB_H - 60, rx: 4, ...lineAttr });
+      overlay.appendChild(border);
+      // Court 1 (left half)
+      const courtW = 560, courtH = 500;
+      const c1x = VB_W / 4 - courtW / 2, c1y = VB_H / 2 - courtH / 2;
+      const c1 = document.createElementNS(SVG_NS, 'rect');
+      setAttrs(c1, { x: c1x, y: c1y, width: courtW, height: courtH, ...lineAttr });
+      overlay.appendChild(c1);
+      // Court 1 centre line
+      const c1h = document.createElementNS(SVG_NS, 'line');
+      setAttrs(c1h, { x1: c1x, y1: VB_H / 2, x2: c1x + courtW, y2: VB_H / 2, ...lineAttr });
+      overlay.appendChild(c1h);
+      // Court 1 net
+      const c1net = document.createElementNS(SVG_NS, 'line');
+      setAttrs(c1net, { x1: c1x, y1: VB_H / 2, x2: c1x + courtW, y2: VB_H / 2, stroke: '#6d28d9', 'stroke-width': 3, opacity: 0.6 });
+      overlay.appendChild(c1net);
+      // Court 1 service boxes
+      const svcW = courtW * 0.38;
+      [c1y, VB_H / 2].forEach(sy => {
+        const left = document.createElementNS(SVG_NS, 'rect');
+        setAttrs(left, { x: c1x + courtW / 2 - svcW, y: sy, width: svcW, height: courtH / 2, ...lineAttr });
+        overlay.appendChild(left);
+        const right = document.createElementNS(SVG_NS, 'rect');
+        setAttrs(right, { x: c1x + courtW / 2, y: sy, width: svcW, height: courtH / 2, ...lineAttr });
+        overlay.appendChild(right);
+      });
+
+      // Court 2 (right half)
+      const c2x = 3 * VB_W / 4 - courtW / 2;
+      const c2 = document.createElementNS(SVG_NS, 'rect');
+      setAttrs(c2, { x: c2x, y: c1y, width: courtW, height: courtH, ...lineAttr });
+      overlay.appendChild(c2);
+      const c2h = document.createElementNS(SVG_NS, 'line');
+      setAttrs(c2h, { x1: c2x, y1: VB_H / 2, x2: c2x + courtW, y2: VB_H / 2, ...lineAttr });
+      overlay.appendChild(c2h);
+      const c2net = document.createElementNS(SVG_NS, 'line');
+      setAttrs(c2net, { x1: c2x, y1: VB_H / 2, x2: c2x + courtW, y2: VB_H / 2, stroke: '#6d28d9', 'stroke-width': 3, opacity: 0.6 });
+      overlay.appendChild(c2net);
+      [c1y, VB_H / 2].forEach(sy => {
+        const left = document.createElementNS(SVG_NS, 'rect');
+        setAttrs(left, { x: c2x + courtW / 2 - svcW, y: sy, width: svcW, height: courtH / 2, ...lineAttr });
+        overlay.appendChild(left);
+        const right = document.createElementNS(SVG_NS, 'rect');
+        setAttrs(right, { x: c2x + courtW / 2, y: sy, width: svcW, height: courtH / 2, ...lineAttr });
+        overlay.appendChild(right);
+      });
+    }
+
+    // Insert overlay after room backgrounds but before layout items
+    svg.insertBefore(overlay, svg.querySelector('#operable-walls'));
+
+    // Filter palette and presets by venue
+    const isPE = venueId !== 'classroom';
+    container.querySelectorAll('#palette .sidebar-item').forEach((btn, i) => {
+      const item = PALETTE[i];
+      if (!item) return;
+      // Show PE equipment only for PE venues; show classroom items only for classroom
+      if (item.pe) btn.style.display = isPE ? '' : 'none';
+    });
+    container.querySelectorAll('#palette .sidebar-section-label').forEach(lbl => {
+      if (lbl.textContent === 'PE Equipment') lbl.style.display = isPE ? '' : 'none';
+    });
+    container.querySelectorAll('#presets .card').forEach((btn, i) => {
+      const p = PRESETS[i];
+      if (!p) return;
+      if (p.pe) btn.style.display = isPE ? '' : 'none';
+      else btn.style.display = isPE ? 'none' : '';
+    });
+  }
 
   /* ══════ Operable Walls ══════ */
   function buildWalls() {
@@ -484,6 +687,15 @@ export function render(container) {
     presetsEl.appendChild(btn);
   });
 
+  /* ══════ Venue selector ══════ */
+  const briefVenue = container.querySelector('#brief-venue');
+  briefVenue?.addEventListener('change', () => {
+    applyVenue(briefVenue.value);
+    showToast(`Venue: ${VENUE_TYPES.find(v => v.id === briefVenue.value)?.label || briefVenue.value}`);
+  });
+  // Initial venue render (hide PE palette/presets by default)
+  applyVenue('classroom');
+
   /* ══════ Design Brief — AI Suggest Layout ══════ */
   const briefClassSelect = container.querySelector('#brief-class');
   const briefTopic = container.querySelector('#brief-topic');
@@ -518,7 +730,11 @@ export function render(container) {
     };
 
     // Build the prompt
-    let briefPrompt = `Suggest the best classroom spatial layout for this lesson:\n`;
+    const venueId = briefVenue?.value || 'classroom';
+    const isPE = venueId !== 'classroom';
+    const venueLabel = VENUE_TYPES.find(v => v.id === venueId)?.label || 'Classroom';
+    let briefPrompt = `Suggest the best ${isPE ? 'spatial' : 'classroom'} layout for this lesson:\n`;
+    briefPrompt += `- Venue: ${venueLabel}\n`;
     briefPrompt += `- Students: ${count}\n`;
     if (cls) briefPrompt += `- Class: ${cls.name} (${cls.level || ''} ${cls.subject || ''})\n`;
     if (topic) briefPrompt += `- Topic/Activity: ${topic}\n`;
@@ -535,10 +751,13 @@ export function render(container) {
     aiSuggestBtn.textContent = 'Thinking...';
 
     try {
-      const sysPrompt = `You are an expert in spatial pedagogy for Singapore schools. Analyze the lesson brief below. Respond with a JSON object that has these keys:
-- "preset": one of "direct", "pods", "stations", "ushape", "quiet", "gallery", "fishbowl", "maker"
-- "wall_A": "close" or "stack"
-- "wall_B": "close" or "stack"
+      const presetOptions = isPE
+        ? '"circuit", "team_game", "warmup"'
+        : '"direct", "pods", "stations", "ushape", "quiet", "gallery", "fishbowl", "maker"';
+      const sysPrompt = `You are an expert in spatial pedagogy for Singapore schools, including Physical Education and outdoor activities. Analyze the lesson brief below. Respond with a JSON object that has these keys:
+- "preset": one of ${presetOptions}
+- "wall_A": "close" or "stack" (for classroom venues only; use "stack" for PE venues)
+- "wall_B": "close" or "stack" (for classroom venues only; use "stack" for PE venues)
 - "rationale": 2-3 sentences explaining why this layout suits the brief
 - "tips": array of 2-3 short spatial tips for this specific lesson
 - "insights": array of 3 objects, each with "title" (string), "affordance" (string describing how the layout supports learning), and "moves" (array of 2 suggested teaching moves)`;
@@ -689,21 +908,30 @@ export function render(container) {
     const description = (container.querySelector('#brief-description')?.value || '').trim();
     const considerations = (briefConsiderations?.value || '').trim();
 
-    let prompt = `Suggest a 3-phase lesson timeline with optimal classroom layouts for each phase.\n`;
+    const venueId = briefVenue?.value || 'classroom';
+    const isPE = venueId !== 'classroom';
+    const venueLabel = VENUE_TYPES.find(v => v.id === venueId)?.label || 'Classroom';
+
+    let prompt = `Suggest a 3-phase lesson timeline with optimal ${isPE ? 'spatial' : 'classroom'} layouts for each phase.\n`;
+    prompt += `- Venue: ${venueLabel}\n`;
     prompt += `- Students: ${count}\n`;
     if (cls) prompt += `- Class: ${cls.name} (${cls.level || ''} ${cls.subject || ''})\n`;
     if (topic) prompt += `- Topic/Activity: ${topic}\n`;
     if (description) prompt += `- Description: ${description}\n`;
     if (e21ccFocus.length > 0) prompt += `- E21CC focus: ${e21ccFocus.map(f => E21CC_MAP[f] || f).join(', ')}\n`;
     if (considerations) prompt += `- Special considerations: ${considerations}\n`;
-    prompt += `\nAvailable presets: direct, pods, stations, ushape, quiet, gallery, fishbowl, maker`;
+    if (isPE) {
+      prompt += `\nAvailable presets (PE): circuit, team_game, warmup`;
+    } else {
+      prompt += `\nAvailable presets: direct, pods, stations, ushape, quiet, gallery, fishbowl, maker`;
+    }
 
     const timelineBtn = container.querySelector('#ai-timeline-btn');
     timelineBtn.disabled = true;
     timelineBtn.textContent = 'Thinking...';
 
     try {
-      const sysPrompt = `You are an expert in spatial pedagogy for Singapore schools. Given a lesson brief, suggest a 3-phase lesson timeline with different classroom layouts for each phase. Respond with a JSON object with a key "phases" containing an array of 3 objects. Each object must have:
+      const sysPrompt = `You are an expert in spatial pedagogy for Singapore schools, including Physical Education and outdoor activities. Given a lesson brief, suggest a 3-phase lesson timeline with different layouts for each phase. Respond with a JSON object with a key "phases" containing an array of 3 objects. Each object must have:
 - "name": phase name (e.g. "Introduction", "Group Investigation", "Debrief")
 - "preset": one of the available presets
 - "wall_A": "close" or "stack"
@@ -830,6 +1058,10 @@ export function render(container) {
       g.appendChild(c);
       if (def.id === 'plant') g.appendChild(svgText(0, 5, '🌿', 16));
       if (def.id === 'vr_station') g.appendChild(svgText(0, 4, 'VR', 12, '#334155'));
+      if (def.id === 'cone') g.appendChild(svgText(0, 4, '▲', 10, '#fff'));
+      if (def.id === 'hoop') g.appendChild(svgText(0, 4, '○', 14, '#be185d'));
+      if (def.id === 'water_station') g.appendChild(svgText(0, 5, '💧', 14));
+      if (def.id === 'speaker') g.appendChild(svgText(0, 4, '📢', 12));
     } else if (def.trap) {
       const poly = document.createElementNS(SVG_NS, 'path');
       const inset = w * 0.2;
@@ -855,6 +1087,11 @@ export function render(container) {
       if (def.id === 'tablet_cart') g.appendChild(svgText(0, 4, 'iPads', 9, '#64748b'));
       if (def.id === 'printer_3d') g.appendChild(svgText(0, 4, '3D', 10, '#64748b'));
       if (def.id === 'teacher_desk') g.appendChild(svgText(0, 4, 'TDesk', 9, '#64748b'));
+      if (def.id === 'gym_mat') g.appendChild(svgText(0, 4, 'Mat', 10, '#1e40af'));
+      if (def.id === 'net') g.appendChild(svgText(0, 3, 'NET', 8, '#fff'));
+      if (def.id === 'goal') g.appendChild(svgText(0, 4, 'Goal', 9, '#64748b'));
+      if (def.id === 'bench') g.appendChild(svgText(0, 3, 'Bench', 8, '#64748b'));
+      if (def.id === 'equipment_box') g.appendChild(svgText(0, 4, '📦', 12));
     }
 
     makeDraggable(g);
@@ -1290,6 +1527,69 @@ export function render(container) {
       place(find('desk_rect'), UNIT * 19, UNIT * 6);
       place(find('tablet_cart'), UNIT * 1.5, UNIT * 9);
       place(find('vr_station'), UNIT * 18, UNIT * 9);
+    } else if (name === 'circuit') {
+      // Circuit training: stations around the perimeter, rest area in centre
+      stackWall('A'); stackWall('B');
+      const stationPositions = [
+        [UNIT * 3, UNIT * 2], [UNIT * 8, UNIT * 2], [UNIT * 13, UNIT * 2], [UNIT * 18, UNIT * 2],
+        [UNIT * 20, UNIT * 5.5],
+        [UNIT * 18, UNIT * 9], [UNIT * 13, UNIT * 9], [UNIT * 8, UNIT * 9], [UNIT * 3, UNIT * 9],
+        [UNIT * 1, UNIT * 5.5]
+      ];
+      const stationItems = ['gym_mat', 'cone', 'hoop', 'gym_mat', 'cone', 'hoop', 'gym_mat', 'cone', 'hoop', 'gym_mat'];
+      stationPositions.forEach(([x, y], i) => {
+        place(find(stationItems[i % stationItems.length]), x, y);
+        // Number cone at each station
+        place(find('cone'), x - UNIT * 0.8, y);
+      });
+      // Centre rest area
+      place(find('water_station'), UNIT * 10, UNIT * 5.5);
+      place(find('bench'), UNIT * 11.5, UNIT * 5.5);
+      // Instructor position
+      place(find('speaker'), UNIT * 10, UNIT * 3.5);
+      place(find('equipment_box'), UNIT * 22, UNIT * 10);
+    } else if (name === 'team_game') {
+      // Two-team setup with a net/barrier down the middle
+      stackWall('A'); stackWall('B');
+      place(find('net'), VB_W / 2 - UNIT * 2, VB_H / 2, 0);
+      // Goals at each end
+      place(find('goal'), UNIT * 2, VB_H / 2, 90);
+      place(find('goal'), VB_W - UNIT * 3, VB_H / 2, -90);
+      // Team A cones (left side)
+      place(find('cone'), UNIT * 5, UNIT * 3);
+      place(find('cone'), UNIT * 5, UNIT * 6);
+      place(find('cone'), UNIT * 5, UNIT * 9);
+      place(find('cone'), UNIT * 8, UNIT * 2);
+      place(find('cone'), UNIT * 8, UNIT * 5.5);
+      place(find('cone'), UNIT * 8, UNIT * 9);
+      // Team B cones (right side)
+      place(find('cone'), UNIT * 16, UNIT * 3);
+      place(find('cone'), UNIT * 16, UNIT * 6);
+      place(find('cone'), UNIT * 16, UNIT * 9);
+      place(find('cone'), UNIT * 13, UNIT * 2);
+      place(find('cone'), UNIT * 13, UNIT * 5.5);
+      place(find('cone'), UNIT * 13, UNIT * 9);
+      // Sideline benches & water
+      place(find('bench'), UNIT * 10, UNIT * 0.5);
+      place(find('water_station'), UNIT * 7, UNIT * 0.5);
+      place(find('speaker'), UNIT * 10.5, UNIT * 11);
+      place(find('equipment_box'), UNIT * 1, UNIT * 0.5);
+    } else if (name === 'warmup') {
+      // Lines facing instructor at front
+      stackWall('A'); stackWall('B');
+      // Instructor at front
+      place(find('speaker'), UNIT * 11, UNIT * 1.5);
+      // Students in rows (cones as markers)
+      const cols = 6, rows = Math.ceil(count / cols);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols && r * cols + c < count; c++) {
+          place(find('cone'), UNIT * (4 + c * 3), UNIT * (3.5 + r * 2));
+        }
+      }
+      // Equipment at the side
+      place(find('equipment_box'), UNIT * 1, UNIT * 10);
+      place(find('water_station'), UNIT * 22, UNIT * 1);
+      place(find('bench'), UNIT * 21, UNIT * 10);
     }
 
     updateMetrics();
@@ -1585,6 +1885,7 @@ export function render(container) {
       Store.saveLayout({
         name, items,
         preset: currentPreset || null,
+        venue: currentVenue || 'classroom',
         wallState: panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed',
         studentCount: parseInt(studentCountInput.value) || 32
       });
@@ -1648,6 +1949,10 @@ export function render(container) {
       btn.addEventListener('click', () => {
         const layout = layouts.find(l => l.id === btn.dataset.idx);
         if (layout) {
+          if (layout.venue && layout.venue !== currentVenue) {
+            applyVenue(layout.venue);
+            if (briefVenue) briefVenue.value = layout.venue;
+          }
           loadLayout(layout.items, layout.wallState);
           if (layout.studentCount) studentCountInput.value = layout.studentCount;
           showToast(`Loaded "${layout.name}"`);
