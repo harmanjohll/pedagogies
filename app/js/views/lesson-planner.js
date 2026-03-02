@@ -906,6 +906,9 @@ function showGroupingModal(container, classes) {
           <option value="Project-based learning">Project-based learning</option>
           <option value="Competition">Competition</option>
           <option value="Lab work">Lab / practical work</option>
+          <option value="Circuit training">PE — Circuit training</option>
+          <option value="Team game">PE — Team game</option>
+          <option value="Warmup drill">PE — Warm-up / drill</option>
         </select>
       </div>
       <div class="input-group">
@@ -996,7 +999,10 @@ function showGroupingModal(container, classes) {
           'Debate or discussion': 'fishbowl',
           'Project-based learning': 'pods',
           'Competition': 'pods',
-          'Lab work': 'stations'
+          'Lab work': 'stations',
+          'Circuit training': 'circuit',
+          'Team game': 'team_game',
+          'Warmup drill': 'warmup'
         };
         sessionStorage.setItem('cocher_spatial_preset', presetMap[activityType] || 'pods');
         sessionStorage.setItem('cocher_spatial_student_count', cls.students.length.toString());
@@ -1060,7 +1066,8 @@ function showSeatAssignmentModal(container, groupingText, meta) {
     const presetMap = {
       'Collaborative group work': 'pods', 'Peer tutoring': 'pods',
       'Jigsaw activity': 'stations', 'Debate or discussion': 'fishbowl',
-      'Project-based learning': 'pods', 'Competition': 'pods', 'Lab work': 'stations'
+      'Project-based learning': 'pods', 'Competition': 'pods', 'Lab work': 'stations',
+      'Circuit training': 'circuit', 'Team game': 'team_game', 'Warmup drill': 'warmup'
     };
     layoutSelect.value = presetMap[meta.activityType] || 'pods';
   }
