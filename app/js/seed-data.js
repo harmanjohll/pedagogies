@@ -823,3 +823,228 @@ export function seedPdIfNeeded() {
   Store.set('pdFolders', folders);
   localStorage.setItem(PD_SEED_KEY, '1');
 }
+
+/* ══════════ Exemplar Lesson Plans ══════════ */
+
+const LESSON_SEED_KEY = 'cocher_lessons_seeded';
+
+const EXEMPLAR_LESSONS = [
+  {
+    title: 'Chemical Bonding — Ionic & Covalent',
+    classKey: 0, // links to 4A Pure Chemistry
+    status: 'ready',
+    e21ccFocus: ['cait', 'cci'],
+    objectives: 'Students will explain ionic and covalent bonding using electron transfer/sharing models, draw dot-and-cross diagrams, and relate bonding type to physical properties.',
+    chatHistory: [
+      { role: 'user', content: 'Plan a lesson on chemical bonding for Sec 4 Pure Chemistry. Cover ionic and covalent bonding, dot-and-cross diagrams, and the properties of ionic vs covalent compounds. I want to use a POE (Predict-Observe-Explain) approach for the demo and include group work.' },
+      { role: 'assistant', content: `## Chemical Bonding — Ionic & Covalent (Sec 4 Pure Chemistry)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. Describe ionic bonding as the transfer of electrons and covalent bonding as the sharing of electrons
+2. Draw dot-and-cross diagrams for simple ionic (NaCl, MgO) and covalent (H₂O, CO₂, CH₄) compounds
+3. Explain the relationship between bonding type and physical properties (melting point, electrical conductivity, solubility)
+
+### Lesson Flow (70 min double period)
+
+**Phase 1 — Hook & Predict (10 min)**
+- Demo setup: Show NaCl crystals and paraffin wax side-by-side
+- POE: Students predict which dissolves in water, which conducts electricity when dissolved, which has a higher melting point
+- Students write predictions in their notebooks with reasoning
+
+**Phase 2 — Observe & Discuss (15 min)**
+- Conduct the demo: dissolve both in water, test conductivity
+- Melt paraffin wax on a hot plate (or show video for safety)
+- Students observe and record results
+- Brief class discussion: "Were your predictions correct? What might explain the differences?"
+
+**Phase 3 — Explain — Direct Instruction (15 min)**
+- Teach ionic bonding: electron transfer, using Na + Cl as the example
+- Draw dot-and-cross diagram for NaCl on the board, explaining each step
+- Teach covalent bonding: electron sharing, using H₂O as the example
+- Draw dot-and-cross diagram for H₂O
+- Link back to demo: ionic compounds form crystal lattices (high MP, conduct when dissolved), covalent compounds form simple molecules (low MP, don't conduct)
+
+**Phase 4 — Apply — Group Practice (20 min)**
+- Groups of 4 work on a set of compounds: MgO, CO₂, CH₄, CaCl₂
+- Each group draws dot-and-cross diagrams on A3 paper
+- Groups predict the properties of each compound based on bonding type
+- Gallery walk: groups circulate and peer-assess diagrams using a checklist
+
+**Phase 5 — Consolidate & Exit Ticket (10 min)**
+- Quick recap: "Ionic = transfer, Covalent = sharing"
+- Exit ticket: Draw the dot-and-cross diagram for NH₃ and predict its melting point (high/low) with reasoning
+- Metacognitive prompt: "What was the trickiest part of today's lesson? What strategy helped you understand it?"
+
+### Resources Needed
+- NaCl crystals, paraffin wax, beakers, water, conductivity tester
+- Hot plate (teacher demo only) or video of melting points
+- A3 paper and markers for group work
+- Printed checklist for gallery walk peer assessment
+
+### Differentiation
+- **Support**: Provide a step-by-step scaffold for drawing dot-and-cross diagrams (electron configuration → identify transfer/sharing → draw diagram)
+- **Extension**: Include dative (coordinate) covalent bonding for NH₄⁺ ion; challenge students to explain why diamond (covalent) has a high melting point
+
+### E21CC Focus
+- **CAIT**: POE approach develops critical thinking; predicting properties from bonding type requires reasoning
+- **CCI**: Gallery walk and group diagram work develop collaborative and communication skills` }
+    ],
+    plan: '',
+    components: {
+      timeline: {
+        content: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Hook & Predict | 0–10 min | POE demo setup — students predict properties of NaCl vs paraffin wax | Direct Instruction (rows facing front) |
+| Observe & Discuss | 10–25 min | Teacher demo: dissolve, test conductivity, melt. Students record observations | Direct Instruction |
+| Explain | 25–40 min | Ionic & covalent bonding — dot-and-cross diagrams on board | Direct Instruction |
+| Group Practice | 40–60 min | Groups draw diagrams for MgO, CO₂, CH₄, CaCl₂ on A3 → gallery walk | Collaborative Pods |
+| Consolidate | 60–70 min | Recap + Exit ticket (NH₃ diagram + property prediction) | Quiet Work |`,
+        meta: 'Auto-generated exemplar',
+        updatedAt: Date.now()
+      },
+      rubric: {
+        content: `### Dot-and-Cross Diagram Rubric
+
+| Criterion | Excellent (4) | Good (3) | Developing (2) | Beginning (1) |
+|-----------|--------------|----------|-----------------|----------------|
+| Electron configuration | Correct electron arrangement for all atoms | Minor error in one atom | Multiple errors in configuration | Incorrect or missing |
+| Bonding representation | Clear transfer (ionic) or sharing (covalent) shown | Mostly clear, minor ambiguity | Bonding type unclear | Bonding not shown |
+| Diagram conventions | Correct use of dots/crosses, brackets, charges | One convention error | Multiple convention errors | Does not follow conventions |
+| Property prediction | Accurate prediction with clear reasoning linked to bonding | Correct prediction, limited reasoning | Prediction partially correct | Incorrect or missing |`,
+        meta: 'Assessment rubric for Chemical Bonding',
+        updatedAt: Date.now()
+      }
+    }
+  },
+  {
+    title: 'Kinematics — Speed, Velocity & Graphs',
+    classKey: 1, // links to 4B Combined Science
+    status: 'ready',
+    e21ccFocus: ['cait', 'cci'],
+    objectives: 'Students will distinguish between speed and velocity, interpret and sketch distance-time and velocity-time graphs, and calculate acceleration from graphs and equations.',
+    chatHistory: [
+      { role: 'user', content: 'Plan a lesson on kinematics for Sec 4 Combined Science. Cover speed vs velocity, d-t and v-t graphs, and calculating acceleration. I want hands-on data collection and graph interpretation.' },
+      { role: 'assistant', content: `## Kinematics — Speed, Velocity & Graphs (Sec 4 Combined Science)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. Define and distinguish between speed, velocity, and acceleration
+2. Interpret distance-time (d-t) and velocity-time (v-t) graphs, including calculating gradient
+3. Calculate acceleration using a = (v − u) / t
+4. Describe the motion represented by different graph shapes (constant speed, acceleration, deceleration, stationary)
+
+### Lesson Flow (70 min double period)
+
+**Phase 1 — Engage: The Human Graph (10 min)**
+- Students stand along a line in the classroom/corridor
+- Teacher calls out motion instructions: "Walk at constant speed", "Speed up", "Stop", "Walk backwards"
+- One student sketches the d-t graph on the whiteboard in real-time
+- Debrief: "What does a steep line mean? A flat line? A curve?"
+
+**Phase 2 — Concept Build: Speed, Velocity, Acceleration (15 min)**
+- Direct instruction with worked examples:
+  - Speed = distance / time (scalar — magnitude only)
+  - Velocity = displacement / time (vector — magnitude + direction)
+  - Acceleration = change in velocity / time, a = (v − u) / t
+- Key distinction: speed vs velocity using the running track example (one lap = distance 400m but displacement 0m)
+- Worked example: A car accelerates from 10 m/s to 30 m/s in 5 s. Calculate acceleration.
+
+**Phase 3 — Data Collection: Ticker Tape / Motion Sensor (20 min)**
+- Stations activity (groups of 4):
+  - **Station A**: Pull a ticker tape through a timer at constant speed → measure dot spacing
+  - **Station B**: Pull a ticker tape with increasing speed → measure dot spacing
+  - **Station C** (if motion sensors available): Record a student walking at constant speed, then accelerating
+- Each group creates a d-t graph from their data on graph paper
+- Discuss: "How does your graph shape match the type of motion?"
+
+**Phase 4 — Graph Interpretation Challenge (15 min)**
+- Pairs work through a set of 6 graphs (mix of d-t and v-t)
+- For each graph: describe the motion in words, calculate speed/acceleration from the gradient
+- Key teaching point: gradient of d-t graph = speed; gradient of v-t graph = acceleration; area under v-t graph = distance
+- Scaffolded worksheet with increasing difficulty
+
+**Phase 5 — Consolidate & Exit Ticket (10 min)**
+- Quick-fire graph matching: teacher shows a motion description, students sketch the graph on mini-whiteboards
+- Exit ticket: Given a v-t graph showing acceleration then constant velocity, calculate (a) the acceleration, (b) the total distance travelled
+- Metacognitive prompt: "Which type of graph do you find easier to read — d-t or v-t? Why?"
+
+### Resources Needed
+- Ticker tape timers + tape (or motion sensors + data loggers)
+- Graph paper, rulers, mini-whiteboards
+- Printed graph interpretation worksheet (6 graphs)
+- Stopwatch for Human Graph activity
+
+### Differentiation
+- **Support**: Provide a graph-reading scaffold — "Step 1: Read the axes. Step 2: Identify the shape. Step 3: Calculate the gradient."
+- **Extension**: Include v-t graphs with negative acceleration (deceleration); challenge students to calculate distance from area under a v-t graph with changing velocity
+
+### E21CC Focus
+- **CAIT**: Graph interpretation requires analytical reasoning; data collection develops investigative thinking
+- **CCI**: Station rotation and pair work develop collaboration; presenting graph findings builds communication` }
+    ],
+    plan: '',
+    components: {
+      timeline: {
+        content: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Human Graph | 0–10 min | Students act out motion, peer sketches d-t graph live | U-Shape / open space |
+| Concept Build | 10–25 min | Speed vs velocity vs acceleration — worked examples | Direct Instruction |
+| Data Collection | 25–45 min | Ticker tape / motion sensor stations — groups collect data and plot graphs | Stations |
+| Graph Challenge | 45–60 min | Pairs interpret 6 graphs — describe motion, calculate gradient | Collaborative Pods |
+| Consolidate | 60–70 min | Quick-fire graph sketching on mini-whiteboards + exit ticket | Quiet Work |`,
+        meta: 'Auto-generated exemplar',
+        updatedAt: Date.now()
+      },
+      rubric: {
+        content: `### Kinematics Graph Interpretation Rubric
+
+| Criterion | Excellent (4) | Good (3) | Developing (2) | Beginning (1) |
+|-----------|--------------|----------|-----------------|----------------|
+| Graph reading | Correctly identifies all motion types from graph shape | Minor errors in one graph | Identifies some motion types, misreads others | Cannot interpret graph shapes |
+| Gradient calculation | Accurate gradient calculation with correct units | Correct method, minor arithmetic error | Attempts gradient but incorrect method | Does not attempt or incorrect approach |
+| Motion description | Precise description using correct physics terminology | Mostly correct description, some informal language | Partial description, missing key details | Vague or incorrect description |
+| d-t vs v-t distinction | Clearly explains what gradient and area represent for each graph type | Mostly correct, minor confusion | Confuses d-t and v-t interpretation | Cannot distinguish between graph types |`,
+        meta: 'Assessment rubric for Kinematics',
+        updatedAt: Date.now()
+      }
+    }
+  }
+];
+
+export function seedLessonsIfNeeded() {
+  if (localStorage.getItem(LESSON_SEED_KEY)) return;
+  const existing = Store.get('lessons') || [];
+  if (existing.length > 0) {
+    localStorage.setItem(LESSON_SEED_KEY, '1');
+    return;
+  }
+
+  const classes = Store.getClasses();
+  if (classes.length === 0) return; // classes must be seeded first
+
+  EXEMPLAR_LESSONS.forEach(ex => {
+    const cls = classes[ex.classKey] || classes[0];
+    // Set the plan from the last assistant message
+    const lastAssistantMsg = [...ex.chatHistory].reverse().find(m => m.role === 'assistant');
+    Store.addLesson({
+      title: ex.title,
+      classId: cls.id,
+      chatHistory: ex.chatHistory,
+      plan: lastAssistantMsg?.content || '',
+      objectives: ex.objectives,
+      e21ccFocus: ex.e21ccFocus
+    });
+    // Update status and components
+    const lessons = Store.get('lessons') || [];
+    const created = lessons[lessons.length - 1];
+    if (created) {
+      Store.updateLesson(created.id, {
+        status: ex.status,
+        components: ex.components
+      });
+    }
+  });
+
+  localStorage.setItem(LESSON_SEED_KEY, '1');
+}

@@ -24,8 +24,8 @@ const ICONS = {
 
 const NAV_ITEMS = [
   { id: '/', icon: 'dashboard', label: 'Dashboard' },
-  { id: '/lesson-planner', icon: 'lessonPlanner', label: 'Lesson Planner' },
-  { id: '/spatial', icon: 'spatial', label: 'Spatial Designer', section: 'Design' },
+  { id: '/lesson-planner', icon: 'lessonPlanner', label: 'Lesson Planner', section: 'Design' },
+  { id: '/spatial', icon: 'spatial', label: 'Spatial Designer' },
   { id: '/classes', icon: 'classes', label: 'Classes', section: 'Manage' },
   { id: '/lessons', icon: 'lessons', label: 'Lessons' },
   { id: '/knowledge', icon: 'knowledge', label: 'Knowledge Base', section: 'Reference' },
