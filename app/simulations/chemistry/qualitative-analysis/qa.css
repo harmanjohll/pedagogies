@@ -1,0 +1,1021 @@
+/*
+ * Qualitative Analysis Simulation — Styles
+ * ==========================================
+ */
+
+/* ═══════════ Layout ═══════════ */
+
+body {
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.qa-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 300px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ═══════════ Guide Panel (Left) ═══════════ */
+
+.qa-guide-panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: var(--sp-4);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  transition: transform var(--dur-normal) var(--ease);
+}
+
+.qa-guide-panel.collapsed {
+  transform: translateX(-100%);
+  position: absolute;
+  left: 0;
+  top: 48px;
+  bottom: 0;
+  width: 240px;
+  z-index: 50;
+}
+
+/* Unknown selection */
+.qa-unknown-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.qa-unknown-select-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
+
+.qa-unknown-dropdown {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease;
+}
+
+.qa-unknown-dropdown:hover {
+  border-color: var(--ink-faint);
+}
+
+.qa-unknown-dropdown:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.qa-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) ease;
+}
+
+.qa-confirm-btn:hover {
+  background: var(--accent-hover);
+}
+
+.qa-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Unknown badge */
+.qa-unknown-badge {
+  display: none;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 8px 12px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.qa-unknown-badge.visible {
+  display: flex;
+}
+
+.qa-unknown-badge .badge-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.4);
+  flex-shrink: 0;
+}
+
+/* Procedure list */
+.qa-procedure-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  counter-reset: procedure-step;
+}
+
+.qa-procedure-list li {
+  counter-increment: procedure-step;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  transition: all var(--dur-fast) ease;
+}
+
+.qa-procedure-list li::before {
+  content: counter(procedure-step);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: all var(--dur-fast) ease;
+}
+
+.qa-procedure-list li.active {
+  background: var(--accent-light);
+  color: var(--accent-dark);
+  font-weight: 500;
+}
+
+.qa-procedure-list li.active::before {
+  background: var(--accent);
+  color: #fff;
+}
+
+.qa-procedure-list li.done {
+  color: var(--success);
+}
+
+.qa-procedure-list li.done::before {
+  content: '\2713';
+  background: var(--success);
+  color: #fff;
+}
+
+/* ═══════════ Workbench (Center) ═══════════ */
+
+.qa-workbench-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.qa-workbench {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 32px;
+  padding: var(--sp-6) var(--sp-4) var(--sp-4);
+  background: linear-gradient(180deg, #1a1d2e 0%, #252840 60%, #2e3250 100%);
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Bench surface */
+.qa-workbench::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 54px;
+  background: linear-gradient(180deg, #5c4a3a 0%, #4a3828 40%, #3d2e20 100%);
+  border-top: 2px solid #6d5a48;
+  z-index: 0;
+}
+
+/* ═══════════ Test Tube Rack ═══════════ */
+
+.qa-rack-assembly {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.qa-rack-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--sp-2);
+}
+
+.qa-tubes-container {
+  display: flex;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+  padding: 0 8px;
+}
+
+/* Individual test tube */
+.qa-tube {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.qa-tube:hover {
+  transform: translateY(-4px);
+}
+
+.qa-tube-num {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 3px;
+}
+
+.qa-tube-glass {
+  width: 24px;
+  height: 110px;
+  border-radius: 3px 3px 12px 12px;
+  background: linear-gradient(135deg,
+    rgba(200, 220, 255, 0.12) 0%,
+    rgba(200, 220, 255, 0.06) 50%,
+    rgba(200, 220, 255, 0.1) 100%
+  );
+  border: 1.5px solid rgba(180, 200, 230, 0.25);
+  position: relative;
+  overflow: hidden;
+  transition: border-color var(--dur-fast) ease;
+}
+
+.qa-tube.selected .qa-tube-glass {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+}
+
+/* Tube liquid layer */
+.qa-tube-liquid {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  transition: height 0.4s var(--ease), background-color 0.4s ease;
+  border-radius: 0 0 10px 10px;
+}
+
+/* Precipitate layer */
+.qa-tube-precipitate {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  transition: height 0.4s var(--ease), background-color 0.4s ease;
+  border-radius: 0 0 10px 10px;
+  z-index: 1;
+}
+
+/* Meniscus highlight */
+.qa-tube-liquid::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 2px;
+  right: 2px;
+  height: 4px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 0 0 50% 50%;
+}
+
+/* Glass shine */
+.qa-tube-glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1px;
+  width: 5px;
+  height: 100%;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.2) 0%,
+    rgba(255,255,255,0.05) 100%
+  );
+  border-radius: 3px 0 0 0;
+  z-index: 3;
+}
+
+/* Wooden rack base */
+.qa-rack-base {
+  position: relative;
+  z-index: 1;
+  margin-top: -6px;
+}
+
+/* Tube flash animation */
+@keyframes tubeFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+  50%  { box-shadow: 0 0 12px 4px rgba(59, 130, 246, 0.3); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.qa-tube-glass.flash {
+  animation: tubeFlash 0.5s ease-out;
+}
+
+/* ═══════════ Reagent Shelf ═══════════ */
+
+.qa-reagent-shelf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.qa-shelf-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--sp-2);
+}
+
+.qa-bottles-container {
+  display: flex;
+  gap: 14px;
+  padding: 0 6px;
+}
+
+/* Individual reagent bottle */
+.qa-bottle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.qa-bottle:hover {
+  transform: translateY(-3px);
+}
+
+.qa-bottle.selected {
+  transform: translateY(-5px);
+}
+
+.qa-bottle-dropper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.qa-dropper-bulb {
+  width: 18px;
+  height: 14px;
+  border-radius: 50% 50% 30% 30%;
+  background: linear-gradient(180deg, #555 0%, #333 100%);
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+.qa-dropper-stem {
+  width: 4px;
+  height: 10px;
+  background: linear-gradient(90deg, rgba(200,220,255,0.15), rgba(200,220,255,0.3), rgba(200,220,255,0.15));
+  border: 1px solid rgba(180,200,230,0.25);
+  margin-top: -1px;
+}
+
+.qa-bottle-body {
+  width: 48px;
+  height: 62px;
+  border-radius: 4px 4px 6px 6px;
+  position: relative;
+  overflow: hidden;
+  border: 1.5px solid rgba(180, 200, 230, 0.25);
+  background: linear-gradient(135deg,
+    rgba(200, 220, 255, 0.1) 0%,
+    rgba(200, 220, 255, 0.04) 50%,
+    rgba(200, 220, 255, 0.08) 100%
+  );
+}
+
+.qa-bottle-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 8px;
+  height: 100%;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.15) 0%,
+    rgba(255,255,255,0.03) 100%
+  );
+}
+
+.qa-bottle-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 75%;
+  border-radius: 0 0 4px 4px;
+  opacity: 0.85;
+}
+
+.qa-bottle-label {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.85);
+  padding: 2px 5px;
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  color: #1a1a2e;
+  white-space: nowrap;
+  z-index: 2;
+  letter-spacing: 0.02em;
+}
+
+.qa-bottle.selected .qa-bottle-body {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+.qa-bottle-caption {
+  font-size: 9px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 4px;
+  text-align: center;
+  max-width: 52px;
+  line-height: 1.3;
+}
+
+/* ═══════════ Bunsen Burner ═══════════ */
+
+.qa-bunsen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.qa-bunsen:hover {
+  transform: translateY(-2px);
+}
+
+.qa-bunsen-barrel {
+  width: 16px;
+  height: 60px;
+  background: linear-gradient(90deg, #777 0%, #999 40%, #777 100%);
+  border-radius: 3px 3px 0 0;
+  position: relative;
+}
+
+.qa-bunsen-barrel::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -3px;
+  right: -3px;
+  height: 6px;
+  background: linear-gradient(90deg, #666, #888, #666);
+  border-radius: 2px;
+}
+
+.qa-bunsen-base {
+  width: 48px;
+  height: 12px;
+  background: linear-gradient(180deg, #666 0%, #444 100%);
+  border-radius: 0 0 6px 6px;
+  margin-top: -1px;
+}
+
+.qa-bunsen-flame {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 28px;
+  border-radius: 50% 50% 30% 30%;
+  background: linear-gradient(0deg, #ff6b35 0%, #ffad36 40%, #ffe066 80%, transparent 100%);
+  filter: blur(1px);
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.qa-bunsen.lit .qa-bunsen-flame {
+  opacity: 1;
+  animation: flicker 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes flicker {
+  0%   { transform: translateX(-50%) scaleY(1) scaleX(1); }
+  50%  { transform: translateX(-50%) scaleY(1.08) scaleX(0.92); }
+  100% { transform: translateX(-50%) scaleY(0.95) scaleX(1.05); }
+}
+
+.qa-bunsen-label {
+  font-size: 9px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 4px;
+}
+
+/* ═══════════ Sink ═══════════ */
+
+.qa-sink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.qa-sink:hover {
+  transform: translateY(-2px);
+}
+
+.qa-sink-body {
+  width: 56px;
+  height: 44px;
+  position: relative;
+}
+
+.qa-sink-label {
+  font-size: 9px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 4px;
+}
+
+/* ═══════════ Reagent Amount Popup ═══════════ */
+
+.qa-amount-popup-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+.qa-amount-popup-overlay.visible {
+  display: flex;
+}
+
+.qa-amount-popup {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6);
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+  min-width: 260px;
+  animation: fadeInUp 0.25s var(--ease) both;
+}
+
+.qa-amount-popup h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: var(--sp-1);
+}
+
+.qa-amount-popup .popup-sub {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-bottom: var(--sp-4);
+}
+
+.qa-amount-choices {
+  display: flex;
+  gap: var(--sp-3);
+  justify-content: center;
+}
+
+.qa-amount-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 20px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all var(--dur-fast) ease;
+  min-width: 100px;
+}
+
+.qa-amount-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.qa-amount-btn .amount-icon {
+  font-size: 20px;
+}
+
+.qa-amount-btn .amount-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
+
+.qa-amount-cancel {
+  margin-top: var(--sp-3);
+  padding: 6px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color var(--dur-fast) ease;
+}
+
+.qa-amount-cancel:hover {
+  color: var(--ink);
+}
+
+/* ═══════════ Flame Test Overlay ═══════════ */
+
+.qa-flame-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.qa-flame-overlay.visible {
+  display: flex;
+  animation: fadeIn 0.3s var(--ease) both;
+}
+
+.qa-flame-visual {
+  width: 120px;
+  height: 200px;
+  border-radius: 50% 50% 40% 40%;
+  position: relative;
+  filter: blur(2px);
+  animation: flamePulse 0.5s ease-in-out infinite alternate;
+}
+
+.qa-flame-visual::after {
+  content: '';
+  position: absolute;
+  bottom: 10%;
+  left: 25%;
+  width: 50%;
+  height: 50%;
+  border-radius: 50% 50% 40% 40%;
+  background: rgba(255,255,255,0.3);
+  filter: blur(8px);
+}
+
+@keyframes flamePulse {
+  0%   { transform: scaleY(1) scaleX(1); opacity: 0.85; }
+  100% { transform: scaleY(1.06) scaleX(0.94); opacity: 1; }
+}
+
+.qa-flame-observation {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  max-width: 340px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+
+.qa-flame-dismiss {
+  margin-top: var(--sp-2);
+  padding: 8px 24px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--dur-fast) ease;
+}
+
+.qa-flame-dismiss:hover {
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.5);
+}
+
+/* ═══════════ Wash Bar ═══════════ */
+
+.qa-wash-bar {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding: 8px var(--sp-4);
+  background: var(--info-light);
+  border-top: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.qa-wash-bar.visible {
+  display: flex;
+}
+
+.qa-wash-bar span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--info);
+}
+
+.qa-wash-btn {
+  padding: 5px 14px;
+  border: 1px solid var(--info);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--info);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--dur-fast) ease;
+}
+
+.qa-wash-btn:hover {
+  background: var(--info);
+  color: #fff;
+}
+
+/* ═══════════ Data Panel (Right) ═══════════ */
+
+.qa-data-panel {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  padding: var(--sp-4);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* Observations table */
+.qa-observations-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.qa-observations-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.qa-observations-table thead th {
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.qa-observations-table tbody td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: top;
+  line-height: 1.45;
+  color: var(--ink-secondary);
+}
+
+.qa-observations-table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+.qa-observations-table .obs-tube {
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  width: 36px;
+}
+
+.qa-observations-table .obs-procedure {
+  color: var(--ink-muted);
+  font-size: 10.5px;
+  width: 80px;
+}
+
+.qa-observations-table .obs-result {
+  color: var(--ink);
+}
+
+.qa-observations-empty {
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+/* Divider */
+.qa-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: var(--sp-1) 0;
+}
+
+/* Identification section */
+.qa-identification {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.qa-id-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.qa-id-row label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.qa-id-input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  transition: border-color var(--dur-fast) ease;
+}
+
+.qa-id-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.qa-id-input::placeholder {
+  color: var(--ink-faint);
+}
+
+.qa-check-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) ease;
+}
+
+.qa-check-btn:hover {
+  background: var(--accent-hover);
+}
+
+.qa-check-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Identification result */
+.qa-id-result {
+  display: none;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.qa-id-result.visible {
+  display: block;
+}
+
+.qa-id-result.correct {
+  background: var(--success-light);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.qa-id-result.incorrect {
+  background: var(--danger-light);
+  color: #9f1239;
+  border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+/* ═══════════ Toast Container ═══════════ */
+
+/* Toast styles are in design-system.css, but add specific positioning here */
+.toast-container {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+}
+
+/* ═══════════ Responsive ═══════════ */
+
+@media (max-width: 1024px) {
+  .qa-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .qa-guide-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .qa-data-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .qa-workbench {
+    gap: 16px;
+    padding: var(--sp-3);
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+  }
+}

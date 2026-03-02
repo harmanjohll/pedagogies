@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Pendulum — LabSim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/design-system.css">
+  <link rel="stylesheet" href="pendulum.css">
+</head>
+<body>
+
+  <!-- ══════════ Top Bar ══════════ -->
+  <header class="top-bar">
+    <div class="top-bar-brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 2 L12 12 L18 16"/>
+      </svg>
+      <span class="top-bar-title">LabSim</span>
+    </div>
+    <nav class="breadcrumb">
+      <span>Practicals</span>
+      <span class="breadcrumb-sep">/</span>
+      <span>Physics</span>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">Simple Pendulum</span>
+    </nav>
+    <div class="top-bar-actions">
+      <button class="btn-icon" id="btnFullscreen" title="Toggle Fullscreen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+          <line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════ Main 3-Column Layout ══════════ -->
+  <div class="sim-layout">
+
+    <!-- ── Controls Panel (Left) ── -->
+    <aside class="controls-panel" id="controlsPanel">
+      <h2 class="panel-title">Parameters</h2>
+
+      <div class="control-group">
+        <label class="control-label">
+          String Length
+          <span class="control-value" id="lengthValue">1.00 m</span>
+        </label>
+        <input type="range" id="lengthSlider" class="sim-slider" min="0.2" max="2.0" step="0.01" value="1.00">
+        <div class="slider-range">
+          <span>0.2 m</span>
+          <span>2.0 m</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">
+          Initial Angle
+          <span class="control-value" id="angleValue">30&deg;</span>
+        </label>
+        <input type="range" id="angleSlider" class="sim-slider" min="5" max="60" step="1" value="30">
+        <div class="slider-range">
+          <span>5&deg;</span>
+          <span>60&deg;</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Gravity</label>
+        <select id="gravitySelect" class="sim-select">
+          <option value="9.81" selected>Earth (9.81 m/s&sup2;)</option>
+          <option value="1.62">Moon (1.62 m/s&sup2;)</option>
+          <option value="24.79">Jupiter (24.79 m/s&sup2;)</option>
+        </select>
+      </div>
+
+      <hr class="control-divider">
+
+      <h2 class="panel-title">Simulation</h2>
+
+      <div class="button-row">
+        <button class="sim-btn sim-btn-primary" id="btnStart">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Start
+        </button>
+        <button class="sim-btn sim-btn-secondary" id="btnPause" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          Pause
+        </button>
+      </div>
+      <button class="sim-btn sim-btn-outline full-width" id="btnReset">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+        Reset
+      </button>
+
+      <hr class="control-divider">
+
+      <h2 class="panel-title">Display</h2>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="chkTrail" checked>
+        <span class="checkbox-custom"></span>
+        Show trail
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="chkTheory" checked>
+        <span class="checkbox-custom"></span>
+        Show theoretical period
+      </label>
+    </aside>
+
+    <!-- ── Canvas (Center) ── -->
+    <main class="canvas-panel">
+      <div class="canvas-container" id="canvasContainer">
+        <canvas id="pendulumCanvas"></canvas>
+      </div>
+      <div class="canvas-status">
+        <span class="status-item">
+          <span class="status-label">Time:</span>
+          <span class="status-value" id="timeDisplay">0.00 s</span>
+        </span>
+        <span class="status-item">
+          <span class="status-label">State:</span>
+          <span class="status-value status-state" id="stateDisplay">Ready</span>
+        </span>
+      </div>
+    </main>
+
+    <!-- ── Data Panel (Right) ── -->
+    <aside class="data-panel" id="dataPanel">
+      <h2 class="panel-title">Live Data</h2>
+
+      <div class="data-grid">
+        <div class="data-card">
+          <span class="data-label">Period (measured)</span>
+          <span class="data-value" id="periodMeasured">&mdash;</span>
+          <span class="data-unit">s</span>
+        </div>
+        <div class="data-card">
+          <span class="data-label">Period (theory)</span>
+          <span class="data-value" id="periodTheory">&mdash;</span>
+          <span class="data-unit">s</span>
+        </div>
+        <div class="data-card">
+          <span class="data-label">Frequency</span>
+          <span class="data-value" id="frequencyDisplay">&mdash;</span>
+          <span class="data-unit">Hz</span>
+        </div>
+        <div class="data-card">
+          <span class="data-label">Angular Velocity</span>
+          <span class="data-value" id="angVelDisplay">&mdash;</span>
+          <span class="data-unit">rad/s</span>
+        </div>
+      </div>
+
+      <hr class="control-divider">
+
+      <h2 class="panel-title">Energy</h2>
+
+      <div class="energy-bar-container">
+        <div class="energy-bar">
+          <div class="energy-ke" id="energyKE"></div>
+          <div class="energy-pe" id="energyPE"></div>
+        </div>
+        <div class="energy-labels">
+          <span class="energy-label ke-label">KE: <span id="keValue">0.00</span> J</span>
+          <span class="energy-label pe-label">PE: <span id="peValue">0.00</span> J</span>
+        </div>
+        <div class="energy-total">
+          Total: <span id="totalEnergy">0.00</span> J
+        </div>
+      </div>
+
+      <hr class="control-divider">
+
+      <h2 class="panel-title">Measurements</h2>
+      <button class="sim-btn sim-btn-accent full-width" id="btnRecord">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
+        Record Measurement
+      </button>
+
+      <div class="measurements-table-wrap">
+        <table class="measurements-table" id="measurementsTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>L (m)</th>
+              <th>T (s)</th>
+            </tr>
+          </thead>
+          <tbody id="measurementsBody">
+          </tbody>
+        </table>
+        <p class="empty-table-msg" id="emptyTableMsg">No measurements recorded yet.</p>
+      </div>
+
+      <button class="sim-btn sim-btn-outline full-width" id="btnClearTable" style="margin-top: 8px;">
+        Clear Table
+      </button>
+    </aside>
+
+  </div>
+
+  <!-- ══════════ Toast Container ══════════ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="pendulum.js"></script>
+</body>
+</html>

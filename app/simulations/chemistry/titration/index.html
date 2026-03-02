@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Titration Lab Simulator — LabSim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/design-system.css">
+  <link rel="stylesheet" href="titration.css">
+</head>
+<body>
+
+  <!-- ══════════ Top Bar ══════════ -->
+  <header class="top-bar">
+    <div class="top-bar-brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 3h6v11l-3 3-3-3V3z"/>
+        <path d="M6 21h12"/>
+        <path d="M3 17c3-2 5-4 5-8"/>
+        <path d="M21 17c-3-2-5-4-5-8"/>
+      </svg>
+      <span class="top-bar-title">LabSim</span>
+    </div>
+    <nav class="breadcrumb">
+      <span>Practicals</span>
+      <span class="breadcrumb-sep">/</span>
+      <span>Chemistry</span>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">Titration</span>
+    </nav>
+    <div class="top-bar-actions">
+      <button class="btn-icon" id="btnReset" title="Reset Experiment">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════ Step Indicator Bar ══════════ -->
+  <div class="step-bar" id="stepBar"></div>
+
+  <!-- ══════════ Main 3-Column Layout ══════════ -->
+  <div class="practical-layout">
+
+    <!-- ── Guide Panel (Left) ── -->
+    <aside class="guide-panel" id="guidePanel">
+      <h2 class="panel-title">Setup</h2>
+
+      <div class="config-section">
+        <label class="config-label">Acid Concentration</label>
+        <div class="config-row">
+          <input type="range" id="acidSlider" class="config-slider" min="0.05" max="0.20" step="0.01" value="0.10">
+          <span class="config-value" id="acidValue">0.10 M</span>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <label class="config-label">Base Solution</label>
+        <select id="baseSelect" class="config-select">
+          <option value="0.10">NaOH 0.10 M</option>
+          <option value="0.05">NaOH 0.05 M</option>
+        </select>
+      </div>
+
+      <hr class="config-divider">
+
+      <h2 class="panel-title">Guide</h2>
+      <div class="guide-instruction" id="guideInstruction">
+        <div class="guide-step-num" id="guideStepNum">1</div>
+        <div class="guide-text" id="guideText">Rinse the burette with distilled water. Click the beaker (FA2), then click the burette.</div>
+      </div>
+
+      <div class="guide-hint" id="guideHint"></div>
+    </aside>
+
+    <!-- ── Workbench (Center) ── -->
+    <main class="workbench-panel">
+      <div class="workbench" id="workbench">
+
+        <!-- Beaker (FA2 - distilled water / acid) -->
+        <div class="apparatus beaker" id="beaker" data-apparatus="beaker" title="Beaker (FA2 — Acid)">
+          <div class="beaker-glass">
+            <div class="beaker-liquid" id="beakerLiquid"></div>
+          </div>
+          <div class="apparatus-label">FA2 (Acid)</div>
+        </div>
+
+        <!-- Pipette -->
+        <div class="apparatus pipette" id="pipette" data-apparatus="pipette" title="Pipette (25.0 cm³)">
+          <div class="pipette-filler"></div>
+          <div class="pipette-body">
+            <div class="pipette-bulge"></div>
+            <div class="pipette-liquid" id="pipetteLiquid"></div>
+          </div>
+          <div class="pipette-tip"></div>
+          <div class="apparatus-label">Pipette</div>
+        </div>
+
+        <!-- Conical Flask -->
+        <div class="apparatus conical-flask" id="conicalFlask" data-apparatus="flask" title="Conical Flask">
+          <div class="flask-body">
+            <div class="flask-liquid" id="flaskLiquid"></div>
+          </div>
+          <div class="flask-neck"></div>
+          <div class="apparatus-label">Flask</div>
+        </div>
+
+        <!-- Indicator Bottle -->
+        <div class="apparatus indicator-bottle" id="indicatorBottle" data-apparatus="indicator" title="Indicator Bottle">
+          <div class="bottle-cap"></div>
+          <div class="bottle-body">
+            <div class="bottle-label">Ind.</div>
+          </div>
+          <div class="apparatus-label">Indicator</div>
+        </div>
+
+        <!-- Retort Stand + Burette Assembly -->
+        <div class="retort-assembly" id="retortAssembly">
+          <div class="retort-base"></div>
+          <div class="retort-pole"></div>
+          <div class="retort-clamp"></div>
+          <div class="burette" id="burette">
+            <div class="burette-tube">
+              <div class="burette-markings"></div>
+              <div class="burette-liquid" id="buretteLiquid"></div>
+            </div>
+            <div class="burette-stopcock" id="stopcock">
+              <div class="stopcock-handle" id="stopcockHandle"></div>
+            </div>
+            <div class="burette-nozzle" id="buretteNozzle">
+              <div class="drip" id="drip"></div>
+            </div>
+          </div>
+
+          <!-- White Tile -->
+          <div class="white-tile" id="whiteTile">
+            <!-- Flask placement zone -->
+            <div class="flask-zone" id="flaskZone">
+              <div class="flask-zone-label">Place flask here</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Burette Controls Bar ── -->
+      <div class="burette-controls" id="buretteControls">
+        <div class="reading-display">
+          <span class="reading-label">Burette:</span>
+          <span class="reading-value" id="readingValue">50.00</span>
+          <span class="reading-unit">cm³</span>
+        </div>
+        <div class="flow-controls">
+          <button class="ctrl-btn" id="btnFast" title="Fast flow (0.50 cm³/tick)">Fast</button>
+          <button class="ctrl-btn" id="btnSlow" title="Slow flow (0.10 cm³/tick)">Slow</button>
+          <button class="ctrl-btn" id="btnHalf" title="Half-drop (0.05 cm³)">Half-drop</button>
+          <button class="ctrl-btn" id="btnSwirl" title="Swirl flask">Swirl</button>
+        </div>
+        <div class="reading-actions">
+          <button class="ctrl-btn action" id="btnInitial">Initial Reading</button>
+          <button class="ctrl-btn action" id="btnFinal">Final Reading</button>
+          <button class="ctrl-btn action" id="btnTopUp">Top Up</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ── Data Panel (Right) ── -->
+    <aside class="data-panel" id="dataPanel">
+      <h2 class="panel-title">Results</h2>
+
+      <div class="results-table-wrap">
+        <table class="results-table" id="resultsTable">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Rough</th>
+              <th>1st</th>
+              <th>2nd</th>
+              <th>3rd</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="row-label">Initial (cm³)</td>
+              <td id="init-0">—</td>
+              <td id="init-1">—</td>
+              <td id="init-2">—</td>
+              <td id="init-3">—</td>
+            </tr>
+            <tr>
+              <td class="row-label">Final (cm³)</td>
+              <td id="final-0">—</td>
+              <td id="final-1">—</td>
+              <td id="final-2">—</td>
+              <td id="final-3">—</td>
+            </tr>
+            <tr class="titre-row">
+              <td class="row-label">Titre (cm³)</td>
+              <td id="titre-0">—</td>
+              <td id="titre-1">—</td>
+              <td id="titre-2">—</td>
+              <td id="titre-3">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="concordant-msg" id="concordantMsg"></div>
+
+      <hr class="config-divider">
+
+      <h2 class="panel-title">Calculations</h2>
+      <div class="calc-workspace" id="calcWorkspace">
+        <p class="calc-placeholder">Complete at least 2 concordant titrations to calculate concentration.</p>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ══════════ Indicator Choice Popup ══════════ -->
+  <div class="indicator-popup-overlay" id="indicatorPopup">
+    <div class="indicator-popup">
+      <h3 class="indicator-popup-title">Choose an Indicator</h3>
+      <div class="indicator-choices" id="indicatorChoices"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ Toast Container ══════════ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ══════════ LabAudio — Web Audio API Sound Effects ══════════ -->
+  <script>
+    const LabAudio = (() => {
+      let ctx = null;
+      function getCtx() {
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        return ctx;
+      }
+      function play(type) {
+        const c = getCtx();
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.connect(g);
+        g.connect(c.destination);
+        const now = c.currentTime;
+        switch (type) {
+          case 'click':
+            o.frequency.setValueAtTime(800, now);
+            g.gain.setValueAtTime(0.08, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            o.start(now);
+            o.stop(now + 0.08);
+            break;
+          case 'pour':
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(200, now);
+            o.frequency.linearRampToValueAtTime(120, now + 0.3);
+            g.gain.setValueAtTime(0.04, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            o.start(now);
+            o.stop(now + 0.3);
+            break;
+          case 'drip':
+            o.frequency.setValueAtTime(1200, now);
+            o.frequency.exponentialRampToValueAtTime(400, now + 0.12);
+            g.gain.setValueAtTime(0.06, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            o.start(now);
+            o.stop(now + 0.15);
+            break;
+          case 'success':
+            o.frequency.setValueAtTime(523, now);
+            o.frequency.setValueAtTime(659, now + 0.12);
+            o.frequency.setValueAtTime(784, now + 0.24);
+            g.gain.setValueAtTime(0.1, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            o.start(now);
+            o.stop(now + 0.5);
+            break;
+          case 'error':
+            o.type = 'square';
+            o.frequency.setValueAtTime(200, now);
+            g.gain.setValueAtTime(0.06, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            o.start(now);
+            o.stop(now + 0.2);
+            break;
+          case 'swirl':
+            o.type = 'sine';
+            o.frequency.setValueAtTime(300, now);
+            o.frequency.linearRampToValueAtTime(500, now + 0.15);
+            o.frequency.linearRampToValueAtTime(300, now + 0.3);
+            g.gain.setValueAtTime(0.03, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            o.start(now);
+            o.stop(now + 0.35);
+            break;
+          default:
+            o.frequency.setValueAtTime(600, now);
+            g.gain.setValueAtTime(0.05, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            o.start(now);
+            o.stop(now + 0.1);
+        }
+      }
+      return { play };
+    })();
+  </script>
+
+  <script src="titration.js"></script>
+</body>
+</html>
