@@ -412,6 +412,12 @@ function createEventFromModal(backdrop, container, close, aiData, nameOverride, 
   }
   close();
   render(container);
+
+  // After AI generation, jump straight into the event detail with panels expanded
+  if (aiData) {
+    const pageContainer = container.querySelector('.page-container');
+    if (pageContainer) showEventDetail(pageContainer, event, { autoExpand: true });
+  }
 }
 
 /* ── AI: Generate all event task content from description ── */
@@ -485,7 +491,7 @@ For select fields, use one of the provided options exactly. For text/textarea fi
 }
 
 /* ══════════ Event Detail View ══════════ */
-function showEventDetail(pageContainer, ev) {
+function showEventDetail(pageContainer, ev, opts = {}) {
   const events = Store.get('adminEvents') || [];
   const enabledTasks = ev.tasks.filter(t => t.enabled);
 
@@ -593,6 +599,16 @@ function showEventDetail(pageContainer, ev) {
       chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
     });
   });
+
+  // Auto-expand all panels when arriving from AI generation
+  if (opts.autoExpand) {
+    pageContainer.querySelectorAll('.task-header').forEach(header => {
+      const body = header.nextElementSibling;
+      const chevron = header.querySelector('.task-chevron');
+      body.style.display = 'block';
+      chevron.style.transform = 'rotate(180deg)';
+    });
+  }
 
   // Save task data
   pageContainer.querySelectorAll('.save-task-btn').forEach(btn => {
