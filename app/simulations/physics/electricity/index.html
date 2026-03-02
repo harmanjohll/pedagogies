@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Circuits — LabSim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/design-system.css">
+  <link rel="stylesheet" href="electricity.css">
+</head>
+<body>
+
+  <!-- ══════════ Top Bar ══════════ -->
+  <header class="top-bar">
+    <div class="top-bar-brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+      <span class="top-bar-title">LabSim</span>
+    </div>
+    <nav class="breadcrumb">
+      <span>Practicals</span>
+      <span class="breadcrumb-sep">/</span>
+      <span>Physics</span>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">Simple Circuits</span>
+    </nav>
+    <div class="top-bar-actions">
+      <button class="btn-icon" id="btnClearAll" title="Clear workspace">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14H6L5 6"/>
+          <path d="M10 11v6"/>
+          <path d="M14 11v6"/>
+          <path d="M9 6V4h6v2"/>
+        </svg>
+      </button>
+      <button class="btn-icon" id="btnFullscreen" title="Toggle Fullscreen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 3 21 3 21 9"/>
+          <polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/>
+          <line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════ Main 2-Panel Layout ══════════ -->
+  <div class="circuit-layout">
+
+    <!-- ── Component Palette (Left) ── -->
+    <aside class="palette-panel" id="palettePanel">
+      <h2 class="panel-title">Components</h2>
+
+      <div class="palette-section">
+        <h3 class="palette-section-title">Power Sources</h3>
+        <div class="palette-item" draggable="true" data-type="battery" data-value="1.5">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="14" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <line x1="14" y1="4" x2="14" y2="24" stroke="#3b82f6" stroke-width="3"/>
+              <line x1="20" y1="8" x2="20" y2="20" stroke="#3b82f6" stroke-width="1.5"/>
+              <line x1="24" y1="4" x2="24" y2="24" stroke="#3b82f6" stroke-width="3"/>
+              <line x1="30" y1="8" x2="30" y2="20" stroke="#3b82f6" stroke-width="1.5"/>
+              <line x1="30" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <text x="22" y="27" text-anchor="middle" font-size="7" fill="#64748b">+</text>
+            </svg>
+          </div>
+          <span class="palette-label">Battery 1.5V</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="battery" data-value="3">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="14" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <line x1="14" y1="4" x2="14" y2="24" stroke="#f59e0b" stroke-width="3"/>
+              <line x1="20" y1="8" x2="20" y2="20" stroke="#f59e0b" stroke-width="1.5"/>
+              <line x1="24" y1="4" x2="24" y2="24" stroke="#f59e0b" stroke-width="3"/>
+              <line x1="30" y1="8" x2="30" y2="20" stroke="#f59e0b" stroke-width="1.5"/>
+              <line x1="30" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="palette-label">Battery 3V</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="battery" data-value="6">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="14" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <line x1="14" y1="4" x2="14" y2="24" stroke="#f43f5e" stroke-width="3"/>
+              <line x1="20" y1="8" x2="20" y2="20" stroke="#f43f5e" stroke-width="1.5"/>
+              <line x1="24" y1="4" x2="24" y2="24" stroke="#f43f5e" stroke-width="3"/>
+              <line x1="30" y1="8" x2="30" y2="20" stroke="#f43f5e" stroke-width="1.5"/>
+              <line x1="30" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="palette-label">Battery 6V</span>
+        </div>
+      </div>
+
+      <div class="palette-section">
+        <h3 class="palette-section-title">Loads</h3>
+        <div class="palette-item" draggable="true" data-type="bulb" data-value="0">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="12" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <circle cx="20" cy="14" r="8" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+              <line x1="15" y1="9" x2="25" y2="19" stroke="#f59e0b" stroke-width="1.5"/>
+              <line x1="25" y1="9" x2="15" y2="19" stroke="#f59e0b" stroke-width="1.5"/>
+              <line x1="28" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="palette-label">Bulb</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="resistor" data-value="10">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="10" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <rect x="10" y="8" width="20" height="12" fill="none" stroke="#10b981" stroke-width="1.5" rx="1"/>
+              <line x1="30" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="palette-label">Resistor 10&ohm;</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="resistor" data-value="47">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="10" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <rect x="10" y="8" width="20" height="12" fill="none" stroke="#8b5cf6" stroke-width="1.5" rx="1"/>
+              <line x1="30" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="palette-label">Resistor 47&ohm;</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="resistor" data-value="100">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="10" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <rect x="10" y="8" width="20" height="12" fill="none" stroke="#f43f5e" stroke-width="1.5" rx="1"/>
+              <line x1="30" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="palette-label">Resistor 100&ohm;</span>
+        </div>
+      </div>
+
+      <div class="palette-section">
+        <h3 class="palette-section-title">Instruments</h3>
+        <div class="palette-item" draggable="true" data-type="ammeter" data-value="0">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="10" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <circle cx="20" cy="14" r="9" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+              <text x="20" y="18" text-anchor="middle" font-size="12" font-weight="700" fill="#3b82f6">A</text>
+              <line x1="30" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="palette-label">Ammeter</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="voltmeter" data-value="0">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="10" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <circle cx="20" cy="14" r="9" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+              <text x="20" y="18" text-anchor="middle" font-size="12" font-weight="700" fill="#f59e0b">V</text>
+              <line x1="30" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="palette-label">Voltmeter</span>
+        </div>
+      </div>
+
+      <div class="palette-section">
+        <h3 class="palette-section-title">Controls</h3>
+        <div class="palette-item" draggable="true" data-type="switch" data-value="0">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="12" y2="14" stroke="#94a3b8" stroke-width="2"/>
+              <circle cx="14" cy="14" r="3" fill="#64748b"/>
+              <line x1="14" y1="14" x2="28" y2="6" stroke="#64748b" stroke-width="2"/>
+              <circle cx="30" cy="14" r="3" fill="#64748b"/>
+              <line x1="30" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="palette-label">Switch</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="wire" data-value="0">
+          <div class="palette-icon">
+            <svg width="40" height="28" viewBox="0 0 40 28">
+              <line x1="4" y1="14" x2="36" y2="14" stroke="#94a3b8" stroke-width="2.5"/>
+              <circle cx="4" cy="14" r="3" fill="#64748b"/>
+              <circle cx="36" cy="14" r="3" fill="#64748b"/>
+            </svg>
+          </div>
+          <span class="palette-label">Wire</span>
+        </div>
+      </div>
+
+      <hr class="control-divider">
+
+      <h2 class="panel-title">Presets</h2>
+      <button class="sim-btn sim-btn-primary full-width" id="btnPresetSeries">
+        Series Circuit
+      </button>
+      <button class="sim-btn sim-btn-secondary full-width" id="btnPresetParallel" style="margin-top: 8px;">
+        Parallel Circuit
+      </button>
+    </aside>
+
+    <!-- ── Circuit Workspace (Center + Right) ── -->
+    <main class="workspace-panel">
+      <div class="workspace-container" id="workspaceContainer">
+        <svg id="circuitSVG" class="circuit-svg"></svg>
+        <!-- Floating component labels rendered by JS -->
+      </div>
+
+      <!-- ── Bottom Analysis Bar ── -->
+      <div class="analysis-bar" id="analysisBar">
+        <div class="analysis-item">
+          <span class="analysis-label">Total Voltage</span>
+          <span class="analysis-value" id="totalVoltage">0.00</span>
+          <span class="analysis-unit">V</span>
+        </div>
+        <div class="analysis-divider"></div>
+        <div class="analysis-item">
+          <span class="analysis-label">Total Resistance</span>
+          <span class="analysis-value" id="totalResistance">0.00</span>
+          <span class="analysis-unit">&ohm;</span>
+        </div>
+        <div class="analysis-divider"></div>
+        <div class="analysis-item">
+          <span class="analysis-label">Current</span>
+          <span class="analysis-value" id="totalCurrent">0.00</span>
+          <span class="analysis-unit">A</span>
+        </div>
+        <div class="analysis-divider"></div>
+        <div class="analysis-item">
+          <span class="analysis-label">Circuit Status</span>
+          <span class="analysis-value analysis-status" id="circuitStatus">Open</span>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ══════════ Toast Container ══════════ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="electricity.js"></script>
+</body>
+</html>

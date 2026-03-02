@@ -74,6 +74,45 @@ export function render(container) {
           </label>
         </div>
 
+        <!-- Import Classes from CSV -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Import Classes from CSV</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            Upload a .csv file to create a class with students. The CSV should have a header row. Accepted columns:
+            <code style="background: var(--bg-subtle); padding: 2px 4px; border-radius: 4px; font-size: 0.75rem;">Name</code> (required),
+            <code style="background: var(--bg-subtle); padding: 2px 4px; border-radius: 4px; font-size: 0.75rem;">CAIT</code>,
+            <code style="background: var(--bg-subtle); padding: 2px 4px; border-radius: 4px; font-size: 0.75rem;">CCI</code>,
+            <code style="background: var(--bg-subtle); padding: 2px 4px; border-radius: 4px; font-size: 0.75rem;">CGC</code> (optional E21CC scores, 0-100).
+          </p>
+          <div style="display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap;">
+            <input class="input" type="text" id="csv-class-name" placeholder="Class name, e.g. 4A Pure Chemistry" style="flex: 1; min-width: 200px;" />
+            <button class="btn btn-secondary btn-sm" id="csv-upload-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload CSV
+            </button>
+          </div>
+          <input type="file" id="csv-file" accept=".csv,.txt" style="display: none;" />
+          <div id="csv-preview" style="margin-top: var(--sp-3); display: none;">
+            <p style="font-size: 0.8125rem; color: var(--ink-secondary); margin-bottom: var(--sp-2);" id="csv-preview-text"></p>
+            <button class="btn btn-primary btn-sm" id="csv-confirm-btn">Confirm Import</button>
+          </div>
+          <p style="font-size: 0.75rem; color: var(--ink-faint); margin-top: var(--sp-2);">
+            Tip: Export from Excel as CSV (UTF-8). One student per row.
+          </p>
+        </div>
+
+        <!-- Clear Sample Data -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Sample Data</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            Co-Cher comes with sample classes and exemplar lessons so you can explore features. When you're ready to use your own data, clear the samples below.
+          </p>
+          <button class="btn btn-ghost btn-sm" id="clear-samples-btn" style="color: var(--warning);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            Clear Sample Data &amp; Start Fresh
+          </button>
+        </div>
+
         <!-- Data Management -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Data Management</h3>
@@ -183,4 +222,115 @@ export function render(container) {
       render(container);
     }
   });
+
+  // ── CSV Upload ──
+  let csvParsedStudents = [];
+  const csvFileInput = container.querySelector('#csv-file');
+  container.querySelector('#csv-upload-btn').addEventListener('click', () => {
+    const className = container.querySelector('#csv-class-name').value.trim();
+    if (!className) {
+      showToast('Please enter a class name first.', 'danger');
+      return;
+    }
+    csvFileInput.click();
+  });
+
+  csvFileInput.addEventListener('change', () => {
+    const file = csvFileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      csvParsedStudents = parseCSV(reader.result);
+      if (csvParsedStudents.length === 0) {
+        showToast('No students found in CSV. Check the format.', 'danger');
+        return;
+      }
+      const preview = container.querySelector('#csv-preview');
+      const previewText = container.querySelector('#csv-preview-text');
+      previewText.textContent = `Found ${csvParsedStudents.length} students: ${csvParsedStudents.slice(0, 5).map(s => s.name).join(', ')}${csvParsedStudents.length > 5 ? '...' : ''}`;
+      preview.style.display = 'block';
+    };
+    reader.readAsText(file);
+  });
+
+  container.querySelector('#csv-confirm-btn').addEventListener('click', () => {
+    const className = container.querySelector('#csv-class-name').value.trim();
+    if (!className || csvParsedStudents.length === 0) return;
+    const cls = Store.addClass({ name: className });
+    csvParsedStudents.forEach(s => {
+      Store.addStudent(cls.id, { name: s.name, e21cc: s.e21cc });
+    });
+    showToast(`Class "${className}" created with ${csvParsedStudents.length} students!`, 'success');
+    csvParsedStudents = [];
+    container.querySelector('#csv-preview').style.display = 'none';
+    container.querySelector('#csv-class-name').value = '';
+    csvFileInput.value = '';
+  });
+
+  // ── Clear Sample Data ──
+  container.querySelector('#clear-samples-btn').addEventListener('click', async () => {
+    const ok = await confirmDialog({
+      title: 'Clear Sample Data',
+      message: 'This will remove all sample classes, students, and exemplar lessons. Your own data (if any) and API key will be kept. Ready to start fresh?'
+    });
+    if (ok) {
+      Store.clearAllData();
+      // Reset seed flags so they don't re-seed
+      localStorage.setItem('cocher_seeded', '1');
+      localStorage.setItem('cocher_pd_seeded', '1');
+      localStorage.setItem('cocher_lessons_seeded', '1');
+      showToast('Sample data cleared. You can now add your own classes!', 'success');
+      render(container);
+    }
+  });
+}
+
+/* ── CSV Parser ── */
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  // Parse header
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const nameIdx = headers.findIndex(h => h === 'name' || h === 'student name' || h === 'student');
+  if (nameIdx === -1) return [];
+
+  const caitIdx = headers.findIndex(h => h === 'cait');
+  const cciIdx = headers.findIndex(h => h === 'cci');
+  const cgcIdx = headers.findIndex(h => h === 'cgc');
+
+  const students = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    const name = (cols[nameIdx] || '').trim();
+    if (!name) continue;
+
+    const e21cc = { cait: 50, cci: 50, cgc: 50 };
+    if (caitIdx !== -1 && cols[caitIdx]) e21cc.cait = clampScore(cols[caitIdx]);
+    if (cciIdx !== -1 && cols[cciIdx]) e21cc.cci = clampScore(cols[cciIdx]);
+    if (cgcIdx !== -1 && cols[cgcIdx]) e21cc.cgc = clampScore(cols[cgcIdx]);
+
+    students.push({ name, e21cc });
+  }
+  return students;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuotes = !inQuotes; continue; }
+    if (ch === ',' && !inQuotes) { result.push(current); current = ''; continue; }
+    current += ch;
+  }
+  result.push(current);
+  return result;
+}
+
+function clampScore(val) {
+  const n = parseInt(val, 10);
+  if (isNaN(n)) return 50;
+  return Math.max(0, Math.min(100, n));
 }

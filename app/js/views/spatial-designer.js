@@ -64,16 +64,33 @@ const PALETTE = [
   { cat: 'Stations', id: 'desk_blue', label: 'Desk (Blue)', w: UNIT, h: UNIT * 0.7, color: '#bfdbfe', snap: 'edge90' },
   { cat: 'Stations', id: 'desk_green', label: 'Desk (Green)', w: UNIT, h: UNIT * 0.7, color: '#bbf7d0', snap: 'edge90' },
   { cat: 'Stations', id: 'desk_orange', label: 'Desk (Orange)', w: UNIT, h: UNIT * 0.7, color: '#fed7aa', snap: 'edge90' },
-  // PE Equipment
-  { cat: 'PE Equipment', id: 'cone', label: 'Cone / Marker', w: UNIT * 0.5, h: UNIT * 0.5, color: '#fb923c', round: true, pe: true },
-  { cat: 'PE Equipment', id: 'gym_mat', label: 'Gym Mat', w: UNIT * 2, h: UNIT * 1.2, color: '#93c5fd', pe: true },
-  { cat: 'PE Equipment', id: 'hoop', label: 'Hula Hoop', w: UNIT * 1.2, h: UNIT * 1.2, color: '#f9a8d4', round: true, pe: true },
-  { cat: 'PE Equipment', id: 'net', label: 'Net / Barrier', w: UNIT * 4, h: UNIT * 0.2, color: '#374151', snap: 'edge90', pe: true },
-  { cat: 'PE Equipment', id: 'goal', label: 'Goal Post', w: UNIT * 2.5, h: UNIT * 0.5, color: '#e5e7eb', snap: 'edge90', pe: true },
-  { cat: 'PE Equipment', id: 'bench', label: 'Bench', w: UNIT * 3, h: UNIT * 0.5, color: '#d6b88a', snap: 'edge90', pe: true },
-  { cat: 'PE Equipment', id: 'water_station', label: 'Water Station', w: UNIT * 0.8, h: UNIT * 0.8, color: '#67e8f9', round: true, pe: true },
-  { cat: 'PE Equipment', id: 'equipment_box', label: 'Equipment Box', w: UNIT * 1.2, h: UNIT * 0.8, color: '#a3a3a3', pe: true },
-  { cat: 'PE Equipment', id: 'speaker', label: 'Speaker / Whistle Point', w: UNIT * 0.6, h: UNIT * 0.6, color: '#1e293b', round: true, pe: true },
+  // ── PE: General ──
+  { cat: 'PE: General', id: 'cone_large', label: 'Cone (large)', w: UNIT * 0.6, h: UNIT * 0.6, color: '#fb923c', round: true, pe: true },
+  { cat: 'PE: General', id: 'cone_small', label: 'Cone (small)', w: UNIT * 0.35, h: UNIT * 0.35, color: '#fdba74', round: true, pe: true },
+  { cat: 'PE: General', id: 'marker_flat', label: 'Flat Marker', w: UNIT * 0.4, h: UNIT * 0.4, color: '#f472b6', round: true, pe: true },
+  { cat: 'PE: General', id: 'gym_mat', label: 'Gym Mat', w: UNIT * 2, h: UNIT * 1.2, color: '#93c5fd', pe: true },
+  { cat: 'PE: General', id: 'bench', label: 'Bench', w: UNIT * 3, h: UNIT * 0.5, color: '#d6b88a', snap: 'edge90', pe: true },
+  { cat: 'PE: General', id: 'hoop', label: 'Hula Hoop', w: UNIT * 1.2, h: UNIT * 1.2, color: '#f9a8d4', round: true, pe: true },
+  { cat: 'PE: General', id: 'water_station', label: 'Water Station', w: UNIT * 0.8, h: UNIT * 0.8, color: '#67e8f9', round: true, pe: true },
+  { cat: 'PE: General', id: 'equipment_box', label: 'Equipment Box', w: UNIT * 1.2, h: UNIT * 0.8, color: '#a3a3a3', pe: true },
+  { cat: 'PE: General', id: 'speaker', label: 'Speaker / Whistle Point', w: UNIT * 0.6, h: UNIT * 0.6, color: '#1e293b', round: true, pe: true },
+  { cat: 'PE: General', id: 'bib_stack', label: 'Bib Stack', w: UNIT * 0.7, h: UNIT * 0.5, color: '#fca5a5', pe: true },
+  // ── PE: Territorial–Invasion ──
+  { cat: 'PE: Territorial–Invasion', id: 'goal_large', label: 'Goal (large)', w: UNIT * 3, h: UNIT * 0.5, color: '#e5e7eb', snap: 'edge90', pe: true, modality: 'territorial' },
+  { cat: 'PE: Territorial–Invasion', id: 'goal_small', label: 'Goal (small/pop-up)', w: UNIT * 1.5, h: UNIT * 0.4, color: '#d1d5db', snap: 'edge90', pe: true, modality: 'territorial' },
+  { cat: 'PE: Territorial–Invasion', id: 'post_small', label: 'Post / Pole', w: UNIT * 0.3, h: UNIT * 0.3, color: '#9ca3af', round: true, pe: true, modality: 'territorial' },
+  { cat: 'PE: Territorial–Invasion', id: 'flag_zone', label: 'Flag / Try Zone', w: UNIT * 4, h: UNIT * 1, color: 'rgba(251,191,36,0.2)', zone: true, border: '#fbbf24', pe: true, modality: 'territorial' },
+  // ── PE: Net–Barrier ──
+  { cat: 'PE: Net–Barrier', id: 'net_full', label: 'Net (full court)', w: UNIT * 6, h: UNIT * 0.2, color: '#374151', snap: 'edge90', pe: true, modality: 'net' },
+  { cat: 'PE: Net–Barrier', id: 'net_short', label: 'Net (short / badminton)', w: UNIT * 3, h: UNIT * 0.2, color: '#4b5563', snap: 'edge90', pe: true, modality: 'net' },
+  { cat: 'PE: Net–Barrier', id: 'racket_depot', label: 'Racket Depot', w: UNIT * 1, h: UNIT * 0.6, color: '#c084fc', pe: true, modality: 'net' },
+  { cat: 'PE: Net–Barrier', id: 'shuttle_bucket', label: 'Shuttle Bucket', w: UNIT * 0.6, h: UNIT * 0.6, color: '#e9d5ff', round: true, pe: true, modality: 'net' },
+  // ── PE: Striking–Fielding ──
+  { cat: 'PE: Striking–Fielding', id: 'base', label: 'Base', w: UNIT * 0.5, h: UNIT * 0.5, color: '#fef08a', pe: true, modality: 'striking' },
+  { cat: 'PE: Striking–Fielding', id: 'home_plate', label: 'Home Plate', w: UNIT * 0.6, h: UNIT * 0.6, color: '#fde68a', pe: true, modality: 'striking' },
+  { cat: 'PE: Striking–Fielding', id: 'wicket', label: 'Wicket / Stump', w: UNIT * 0.3, h: UNIT * 0.6, color: '#d6b88a', pe: true, modality: 'striking' },
+  { cat: 'PE: Striking–Fielding', id: 'bat_rack', label: 'Bat Rack', w: UNIT * 1.2, h: UNIT * 0.5, color: '#a3a3a3', pe: true, modality: 'striking' },
+  { cat: 'PE: Striking–Fielding', id: 'fielding_zone', label: 'Fielding Zone', w: UNIT * 3, h: UNIT * 3, color: 'rgba(187,247,208,0.16)', zone: true, border: '#86efac', pe: true, modality: 'striking' },
   // Zones
   { cat: 'Zones', id: 'zone_cog', label: 'Zone: Cognitive', w: UNIT * 3, h: UNIT * 2, color: 'rgba(147,197,253,0.16)', zone: true, border: '#93c5fd' },
   { cat: 'Zones', id: 'zone_soc', label: 'Zone: Social', w: UNIT * 3, h: UNIT * 2, color: 'rgba(167,243,208,0.16)', zone: true, border: '#a7f3d0' },
@@ -522,11 +539,15 @@ export function render(container) {
     container.querySelectorAll('#palette .sidebar-item').forEach((btn, i) => {
       const item = PALETTE[i];
       if (!item) return;
-      // Show PE equipment only for PE venues; show classroom items only for classroom
       if (item.pe) btn.style.display = isPE ? '' : 'none';
+      else if (!item.zone && !item.text) btn.style.display = isPE ? 'none' : '';
     });
     container.querySelectorAll('#palette .sidebar-section-label').forEach(lbl => {
-      if (lbl.textContent === 'PE Equipment') lbl.style.display = isPE ? '' : 'none';
+      const t = lbl.textContent;
+      const isPECat = t.startsWith('PE:');
+      const isClassroomCat = !isPECat && t !== 'Zones';
+      if (isPECat) lbl.style.display = isPE ? '' : 'none';
+      if (isClassroomCat) lbl.style.display = isPE ? 'none' : '';
     });
     container.querySelectorAll('#presets .card').forEach((btn, i) => {
       const p = PRESETS[i];
@@ -1058,10 +1079,14 @@ export function render(container) {
       g.appendChild(c);
       if (def.id === 'plant') g.appendChild(svgText(0, 5, '🌿', 16));
       if (def.id === 'vr_station') g.appendChild(svgText(0, 4, 'VR', 12, '#334155'));
-      if (def.id === 'cone') g.appendChild(svgText(0, 4, '▲', 10, '#fff'));
+      if (def.id === 'cone_large') g.appendChild(svgText(0, 4, '▲', 12, '#fff'));
+      if (def.id === 'cone_small') g.appendChild(svgText(0, 3, '▲', 8, '#fff'));
+      if (def.id === 'marker_flat') g.appendChild(svgText(0, 3, '●', 8, '#fff'));
       if (def.id === 'hoop') g.appendChild(svgText(0, 4, '○', 14, '#be185d'));
       if (def.id === 'water_station') g.appendChild(svgText(0, 5, '💧', 14));
       if (def.id === 'speaker') g.appendChild(svgText(0, 4, '📢', 12));
+      if (def.id === 'post_small') g.appendChild(svgText(0, 3, '|', 10, '#fff'));
+      if (def.id === 'shuttle_bucket') g.appendChild(svgText(0, 4, '🏸', 10));
     } else if (def.trap) {
       const poly = document.createElementNS(SVG_NS, 'path');
       const inset = w * 0.2;
@@ -1088,10 +1113,16 @@ export function render(container) {
       if (def.id === 'printer_3d') g.appendChild(svgText(0, 4, '3D', 10, '#64748b'));
       if (def.id === 'teacher_desk') g.appendChild(svgText(0, 4, 'TDesk', 9, '#64748b'));
       if (def.id === 'gym_mat') g.appendChild(svgText(0, 4, 'Mat', 10, '#1e40af'));
-      if (def.id === 'net') g.appendChild(svgText(0, 3, 'NET', 8, '#fff'));
-      if (def.id === 'goal') g.appendChild(svgText(0, 4, 'Goal', 9, '#64748b'));
+      if (def.id === 'net_full' || def.id === 'net_short') g.appendChild(svgText(0, 3, 'NET', 8, '#fff'));
+      if (def.id === 'goal_large' || def.id === 'goal_small') g.appendChild(svgText(0, 4, 'Goal', 9, '#64748b'));
       if (def.id === 'bench') g.appendChild(svgText(0, 3, 'Bench', 8, '#64748b'));
       if (def.id === 'equipment_box') g.appendChild(svgText(0, 4, '📦', 12));
+      if (def.id === 'bib_stack') g.appendChild(svgText(0, 3, 'Bibs', 8, '#991b1b'));
+      if (def.id === 'racket_depot') g.appendChild(svgText(0, 3, '🏸', 10));
+      if (def.id === 'base') g.appendChild(svgText(0, 4, 'B', 10, '#92400e'));
+      if (def.id === 'home_plate') g.appendChild(svgText(0, 4, 'H', 10, '#92400e'));
+      if (def.id === 'wicket') g.appendChild(svgText(0, 4, '|||', 7, '#78350f'));
+      if (def.id === 'bat_rack') g.appendChild(svgText(0, 3, 'Bats', 8, '#64748b'));
     }
 
     makeDraggable(g);
@@ -1540,7 +1571,7 @@ export function render(container) {
       stationPositions.forEach(([x, y], i) => {
         place(find(stationItems[i % stationItems.length]), x, y);
         // Number cone at each station
-        place(find('cone'), x - UNIT * 0.8, y);
+        place(find('cone_large'), x - UNIT * 0.8, y);
       });
       // Centre rest area
       place(find('water_station'), UNIT * 10, UNIT * 5.5);
@@ -1551,24 +1582,24 @@ export function render(container) {
     } else if (name === 'team_game') {
       // Two-team setup with a net/barrier down the middle
       stackWall('A'); stackWall('B');
-      place(find('net'), VB_W / 2 - UNIT * 2, VB_H / 2, 0);
+      place(find('net_full'), VB_W / 2 - UNIT * 2, VB_H / 2, 0);
       // Goals at each end
-      place(find('goal'), UNIT * 2, VB_H / 2, 90);
-      place(find('goal'), VB_W - UNIT * 3, VB_H / 2, -90);
+      place(find('goal_large'), UNIT * 2, VB_H / 2, 90);
+      place(find('goal_large'), VB_W - UNIT * 3, VB_H / 2, -90);
       // Team A cones (left side)
-      place(find('cone'), UNIT * 5, UNIT * 3);
-      place(find('cone'), UNIT * 5, UNIT * 6);
-      place(find('cone'), UNIT * 5, UNIT * 9);
-      place(find('cone'), UNIT * 8, UNIT * 2);
-      place(find('cone'), UNIT * 8, UNIT * 5.5);
-      place(find('cone'), UNIT * 8, UNIT * 9);
+      place(find('cone_large'), UNIT * 5, UNIT * 3);
+      place(find('cone_large'), UNIT * 5, UNIT * 6);
+      place(find('cone_large'), UNIT * 5, UNIT * 9);
+      place(find('cone_large'), UNIT * 8, UNIT * 2);
+      place(find('cone_large'), UNIT * 8, UNIT * 5.5);
+      place(find('cone_large'), UNIT * 8, UNIT * 9);
       // Team B cones (right side)
-      place(find('cone'), UNIT * 16, UNIT * 3);
-      place(find('cone'), UNIT * 16, UNIT * 6);
-      place(find('cone'), UNIT * 16, UNIT * 9);
-      place(find('cone'), UNIT * 13, UNIT * 2);
-      place(find('cone'), UNIT * 13, UNIT * 5.5);
-      place(find('cone'), UNIT * 13, UNIT * 9);
+      place(find('cone_large'), UNIT * 16, UNIT * 3);
+      place(find('cone_large'), UNIT * 16, UNIT * 6);
+      place(find('cone_large'), UNIT * 16, UNIT * 9);
+      place(find('cone_large'), UNIT * 13, UNIT * 2);
+      place(find('cone_large'), UNIT * 13, UNIT * 5.5);
+      place(find('cone_large'), UNIT * 13, UNIT * 9);
       // Sideline benches & water
       place(find('bench'), UNIT * 10, UNIT * 0.5);
       place(find('water_station'), UNIT * 7, UNIT * 0.5);
@@ -1583,7 +1614,7 @@ export function render(container) {
       const cols = 6, rows = Math.ceil(count / cols);
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols && r * cols + c < count; c++) {
-          place(find('cone'), UNIT * (4 + c * 3), UNIT * (3.5 + r * 2));
+          place(find('cone_large'), UNIT * (4 + c * 3), UNIT * (3.5 + r * 2));
         }
       }
       // Equipment at the side

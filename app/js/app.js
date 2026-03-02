@@ -8,7 +8,7 @@ import { Store } from './state.js';
 import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome } from './components/welcome.js';
-import { seedIfNeeded, seedPdIfNeeded } from './seed-data.js';
+import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded } from './seed-data.js';
 
 /* ── Views ── */
 import { render as renderDashboard } from './views/dashboard.js';
@@ -19,6 +19,8 @@ import { renderList as renderLessonsList, renderDetail as renderLessonDetail } f
 import { render as renderKnowledgeBase } from './views/knowledge-base.js';
 import { render as renderPdPortfolio, renderDetail as renderPdFolderDetail } from './views/pd-portfolio.js';
 import { render as renderAdmin } from './views/admin.js';
+import { render as renderSimulations } from './views/simulations.js';
+import { render as renderLessonRehearsal } from './views/lesson-rehearsal.js';
 import { render as renderSettings } from './views/settings.js';
 
 function init() {
@@ -28,6 +30,7 @@ function init() {
   // Seed sample data on first run
   seedIfNeeded();
   seedPdIfNeeded();
+  seedLessonsIfNeeded();
 
   app.innerHTML = `
     <aside class="sidebar" id="sidebar"></aside>
@@ -86,6 +89,8 @@ function init() {
   registerRoute('/my-growth', renderPdPortfolio);
   registerRoute('/my-growth/:id', renderPdFolderDetail);
   registerRoute('/admin', renderAdmin);
+  registerRoute('/simulations', renderSimulations);
+  registerRoute('/lesson-rehearsal', renderLessonRehearsal);
   registerRoute('/settings', renderSettings);
 
   // Start router
