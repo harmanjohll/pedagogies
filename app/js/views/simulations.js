@@ -5,6 +5,7 @@
  */
 
 import { showToast } from '../components/toast.js';
+import { Store } from '../state.js';
 
 /* ── Simulation catalogue ── */
 const SIMULATIONS = [
@@ -512,31 +513,36 @@ export function render(container) {
                   <option value="JC / Pre-U">JC / Pre-U</option>
                 </select>
               </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+              <div class="sim-byo-field">
+                <label class="sim-byo-label">Topic</label>
+                <select id="byo-topic-select" class="sim-byo-select">
+                  <option value="">Select a subject first...</option>
+                </select>
+              </div>
               <div class="sim-byo-field">
                 <label class="sim-byo-label">Simulation Type</label>
                 <select id="byo-type" class="sim-byo-select">
                   <option value="">Select...</option>
                   <option value="virtual-lab">Virtual Lab Practical</option>
                   <option value="interactive-model">Interactive Model / Diagram</option>
-                  <option value="data-collection">Data Collection & Graphing</option>
+                  <option value="data-collection">Data Collection &amp; Graphing</option>
                   <option value="guided-exploration">Guided Exploration</option>
                   <option value="sandbox">Free-play Sandbox</option>
                 </select>
               </div>
-              <div class="sim-byo-field">
-                <label class="sim-byo-label">Interactivity</label>
-                <select id="byo-interactivity" class="sim-byo-select">
-                  <option value="sliders">Sliders &amp; Controls</option>
-                  <option value="drag-drop">Drag &amp; Drop</option>
-                  <option value="click-step">Click-through Steps</option>
-                  <option value="combined">Combined</option>
-                </select>
-              </div>
+            </div>
+
+            <div id="byo-other-topic-wrap" class="sim-byo-field" style="margin-bottom:14px;display:none;">
+              <label class="sim-byo-label">Your Topic</label>
+              <input type="text" id="byo-other-topic" class="sim-byo-input" placeholder="Enter your topic and learning objective..." />
             </div>
 
             <div class="sim-byo-field" style="margin-bottom:14px;">
-              <label class="sim-byo-label">Topic &amp; Learning Objective</label>
-              <input type="text" id="byo-topic" class="sim-byo-input" placeholder="e.g. Electromagnetic induction — show how changing flux produces EMF" />
+              <label class="sim-byo-label">Learning Objective</label>
+              <input type="text" id="byo-topic" class="sim-byo-input" placeholder="e.g. Show how changing flux produces EMF" />
             </div>
 
             <div class="sim-byo-field" style="margin-bottom:14px;">
@@ -587,6 +593,107 @@ export function render(container) {
       </div>
     `;
 
+    /* ── MOE Syllabus topics by subject ── */
+    const MOE_TOPICS = {
+      Physics: [
+        'Kinematics (speed, velocity, acceleration)',
+        'Dynamics (Newton\u2019s laws, forces)',
+        'Mass, Weight & Density',
+        'Turning Effect of Forces (moments)',
+        'Pressure',
+        'Energy, Work & Power',
+        'Kinetic Model of Matter',
+        'Thermal Properties of Matter',
+        'Transfer of Thermal Energy',
+        'General Wave Properties',
+        'Light (reflection, refraction, lenses)',
+        'Electromagnetic Spectrum',
+        'Sound',
+        'Static Electricity',
+        'Current Electricity (circuits, Ohm\u2019s law)',
+        'D.C. Circuits (series & parallel)',
+        'Practical Electricity (power, cost)',
+        'Magnetism & Electromagnetism',
+        'Electromagnetic Induction',
+        'Radioactivity',
+      ],
+      Chemistry: [
+        'Experimental Chemistry (lab techniques)',
+        'Atomic Structure',
+        'Chemical Bonding (ionic, covalent, metallic)',
+        'Acids, Bases & Salts',
+        'Qualitative Analysis',
+        'The Mole Concept & Stoichiometry',
+        'Electrolysis',
+        'Energy Changes (exo/endothermic)',
+        'Rate of Reaction (factors)',
+        'Redox Reactions',
+        'Metals & Reactivity Series',
+        'Atmosphere & Environment',
+        'Organic Chemistry (alkanes, alkenes, alcohols)',
+        'Polymers & Macromolecules',
+        'Titration & Volumetric Analysis',
+      ],
+      Biology: [
+        'Cell Structure & Organisation',
+        'Movement of Substances (diffusion, osmosis)',
+        'Biological Molecules (enzymes)',
+        'Nutrition in Humans (digestion)',
+        'Nutrition in Plants (photosynthesis)',
+        'Transport in Flowering Plants',
+        'Transport in Humans (circulatory system)',
+        'Respiration & the Respiratory System',
+        'Excretion (kidneys)',
+        'Homeostasis (thermoregulation)',
+        'Co-ordination & Response (nervous system)',
+        'Cell Division (mitosis, meiosis)',
+        'Molecular Genetics (DNA, inheritance)',
+        'Ecology & Environment',
+        'Inheritance (Mendelian genetics)',
+      ],
+      Mathematics: [
+        'Graphs of Functions (linear, quadratic)',
+        'Trigonometry (sine, cosine, tangent)',
+        'Vectors in 2D',
+        'Probability & Statistics',
+        'Coordinate Geometry',
+        'Set Theory & Venn Diagrams',
+        'Number Patterns & Sequences',
+        'Mensuration (area, volume, surface area)',
+        'Transformation Geometry',
+      ],
+      Geography: [
+        'Plate Tectonics (earthquakes, volcanoes)',
+        'Weather & Climate',
+        'Water Cycle & Rivers',
+        'Coastal Processes',
+        'Urban Geography',
+      ],
+    };
+
+    // Wire subject → topic dropdown
+    const subjectSel = container.querySelector('#byo-subject');
+    const topicSel = container.querySelector('#byo-topic-select');
+    const otherWrap = container.querySelector('#byo-other-topic-wrap');
+    if (subjectSel && topicSel) {
+      subjectSel.addEventListener('change', () => {
+        const subj = subjectSel.value;
+        const topics = MOE_TOPICS[subj] || [];
+        if (subj === 'Other' || topics.length === 0) {
+          topicSel.innerHTML = '<option value="Other">Other (type below)</option>';
+          otherWrap.style.display = '';
+        } else {
+          topicSel.innerHTML = '<option value="">Select topic...</option>'
+            + topics.map(t => `<option value="${t}">${t}</option>`).join('')
+            + '<option value="Other">Other (type below)</option>';
+          otherWrap.style.display = 'none';
+        }
+      });
+      topicSel.addEventListener('change', () => {
+        otherWrap.style.display = topicSel.value === 'Other' ? '' : 'none';
+      });
+    }
+
     /* ── Event listeners ── */
 
     // Launch built-in sims
@@ -630,31 +737,33 @@ export function render(container) {
       const subject = container.querySelector('#byo-subject')?.value || '';
       const level = container.querySelector('#byo-level')?.value || '';
       const simType = container.querySelector('#byo-type')?.value || '';
-      const interactivity = container.querySelector('#byo-interactivity')?.value || 'sliders';
-      const topic = container.querySelector('#byo-topic')?.value.trim() || '';
+      const topicFromDropdown = container.querySelector('#byo-topic-select')?.value || '';
+      const topicCustom = container.querySelector('#byo-other-topic')?.value.trim() || '';
+      const selectedTopic = (topicFromDropdown === 'Other' || !topicFromDropdown) ? topicCustom : topicFromDropdown;
+      const objective = container.querySelector('#byo-topic')?.value.trim() || '';
       const variables = container.querySelector('#byo-variables')?.value.trim() || '';
       const extra = promptArea.value.trim();
 
-      if (!topic) {
-        showToast('Please enter a topic and learning objective.', 'danger');
+      if (!selectedTopic && !objective) {
+        showToast('Please select a topic or enter a learning objective.', 'danger');
         container.querySelector('#byo-topic')?.focus();
         return;
       }
 
       // Build the structured prompt from scaffold fields
-      const parts = [`Create an interactive simulation for: ${topic}`];
-      if (subject) parts.push(`Subject: ${subject}`);
+      const topicLine = selectedTopic ? `${selectedTopic}${objective ? ' \u2014 ' + objective : ''}` : objective;
+      const parts = [`Create an interactive simulation for: ${topicLine}`];
+      if (subject && subject !== 'Other') parts.push(`Subject: ${subject}`);
       if (level) parts.push(`Student level: ${level}`);
       if (simType) parts.push(`Simulation style: ${simType.replace(/-/g, ' ')}`);
-      if (interactivity) parts.push(`Interactivity: ${interactivity.replace(/-/g, ' ')}`);
       if (variables) parts.push(`Key variables/parameters: ${variables}`);
       if (extra) parts.push(`Additional instructions: ${extra}`);
       const prompt = parts.join('\n');
 
-      // Check for API key
-      const apiKey = localStorage.getItem('cocher_api_key');
+      // Check for API key (use same key as general settings)
+      const apiKey = Store.get('apiKey');
       if (!apiKey) {
-        showToast('Please set your Anthropic API key in Settings first.', 'danger');
+        showToast('Please set your API key in Admin \u2192 Settings first.', 'danger');
         return;
       }
 
