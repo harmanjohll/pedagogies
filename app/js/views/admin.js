@@ -452,12 +452,12 @@ For select fields, use one of the provided options exactly. For text/textarea fi
   }];
 
   const response = await sendChat(messages, {
-    systemPrompt: `You are Co-Cher's event planning assistant for Singapore schools. Generate complete, practical event planning documents based on teacher descriptions. Always respond with valid JSON only. Be specific, professional, and follow Singapore MOE conventions for school communications.`,
-    temperature: 0.4,
-    maxTokens: 4096
+    systemPrompt: `You are Co-Cher's event planning assistant for Singapore schools. Generate complete, practical event planning documents based on teacher descriptions. Respond with valid JSON only. Be specific, professional, and follow Singapore MOE conventions for school communications.`,
+    jsonMode: true,
+    maxTokens: 8192
   });
 
-  // Parse JSON from response (handle potential markdown wrapping)
+  // With jsonMode the API returns raw JSON, but add fallback parsing just in case
   let jsonStr = response.trim();
   // Strip markdown code blocks if present
   if (jsonStr.startsWith('```')) {
@@ -467,10 +467,18 @@ For select fields, use one of the provided options exactly. For text/textarea fi
   try {
     return JSON.parse(jsonStr);
   } catch (e) {
-    // Try to extract JSON from response
+    // Try to extract the outermost JSON object from response
     const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (e2) {
+        // Last resort: try to fix common JSON issues (trailing commas)
+        const cleaned = jsonMatch[0]
+          .replace(/,\s*([}\]])/g, '$1')  // remove trailing commas
+          .replace(/[\x00-\x1f]/g, ' ');  // remove control characters
+        return JSON.parse(cleaned);
+      }
     }
     throw new Error('Failed to parse AI response as JSON. Please try again.');
   }

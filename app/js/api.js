@@ -231,7 +231,7 @@ _Rationale:_ One short sentence.
 
 IMPORTANT: List every student name. Do NOT abbreviate, do NOT use "..." or "etc." Do NOT skip any student.`,
     temperature: 0.6,
-    maxTokens: 4096
+    maxTokens: 8192
   });
 }
 

@@ -923,6 +923,16 @@ select.input {
 .mt-2 { margin-top: var(--sp-2); } .mt-4 { margin-top: var(--sp-4); } .mt-6 { margin-top: var(--sp-6); }
 .mb-2 { margin-bottom: var(--sp-2); } .mb-4 { margin-bottom: var(--sp-4); } .mb-6 { margin-bottom: var(--sp-6); }
 
+/* ═══════════ Lesson Component Card Scrollable Content ═══════════ */
+.component-content-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.component-content-scroll::-webkit-scrollbar { width: 6px; }
+.component-content-scroll::-webkit-scrollbar-track { background: transparent; }
+.component-content-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.component-content-scroll::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+
 /* ═══════════ Responsive — Tablet (≤ 1024px) ═══════════ */
 
 @media (max-width: 1024px) {
