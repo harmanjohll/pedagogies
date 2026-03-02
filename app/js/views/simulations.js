@@ -6,6 +6,7 @@
 
 import { showToast } from '../components/toast.js';
 import { Store } from '../state.js';
+import { sendChat } from '../api.js';
 
 /* ── Simulation catalogue ── */
 const SIMULATIONS = [
@@ -27,17 +28,17 @@ const SIMULATIONS = [
   },
   {
     id: 'pendulum',
-    title: 'Simple Pendulum',
+    title: 'Pendulum & Oscillations',
     subject: 'Physics',
-    description: 'Investigate the relationship between pendulum length, gravity, and period. Collect data and verify T = 2\u03c0\u221a(L/g).',
+    description: 'Investigate the relationship between pendulum length and period. Time oscillations, record data, plot T\u00B2 vs L and calculate g.',
     difficulty: 'Beginner',
     path: 'simulations/physics/pendulum/index.html'
   },
   {
-    id: 'circuits',
-    title: 'Simple Circuits',
+    id: 'ohms-law',
+    title: 'Ohm\u2019s Law',
     subject: 'Physics',
-    description: 'Build series and parallel circuits. Measure voltage, current, and resistance with virtual instruments.',
+    description: 'Set up a circuit with ammeter and voltmeter. Vary EMF, record V and I, plot V vs I and determine resistance.',
     difficulty: 'Intermediate',
     path: 'simulations/physics/electricity/index.html'
   }
@@ -69,22 +70,32 @@ function saveCustomSims(sims) {
   localStorage.setItem('cocher_custom_sims', JSON.stringify(sims));
 }
 
-/* ── Iframe overlay ── */
+/* ── Iframe overlay with window-size controls ── */
 function openOverlay(container, title, opts) {
   // opts: { src } or { srcdoc }
   const overlay = document.createElement('div');
   overlay.id = 'sim-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;background:rgba(0,0,0,0.85);animation:simFadeIn 0.2s ease;';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);animation:simFadeIn 0.2s ease;';
+
+  // Window wrapper (resizable via presets)
+  const win = document.createElement('div');
+  win.id = 'sim-window';
+  win.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;border-radius:0;overflow:hidden;transition:all 0.25s ease;background:#1a1a2e;';
 
   const topBar = document.createElement('div');
-  topBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:#1a1a2e;color:#fff;flex-shrink:0;';
+  topBar.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 16px;background:#1a1a2e;color:#fff;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.08);';
   topBar.innerHTML = `
-    <span style="font-weight:600;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
-    <button id="sim-overlay-close" style="background:none;border:none;color:#fff;cursor:pointer;padding:4px 8px;font-size:1.25rem;line-height:1;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='none'">&times;</button>
+    <span style="font-weight:600;font-size:0.9375rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${title}</span>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="sim-size-btn" data-size="windowed" title="Windowed (80%)" style="background:none;border:1px solid rgba(255,255,255,0.2);color:#fff;cursor:pointer;padding:3px 10px;font-size:0.75rem;border-radius:4px;transition:all 0.15s;">Windowed</button>
+      <button class="sim-size-btn active" data-size="fullscreen" title="Fullscreen" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;cursor:pointer;padding:3px 10px;font-size:0.75rem;border-radius:4px;transition:all 0.15s;">Fullscreen</button>
+      <span style="width:1px;height:18px;background:rgba(255,255,255,0.15);margin:0 4px;"></span>
+      <button id="sim-overlay-close" style="background:none;border:none;color:#fff;cursor:pointer;padding:2px 8px;font-size:1.25rem;line-height:1;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='none'">&times;</button>
+    </div>
   `;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'flex:1;border:none;width:100%;background:#fff;';
+  iframe.style.cssText = 'flex:1;border:none;width:100%;background:#1e1f2b;';
   if (opts.src) {
     iframe.src = opts.src;
   } else if (opts.srcdoc) {
@@ -92,22 +103,48 @@ function openOverlay(container, title, opts) {
   }
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
 
-  overlay.appendChild(topBar);
-  overlay.appendChild(iframe);
+  win.appendChild(topBar);
+  win.appendChild(iframe);
+  overlay.appendChild(win);
   document.body.appendChild(overlay);
 
+  // Size presets
+  const SIZE_PRESETS = {
+    fullscreen: { width: '100%', height: '100%', borderRadius: '0' },
+    windowed: { width: '85%', height: '85%', borderRadius: '12px' },
+  };
+
+  topBar.querySelectorAll('.sim-size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const size = btn.dataset.size;
+      const preset = SIZE_PRESETS[size];
+      if (!preset) return;
+      win.style.width = preset.width;
+      win.style.height = preset.height;
+      win.style.borderRadius = preset.borderRadius;
+      topBar.querySelectorAll('.sim-size-btn').forEach(b => {
+        b.style.background = 'none';
+        b.style.borderColor = 'rgba(255,255,255,0.2)';
+      });
+      btn.style.background = 'rgba(255,255,255,0.15)';
+      btn.style.borderColor = 'rgba(255,255,255,0.3)';
+    });
+  });
+
+  const closeOverlay = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', escHandler);
+  };
+
   const closeBtn = overlay.querySelector('#sim-overlay-close');
-  closeBtn.addEventListener('click', () => overlay.remove());
+  closeBtn.addEventListener('click', closeOverlay);
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.remove();
+    if (e.target === overlay) closeOverlay();
   });
 
   // Escape key
   const escHandler = (e) => {
-    if (e.key === 'Escape') {
-      overlay.remove();
-      document.removeEventListener('keydown', escHandler);
-    }
+    if (e.key === 'Escape') closeOverlay();
   };
   document.addEventListener('keydown', escHandler);
 }
@@ -760,30 +797,12 @@ export function render(container) {
       if (extra) parts.push(`Additional instructions: ${extra}`);
       const prompt = parts.join('\n');
 
-      // Check for API key (use same key as general settings)
-      const apiKey = Store.get('apiKey');
-      if (!apiKey) {
-        showToast('Please set your API key in Admin \u2192 Settings first.', 'danger');
-        return;
-      }
-
       // Show loading state
       generateBtn.disabled = true;
       loadingEl.style.display = 'flex';
 
       try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true'
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 16000,
-            system: `You are LabSim Builder, an expert at creating interactive science simulations for Singapore secondary school / JC students. Generate a complete, self-contained HTML page with embedded CSS and JavaScript. Requirements:
+        const systemPrompt = `You are LabSim Builder, an expert at creating interactive science simulations for Singapore secondary school / JC students. Generate a complete, self-contained HTML page with embedded CSS and JavaScript. Requirements:
 - Dark theme (background #1a1a2e, text #e8e8f0, accent #4361ee)
 - Use HTML5 Canvas or SVG for visual elements
 - Include labelled interactive controls (sliders, buttons, dropdowns) for each variable
@@ -791,24 +810,12 @@ export function render(container) {
 - Add a brief instruction/guide panel explaining what to do
 - Make it scientifically accurate and educationally meaningful
 - The page must be fully self-contained — no external dependencies
-- Return ONLY the complete HTML — no explanation or markdown`,
-            messages: [
-              { role: 'user', content: prompt }
-            ]
-          })
-        });
+- Return ONLY the complete HTML — no explanation or markdown`;
 
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          const msg = err?.error?.message || `API error ${res.status}`;
-          throw new Error(msg);
-        }
-
-        const data = await res.json();
-        const text = data?.content?.[0]?.text;
-        if (!text) {
-          throw new Error('No response received from the API.');
-        }
+        const text = await sendChat(
+          [{ role: 'user', content: prompt }],
+          { systemPrompt, temperature: 0.5, maxTokens: 16000 }
+        );
 
         const html = extractHTML(text);
         const title = deriveTitle(prompt);
