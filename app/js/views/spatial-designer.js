@@ -1573,26 +1573,62 @@ export function render(container) {
       place(find('tablet_cart'), UNIT * 1.5, UNIT * 9);
       place(find('vr_station'), UNIT * 18, UNIT * 9);
     } else if (name === 'circuit') {
-      // Circuit training: stations around the perimeter, rest area in centre
+      // Circuit training: 8 stations around the perimeter with varied equipment
       stackWall('A'); stackWall('B');
-      const stationPositions = [
-        [UNIT * 3, UNIT * 2], [UNIT * 8, UNIT * 2], [UNIT * 13, UNIT * 2], [UNIT * 18, UNIT * 2],
-        [UNIT * 20, UNIT * 5.5],
-        [UNIT * 18, UNIT * 9], [UNIT * 13, UNIT * 9], [UNIT * 8, UNIT * 9], [UNIT * 3, UNIT * 9],
-        [UNIT * 1, UNIT * 5.5]
-      ];
-      const stationItems = ['gym_mat', 'cone', 'hoop', 'gym_mat', 'cone', 'hoop', 'gym_mat', 'cone', 'hoop', 'gym_mat'];
-      stationPositions.forEach(([x, y], i) => {
-        place(find(stationItems[i % stationItems.length]), x, y);
-        // Number cone at each station
-        place(find('cone_large'), x - UNIT * 0.8, y);
-      });
-      // Centre rest area
-      place(find('water_station'), UNIT * 10, UNIT * 5.5);
-      place(find('bench'), UNIT * 11.5, UNIT * 5.5);
-      // Instructor position
-      place(find('speaker'), UNIT * 10, UNIT * 3.5);
-      place(find('equipment_box'), UNIT * 22, UNIT * 10);
+      // Station 1 — Push-up mat (top-left)
+      place(find('cone_large'), UNIT * 2.5, UNIT * 1.5);
+      place(find('gym_mat'), UNIT * 3.5, UNIT * 1.8);
+      place(find('marker_flat'), UNIT * 5.6, UNIT * 1.8);
+      // Station 2 — Agility hoops (top-centre-left)
+      place(find('cone_large'), UNIT * 7, UNIT * 1.5);
+      place(find('hoop'), UNIT * 8, UNIT * 1.8);
+      place(find('hoop'), UNIT * 9.3, UNIT * 1.8);
+      place(find('hoop'), UNIT * 8.6, UNIT * 2.8);
+      // Station 3 — Core mat (top-centre-right)
+      place(find('cone_large'), UNIT * 11.5, UNIT * 1.5);
+      place(find('gym_mat'), UNIT * 12.5, UNIT * 1.8);
+      place(find('marker_flat'), UNIT * 14.6, UNIT * 1.8);
+      // Station 4 — Shuttle run (top-right)
+      place(find('cone_large'), UNIT * 16.5, UNIT * 1.5);
+      place(find('cone_small'), UNIT * 17.5, UNIT * 1.8);
+      place(find('cone_small'), UNIT * 20, UNIT * 1.8);
+      place(find('marker_flat'), UNIT * 18.7, UNIT * 1.8);
+      // Station 5 — Balance bench (right side)
+      place(find('cone_large'), UNIT * 20.5, UNIT * 4);
+      place(find('bench'), UNIT * 20, UNIT * 5);
+      place(find('marker_flat'), UNIT * 21, UNIT * 6.2);
+      // Station 6 — Skipping / jump zone (bottom-right)
+      place(find('cone_large'), UNIT * 16.5, UNIT * 8.5);
+      place(find('hoop'), UNIT * 17.5, UNIT * 8.8);
+      place(find('hoop'), UNIT * 18.8, UNIT * 8.8);
+      place(find('marker_flat'), UNIT * 20, UNIT * 8.8);
+      // Station 7 — Burpee mat (bottom-centre)
+      place(find('cone_large'), UNIT * 11.5, UNIT * 8.5);
+      place(find('gym_mat'), UNIT * 12.5, UNIT * 8.8);
+      place(find('gym_mat'), UNIT * 12.5, UNIT * 10);
+      // Station 8 — Star jumps / cone weave (bottom-left)
+      place(find('cone_large'), UNIT * 2.5, UNIT * 8.5);
+      place(find('cone_small'), UNIT * 3.5, UNIT * 9);
+      place(find('cone_small'), UNIT * 4.5, UNIT * 8.5);
+      place(find('cone_small'), UNIT * 5.5, UNIT * 9);
+      place(find('cone_small'), UNIT * 6.5, UNIT * 8.5);
+      // Left side — stretching/rest
+      place(find('gym_mat'), UNIT * 1, UNIT * 4.5);
+      place(find('gym_mat'), UNIT * 1, UNIT * 6);
+      // Directional arrows (flat markers showing rotation)
+      place(find('marker_flat'), UNIT * 6, UNIT * 0.8);
+      place(find('marker_flat'), UNIT * 15, UNIT * 0.8);
+      place(find('marker_flat'), UNIT * 15, UNIT * 10.2);
+      place(find('marker_flat'), UNIT * 6, UNIT * 10.2);
+      // Centre: instructor, timer, water
+      place(find('speaker'), UNIT * 10.5, UNIT * 5.5);
+      place(find('water_station'), UNIT * 9, UNIT * 5.5);
+      place(find('bench'), UNIT * 10, UNIT * 7);
+      place(find('bench'), UNIT * 10, UNIT * 4);
+      // Equipment storage & bibs
+      place(find('equipment_box'), UNIT * 22, UNIT * 10.5);
+      place(find('bib_stack'), UNIT * 22, UNIT * 9.5);
+      place(find('water_station'), UNIT * 0.5, UNIT * 0.5);
     } else if (name === 'team_game') {
       // Two-team setup with a net/barrier down the middle
       stackWall('A'); stackWall('B');
@@ -1636,50 +1672,136 @@ export function render(container) {
       place(find('water_station'), UNIT * 22, UNIT * 1);
       place(find('bench'), UNIT * 21, UNIT * 10);
     } else if (name === 'hiit') {
-      // HIIT: two parallel lanes with work/rest zones
+      // HIIT: 3 work lanes, recovery zone, instructor station
       stackWall('A'); stackWall('B');
-      // Work zone markers (left half — two rows of cones)
-      for (let lane = 0; lane < 2; lane++) {
-        const y = UNIT * (3 + lane * 5);
-        place(find('cone'), UNIT * 3, y);
-        place(find('cone'), UNIT * 7, y);
-        place(find('cone'), UNIT * 11, y);
-        place(find('cone'), UNIT * 15, y);
-        // Mats between cones for exercises
-        place(find('gym_mat'), UNIT * 5, y);
-        place(find('gym_mat'), UNIT * 9, y);
-        place(find('gym_mat'), UNIT * 13, y);
-      }
-      // Recovery zone (right side)
-      place(find('bench'), UNIT * 19, UNIT * 3);
-      place(find('bench'), UNIT * 19, UNIT * 8);
-      place(find('water_station'), UNIT * 21, UNIT * 5.5);
-      // Timer / instructor position
-      place(find('speaker'), UNIT * 11, UNIT * 0.5);
-      place(find('equipment_box'), UNIT * 1, UNIT * 10);
+
+      // --- Lane 1 (top): burpee → high-knees → jump-squats → mountain-climbers ---
+      place(find('cone_large'), UNIT * 2, UNIT * 1.5);       // lane start
+      place(find('gym_mat'), UNIT * 3.5, UNIT * 1.5);        // burpee station
+      place(find('marker_flat'), UNIT * 5.8, UNIT * 1.5);    // transition
+      place(find('cone_small'), UNIT * 7, UNIT * 1.5);       // high-knees marker
+      place(find('cone_small'), UNIT * 8.5, UNIT * 1.5);
+      place(find('marker_flat'), UNIT * 9.8, UNIT * 1.5);    // transition
+      place(find('hoop'), UNIT * 11, UNIT * 1.5);            // jump-squat zone
+      place(find('hoop'), UNIT * 12.5, UNIT * 1.5);
+      place(find('marker_flat'), UNIT * 13.8, UNIT * 1.5);   // transition
+      place(find('gym_mat'), UNIT * 15, UNIT * 1.5);         // mountain-climbers
+      place(find('cone_large'), UNIT * 17, UNIT * 1.5);      // lane end
+
+      // --- Lane 2 (middle): shuttle run → tuck jumps → plank → star jumps ---
+      place(find('cone_large'), UNIT * 2, UNIT * 5);
+      place(find('cone_small'), UNIT * 3.5, UNIT * 5);       // shuttle start
+      place(find('cone_small'), UNIT * 5.5, UNIT * 5);       // shuttle end
+      place(find('marker_flat'), UNIT * 6.8, UNIT * 5);
+      place(find('hoop'), UNIT * 8, UNIT * 5);               // tuck jumps
+      place(find('marker_flat'), UNIT * 9.5, UNIT * 5);
+      place(find('gym_mat'), UNIT * 11, UNIT * 5);           // plank
+      place(find('marker_flat'), UNIT * 13.2, UNIT * 5);
+      place(find('cone_small'), UNIT * 14.5, UNIT * 4.5);    // star jumps area
+      place(find('cone_small'), UNIT * 14.5, UNIT * 5.5);
+      place(find('cone_small'), UNIT * 16, UNIT * 5);
+      place(find('cone_large'), UNIT * 17, UNIT * 5);
+
+      // --- Lane 3 (bottom): lunges → push-ups → box step → lateral shuffle ---
+      place(find('cone_large'), UNIT * 2, UNIT * 8.5);
+      place(find('cone_small'), UNIT * 3, UNIT * 8.5);       // lunge line
+      place(find('cone_small'), UNIT * 4.5, UNIT * 8.5);
+      place(find('cone_small'), UNIT * 6, UNIT * 8.5);
+      place(find('marker_flat'), UNIT * 7, UNIT * 8.5);
+      place(find('gym_mat'), UNIT * 8.5, UNIT * 8.5);        // push-ups
+      place(find('marker_flat'), UNIT * 10.8, UNIT * 8.5);
+      place(find('bench'), UNIT * 12, UNIT * 8.5);           // box step (use bench)
+      place(find('marker_flat'), UNIT * 14.5, UNIT * 8.5);
+      place(find('cone_small'), UNIT * 15.5, UNIT * 8);      // lateral shuffle zone
+      place(find('cone_small'), UNIT * 15.5, UNIT * 9);
+      place(find('cone_small'), UNIT * 17, UNIT * 8);
+      place(find('cone_small'), UNIT * 17, UNIT * 9);
+      place(find('cone_large'), UNIT * 18, UNIT * 8.5);
+
+      // --- Recovery / rest area (right side) ---
+      place(find('bench'), UNIT * 19, UNIT * 2.5);
+      place(find('bench'), UNIT * 19, UNIT * 5);
+      place(find('bench'), UNIT * 19, UNIT * 7.5);
+      place(find('water_station'), UNIT * 21, UNIT * 3);
+      place(find('water_station'), UNIT * 21, UNIT * 7);
+      place(find('gym_mat'), UNIT * 20.5, UNIT * 5);         // cool-down mat
+
+      // --- Instructor, timer, equipment ---
+      place(find('speaker'), UNIT * 10, UNIT * 10.5);        // instructor
+      place(find('equipment_box'), UNIT * 0.5, UNIT * 10.5);
+      place(find('equipment_box'), UNIT * 22, UNIT * 10.5);
+      place(find('bib_stack'), UNIT * 0.5, UNIT * 0.5);
+      place(find('bib_stack'), UNIT * 22, UNIT * 0.5);
+
     } else if (name === 'skills_stations') {
-      // Skills stations: 6 stations arranged around perimeter for sport-specific drills
+      // Skills stations: 6 sport-specific drill zones with detailed equipment at each
       stackWall('A'); stackWall('B');
-      const stationLayout = [
-        { x: UNIT * 3,  y: UNIT * 2,   item: 'cone_large' },
-        { x: UNIT * 10, y: UNIT * 2,   item: 'cone_large' },
-        { x: UNIT * 17, y: UNIT * 2,   item: 'cone_large' },
-        { x: UNIT * 3,  y: UNIT * 8.5, item: 'cone_large' },
-        { x: UNIT * 10, y: UNIT * 8.5, item: 'cone_large' },
-        { x: UNIT * 17, y: UNIT * 8.5, item: 'cone_large' },
-      ];
-      stationLayout.forEach(({ x, y, item }) => {
-        place(find(item), x, y);
-        // Add supporting equipment near each station
-        place(find('hoop'), x + UNIT * 1.5, y);
-        place(find('cone'), x + UNIT * 3, y);
-      });
-      // Central observation / feedback area
-      place(find('bench'), UNIT * 10, UNIT * 5.5);
-      place(find('speaker'), UNIT * 11.5, UNIT * 5.5);
-      // Equipment & water
-      place(find('equipment_box'), UNIT * 22, UNIT * 1);
-      place(find('water_station'), UNIT * 22, UNIT * 10);
+
+      // --- Station 1 (top-left): Dribbling / ball control ---
+      place(find('cone_large'), UNIT * 2, UNIT * 1.5);       // station marker
+      place(find('cone_small'), UNIT * 3, UNIT * 2.2);       // weave cone 1
+      place(find('cone_small'), UNIT * 4, UNIT * 1.5);       // weave cone 2
+      place(find('cone_small'), UNIT * 5, UNIT * 2.2);       // weave cone 3
+      place(find('cone_small'), UNIT * 6, UNIT * 1.5);       // weave cone 4
+      place(find('marker_flat'), UNIT * 7, UNIT * 2);         // end marker
+      place(find('equipment_box'), UNIT * 2, UNIT * 3);       // ball box
+
+      // --- Station 2 (top-centre): Passing accuracy ---
+      place(find('cone_large'), UNIT * 9, UNIT * 1.5);
+      place(find('hoop'), UNIT * 10.5, UNIT * 1.5);          // target hoop 1
+      place(find('hoop'), UNIT * 12, UNIT * 1.5);            // target hoop 2
+      place(find('cone_small'), UNIT * 10.5, UNIT * 3);      // pass-from marker
+      place(find('cone_small'), UNIT * 12, UNIT * 3);
+      place(find('marker_flat'), UNIT * 13.2, UNIT * 2);
+
+      // --- Station 3 (top-right): Serving / shooting ---
+      place(find('cone_large'), UNIT * 15, UNIT * 1.5);
+      place(find('goal_small'), UNIT * 17, UNIT * 1.5);      // target goal
+      place(find('cone_small'), UNIT * 16, UNIT * 3);        // shooting mark 1
+      place(find('cone_small'), UNIT * 17.5, UNIT * 3);      // shooting mark 2
+      place(find('cone_small'), UNIT * 19, UNIT * 3);        // shooting mark 3
+      place(find('marker_flat'), UNIT * 20, UNIT * 1.8);
+
+      // --- Station 4 (bottom-left): Agility / footwork ---
+      place(find('cone_large'), UNIT * 2, UNIT * 8);
+      place(find('hoop'), UNIT * 3, UNIT * 8.5);             // hop scotch
+      place(find('hoop'), UNIT * 4.2, UNIT * 8);
+      place(find('hoop'), UNIT * 5.4, UNIT * 8.5);
+      place(find('hoop'), UNIT * 6.6, UNIT * 8);
+      place(find('cone_small'), UNIT * 7.5, UNIT * 8.5);     // sprint cone
+      place(find('marker_flat'), UNIT * 3, UNIT * 9.5);
+      place(find('marker_flat'), UNIT * 5, UNIT * 9.5);
+
+      // --- Station 5 (bottom-centre): Defence / 1v1 ---
+      place(find('cone_large'), UNIT * 9, UNIT * 8);
+      place(find('cone_small'), UNIT * 10, UNIT * 8.5);      // attacker start
+      place(find('cone_small'), UNIT * 12, UNIT * 8.5);      // defender start
+      place(find('goal_small'), UNIT * 11, UNIT * 10);       // mini goal
+      place(find('gym_mat'), UNIT * 10.5, UNIT * 9);         // contact zone mat
+      place(find('marker_flat'), UNIT * 13, UNIT * 9);
+
+      // --- Station 6 (bottom-right): Game application / mini-match ---
+      place(find('cone_large'), UNIT * 15, UNIT * 8);
+      place(find('cone_small'), UNIT * 15, UNIT * 8.5);      // boundary
+      place(find('cone_small'), UNIT * 15, UNIT * 10.5);
+      place(find('cone_small'), UNIT * 20, UNIT * 8.5);
+      place(find('cone_small'), UNIT * 20, UNIT * 10.5);
+      place(find('goal_small'), UNIT * 15, UNIT * 9.5);      // goal left
+      place(find('goal_small'), UNIT * 20, UNIT * 9.5);      // goal right
+      place(find('net_short'), UNIT * 17.5, UNIT * 9.5);     // centre divide
+
+      // --- Central observation hub ---
+      place(find('bench'), UNIT * 10, UNIT * 5);              // peer-observation bench
+      place(find('bench'), UNIT * 13, UNIT * 5);
+      place(find('speaker'), UNIT * 11.5, UNIT * 5.5);       // instructor
+
+      // --- Side equipment & hydration ---
+      place(find('equipment_box'), UNIT * 0.5, UNIT * 5.5);
+      place(find('equipment_box'), UNIT * 22, UNIT * 5.5);
+      place(find('water_station'), UNIT * 0.5, UNIT * 0.5);
+      place(find('water_station'), UNIT * 22, UNIT * 10.5);
+      place(find('bib_stack'), UNIT * 0.5, UNIT * 10.5);
+      place(find('bib_stack'), UNIT * 22, UNIT * 0.5);
     }
 
     updateMetrics();
