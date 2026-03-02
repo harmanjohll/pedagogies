@@ -85,7 +85,7 @@ function renderComponents(container) {
                 </button>
               </div>
             </summary>
-            <div style="padding:var(--sp-4);font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">
+            <div class="component-content-scroll" style="padding:var(--sp-4);font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);max-height:500px;overflow-y:auto;">
               ${md(comp.content)}
             </div>
           </details>`;
