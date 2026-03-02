@@ -385,6 +385,39 @@ export function render(container) {
         .dark .sim-custom-delete {
           border-color: var(--border, #3e3e4e);
         }
+        .sim-byo-field {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .sim-byo-label {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: var(--ink-secondary, #555);
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+        .dark .sim-byo-label { color: var(--ink-secondary, #aaa); }
+        .sim-byo-select, .sim-byo-input {
+          padding: 8px 12px;
+          border: 1px solid var(--border, #e2e5ea);
+          border-radius: 8px;
+          font-size: 0.8125rem;
+          font-family: inherit;
+          background: var(--bg, #fff);
+          color: var(--ink, #1a1a2e);
+          transition: border-color 0.15s;
+        }
+        .sim-byo-select:focus, .sim-byo-input:focus {
+          outline: none;
+          border-color: #4361ee;
+          box-shadow: 0 0 0 3px rgba(67,97,238,0.12);
+        }
+        .dark .sim-byo-select, .dark .sim-byo-input {
+          background: var(--bg-subtle, #16161e);
+          color: var(--ink, #e8e8f0);
+          border-color: var(--border, #3e3e4e);
+        }
         .sim-loading {
           display: flex;
           align-items: center;
@@ -454,8 +487,68 @@ export function render(container) {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4361ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
               <div class="sim-byo-title">Build Your Own Simulation</div>
             </div>
-            <div class="sim-byo-desc">Describe a simulation concept and AI will generate an interactive for your lesson.</div>
-            <textarea class="sim-byo-textarea" id="sim-prompt" placeholder="e.g. Create a simulation showing how changing the angle affects projectile range..."></textarea>
+            <div class="sim-byo-desc">Configure the parameters below, then let AI generate an interactive simulation for your lesson.</div>
+
+            <!-- Scaffolded parameters -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+              <div class="sim-byo-field">
+                <label class="sim-byo-label">Subject</label>
+                <select id="byo-subject" class="sim-byo-select">
+                  <option value="">Select...</option>
+                  <option value="Physics">Physics</option>
+                  <option value="Chemistry">Chemistry</option>
+                  <option value="Biology">Biology</option>
+                  <option value="Mathematics">Mathematics</option>
+                  <option value="Geography">Geography</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="sim-byo-field">
+                <label class="sim-byo-label">Level</label>
+                <select id="byo-level" class="sim-byo-select">
+                  <option value="">Select...</option>
+                  <option value="Lower Secondary">Lower Secondary</option>
+                  <option value="Upper Secondary">Upper Secondary</option>
+                  <option value="JC / Pre-U">JC / Pre-U</option>
+                </select>
+              </div>
+              <div class="sim-byo-field">
+                <label class="sim-byo-label">Simulation Type</label>
+                <select id="byo-type" class="sim-byo-select">
+                  <option value="">Select...</option>
+                  <option value="virtual-lab">Virtual Lab Practical</option>
+                  <option value="interactive-model">Interactive Model / Diagram</option>
+                  <option value="data-collection">Data Collection & Graphing</option>
+                  <option value="guided-exploration">Guided Exploration</option>
+                  <option value="sandbox">Free-play Sandbox</option>
+                </select>
+              </div>
+              <div class="sim-byo-field">
+                <label class="sim-byo-label">Interactivity</label>
+                <select id="byo-interactivity" class="sim-byo-select">
+                  <option value="sliders">Sliders &amp; Controls</option>
+                  <option value="drag-drop">Drag &amp; Drop</option>
+                  <option value="click-step">Click-through Steps</option>
+                  <option value="combined">Combined</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="sim-byo-field" style="margin-bottom:14px;">
+              <label class="sim-byo-label">Topic &amp; Learning Objective</label>
+              <input type="text" id="byo-topic" class="sim-byo-input" placeholder="e.g. Electromagnetic induction — show how changing flux produces EMF" />
+            </div>
+
+            <div class="sim-byo-field" style="margin-bottom:14px;">
+              <label class="sim-byo-label">Key Variables / Parameters to Include</label>
+              <input type="text" id="byo-variables" class="sim-byo-input" placeholder="e.g. coil turns, magnet speed, field strength" />
+            </div>
+
+            <div class="sim-byo-field" style="margin-bottom:14px;">
+              <label class="sim-byo-label">Additional Instructions <span style="font-weight:400;opacity:0.6;">(optional)</span></label>
+              <textarea class="sim-byo-textarea" id="sim-prompt" rows="3" placeholder="Any other details: specific apparatus, colour scheme, data table format, guided questions..."></textarea>
+            </div>
+
             <button class="sim-generate-btn" id="sim-generate-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               Generate Simulation
@@ -534,12 +627,29 @@ export function render(container) {
     const loadingEl = container.querySelector('#sim-loading');
 
     generateBtn.addEventListener('click', async () => {
-      const prompt = promptArea.value.trim();
-      if (!prompt) {
-        showToast('Please describe the simulation you want to create.', 'danger');
-        promptArea.focus();
+      const subject = container.querySelector('#byo-subject')?.value || '';
+      const level = container.querySelector('#byo-level')?.value || '';
+      const simType = container.querySelector('#byo-type')?.value || '';
+      const interactivity = container.querySelector('#byo-interactivity')?.value || 'sliders';
+      const topic = container.querySelector('#byo-topic')?.value.trim() || '';
+      const variables = container.querySelector('#byo-variables')?.value.trim() || '';
+      const extra = promptArea.value.trim();
+
+      if (!topic) {
+        showToast('Please enter a topic and learning objective.', 'danger');
+        container.querySelector('#byo-topic')?.focus();
         return;
       }
+
+      // Build the structured prompt from scaffold fields
+      const parts = [`Create an interactive simulation for: ${topic}`];
+      if (subject) parts.push(`Subject: ${subject}`);
+      if (level) parts.push(`Student level: ${level}`);
+      if (simType) parts.push(`Simulation style: ${simType.replace(/-/g, ' ')}`);
+      if (interactivity) parts.push(`Interactivity: ${interactivity.replace(/-/g, ' ')}`);
+      if (variables) parts.push(`Key variables/parameters: ${variables}`);
+      if (extra) parts.push(`Additional instructions: ${extra}`);
+      const prompt = parts.join('\n');
 
       // Check for API key
       const apiKey = localStorage.getItem('cocher_api_key');
@@ -564,7 +674,15 @@ export function render(container) {
           body: JSON.stringify({
             model: 'claude-sonnet-4-20250514',
             max_tokens: 16000,
-            system: 'You are a simulation builder. Generate a complete, self-contained HTML page with embedded CSS and JavaScript that creates the requested interactive simulation. The page should be visually polished with a dark theme. Use HTML5 Canvas or SVG for graphics. Include controls (sliders, buttons) for interactivity. Return ONLY the complete HTML \u2014 no explanation.',
+            system: `You are LabSim Builder, an expert at creating interactive science simulations for Singapore secondary school / JC students. Generate a complete, self-contained HTML page with embedded CSS and JavaScript. Requirements:
+- Dark theme (background #1a1a2e, text #e8e8f0, accent #4361ee)
+- Use HTML5 Canvas or SVG for visual elements
+- Include labelled interactive controls (sliders, buttons, dropdowns) for each variable
+- Show real-time data readouts or a data table where appropriate
+- Add a brief instruction/guide panel explaining what to do
+- Make it scientifically accurate and educationally meaningful
+- The page must be fully self-contained — no external dependencies
+- Return ONLY the complete HTML — no explanation or markdown`,
             messages: [
               { role: 'user', content: prompt }
             ]

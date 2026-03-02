@@ -112,6 +112,8 @@ const PRESETS = [
   { id: 'circuit', label: 'Circuit Training', desc: 'Station-based fitness rotation', icon: '🏃', pe: true },
   { id: 'team_game', label: 'Team Game', desc: 'Two-team court/field setup', icon: '⚽', pe: true },
   { id: 'warmup', label: 'Warm-up Formation', desc: 'Lines facing instructor', icon: '🤸', pe: true },
+  { id: 'hiit', label: 'HIIT / Interval', desc: 'High-intensity work-rest intervals', icon: '⏱️', pe: true },
+  { id: 'skills_stations', label: 'Skills Stations', desc: 'Sport-specific drill stations', icon: '🎯', pe: true },
 ];
 
 /* ═══════════ Preset Insights (E21CC + STP ties) ═══════════ */
@@ -157,9 +159,11 @@ const PRESET_INSIGHTS = {
     { title: '💡 Interdisciplinary Thinking', affordance: 'Space blends art, design, engineering, and technology across subjects.', moves: ['Partner with other subject teachers for cross-curricular projects.', 'Invite community experts to mentor student projects.'], e21cc: 'CGC — cross-disciplinary work builds global and cross-cultural literacy.' }
   ],
   circuit: [
-    { title: '🏃 Active Station Rotation', affordance: 'Multiple equipment stations spread around the space promote continuous physical activity and prevent idle time.', moves: ['Set timed rotations (e.g. 2 min per station) with a whistle signal.', 'Include a rest/water station in the circuit.'], e21cc: 'CAIT — self-paced stations develop adaptive physical literacy.' },
-    { title: '💪 Differentiated Fitness', affordance: 'Each station can target different muscle groups or skill levels, catering to all abilities.', moves: ['Offer modified exercises at each station (beginner/advanced).', 'Use peer coaching — pair stronger students with those who need support.'], e21cc: 'CCI — peer coaching at stations builds communication and collaboration.' },
-    { title: '📋 Student Ownership', affordance: 'Students track their own progress through stations, building responsibility and self-management.', moves: ['Provide station cards with exercise instructions and rep targets.', 'Debrief at the end: which station was hardest and why?'], e21cc: 'CGC — self-tracking develops personal responsibility and wellness awareness.' }
+    { title: '🏃 Active Station Rotation', affordance: 'Multiple equipment stations spread around the space promote continuous physical activity and prevent idle time. Spacing stations evenly ensures safe transitions and clear flow.', moves: ['Set timed rotations (e.g. 40s work / 20s transition) with a whistle or music cue.', 'Include a rest/hydration station in the circuit.', 'Number stations and use cones or markers for clear pathways between them.'], e21cc: 'CAIT — self-paced stations develop adaptive physical literacy.' },
+    { title: '💪 Differentiated Fitness', affordance: 'Each station can target different muscle groups or fitness components (strength, cardio, agility, flexibility), catering to all abilities.', moves: ['Offer modified exercises at each station (3 tiers: beginner, intermediate, advanced).', 'Use peer coaching — pair stronger students with those who need support.', 'Provide visual task cards at each station showing exercise, reps/duration, and muscle groups targeted.'], e21cc: 'CCI — peer coaching at stations builds communication and collaboration.' },
+    { title: '📋 Student Ownership & Tracking', affordance: 'Students monitor their own heart rate, reps, and progress through stations, building responsibility and self-management.', moves: ['Provide individual circuit cards for students to record reps and RPE (Rate of Perceived Exertion).', 'Teach students to self-check pulse during rest intervals.', 'Debrief at the end: which station was hardest and why? What would you change?'], e21cc: 'CGC — self-tracking develops personal responsibility and wellness awareness.' },
+    { title: '🔄 Progressive Overload', affordance: 'Circuit format naturally supports progressive overload by adjusting time, reps, or resistance across sessions.', moves: ['Revisit the same circuit weekly, increasing work intervals or adding reps.', 'Let students set personal targets and track improvement over time.', 'Introduce partner-based stations (e.g. medicine ball pass) for variety.'], e21cc: 'CAIT — goal-setting and self-monitoring develop inventive thinking about personal fitness.' },
+    { title: '🎵 Atmosphere & Motivation', affordance: 'Music-driven transitions and energetic pacing keep motivation high throughout the session.', moves: ['Use an upbeat playlist with tracks timed to work/rest intervals.', 'Assign student "DJs" to select music on a rotating basis.', 'Use countdown timers visible to all students for accountability.'], e21cc: 'CGC — shared experience and student choice build community and wellbeing.' }
   ],
   team_game: [
     { title: '⚽ Strategic Teamwork', affordance: 'Divided court creates clear team territories, encouraging strategic positioning and communication.', moves: ['Assign positions and rotate roles each quarter.', 'Use time-outs to discuss team strategy collaboratively.'], e21cc: 'CCI — team sports are a natural setting for communication and collaboration.' },
@@ -170,6 +174,16 @@ const PRESET_INSIGHTS = {
     { title: '🤸 Structured Movement', affordance: 'Lines facing the instructor ensure all students can see demonstrations clearly for correct form.', moves: ['Demonstrate each exercise, then have students mirror you.', 'Walk through rows to correct posture and technique.'], e21cc: 'CCI — clear demonstration supports visual communication and modelling.' },
     { title: '🫀 Injury Prevention', affordance: 'Organised formation with adequate spacing ensures safe movement during dynamic warm-ups.', moves: ['Start with gentle cardio, progress to dynamic stretches.', 'Call out body parts systematically: neck, shoulders, arms, core, legs.'], e21cc: 'CGC — safe warm-up habits develop lifelong physical wellness.' },
     { title: '🎵 Engagement & Routine', affordance: 'Familiar formation signals the start of PE, building routine and readiness to learn.', moves: ['Use music to energise the warm-up.', 'Let students lead the warm-up on a rotating basis.'], e21cc: 'CAIT — student-led warm-ups develop adaptive leadership skills.' }
+  ],
+  hiit: [
+    { title: '⏱️ Work-Rest Structure', affordance: 'Clearly marked zones for high-intensity work and active recovery create a disciplined, time-based training environment.', moves: ['Use a visible timer (projector or large clock) so all students can pace themselves.', 'Start with manageable intervals (e.g. 20s work / 40s rest) and progress to more challenging ratios.', 'Sound a horn or use music drops to signal transitions between work and rest.'], e21cc: 'CAIT — self-regulation of effort during timed intervals develops adaptive thinking.' },
+    { title: '🫀 Cardiovascular Fitness', affordance: 'Alternating between maximal effort and recovery trains the aerobic and anaerobic energy systems efficiently.', moves: ['Include a variety of exercises: burpees, high knees, jump squats, mountain climbers, shuttle runs.', 'Teach students to monitor their heart rate (pulse check or wearable) and understand training zones.', 'Discuss the science: why does HIIT improve VO₂ max and metabolic rate?'], e21cc: 'CGC — understanding exercise physiology builds lifelong health literacy.' },
+    { title: '🤝 Partner & Group Formats', affordance: 'HIIT can be structured as partner relay, small-group challenges, or whole-class synchronised efforts for social motivation.', moves: ['Use partner formats: one works while the other counts reps and encourages.', 'Try "AMRAP" (As Many Rounds As Possible) challenges where groups aim for collective targets.', 'Debrief on effort, honesty in self-assessment, and supporting teammates.'], e21cc: 'CCI — partner accountability and encouragement build communication and collaboration skills.' }
+  ],
+  skills_stations: [
+    { title: '🎯 Sport-Specific Drill Zones', affordance: 'Dedicated stations for specific techniques (passing, dribbling, shooting, serving) allow focused, repetitive practice that builds muscle memory.', moves: ['Design 4–6 stations targeting the key skills of the unit sport (e.g. badminton: serve, clear, drop, net play).', 'Provide clear visual task cards with coaching cues at each station.', 'Use small-sided space to maximise touches and repetitions per student.'], e21cc: 'CAIT — deliberate practice at skill stations develops adaptive motor learning.' },
+    { title: '📊 Peer Observation & Feedback', affordance: 'At each station, students can observe and coach each other, reinforcing technique and building communication skills.', moves: ['Pair students: one performs, one observes and gives feedback using a simple checklist (e.g. "Racket high? Follow through?").', 'Rotate roles after every set of repetitions.', 'Use video recording (tablets) for self-analysis at one station.'], e21cc: 'CCI — structured peer feedback develops constructive communication and observation skills.' },
+    { title: '🔀 Progression & Game Application', affordance: 'Stations can be arranged from isolated drills to conditioned games, building up to match-like scenarios.', moves: ['Arrange stations in order of complexity: closed drill → open drill → small-sided game → full game.', 'At the final station, apply skills in a mini-match or game scenario.', 'Debrief: which skill transferred best to the game? What needs more work?'], e21cc: 'CAIT — linking drills to game application develops critical and inventive tactical thinking.' }
   ]
 };
 
@@ -773,7 +787,7 @@ export function render(container) {
 
     try {
       const presetOptions = isPE
-        ? '"circuit", "team_game", "warmup"'
+        ? '"circuit", "team_game", "warmup", "hiit", "skills_stations"'
         : '"direct", "pods", "stations", "ushape", "quiet", "gallery", "fishbowl", "maker"';
       const sysPrompt = `You are an expert in spatial pedagogy for Singapore schools, including Physical Education and outdoor activities. Analyze the lesson brief below. Respond with a JSON object that has these keys:
 - "preset": one of ${presetOptions}
@@ -942,7 +956,7 @@ export function render(container) {
     if (e21ccFocus.length > 0) prompt += `- E21CC focus: ${e21ccFocus.map(f => E21CC_MAP[f] || f).join(', ')}\n`;
     if (considerations) prompt += `- Special considerations: ${considerations}\n`;
     if (isPE) {
-      prompt += `\nAvailable presets (PE): circuit, team_game, warmup`;
+      prompt += `\nAvailable presets (PE): circuit, team_game, warmup, hiit, skills_stations`;
     } else {
       prompt += `\nAvailable presets: direct, pods, stations, ushape, quiet, gallery, fishbowl, maker`;
     }
@@ -1621,6 +1635,51 @@ export function render(container) {
       place(find('equipment_box'), UNIT * 1, UNIT * 10);
       place(find('water_station'), UNIT * 22, UNIT * 1);
       place(find('bench'), UNIT * 21, UNIT * 10);
+    } else if (name === 'hiit') {
+      // HIIT: two parallel lanes with work/rest zones
+      stackWall('A'); stackWall('B');
+      // Work zone markers (left half — two rows of cones)
+      for (let lane = 0; lane < 2; lane++) {
+        const y = UNIT * (3 + lane * 5);
+        place(find('cone'), UNIT * 3, y);
+        place(find('cone'), UNIT * 7, y);
+        place(find('cone'), UNIT * 11, y);
+        place(find('cone'), UNIT * 15, y);
+        // Mats between cones for exercises
+        place(find('gym_mat'), UNIT * 5, y);
+        place(find('gym_mat'), UNIT * 9, y);
+        place(find('gym_mat'), UNIT * 13, y);
+      }
+      // Recovery zone (right side)
+      place(find('bench'), UNIT * 19, UNIT * 3);
+      place(find('bench'), UNIT * 19, UNIT * 8);
+      place(find('water_station'), UNIT * 21, UNIT * 5.5);
+      // Timer / instructor position
+      place(find('speaker'), UNIT * 11, UNIT * 0.5);
+      place(find('equipment_box'), UNIT * 1, UNIT * 10);
+    } else if (name === 'skills_stations') {
+      // Skills stations: 6 stations arranged around perimeter for sport-specific drills
+      stackWall('A'); stackWall('B');
+      const stationLayout = [
+        { x: UNIT * 3,  y: UNIT * 2,   item: 'cone_large' },
+        { x: UNIT * 10, y: UNIT * 2,   item: 'cone_large' },
+        { x: UNIT * 17, y: UNIT * 2,   item: 'cone_large' },
+        { x: UNIT * 3,  y: UNIT * 8.5, item: 'cone_large' },
+        { x: UNIT * 10, y: UNIT * 8.5, item: 'cone_large' },
+        { x: UNIT * 17, y: UNIT * 8.5, item: 'cone_large' },
+      ];
+      stationLayout.forEach(({ x, y, item }) => {
+        place(find(item), x, y);
+        // Add supporting equipment near each station
+        place(find('hoop'), x + UNIT * 1.5, y);
+        place(find('cone'), x + UNIT * 3, y);
+      });
+      // Central observation / feedback area
+      place(find('bench'), UNIT * 10, UNIT * 5.5);
+      place(find('speaker'), UNIT * 11.5, UNIT * 5.5);
+      // Equipment & water
+      place(find('equipment_box'), UNIT * 22, UNIT * 1);
+      place(find('water_station'), UNIT * 22, UNIT * 10);
     }
 
     updateMetrics();

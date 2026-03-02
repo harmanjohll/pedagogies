@@ -1,831 +1,809 @@
-/*
- * Qualitative Analysis Simulation — Logic
- * =========================================
- * Complete interactive QA sim for Co-Cher LabSim.
- */
+/* ============================================================
+   Qualitative Analysis Practical — Logic (v2)
+   Uses CHEMISTRY_DATA from chemistry-data.js (loaded first via var)
+   ============================================================ */
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', () => {
 
-  /* ═══════════ References ═══════════ */
+  const data = window.CHEMISTRY_DATA;
+  if (!data) {
+    console.error('CHEMISTRY_DATA not loaded. Check chemistry-data.js.');
+    return;
+  }
 
-  var DATA = CHEMISTRY_DATA;
+  const NUM_TUBES = 5;
 
-  var unknownSelect     = document.getElementById('unknownSelect');
-  var btnConfirmUnknown = document.getElementById('btnConfirmUnknown');
-  var unknownBadge      = document.getElementById('unknownBadge');
-  var badgeSwatch       = document.getElementById('badgeSwatch');
-  var badgeLabel        = document.getElementById('badgeLabel');
-  var procedureList     = document.getElementById('procedureList');
-  var tubesContainer    = document.getElementById('tubesContainer');
-  var bottlesContainer  = document.getElementById('bottlesContainer');
-  var bunsenBurner      = document.getElementById('bunsenBurner');
-  var sink              = document.getElementById('sink');
-  var washBar           = document.getElementById('washBar');
-  var btnWash           = document.getElementById('btnWash');
-  var observationsBody  = document.getElementById('observationsBody');
-  var observationsEmpty = document.getElementById('observationsEmpty');
-  var cationInput       = document.getElementById('cationInput');
-  var anionInput        = document.getElementById('anionInput');
-  var btnCheckId        = document.getElementById('btnCheckId');
-  var idResult          = document.getElementById('idResult');
-  var amountPopup       = document.getElementById('amountPopup');
-  var amountPopupTitle  = document.getElementById('amountPopupTitle');
-  var amountPopupSub    = document.getElementById('amountPopupSub');
-  var amountCancel      = document.getElementById('amountCancel');
-  var flameOverlay      = document.getElementById('flameOverlay');
-  var flameVisual       = document.getElementById('flameVisual');
-  var flameObservation  = document.getElementById('flameObservation');
-  var flameDismiss      = document.getElementById('flameDismiss');
-  var btnGuideToggle    = document.getElementById('btnGuideToggle');
-  var btnResetAll       = document.getElementById('btnResetAll');
-  var guidePanel        = document.getElementById('guidePanel');
-  var toastContainer    = document.getElementById('toastContainer');
-
-  /* ═══════════ State ═══════════ */
-
-  var NUM_TUBES = 5;
-
-  var state = {
-    selectedUnknown: null,       // key in DATA.unknowns e.g. 'FB6'
-    unknownData: null,           // the data object for the selected unknown
-    tubes: [],                   // array of tube state objects
-    selectedTubeIndex: null,     // currently selected tube (0-4) or null
-    selectedReagent: null,       // currently selected reagent key or null
-    pendingReagent: null,        // reagent key pending amount choice
-    pendingAmount: null,         // 'few' or 'excess' waiting for tube click
-    proceduresDone: new Set(),   // set of step keys: 'observe','cation','anion','flame','conclude'
-    observationCount: 0
+  // ── State ──
+  const state = {
+    unknownKey: null,
+    unknownData: null,
+    selectedBottle: null,   // 'Unknown', 'NaOH', 'NH3', etc.
+    selectedTube: null,     // tube index 1–5
+    tubeContents: {},       // { 1: { hasSample: true, reagents: [{key, amount}] } }
+    observations: [],
+    procedureDone: { observe: false, cation: false, anion: false, flame: false, conclude: false },
   };
 
-  /* ═══════════ Initialisation ═══════════ */
+  // ── DOM ──
+  const $ = id => document.getElementById(id);
+  const dom = {
+    unknownSelect: $('unknown-select'),
+    confirmBtn: $('btn-confirm-unknown'),
+    unknownChooser: $('unknown-chooser'),
+    unknownInfo: $('unknown-info'),
+    unknownBadge: $('unknown-badge'),
+    unknownHint: $('unknown-hint'),
+    rackTubes: $('rack-tubes'),
+    reagentShelf: $('reagent-shelf'),
+    bunsen: $('bunsen'),
+    bunsenFlame: $('bunsen-flame'),
+    sink: $('sink'),
+    washBar: $('wash-bar'),
+    btnWash: $('btn-wash'),
+    obsTbody: $('obs-tbody'),
+    obsEmpty: $('obs-empty'),
+    flameOverlay: $('flame-overlay'),
+    flameVisual: $('flame-visual'),
+    flameText: $('flame-text'),
+    btnCloseFlame: $('btn-close-flame'),
+    idCation: $('id-cation'),
+    idAnion: $('id-anion'),
+    btnCheckId: $('btn-check-id'),
+    idResult: $('id-result'),
+    btnReset: $('btn-reset'),
+    btnToggleGuide: $('btn-toggle-guide'),
+    guidePanel: $('guide-panel'),
+    workbench: $('workbench'),
+    toastContainer: $('toast-container'),
+  };
 
-  function init() {
-    populateUnknownDropdown();
-    generateTubes();
-    generateBottles();
-    bindEvents();
-    updateProcedureUI();
-    updateWashBar();
-  }
-
-  function populateUnknownDropdown() {
-    var keys = Object.keys(DATA.unknowns);
-    keys.forEach(function (key) {
-      var opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = key + ' — Unknown solution';
-      unknownSelect.appendChild(opt);
-    });
-  }
-
-  /* ═══════════ Tube Generation ═══════════ */
-
-  function initTubeState() {
-    return {
-      hasSample: false,
-      reagents: [],        // list of {reagent, amount} objects
-      liquidColor: 'transparent',
-      pptColor: null,
-      pptHeight: 0,
-      liquidHeight: 0,
-      hasHNO3: false
-    };
-  }
-
-  function generateTubes() {
-    tubesContainer.innerHTML = '';
-    state.tubes = [];
-
-    for (var i = 0; i < NUM_TUBES; i++) {
-      state.tubes.push(initTubeState());
-
-      var tube = document.createElement('div');
-      tube.className = 'qa-tube';
-      tube.dataset.index = i;
-
-      var num = document.createElement('span');
-      num.className = 'qa-tube-num';
-      num.textContent = i + 1;
-
-      var glass = document.createElement('div');
-      glass.className = 'qa-tube-glass';
-
-      var liquid = document.createElement('div');
-      liquid.className = 'qa-tube-liquid';
-
-      var ppt = document.createElement('div');
-      ppt.className = 'qa-tube-precipitate';
-
-      glass.appendChild(liquid);
-      glass.appendChild(ppt);
-      tube.appendChild(num);
-      tube.appendChild(glass);
-      tubesContainer.appendChild(tube);
-    }
-  }
-
-  /* ═══════════ Bottle Generation ═══════════ */
-
-  var REAGENT_LIST = [
-    { key: 'sample', label: 'Unknown', caption: 'Sample', fillColor: null },
-    { key: 'NaOH',  label: 'NaOH',    caption: 'NaOH(aq)',         fillColor: 'rgba(180,200,240,0.35)' },
-    { key: 'NH3',   label: 'NH\u2083', caption: 'NH\u2083(aq)',     fillColor: 'rgba(180,200,240,0.35)' },
-    { key: 'HNO3',  label: 'HNO\u2083',caption: 'dil. HNO\u2083',  fillColor: 'rgba(240,200,180,0.35)' },
-    { key: 'AgNO3', label: 'AgNO\u2083',caption: 'AgNO\u2083(aq)',  fillColor: 'rgba(200,200,210,0.4)' },
-    { key: 'BaCl2', label: 'BaCl\u2082',caption: 'BaCl\u2082(aq)',  fillColor: 'rgba(200,200,210,0.4)' }
+  // ── Reagent definitions ──
+  const REAGENTS = [
+    { key: 'NaOH',  label: 'NaOH',  sub: '(aq)',  color: 'rgba(200,220,255,0.4)' },
+    { key: 'NH3',   label: 'NH₃',   sub: '(aq)',  color: 'rgba(200,220,255,0.4)' },
+    { key: 'HNO3',  label: 'HNO₃',  sub: '(aq)',  color: 'rgba(255,240,200,0.4)' },
+    { key: 'AgNO3', label: 'AgNO₃', sub: '(aq)',  color: 'rgba(220,220,220,0.4)' },
+    { key: 'BaCl2', label: 'BaCl₂', sub: '(aq)',  color: 'rgba(220,220,220,0.4)' },
   ];
 
-  function generateBottles() {
-    bottlesContainer.innerHTML = '';
+  // ── Recording Mode ──
+  if (typeof LabRecordMode !== 'undefined') {
+    LabRecordMode.inject('#record-mode-slot');
+  }
 
-    REAGENT_LIST.forEach(function (r) {
-      var bottle = document.createElement('div');
-      bottle.className = 'qa-bottle';
-      bottle.dataset.reagent = r.key;
-      bottle.title = r.caption;
+  // ── Initialise UI ──
+  buildUnknownSelect();
+  buildTestTubes();
+  buildReagentBottles();
 
-      // Dropper top
-      var dropper = document.createElement('div');
-      dropper.className = 'qa-bottle-dropper';
-      var bulb = document.createElement('div');
-      bulb.className = 'qa-dropper-bulb';
-      var stem = document.createElement('div');
-      stem.className = 'qa-dropper-stem';
-      dropper.appendChild(bulb);
-      dropper.appendChild(stem);
+  // ══════════════════════════════════════
+  // UNKNOWN SELECTION
+  // ══════════════════════════════════════
 
-      // Body
-      var body = document.createElement('div');
-      body.className = 'qa-bottle-body';
-
-      var fill = document.createElement('div');
-      fill.className = 'qa-bottle-fill';
-      var fillColor = r.fillColor;
-      if (r.key === 'sample' && state.unknownData) {
-        fillColor = state.unknownData.solutionColor;
-      } else if (r.key === 'sample') {
-        fillColor = 'rgba(180,200,240,0.2)';
-      }
-      fill.style.background = fillColor;
-      body.appendChild(fill);
-
-      var label = document.createElement('div');
-      label.className = 'qa-bottle-label';
-      label.textContent = r.label;
-      body.appendChild(label);
-
-      // Caption
-      var caption = document.createElement('div');
-      caption.className = 'qa-bottle-caption';
-      caption.textContent = r.caption;
-
-      bottle.appendChild(dropper);
-      bottle.appendChild(body);
-      bottle.appendChild(caption);
-      bottlesContainer.appendChild(bottle);
+  function buildUnknownSelect() {
+    const keys = Object.keys(data.unknowns);
+    keys.forEach(key => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = key;
+      dom.unknownSelect.appendChild(opt);
     });
   }
 
-  /* ═══════════ Event Binding ═══════════ */
+  dom.unknownSelect.addEventListener('change', () => {
+    dom.confirmBtn.disabled = !dom.unknownSelect.value;
+  });
 
-  function bindEvents() {
-    // Unknown selection
-    unknownSelect.addEventListener('change', function () {
-      btnConfirmUnknown.disabled = !unknownSelect.value;
-    });
+  dom.confirmBtn.addEventListener('click', () => {
+    const key = dom.unknownSelect.value;
+    if (!key) return;
+    state.unknownKey = key;
+    state.unknownData = data.unknowns[key];
 
-    btnConfirmUnknown.addEventListener('click', confirmUnknown);
+    const cn = state.unknownData.colorName;
 
-    // Bottles
-    bottlesContainer.addEventListener('click', function (e) {
-      var bottle = e.target.closest('.qa-bottle');
-      if (!bottle) return;
-      handleBottleClick(bottle.dataset.reagent);
-    });
+    dom.unknownChooser.style.display = 'none';
+    dom.unknownInfo.style.display = '';
+    dom.unknownBadge.textContent = key;
+    dom.unknownBadge.style.background = cn === 'colourless'
+      ? 'var(--color-primary)' : state.unknownData.solutionColor;
+    dom.unknownHint.textContent = cn === 'colourless'
+      ? 'The solution is colourless. Identify the cation and anion.'
+      : `The solution is ${cn}. Identify the cation and anion.`;
 
-    // Tubes
-    tubesContainer.addEventListener('click', function (e) {
-      var tube = e.target.closest('.qa-tube');
-      if (!tube) return;
-      handleTubeClick(parseInt(tube.dataset.index, 10));
-    });
+    dom.washBar.style.display = '';
+    dom.btnCheckId.disabled = false;
+    markProcedure('observe');
 
-    // Bunsen
-    bunsenBurner.addEventListener('click', handleBunsenClick);
+    // Update unknown bottle label and fill colour
+    const unknownBottle = document.querySelector('[data-bottle="Unknown"]');
+    if (unknownBottle) {
+      const lbl = unknownBottle.querySelector('.bottle-label');
+      if (lbl) lbl.innerHTML = key + '<br><span style="font-weight:400;opacity:0.7;">sample</span>';
+      const fill = unknownBottle.querySelector('.bottle-fill');
+      if (fill) fill.style.background = cn === 'colourless'
+        ? 'rgba(200, 220, 240, 0.35)' : state.unknownData.solutionColor;
+    }
 
-    // Sink
-    sink.addEventListener('click', washAllTubes);
-    btnWash.addEventListener('click', washAllTubes);
+    addObservation('—', `${key} solution examined.`,
+      cn === 'colourless'
+        ? 'Colourless solution.'
+        : `${cn.charAt(0).toUpperCase() + cn.slice(1)} solution.`
+    );
 
-    // Amount popup
-    amountPopup.querySelectorAll('.qa-amount-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        handleAmountChoice(btn.dataset.amount);
+    toast(`${key} selected. Click the sample bottle, then click a test tube to transfer.`, 'info');
+  });
+
+
+  // ══════════════════════════════════════
+  // TEST TUBES
+  // ══════════════════════════════════════
+
+  function buildTestTubes() {
+    dom.rackTubes.innerHTML = '';
+    for (let i = 1; i <= NUM_TUBES; i++) {
+      state.tubeContents[i] = { hasSample: false, reagents: [] };
+
+      const slot = document.createElement('div');
+      slot.className = 'tube-slot';
+
+      const label = document.createElement('div');
+      label.className = 'tube-label';
+      label.id = `tube-label-${i}`;
+      label.textContent = `${i}`;
+
+      const tube = document.createElement('div');
+      tube.className = 'test-tube';
+      tube.dataset.tube = i;
+      tube.title = `Test tube ${i}`;
+
+      const liquid = document.createElement('div');
+      liquid.className = 'tube-liquid';
+      liquid.id = `tube-liquid-${i}`;
+
+      const ppt = document.createElement('div');
+      ppt.className = 'ppt-layer';
+      ppt.id = `tube-ppt-${i}`;
+
+      tube.appendChild(liquid);
+      tube.appendChild(ppt);
+      slot.appendChild(label);
+      slot.appendChild(tube);
+      dom.rackTubes.appendChild(slot);
+
+      tube.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleTubeClick(i);
       });
-    });
-    amountCancel.addEventListener('click', cancelAmountPopup);
-
-    // Flame dismiss
-    flameDismiss.addEventListener('click', function () {
-      flameOverlay.classList.remove('visible');
-    });
-
-    // Identification check
-    btnCheckId.addEventListener('click', checkIdentification);
-    cationInput.addEventListener('input', toggleCheckBtn);
-    anionInput.addEventListener('input', toggleCheckBtn);
-
-    // Guide toggle
-    btnGuideToggle.addEventListener('click', function () {
-      guidePanel.classList.toggle('collapsed');
-    });
-
-    // Reset all
-    btnResetAll.addEventListener('click', resetAll);
-  }
-
-  /* ═══════════ Unknown Selection ═══════════ */
-
-  function confirmUnknown() {
-    var key = unknownSelect.value;
-    if (!key || !DATA.unknowns[key]) return;
-
-    state.selectedUnknown = key;
-    state.unknownData = DATA.unknowns[key];
-
-    // Update badge
-    unknownBadge.classList.add('visible');
-    badgeSwatch.style.background = state.unknownData.solutionColor;
-    badgeLabel.textContent = key + ' — ' + state.unknownData.colorName + ' solution';
-
-    // Disable further changes
-    unknownSelect.disabled = true;
-    btnConfirmUnknown.disabled = true;
-
-    // Update sample bottle fill
-    var sampleBottle = bottlesContainer.querySelector('[data-reagent="sample"]');
-    if (sampleBottle) {
-      var fill = sampleBottle.querySelector('.qa-bottle-fill');
-      if (fill) fill.style.background = state.unknownData.solutionColor;
     }
-
-    toast('Unknown ' + key + ' selected (' + state.unknownData.colorName + ' solution)', 'info');
   }
 
-  /* ═══════════ Bottle Click ═══════════ */
+  function handleTubeClick(tubeIdx) {
+    // Highlight this tube
+    document.querySelectorAll('.test-tube').forEach(t => t.classList.remove('selected'));
+    document.querySelector(`.test-tube[data-tube="${tubeIdx}"]`).classList.add('selected');
+    state.selectedTube = tubeIdx;
 
-  function handleBottleClick(reagentKey) {
-    if (!state.selectedUnknown) {
-      toast('Select and confirm an unknown sample first.', 'warning');
+    if (!state.unknownKey) {
+      toast('Select an unknown sample first.', 'warn');
       return;
     }
 
-    // Deselect all bottles
-    bottlesContainer.querySelectorAll('.qa-bottle').forEach(function (b) {
-      b.classList.remove('selected');
-    });
-
-    if (reagentKey === 'sample') {
-      // Directly transfer sample to a tube: enter "awaiting tube click" mode
-      state.selectedReagent = 'sample';
-      state.pendingReagent = null;
-      state.pendingAmount = null;
-      var bottle = bottlesContainer.querySelector('[data-reagent="sample"]');
-      if (bottle) bottle.classList.add('selected');
-      toast('Click a test tube to transfer the sample.', 'info');
+    if (!state.selectedBottle) {
+      toast('Select a reagent bottle first, then click a test tube.', 'info');
       return;
     }
 
-    // For reagents that need amount choice
-    state.selectedReagent = null;
-    state.pendingReagent = reagentKey;
+    const bottle = state.selectedBottle;
 
-    var bottle = bottlesContainer.querySelector('[data-reagent="' + reagentKey + '"]');
+    // TRANSFER unknown sample
+    if (bottle === 'Unknown') {
+      transferSample(tubeIdx);
+      return;
+    }
+
+    // ADD REAGENT — need sample in tube
+    if (!state.tubeContents[tubeIdx].hasSample) {
+      toast('Transfer sample to this tube first.', 'warn');
+      return;
+    }
+
+    // Show popup asking few drops or excess
+    showReagentPopup(tubeIdx, bottle);
+  }
+
+
+  // ══════════════════════════════════════
+  // REAGENT BOTTLES
+  // ══════════════════════════════════════
+
+  function buildReagentBottles() {
+    dom.reagentShelf.innerHTML = '';
+
+    // Unknown sample bottle
+    const unknownSlot = createBottle('Unknown', state.unknownKey || 'Sample', '', state.unknownData?.solutionColor || 'rgba(200,220,255,0.3)');
+    dom.reagentShelf.appendChild(unknownSlot);
+
+    // Reagent bottles
+    REAGENTS.forEach(r => {
+      const slot = createBottle(r.key, r.label, r.sub, r.color);
+      dom.reagentShelf.appendChild(slot);
+    });
+  }
+
+  function createBottle(key, label, sub, liquidColor) {
+    const slot = document.createElement('div');
+    slot.className = 'reagent-slot';
+
+    const bottle = document.createElement('div');
+    bottle.className = 'reagent-bottle';
+    bottle.dataset.bottle = key;
+
+    // Dropper top: rubber bulb + glass stem
+    const dropper = document.createElement('div');
+    dropper.className = 'bottle-dropper';
+    const bulb = document.createElement('div');
+    bulb.className = 'bottle-dropper-bulb';
+    const stem = document.createElement('div');
+    stem.className = 'bottle-dropper-stem';
+    dropper.appendChild(bulb);
+    dropper.appendChild(stem);
+
+    const fill = document.createElement('div');
+    fill.className = 'bottle-fill';
+    fill.style.background = liquidColor || 'rgba(200,220,255,0.3)';
+
+    const lbl = document.createElement('span');
+    lbl.className = 'bottle-label';
+    lbl.innerHTML = label + (sub ? `<br><span style="font-weight:400;opacity:0.7;">${sub}</span>` : '');
+
+    bottle.appendChild(dropper);
+    bottle.appendChild(fill);
+    bottle.appendChild(lbl);
+    slot.appendChild(bottle);
+
+    bottle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectBottle(key);
+    });
+
+    return slot;
+  }
+
+  function selectBottle(key) {
+    if (!state.unknownKey && key !== 'Unknown') {
+      toast('Select an unknown sample first.', 'warn');
+      return;
+    }
+
+    // Toggle — clicking same bottle deselects
+    if (state.selectedBottle === key) {
+      deselectBottle();
+      return;
+    }
+
+    document.querySelectorAll('.reagent-bottle').forEach(b => b.classList.remove('selected'));
+    state.selectedBottle = key;
+    const bottle = document.querySelector(`[data-bottle="${key}"]`);
     if (bottle) bottle.classList.add('selected');
 
-    // HNO3 doesn't need amount choice — it's added to acidify
-    if (reagentKey === 'HNO3') {
-      state.selectedReagent = 'HNO3';
-      state.pendingReagent = null;
-      state.pendingAmount = null;
-      toast('Click a tube with sample to add dilute HNO\u2083.', 'info');
-      return;
+    // If a tube is already selected, auto-trigger
+    if (state.selectedTube) {
+      handleTubeClick(state.selectedTube);
     }
-
-    // Show amount popup for NaOH, NH3, AgNO3, BaCl2
-    showAmountPopup(reagentKey);
   }
 
-  /* ═══════════ Amount Popup ═══════════ */
-
-  function showAmountPopup(reagentKey) {
-    var name = DATA.reagentNames[reagentKey] || reagentKey;
-    amountPopupTitle.textContent = 'Add ' + name;
-    amountPopupSub.textContent = 'How much do you want to add?';
-    amountPopup.classList.add('visible');
+  function deselectBottle() {
+    document.querySelectorAll('.reagent-bottle').forEach(b => b.classList.remove('selected'));
+    state.selectedBottle = null;
   }
 
-  function handleAmountChoice(amount) {
-    amountPopup.classList.remove('visible');
-    if (!state.pendingReagent) return;
 
-    state.selectedReagent = state.pendingReagent;
-    state.pendingAmount = amount;
-    state.pendingReagent = null;
+  // ══════════════════════════════════════
+  // REAGENT POPUP (few drops / excess)
+  // ══════════════════════════════════════
 
-    var name = DATA.reagentNames[state.selectedReagent] || state.selectedReagent;
-    var desc = amount === 'few' ? 'a few drops' : 'excess';
-    toast('Now click a tube with sample to add ' + desc + ' of ' + name + '.', 'info');
-  }
+  function showReagentPopup(tubeIdx, reagentKey) {
+    // Remove any existing popup
+    closeReagentPopup();
 
-  function cancelAmountPopup() {
-    amountPopup.classList.remove('visible');
-    state.pendingReagent = null;
-    state.selectedReagent = null;
-    state.pendingAmount = null;
-    deselectAllBottles();
-  }
+    const tube = document.querySelector(`.test-tube[data-tube="${tubeIdx}"]`);
+    const tubeRect = tube.getBoundingClientRect();
+    const wbRect = dom.workbench.getBoundingClientRect();
 
-  function deselectAllBottles() {
-    bottlesContainer.querySelectorAll('.qa-bottle').forEach(function (b) {
-      b.classList.remove('selected');
+    const popup = document.createElement('div');
+    popup.className = 'reagent-popup';
+    popup.id = 'reagent-popup';
+
+    const reagentName = data.reagentNames[reagentKey] || reagentKey;
+    const title = document.createElement('div');
+    title.className = 'popup-title';
+    title.textContent = `Add ${reagentName} to TT${tubeIdx}`;
+    popup.appendChild(title);
+
+    // "Add a few drops" button
+    const btnFew = document.createElement('button');
+    btnFew.className = 'btn btn-primary btn-sm w-full';
+    btnFew.textContent = 'Add a few drops';
+    btnFew.addEventListener('click', () => {
+      applyReagent(tubeIdx, reagentKey, 'few');
+      closeReagentPopup();
     });
-  }
+    popup.appendChild(btnFew);
 
-  /* ═══════════ Tube Click ═══════════ */
-
-  function handleTubeClick(index) {
-    var tubeState = state.tubes[index];
-    var tubeEl = tubesContainer.querySelectorAll('.qa-tube')[index];
-
-    // If we have a sample selected for transfer
-    if (state.selectedReagent === 'sample') {
-      if (tubeState.hasSample) {
-        toast('This tube already has a sample.', 'warning');
-        return;
-      }
-      transferSample(index);
-      state.selectedReagent = null;
-      deselectAllBottles();
-      return;
-    }
-
-    // If we have HNO3 selected
-    if (state.selectedReagent === 'HNO3') {
-      if (!tubeState.hasSample) {
-        toast('This tube has no sample. Add sample first.', 'warning');
-        return;
-      }
-      addHNO3(index);
-      state.selectedReagent = null;
-      deselectAllBottles();
-      return;
-    }
-
-    // If we have a reagent + amount ready
-    if (state.selectedReagent && state.pendingAmount) {
-      if (!tubeState.hasSample) {
-        toast('This tube has no sample. Add sample first.', 'warning');
-        return;
-      }
-      applyReagent(index, state.selectedReagent, state.pendingAmount);
-      state.selectedReagent = null;
-      state.pendingAmount = null;
-      deselectAllBottles();
-      return;
-    }
-
-    // Otherwise just select/deselect the tube (for flame test)
-    deselectAllTubes();
-    if (state.selectedTubeIndex === index) {
-      state.selectedTubeIndex = null;
-    } else {
-      state.selectedTubeIndex = index;
-      tubeEl.classList.add('selected');
-    }
-  }
-
-  function deselectAllTubes() {
-    state.selectedTubeIndex = null;
-    tubesContainer.querySelectorAll('.qa-tube').forEach(function (t) {
-      t.classList.remove('selected');
-    });
-  }
-
-  /* ═══════════ Transfer Sample ═══════════ */
-
-  function transferSample(index) {
-    var tubeState = state.tubes[index];
-    tubeState.hasSample = true;
-    tubeState.liquidColor = state.unknownData.solutionColor;
-    tubeState.liquidHeight = 55;
-
-    updateTubeVisual(index);
-    flashTube(index);
-
-    addObservation(index + 1, 'Observe', state.unknownData.colorName.charAt(0).toUpperCase() + state.unknownData.colorName.slice(1) + ' solution observed.');
-    markProcedureDone('observe');
-  }
-
-  /* ═══════════ Add HNO3 ═══════════ */
-
-  function addHNO3(index) {
-    var tubeState = state.tubes[index];
-    tubeState.hasHNO3 = true;
-    tubeState.reagents.push({ reagent: 'HNO3', amount: 'few' });
-
-    // HNO3 dissolves any precipitate from cation tests (acidify for anion test)
-    tubeState.pptColor = null;
-    tubeState.pptHeight = 0;
-
-    // If the solution had changed colour from cation test, adding acid returns to original
-    tubeState.liquidColor = state.unknownData.solutionColor;
-    tubeState.liquidHeight = Math.min(tubeState.liquidHeight + 8, 85);
-
-    updateTubeVisual(index);
-    flashTube(index);
-
-    addObservation(index + 1, '+ dil. HNO\u2083', 'Acidified with dilute HNO\u2083(aq). Any precipitate dissolved.');
-    toast('Tube ' + (index + 1) + ' acidified with dil. HNO\u2083.', 'info');
-  }
-
-  /* ═══════════ Apply Reagent ═══════════ */
-
-  function applyReagent(index, reagentKey, amount) {
-    var tubeState = state.tubes[index];
-    var cation = state.unknownData.cation;
-    var anion = state.unknownData.anion;
-
-    // Build lookup key
-    var lookupKey = reagentKey + '_' + amount;
-    var result = null;
-    var procedureCategory = null;
-    var reagentDisplayName = DATA.reagentNames[reagentKey] || reagentKey;
-    var amountLabel = amount === 'few' ? 'few drops' : 'excess';
-
-    // Check if this is a cation test reagent
+    // "Add excess" button — for NaOH and NH3 only
     if (reagentKey === 'NaOH' || reagentKey === 'NH3') {
-      procedureCategory = 'cation';
-      var cationData = DATA.cationTests[cation];
-      if (cationData) {
-        result = cationData[lookupKey];
-      }
+      const btnExcess = document.createElement('button');
+      btnExcess.className = 'btn btn-ghost btn-sm w-full';
+      btnExcess.textContent = 'Add excess';
+      btnExcess.style.marginTop = '4px';
+      btnExcess.addEventListener('click', () => {
+        applyReagent(tubeIdx, reagentKey, 'excess');
+        closeReagentPopup();
+      });
+      popup.appendChild(btnExcess);
     }
 
-    // Check if this is an anion test reagent
+    // Cancel
+    const btnCancel = document.createElement('button');
+    btnCancel.className = 'btn btn-ghost btn-sm w-full';
+    btnCancel.textContent = 'Cancel';
+    btnCancel.style.marginTop = '4px';
+    btnCancel.style.opacity = '0.6';
+    btnCancel.addEventListener('click', closeReagentPopup);
+    popup.appendChild(btnCancel);
+
+    // Position above tube
+    popup.style.left = (tubeRect.left - wbRect.left + tubeRect.width / 2 - 75) + 'px';
+    popup.style.top = (tubeRect.top - wbRect.top - 130) + 'px';
+
+    dom.workbench.appendChild(popup);
+  }
+
+  function closeReagentPopup() {
+    const existing = document.getElementById('reagent-popup');
+    if (existing) existing.remove();
+  }
+
+
+  // ══════════════════════════════════════
+  // CHEMISTRY ENGINE
+  // ══════════════════════════════════════
+
+  function transferSample(tubeIdx) {
+    const tc = state.tubeContents[tubeIdx];
+    if (tc.hasSample && tc.reagents.length === 0) {
+      toast('This tube already has sample.', 'info');
+      return;
+    }
+    if (tc.hasSample) {
+      toast('This tube already has contents. Wash it first.', 'warn');
+      return;
+    }
+
+    tc.hasSample = true;
+    tc.reagents = [];
+
+    const liquid = document.getElementById(`tube-liquid-${tubeIdx}`);
+    const label = document.getElementById(`tube-label-${tubeIdx}`);
+    liquid.style.height = '30%';
+    liquid.style.background = state.unknownData.solutionColor;
+    if (label) label.textContent = state.unknownKey;
+
+    // Flash animation
+    flashTube(tubeIdx);
+
+    addObservation(`TT${tubeIdx}`,
+      `About 1 cm³ of ${state.unknownKey} transferred to TT${tubeIdx}.`,
+      state.unknownData.colorName === 'colourless'
+        ? 'Colourless solution.'
+        : `${state.unknownData.colorName.charAt(0).toUpperCase() + state.unknownData.colorName.slice(1)} solution.`
+    );
+  }
+
+  function applyReagent(tubeIdx, reagentKey, amount) {
+    const tc = state.tubeContents[tubeIdx];
+    tc.reagents.push({ key: reagentKey, amount });
+
+    const cation = state.unknownData.cation;
+    const anion = state.unknownData.anion;
+    const reagentDisplay = data.reagentNames[reagentKey] || reagentKey;
+
+    let procedure = amount === 'few'
+      ? `1–2 drops of ${reagentDisplay} added to TT${tubeIdx}.`
+      : `Excess ${reagentDisplay} added to TT${tubeIdx}.`;
+
+    let result = null;
+
+    // ── Cation tests (NaOH / NH3) ──
+    if (reagentKey === 'NaOH' || reagentKey === 'NH3') {
+      const testKey = `${reagentKey}_${amount}`;
+      const cationData = data.cationTests[cation];
+      if (cationData && cationData[testKey]) {
+        result = cationData[testKey];
+      }
+      markProcedure('cation');
+    }
+
+    // ── Anion tests (AgNO3 / BaCl2) ──
     if (reagentKey === 'AgNO3' || reagentKey === 'BaCl2') {
-      procedureCategory = 'anion';
-
-      // Must have HNO3 first
-      if (!tubeState.hasHNO3) {
-        toast('Acidify the solution with dil. HNO\u2083 first before adding ' + reagentDisplayName + '.', 'warning');
-        return;
+      const hasHNO3 = tc.reagents.some(r => r.key === 'HNO3');
+      if (hasHNO3) {
+        const anionData = data.anionTests[anion];
+        if (anionData && anionData[reagentKey]) {
+          result = anionData[reagentKey];
+        }
+        markProcedure('anion');
+      } else {
+        result = { observation: 'No HNO₃ added first. Acidify the solution with dilute HNO₃ before testing for anions.' };
+        toast('Acidify with HNO₃ first!', 'warn');
       }
+    }
 
-      var anionData = DATA.anionTests[anion];
-      if (anionData) {
-        result = anionData[reagentKey];
+    // ── HNO3 (acidification) ──
+    if (reagentKey === 'HNO3') {
+      result = { observation: 'Solution acidified with dilute HNO₃(aq). Ready for anion testing.' };
+      markProcedure('anion');
+    }
+
+    // ── Update visuals ──
+    const liquid = document.getElementById(`tube-liquid-${tubeIdx}`);
+    const ppt = document.getElementById(`tube-ppt-${tubeIdx}`);
+
+    if (result) {
+      if (result.ppt) {
+        ppt.style.opacity = '1';
+        ppt.style.height = '16px';
+        ppt.style.background = result.pptColor || '#f0f2f5';
+      } else {
+        ppt.style.opacity = '0';
+        ppt.style.height = '0';
       }
-    }
-
-    if (!result) {
-      toast('No reaction data found.', 'warning');
-      return;
-    }
-
-    // Record reagent usage
-    tubeState.reagents.push({ reagent: reagentKey, amount: amount });
-
-    // Update tube state based on result
-    tubeState.liquidHeight = Math.min(tubeState.liquidHeight + 10, 85);
-
-    if (result.solutionColor) {
-      tubeState.liquidColor = result.solutionColor;
-    }
-
-    if (result.ppt) {
-      tubeState.pptColor = result.pptColor;
-      tubeState.pptHeight = Math.min((tubeState.pptHeight || 0) + 15, 30);
-    } else {
-      // Precipitate dissolves (for excess reagent cases)
+      if (result.solutionColor) {
+        liquid.style.background = result.solutionColor;
+      }
       if (amount === 'excess') {
-        tubeState.pptColor = null;
-        tubeState.pptHeight = 0;
+        liquid.style.height = '65%';
+      } else {
+        const currentH = parseInt(liquid.style.height) || 30;
+        liquid.style.height = Math.min(currentH + 12, 60) + '%';
       }
-    }
-
-    updateTubeVisual(index);
-    flashTube(index);
-
-    // Build observation description
-    var obsDesc = amountLabel + ' ' + reagentDisplayName;
-    addObservation(index + 1, '+ ' + obsDesc, result.observation);
-
-    // Mark procedure done
-    if (procedureCategory) {
-      markProcedureDone(procedureCategory);
-    }
-
-    updateWashBar();
-  }
-
-  /* ═══════════ Bunsen / Flame Test ═══════════ */
-
-  function handleBunsenClick() {
-    if (!state.selectedUnknown) {
-      toast('Select an unknown sample first.', 'warning');
-      return;
-    }
-
-    if (state.selectedTubeIndex === null) {
-      toast('Select a test tube with sample first, then click the burner.', 'info');
-      return;
-    }
-
-    var tubeState = state.tubes[state.selectedTubeIndex];
-    if (!tubeState.hasSample) {
-      toast('Selected tube has no sample.', 'warning');
-      return;
-    }
-
-    var cation = state.unknownData.cation;
-    var flameData = DATA.cationTests[cation] ? DATA.cationTests[cation].flame : null;
-
-    // Light the burner briefly
-    bunsenBurner.classList.add('lit');
-    setTimeout(function () {
-      bunsenBurner.classList.remove('lit');
-    }, 2000);
-
-    if (!flameData) {
-      // No characteristic flame
-      addObservation(state.selectedTubeIndex + 1, 'Flame test', 'No characteristic flame colour observed.');
-      toast('No characteristic flame colour for ' + cation + '.', 'info');
-      markProcedureDone('flame');
-      deselectAllTubes();
-      return;
-    }
-
-    // Show flame overlay
-    flameVisual.style.background = 'radial-gradient(ellipse at 50% 80%, ' +
-      flameData.flameColor + ' 0%, ' +
-      flameData.flameColor + '88 40%, transparent 70%)';
-    flameObservation.textContent = flameData.observation;
-    flameOverlay.classList.add('visible');
-
-    addObservation(state.selectedTubeIndex + 1, 'Flame test', flameData.observation);
-    markProcedureDone('flame');
-    deselectAllTubes();
-  }
-
-  /* ═══════════ Tube Visual Update ═══════════ */
-
-  function updateTubeVisual(index) {
-    var tubeState = state.tubes[index];
-    var tubeEl = tubesContainer.querySelectorAll('.qa-tube')[index];
-    if (!tubeEl) return;
-
-    var liquidEl = tubeEl.querySelector('.qa-tube-liquid');
-    var pptEl = tubeEl.querySelector('.qa-tube-precipitate');
-
-    // Liquid
-    liquidEl.style.height = tubeState.liquidHeight + 'px';
-    liquidEl.style.background = tubeState.liquidColor;
-
-    // Precipitate
-    if (tubeState.pptColor && tubeState.pptHeight > 0) {
-      pptEl.style.height = tubeState.pptHeight + 'px';
-      pptEl.style.background = tubeState.pptColor;
+      addObservation(`TT${tubeIdx}`, procedure, result.observation || 'No visible change.');
     } else {
-      pptEl.style.height = '0px';
-      pptEl.style.background = 'transparent';
+      const currentH = parseInt(liquid.style.height) || 30;
+      liquid.style.height = Math.min(currentH + 8, 55) + '%';
+      addObservation(`TT${tubeIdx}`, procedure, 'No visible change.');
+    }
+
+    flashTube(tubeIdx);
+
+    // Update tube label
+    const label = document.getElementById(`tube-label-${tubeIdx}`);
+    if (label) {
+      const reagentCodes = tc.reagents.map(r => r.key === 'NaOH' ? 'NaOH' : r.key === 'NH3' ? 'NH₃' : r.key === 'HNO3' ? 'HNO₃' : r.key === 'AgNO3' ? 'Ag⁺' : r.key === 'BaCl2' ? 'Ba²⁺' : '');
+      label.textContent = `${state.unknownKey}+${reagentCodes.join('+')}`;
     }
   }
 
-  function flashTube(index) {
-    var tubeEl = tubesContainer.querySelectorAll('.qa-tube')[index];
-    if (!tubeEl) return;
-    var glass = tubeEl.querySelector('.qa-tube-glass');
-    glass.classList.remove('flash');
-    // Trigger reflow
-    void glass.offsetWidth;
-    glass.classList.add('flash');
-    setTimeout(function () {
-      glass.classList.remove('flash');
-    }, 600);
+  function flashTube(tubeIdx) {
+    const tube = document.querySelector(`.test-tube[data-tube="${tubeIdx}"]`);
+    if (!tube) return;
+    tube.classList.add('flash');
+    setTimeout(() => tube.classList.remove('flash'), 500);
   }
 
-  /* ═══════════ Observations Table ═══════════ */
 
-  function addObservation(tubeNum, procedure, observation) {
-    state.observationCount++;
-    observationsEmpty.style.display = 'none';
+  // ══════════════════════════════════════
+  // FLAME TEST
+  // ══════════════════════════════════════
 
-    var tr = document.createElement('tr');
+  dom.bunsen.addEventListener('click', () => {
+    if (!state.unknownKey) {
+      toast('Select an unknown sample first.', 'warn');
+      return;
+    }
+    performFlameTest();
+  });
 
-    var tdTube = document.createElement('td');
-    tdTube.className = 'obs-tube';
-    tdTube.textContent = tubeNum;
+  function performFlameTest() {
+    const cation = state.unknownData.cation;
+    const cationData = data.cationTests[cation];
+    const flameData = cationData?.flame;
 
-    var tdProc = document.createElement('td');
-    tdProc.className = 'obs-procedure';
-    tdProc.textContent = procedure;
+    dom.bunsenFlame.classList.add('lit');
+    markProcedure('flame');
 
-    var tdResult = document.createElement('td');
-    tdResult.className = 'obs-result';
-    tdResult.textContent = observation;
+    if (flameData) {
+      dom.flameVisual.style.background = `radial-gradient(ellipse, ${flameData.flameColor} 0%, ${flameData.flameColor}88 40%, transparent 70%)`;
+      dom.flameText.textContent = flameData.observation;
+      addObservation('Flame', `Nichrome wire dipped in ${state.unknownKey}, held in Bunsen flame.`, flameData.observation);
+    } else {
+      dom.flameVisual.style.background = 'radial-gradient(ellipse, #3b82f6 0%, #60a5fa 40%, transparent 70%)';
+      dom.flameText.textContent = 'No distinctive flame colour observed (normal blue flame).';
+      addObservation('Flame', `Nichrome wire dipped in ${state.unknownKey}, held in Bunsen flame.`, 'No distinctive flame colour observed.');
+    }
 
-    tr.appendChild(tdTube);
-    tr.appendChild(tdProc);
-    tr.appendChild(tdResult);
-    observationsBody.appendChild(tr);
-
-    // Scroll to bottom
-    var wrap = document.querySelector('.qa-observations-wrap');
-    if (wrap) wrap.scrollTop = wrap.scrollHeight;
+    dom.flameOverlay.style.display = '';
   }
 
-  /* ═══════════ Procedure Tracking ═══════════ */
+  dom.btnCloseFlame.addEventListener('click', () => {
+    dom.flameOverlay.style.display = 'none';
+    dom.bunsenFlame.classList.remove('lit');
+  });
 
-  function markProcedureDone(stepKey) {
-    state.proceduresDone.add(stepKey);
-    updateProcedureUI();
+
+  // ══════════════════════════════════════
+  // OBSERVATIONS TABLE
+  // ══════════════════════════════════════
+
+  function addObservation(tube, procedure, observation) {
+    state.observations.push({ tube, procedure, observation });
+    dom.obsEmpty.style.display = 'none';
+
+    const isIndependent = typeof LabRecordMode !== 'undefined' && !LabRecordMode.isGuided();
+
+    const row = document.createElement('tr');
+    row.className = 'animate-fade-in';
+
+    if (isIndependent) {
+      // Independent mode: student records observation manually
+      const tdTube = document.createElement('td');
+      tdTube.textContent = tube;
+      const tdProc = document.createElement('td');
+      tdProc.textContent = procedure;
+      const tdObs = document.createElement('td');
+      const obsInput = document.createElement('input');
+      obsInput.type = 'text';
+      obsInput.className = 'reading-input';
+      obsInput.placeholder = 'Type your observation...';
+      obsInput.style.cssText = 'width:100%;font-size:var(--text-xs);border:1px dashed var(--color-border);padding:4px;border-radius:4px;background:var(--color-surface);color:var(--color-text);';
+      obsInput.dataset.answer = observation;
+      obsInput.title = 'Record what you observe';
+      // Reveal correct answer on blur if student typed something
+      obsInput.addEventListener('blur', function () {
+        if (this.value.trim().length > 0 && !this.dataset.revealed) {
+          this.dataset.revealed = 'true';
+          const feedback = document.createElement('div');
+          feedback.style.cssText = 'font-size:9px;color:var(--color-text-muted);margin-top:2px;';
+          feedback.textContent = 'Expected: ' + observation;
+          tdObs.appendChild(feedback);
+        }
+      });
+      tdObs.appendChild(obsInput);
+      row.appendChild(tdTube);
+      row.appendChild(tdProc);
+      row.appendChild(tdObs);
+    } else {
+      row.innerHTML = `
+        <td>${tube}</td>
+        <td>${procedure}</td>
+        <td>${observation}</td>
+      `;
+    }
+
+    dom.obsTbody.appendChild(row);
+
+    const scrollContainer = dom.obsTbody.closest('.qa-obs-scroll');
+    if (scrollContainer) {
+      setTimeout(() => { scrollContainer.scrollTop = scrollContainer.scrollHeight; }, 50);
+    }
   }
 
-  function updateProcedureUI() {
-    var steps = procedureList.querySelectorAll('li');
-    var stepKeys = ['observe', 'cation', 'anion', 'flame', 'conclude'];
-    var foundNextActive = false;
 
-    steps.forEach(function (li, i) {
-      var key = stepKeys[i];
-      li.classList.remove('active', 'done');
+  // ══════════════════════════════════════
+  // PROCEDURE TRACKING
+  // ══════════════════════════════════════
 
-      if (state.proceduresDone.has(key)) {
-        li.classList.add('done');
-      } else if (!foundNextActive) {
-        li.classList.add('active');
-        foundNextActive = true;
+  function markProcedure(step) {
+    state.procedureDone[step] = true;
+    document.querySelectorAll('.procedure-step').forEach(el => {
+      const s = el.dataset.step;
+      if (state.procedureDone[s]) {
+        el.classList.add('done');
+        el.classList.remove('active');
       }
     });
-
-    // Enable check button when we have at least some tests done
-    btnCheckId.disabled = !(state.proceduresDone.has('observe'));
+    // Mark next undone step as active
+    const steps = ['observe', 'cation', 'anion', 'flame', 'conclude'];
+    for (const s of steps) {
+      if (!state.procedureDone[s]) {
+        const el = document.querySelector(`.procedure-step[data-step="${s}"]`);
+        if (el) el.classList.add('active');
+        break;
+      }
+    }
   }
 
-  /* ═══════════ Identification Check ═══════════ */
 
-  function toggleCheckBtn() {
-    var hasBoth = cationInput.value.trim().length > 0 && anionInput.value.trim().length > 0;
-    btnCheckId.disabled = !(hasBoth && state.selectedUnknown);
+  // ══════════════════════════════════════
+  // WASH / SINK
+  // ══════════════════════════════════════
+
+  dom.sink.addEventListener('click', washTubes);
+  dom.btnWash.addEventListener('click', washTubes);
+
+  function washTubes() {
+    if (!state.unknownKey) return;
+    for (let i = 1; i <= NUM_TUBES; i++) {
+      const liquid = document.getElementById(`tube-liquid-${i}`);
+      const ppt = document.getElementById(`tube-ppt-${i}`);
+      const label = document.getElementById(`tube-label-${i}`);
+      if (liquid) { liquid.style.height = '0'; liquid.style.background = 'transparent'; }
+      if (ppt) { ppt.style.opacity = '0'; ppt.style.height = '0'; }
+      if (label) label.textContent = `${i}`;
+      state.tubeContents[i] = { hasSample: false, reagents: [] };
+    }
+    document.querySelectorAll('.test-tube').forEach(t => t.classList.remove('selected'));
+    state.selectedTube = null;
+    addObservation('All', 'All test tubes washed and dried.', '—');
+    toast('All test tubes washed.', 'info');
   }
+
+
+  // ══════════════════════════════════════
+  // IDENTIFICATION CHECK
+  // ══════════════════════════════════════
+
+  dom.btnCheckId.addEventListener('click', () => {
+    if (!state.unknownKey) return;
+    checkIdentification();
+  });
 
   function checkIdentification() {
-    if (!state.unknownData) return;
+    const cationInput = dom.idCation.value.trim();
+    const anionInput = dom.idAnion.value.trim();
+    if (!cationInput && !anionInput) {
+      toast('Enter your cation and anion identification.', 'warn');
+      return;
+    }
 
-    var userCation = normalizeIon(cationInput.value.trim());
-    var userAnion = normalizeIon(anionInput.value.trim());
-    var actualCation = normalizeIon(state.unknownData.cation);
-    var actualAnion = normalizeIon(state.unknownData.anion);
+    const actualCation = state.unknownData.cation;
+    const actualAnion = state.unknownData.anion;
 
-    var cationCorrect = userCation === actualCation;
-    var anionCorrect = userAnion === actualAnion;
+    const cationCorrect = matchIon(cationInput, actualCation);
+    const anionCorrect = matchIon(anionInput, actualAnion);
 
-    idResult.classList.add('visible');
-    idResult.classList.remove('correct', 'incorrect');
+    dom.idResult.style.display = '';
 
     if (cationCorrect && anionCorrect) {
-      idResult.classList.add('correct');
-      idResult.innerHTML = 'Correct! The unknown is <strong>' + state.unknownData.formula + '</strong> ' +
-        '(cation: ' + state.unknownData.cation + ', anion: ' + formatAnionDisplay(state.unknownData.anion) + ').';
-      toast('Identification correct!', 'success');
+      dom.idResult.className = 'mt-2 id-result-correct';
+      dom.idResult.innerHTML = `Correct! The unknown is <strong>${state.unknownData.formula}</strong> (${formatIon(actualCation)} + ${formatIon(actualAnion)}).`;
+      markProcedure('conclude');
+      toast('Correct identification!', 'success');
     } else {
-      var msg = 'Not quite. ';
-      if (!cationCorrect) msg += 'Cation is incorrect. ';
-      if (!anionCorrect) msg += 'Anion is incorrect. ';
+      let msg = '';
+      if (cationCorrect) msg += 'Cation is correct. ';
+      else if (cationInput) msg += `Cation is incorrect. `;
+      if (anionCorrect) msg += 'Anion is correct. ';
+      else if (anionInput) msg += `Anion is incorrect. `;
       msg += 'Review your observations and try again.';
-      idResult.classList.add('incorrect');
-      idResult.textContent = msg;
-      toast('Incorrect identification. Check your observations.', 'error');
-    }
-
-    markProcedureDone('conclude');
-  }
-
-  function normalizeIon(str) {
-    // Remove whitespace
-    str = str.replace(/\s+/g, '');
-    // Replace superscript characters with plain equivalents
-    str = str.replace(/\u00B2/g, '2')   // ²
-             .replace(/\u00B3/g, '3')    // ³
-             .replace(/\u2074/g, '4')    // ⁴
-             .replace(/\u207A/g, '+')    // ⁺
-             .replace(/\u207B/g, '-');   // ⁻
-    // Replace subscript characters
-    str = str.replace(/\u2080/g, '0')
-             .replace(/\u2081/g, '1')
-             .replace(/\u2082/g, '2')
-             .replace(/\u2083/g, '3')
-             .replace(/\u2084/g, '4');
-    // Lowercase for comparison
-    str = str.toLowerCase();
-    return str;
-  }
-
-  function formatAnionDisplay(anion) {
-    return anion.replace('SO42-', 'SO\u2084\u00B2\u207B')
-                .replace('NO3-', 'NO\u2083\u207B')
-                .replace('Cl-', 'Cl\u207B')
-                .replace('I-', 'I\u207B');
-  }
-
-  /* ═══════════ Wash ═══════════ */
-
-  function washAllTubes() {
-    for (var i = 0; i < NUM_TUBES; i++) {
-      state.tubes[i] = initTubeState();
-      updateTubeVisual(i);
-    }
-    deselectAllTubes();
-    updateWashBar();
-    toast('All tubes washed and cleared.', 'info');
-  }
-
-  function updateWashBar() {
-    var anyUsed = state.tubes.some(function (t) { return t.hasSample; });
-    if (anyUsed) {
-      washBar.classList.add('visible');
-    } else {
-      washBar.classList.remove('visible');
+      dom.idResult.className = 'mt-2 id-result-incorrect';
+      dom.idResult.textContent = msg;
     }
   }
 
-  /* ═══════════ Reset ═══════════ */
-
-  function resetAll() {
-    state.selectedUnknown = null;
-    state.unknownData = null;
-    state.selectedTubeIndex = null;
-    state.selectedReagent = null;
-    state.pendingReagent = null;
-    state.pendingAmount = null;
-    state.proceduresDone = new Set();
-    state.observationCount = 0;
-
-    // Reset unknown selection
-    unknownSelect.value = '';
-    unknownSelect.disabled = false;
-    btnConfirmUnknown.disabled = true;
-    unknownBadge.classList.remove('visible');
-    badgeLabel.textContent = '\u2014';
-
-    // Reset tubes
-    generateTubes();
-
-    // Reset bottles
-    generateBottles();
-
-    // Reset observations
-    observationsBody.innerHTML = '';
-    observationsEmpty.style.display = '';
-
-    // Reset identification
-    cationInput.value = '';
-    anionInput.value = '';
-    btnCheckId.disabled = true;
-    idResult.classList.remove('visible', 'correct', 'incorrect');
-    idResult.textContent = '';
-
-    // Reset procedure
-    updateProcedureUI();
-    updateWashBar();
-
-    // Close any open overlays
-    amountPopup.classList.remove('visible');
-    flameOverlay.classList.remove('visible');
-
-    toast('Experiment reset.', 'info');
+  function matchIon(input, actual) {
+    if (!input) return false;
+    const normalize = s => s.toLowerCase()
+      .replace(/\s+/g, '')
+      .replace(/[²³⁺⁻₂₃₄]/g, c => ({ '²':'2','³':'3','⁺':'+','⁻':'-','₂':'2','₃':'3','₄':'4' }[c] || c))
+      .replace(/\^(\d[+-])/g, '$1')
+      .replace(/\(([^)]+)\)/g, '$1');
+    const a = normalize(input);
+    const b = normalize(actual);
+    // Match with or without charge
+    return a === b || a === b.replace(/[+-]/g, '') || a.replace(/[+-]/g, '') === b.replace(/[+-]/g, '');
   }
 
-  /* ═══════════ Toast Utility ═══════════ */
+  function formatIon(ion) {
+    return ion.replace('2+', '²⁺').replace('3+', '³⁺').replace('2-', '²⁻').replace('-', '⁻')
+      .replace('42-', '₄²⁻').replace('SO42-', 'SO₄²⁻');
+  }
+
+
+  // ══════════════════════════════════════
+  // TOAST NOTIFICATIONS
+  // ══════════════════════════════════════
 
   function toast(message, type) {
-    type = type || 'info';
-    var el = document.createElement('div');
-    el.className = 'toast toast-' + type;
+    if (!dom.toastContainer) return;
+    const el = document.createElement('div');
+    el.className = `toast toast-${type || 'info'}`;
     el.textContent = message;
-    toastContainer.appendChild(el);
+    dom.toastContainer.appendChild(el);
 
-    setTimeout(function () {
-      el.classList.add('toast-out');
-      setTimeout(function () {
-        if (el.parentNode) el.parentNode.removeChild(el);
-      }, 300);
+    // Trigger animation
+    requestAnimationFrame(() => el.classList.add('visible'));
+
+    setTimeout(() => {
+      el.classList.remove('visible');
+      setTimeout(() => el.remove(), 300);
     }, 3000);
+
+    // Audio feedback
+    if (typeof LabAudio !== 'undefined') {
+      if (type === 'success') LabAudio.success();
+      else if (type === 'warn') LabAudio.warn();
+      else LabAudio.click();
+    }
   }
 
-  /* ═══════════ Start ═══════════ */
 
-  init();
+  // ══════════════════════════════════════
+  // RESET
+  // ══════════════════════════════════════
 
+  dom.btnReset.addEventListener('click', () => {
+    Object.assign(state, {
+      unknownKey: null,
+      unknownData: null,
+      selectedBottle: null,
+      selectedTube: null,
+      tubeContents: {},
+      observations: [],
+      procedureDone: { observe: false, cation: false, anion: false, flame: false, conclude: false },
+    });
+
+    dom.unknownChooser.style.display = '';
+    dom.unknownInfo.style.display = 'none';
+    dom.unknownSelect.value = '';
+    dom.confirmBtn.disabled = true;
+
+    for (let i = 1; i <= NUM_TUBES; i++) {
+      state.tubeContents[i] = { hasSample: false, reagents: [] };
+      const liquid = document.getElementById(`tube-liquid-${i}`);
+      const ppt = document.getElementById(`tube-ppt-${i}`);
+      const label = document.getElementById(`tube-label-${i}`);
+      if (liquid) { liquid.style.height = '0'; liquid.style.background = 'transparent'; }
+      if (ppt) { ppt.style.opacity = '0'; ppt.style.height = '0'; }
+      if (label) label.textContent = `${i}`;
+    }
+
+    document.querySelectorAll('.test-tube').forEach(t => t.classList.remove('selected'));
+    document.querySelectorAll('.reagent-bottle').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.procedure-step').forEach(el => {
+      el.classList.remove('done', 'active');
+    });
+
+    closeReagentPopup();
+    dom.obsTbody.innerHTML = '';
+    dom.obsEmpty.style.display = '';
+    dom.washBar.style.display = 'none';
+    dom.flameOverlay.style.display = 'none';
+    dom.bunsenFlame.classList.remove('lit');
+    dom.idCation.value = '';
+    dom.idAnion.value = '';
+    dom.btnCheckId.disabled = true;
+    dom.idResult.style.display = 'none';
+
+    buildReagentBottles();
+  });
+
+
+  // ══════════════════════════════════════
+  // GUIDE TOGGLE
+  // ══════════════════════════════════════
+
+  dom.btnToggleGuide.addEventListener('click', () => {
+    const visible = dom.guidePanel.style.display !== 'none';
+    dom.guidePanel.style.display = visible ? 'none' : '';
+  });
+
+
+  // ══════════════════════════════════════
+  // GLOBAL CLICK TO DESELECT
+  // ══════════════════════════════════════
+
+  dom.workbench.addEventListener('click', (e) => {
+    if (!e.target.closest('.test-tube') &&
+        !e.target.closest('.reagent-bottle') &&
+        !e.target.closest('.reagent-popup') &&
+        !e.target.closest('.bunsen-assembly') &&
+        !e.target.closest('.sink-assembly')) {
+      document.querySelectorAll('.test-tube').forEach(t => t.classList.remove('selected'));
+      state.selectedTube = null;
+      closeReagentPopup();
+      // Don't deselect bottle — it should stay selected for multi-tube use
+    }
+  });
 });

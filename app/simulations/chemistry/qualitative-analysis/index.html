@@ -3,209 +3,206 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Qualitative Analysis — LabSim</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <title>Qualitative Analysis – LabSim</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../shared/design-system.css">
+  <link rel="stylesheet" href="../../shared/design-system.css">
   <link rel="stylesheet" href="qa.css">
 </head>
 <body>
 
-  <!-- ══════════ Top Bar ══════════ -->
-  <header class="top-bar">
-    <div class="top-bar-brand">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 3h6v11l-3 3-3-3V3z"/>
-        <path d="M6 21h12"/>
-        <path d="M3 17c3-2 5-4 5-8"/>
-        <path d="M21 17c-3-2-5-4-5-8"/>
-      </svg>
-      <span class="top-bar-title">LabSim</span>
-    </div>
-    <nav class="breadcrumb">
-      <span>Practicals</span>
-      <span class="breadcrumb-sep">/</span>
-      <span>Chemistry</span>
-      <span class="breadcrumb-sep">/</span>
-      <span class="breadcrumb-current">Qualitative Analysis</span>
-    </nav>
-    <div class="top-bar-actions">
-      <button class="btn-icon" id="btnGuideToggle" title="Toggle Guide">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-        </svg>
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../../index.html">Practicals</a>
+      <span class="separator">/</span>
+      Chemistry
+      <span class="separator">/</span>
+      Qualitative Analysis
+    </span>
+    <div class="topbar-actions" id="topbar-actions">
+      <div id="record-mode-slot"></div>
+        <button id="btn-toggle-guide" class="btn btn-ghost btn-sm">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+        Guide
       </button>
-      <button class="btn-icon" id="btnResetAll" title="Reset All">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-          <path d="M3 3v5h5"/>
-        </svg>
-      </button>
+      <button id="btn-reset" class="btn btn-danger btn-sm">Reset All</button>
     </div>
-  </header>
+  </nav>
 
-  <!-- ══════════ Main 3-Column Layout ══════════ -->
-  <div class="qa-layout" id="qaLayout">
+  <!-- Main layout -->
+  <div class="qa-layout">
 
-    <!-- ── Guide Panel (Left) ── -->
-    <aside class="qa-guide-panel" id="guidePanel">
-      <h2 class="panel-title">Unknown Sample</h2>
-
-      <div class="qa-unknown-select-group">
-        <label for="unknownSelect">Choose unknown</label>
-        <select class="qa-unknown-dropdown" id="unknownSelect">
-          <option value="">-- Select --</option>
-        </select>
-        <button class="qa-confirm-btn" id="btnConfirmUnknown" disabled>Confirm Selection</button>
+    <!-- Left: Guide + Unknown selection -->
+    <aside id="guide-panel" class="qa-guide-panel">
+      <!-- Unknown selection -->
+      <div class="panel">
+        <div class="panel-header">Unknown Sample</div>
+        <div class="panel-body">
+          <div id="unknown-chooser">
+            <select id="unknown-select" class="config-select w-full">
+              <option value="">— Select unknown —</option>
+            </select>
+            <button id="btn-confirm-unknown" class="btn btn-primary btn-sm mt-2 w-full" disabled>Confirm Selection</button>
+          </div>
+          <div id="unknown-info" style="display:none;">
+            <div class="unknown-badge" id="unknown-badge">FB6</div>
+            <p class="text-sm text-muted mt-2" id="unknown-hint">Identify the cation and anion by systematic testing.</p>
+          </div>
+        </div>
       </div>
 
-      <div class="qa-unknown-badge" id="unknownBadge">
-        <span class="badge-swatch" id="badgeSwatch"></span>
-        <span id="badgeLabel">—</span>
+      <!-- Procedure guide -->
+      <div class="panel mt-4" id="procedure-guide">
+        <div class="panel-header">Procedure Guide</div>
+        <div class="panel-body">
+          <ol class="procedure-list">
+            <li class="procedure-step" data-step="observe">
+              <strong>Observe</strong> — Note the colour of the solution.
+            </li>
+            <li class="procedure-step" data-step="cation">
+              <strong>Cation test</strong> — Transfer sample to 2 test tubes. Add NaOH(aq) to one and NH₃(aq) to the other, first a few drops then excess.
+            </li>
+            <li class="procedure-step" data-step="anion">
+              <strong>Anion test</strong> — Transfer sample to a clean tube. Add dilute HNO₃(aq), then test with AgNO₃(aq) and/or BaCl₂(aq).
+            </li>
+            <li class="procedure-step" data-step="flame">
+              <strong>Flame test</strong> — Dip a clean nichrome wire into the solution and hold in a Bunsen flame.
+            </li>
+            <li class="procedure-step" data-step="conclude">
+              <strong>Conclude</strong> — Identify the cation and anion from your observations.
+            </li>
+          </ol>
+        </div>
       </div>
-
-      <hr class="qa-divider">
-
-      <h2 class="panel-title">Procedure</h2>
-      <ol class="qa-procedure-list" id="procedureList">
-        <li data-step="observe">Observe the colour of the unknown solution</li>
-        <li data-step="cation">Test the cation using NaOH(aq) and NH&#8323;(aq)</li>
-        <li data-step="anion">Test the anion using AgNO&#8323;(aq) and BaCl&#8322;(aq)</li>
-        <li data-step="flame">Perform flame test (if applicable)</li>
-        <li data-step="conclude">Identify the cation and anion</li>
-      </ol>
     </aside>
 
-    <!-- ── Workbench (Center) ── -->
-    <main class="qa-workbench-panel">
-      <div class="qa-workbench" id="qaWorkbench">
+    <!-- Centre: Workbench -->
+    <section class="qa-workbench-panel">
+      <div id="workbench" class="workbench qa-workbench">
+        <div class="bench-surface"></div>
 
-        <!-- Test Tube Rack -->
-        <div class="qa-rack-assembly">
-          <span class="qa-rack-label">Test Tube Rack</span>
-          <div class="qa-tubes-container" id="tubesContainer">
-            <!-- Tubes generated by JS -->
+        <!-- Test tube rack -->
+        <div class="rack-assembly" id="rack-assembly">
+          <div class="rack-tubes" id="rack-tubes">
+            <!-- 5 test tubes, generated by JS -->
           </div>
-          <svg class="qa-rack-base" width="170" height="28" viewBox="0 0 170 28">
-            <rect x="0" y="0" width="170" height="8" rx="3" fill="#8B6F47"/>
-            <rect x="5" y="8" width="160" height="4" rx="2" fill="#7A6040"/>
-            <rect x="0" y="12" width="170" height="8" rx="3" fill="#8B6F47"/>
-            <rect x="10" y="20" width="6" height="8" rx="1" fill="#6B5030"/>
-            <rect x="154" y="20" width="6" height="8" rx="1" fill="#6B5030"/>
-          </svg>
+          <div class="rack-base">
+            <svg class="rack-svg" viewBox="0 0 210 50" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+              <rect x="0" y="8" width="210" height="34" rx="6" fill="url(#wg)"/>
+              <rect x="0" y="8" width="210" height="6" rx="3" fill="#946424" opacity="0.3"/>
+              <defs>
+                <linearGradient id="wg" x1="0" y1="0" x2="210" y2="60" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#8B5C2B"/>
+                  <stop offset="0.3" stop-color="#6B3815"/>
+                  <stop offset="0.7" stop-color="#532A10"/>
+                  <stop offset="1" stop-color="#3D2210"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
         </div>
 
-        <!-- Reagent Shelf -->
-        <div class="qa-reagent-shelf">
-          <span class="qa-shelf-label">Reagents</span>
-          <div class="qa-bottles-container" id="bottlesContainer">
-            <!-- Bottles generated by JS -->
-          </div>
+        <!-- Reagent bottles -->
+        <div class="reagent-shelf" id="reagent-shelf">
+          <!-- Generated by JS -->
         </div>
 
-        <!-- Bunsen Burner -->
-        <div class="qa-bunsen" id="bunsenBurner" title="Bunsen Burner — click with a sample tube selected">
-          <div class="qa-bunsen-flame" id="bunsenFlame"></div>
-          <div class="qa-bunsen-barrel"></div>
-          <div class="qa-bunsen-base"></div>
-          <span class="qa-bunsen-label">Burner</span>
+        <!-- Bunsen burner (for flame test) -->
+        <div class="bunsen-assembly" id="bunsen">
+          <div class="bunsen-flame" id="bunsen-flame"></div>
+          <div class="bunsen-body">
+            <div class="bunsen-barrel"></div>
+            <div class="bunsen-base"></div>
+          </div>
+          <div class="apparatus-label">Bunsen</div>
         </div>
 
         <!-- Sink -->
-        <div class="qa-sink" id="sink" title="Sink — wash all tubes">
-          <div class="qa-sink-body">
-            <svg width="56" height="44" viewBox="0 0 56 44" fill="none">
-              <rect x="4" y="12" width="48" height="28" rx="4" fill="#5a6577" stroke="#4a5568" stroke-width="1.5"/>
-              <rect x="8" y="16" width="40" height="20" rx="3" fill="#3d4556"/>
-              <ellipse cx="28" cy="36" rx="6" ry="2" fill="#2d3442"/>
-              <rect x="24" y="0" width="8" height="14" rx="3" fill="#7a8599"/>
-              <rect x="22" y="2" width="12" height="4" rx="2" fill="#8a95a8"/>
-            </svg>
+        <div class="sink-assembly" id="sink">
+          <svg width="50" height="70" viewBox="0 0 50 70" fill="none">
+            <rect x="20" y="4" width="8" height="30" rx="4" fill="#bfc1ca" stroke="#9296a3" stroke-width="1"/>
+            <ellipse cx="24" cy="5" rx="5" ry="3.5" fill="#dbdde5" stroke="#b7bac3" stroke-width="0.8"/>
+            <rect x="25" y="12" width="16" height="6" rx="3" fill="#bfc1ca" stroke="#9296a3" stroke-width="1"/>
+            <rect x="39" y="13" width="4" height="22" rx="2" fill="#bfc1ca" stroke="#9296a3" stroke-width="1"/>
+            <ellipse cx="41" cy="36" rx="2.5" ry="1.8" fill="#bfc1ca" stroke="#9296a3" stroke-width="0.8"/>
+            <rect x="5" y="38" width="36" height="20" rx="8" fill="#f4f7fb" stroke="#babec6" stroke-width="1.2"/>
+            <ellipse cx="23" cy="56" rx="20" ry="8" fill="#e3e4ea" stroke="#b7bac3" stroke-width="1.2"/>
+          </svg>
+          <div class="apparatus-label">Sink</div>
+        </div>
+
+        <!-- Flame test result overlay -->
+        <div id="flame-overlay" class="flame-overlay" style="display:none;">
+          <div class="flame-result" id="flame-result">
+            <div class="flame-visual" id="flame-visual"></div>
+            <p id="flame-text"></p>
           </div>
-          <span class="qa-sink-label">Sink</span>
+          <button id="btn-close-flame" class="btn btn-ghost btn-sm">Close</button>
         </div>
 
       </div>
 
-      <!-- Wash Bar -->
-      <div class="qa-wash-bar" id="washBar">
-        <span>Tubes contain reagents. Wash before reusing?</span>
-        <button class="qa-wash-btn" id="btnWash">Wash All Tubes</button>
+      <!-- Wash button -->
+      <div class="wash-bar" id="wash-bar" style="display:none;">
+        <button id="btn-wash" class="btn btn-ghost btn-sm">Wash all test tubes</button>
+        <span class="text-sm text-muted">Click the sink or this button to clean apparatus</span>
       </div>
-    </main>
+    </section>
 
-    <!-- ── Data Panel (Right) ── -->
-    <aside class="qa-data-panel" id="dataPanel">
-      <h2 class="panel-title">Observations</h2>
-
-      <div class="qa-observations-wrap">
-        <table class="qa-observations-table" id="observationsTable">
-          <thead>
-            <tr>
-              <th>Tube</th>
-              <th>Procedure</th>
-              <th>Observation</th>
-            </tr>
-          </thead>
-          <tbody id="observationsBody">
-          </tbody>
-        </table>
-        <div class="qa-observations-empty" id="observationsEmpty">
-          No observations yet. Begin by selecting an unknown and performing tests.
+    <!-- Right: Observations table -->
+    <aside class="qa-data-panel">
+      <div class="panel">
+        <div class="panel-header">Observations</div>
+        <div class="panel-body qa-obs-scroll">
+          <table class="data-table qa-obs-table" id="obs-table">
+            <thead>
+              <tr>
+                <th style="width:50px;">Tube</th>
+                <th style="width:45%;">Procedure</th>
+                <th>Observation</th>
+              </tr>
+            </thead>
+            <tbody id="obs-tbody"></tbody>
+          </table>
+          <p id="obs-empty" class="text-sm text-muted text-center mt-4">
+            Select an unknown and begin testing to record observations.
+          </p>
         </div>
       </div>
 
-      <hr class="qa-divider">
-
-      <h2 class="panel-title">Identification</h2>
-      <div class="qa-identification" id="identificationSection">
-        <div class="qa-id-row">
-          <label for="cationInput">Cation</label>
-          <input class="qa-id-input" id="cationInput" type="text" placeholder="e.g. Cu2+, Fe3+">
+      <!-- Identification -->
+      <div class="panel mt-4">
+        <div class="panel-header">Identification</div>
+        <div class="panel-body">
+          <div class="id-row">
+            <label class="text-xs text-muted">Cation</label>
+            <input id="id-cation" class="id-input" placeholder="e.g. Cu²⁺">
+          </div>
+          <div class="id-row mt-2">
+            <label class="text-xs text-muted">Anion</label>
+            <input id="id-anion" class="id-input" placeholder="e.g. SO₄²⁻">
+          </div>
+          <button id="btn-check-id" class="btn btn-success btn-sm mt-4 w-full" disabled>Check Identification</button>
+          <div id="id-result" class="mt-2" style="display:none;"></div>
         </div>
-        <div class="qa-id-row">
-          <label for="anionInput">Anion</label>
-          <input class="qa-id-input" id="anionInput" type="text" placeholder="e.g. SO42-, Cl-">
-        </div>
-        <button class="qa-check-btn" id="btnCheckId" disabled>Check Identification</button>
-        <div class="qa-id-result" id="idResult"></div>
       </div>
     </aside>
 
   </div>
 
-  <!-- ══════════ Reagent Amount Popup ══════════ -->
-  <div class="qa-amount-popup-overlay" id="amountPopup">
-    <div class="qa-amount-popup">
-      <h3 id="amountPopupTitle">Add Reagent</h3>
-      <p class="popup-sub" id="amountPopupSub">Select the amount to add</p>
-      <div class="qa-amount-choices">
-        <button class="qa-amount-btn" data-amount="few">
-          <span class="amount-icon">💧</span>
-          <span class="amount-label">A few drops</span>
-        </button>
-        <button class="qa-amount-btn" data-amount="excess">
-          <span class="amount-icon">🧪</span>
-          <span class="amount-label">Excess</span>
-        </button>
-      </div>
-      <button class="qa-amount-cancel" id="amountCancel">Cancel</button>
-    </div>
-  </div>
 
-  <!-- ══════════ Flame Test Overlay ══════════ -->
-  <div class="qa-flame-overlay" id="flameOverlay">
-    <div class="qa-flame-visual" id="flameVisual"></div>
-    <div class="qa-flame-observation" id="flameObservation"></div>
-    <button class="qa-flame-dismiss" id="flameDismiss">Close</button>
-  </div>
+  <!-- Lab Notebook -->
+  <div class="lab-notebook-slot" data-practical="qualitative-analysis" style="max-width:640px;margin:var(--sp-4) auto;padding:0 var(--sp-4);"></div>
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container"></div>
 
-  <!-- ══════════ Toast Container ══════════ -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <!-- ══════════ Scripts ══════════ -->
+  <script src="../../shared/lab-audio.js"></script>
+  <script src="../../shared/lab-score.js"></script>
+  <script src="../../shared/dark-mode.js"></script>
+  <script src="../../shared/lab-record-mode.js"></script>
+  <script src="../../shared/guide-collapse.js"></script>
+  <script src="../../shared/lab-notebook.js"></script>
   <script src="chemistry-data.js"></script>
   <script src="qa.js"></script>
 </body>
