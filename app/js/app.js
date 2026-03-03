@@ -21,7 +21,7 @@ import { render as renderPdPortfolio, renderDetail as renderPdFolderDetail } fro
 import { render as renderAdmin } from './views/admin.js';
 import { render as renderSimulations } from './views/simulations.js';
 import { render as renderLessonRehearsal } from './views/lesson-rehearsal.js';
-import { render as renderAssessment } from './views/assessment.js';
+import { renderAoL, renderAaL, renderAfL } from './views/assessment.js';
 import { render as renderSettings } from './views/settings.js';
 
 function init() {
@@ -92,7 +92,9 @@ function init() {
   registerRoute('/admin', renderAdmin);
   registerRoute('/simulations', renderSimulations);
   registerRoute('/lesson-rehearsal', renderLessonRehearsal);
-  registerRoute('/assessment', renderAssessment);
+  registerRoute('/assessment/aal', renderAaL);
+  registerRoute('/assessment/afl', renderAfL);
+  registerRoute('/assessment/aol', renderAoL);
   registerRoute('/settings', renderSettings);
 
   // Start router
