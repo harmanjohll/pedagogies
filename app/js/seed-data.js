@@ -8,6 +8,137 @@
 import { Store, generateId } from './state.js';
 
 const SEED_KEY = 'cocher_seeded';
+const ASSESSMENT_SEED_KEY = 'cocher_assessment_seeded';
+
+/* ── Built-in Metacognitive Routines ── */
+const BUILT_IN_ROUTINES = [
+  {
+    name: 'GROW',
+    description: 'A metacognitive routine for students to reflect on their learning journey — Gift, Rise, Own, Watch.',
+    isBuiltIn: true,
+    steps: [
+      { key: 'G', label: 'Gift yourself success', colour: '#22c55e',
+        description: 'Recognise and celebrate what you have achieved so far.',
+        questions: ['What is one thing you did well in this lesson/task?', 'What strength did you use to help you learn today?'] },
+      { key: 'R', label: 'Rise above one challenge', colour: '#f59e0b',
+        description: 'Identify a challenge you faced and how you overcame or plan to overcome it.',
+        questions: ['What was the hardest part for you?', 'What strategy did you use (or could you use) to get through it?'] },
+      { key: 'O', label: 'Own your knowledge', colour: '#3b82f6',
+        description: 'Take ownership of what you now know or can do.',
+        questions: ['What is the most important thing you learned today?', 'How would you explain it to a friend who was absent?'] },
+      { key: 'W', label: 'Watch what comes next', colour: '#8b5cf6',
+        description: 'Look ahead — set a goal or identify what you want to learn next.',
+        questions: ['What will you focus on improving next time?', 'What question do you still have?'] },
+    ]
+  },
+  {
+    name: 'See-Think-Wonder',
+    description: 'Harvard Project Zero routine — separates observation from interpretation and questioning.',
+    isBuiltIn: true,
+    steps: [
+      { key: 'S', label: 'See', colour: '#3b82f6',
+        description: 'What do you observe? Stick to facts — no interpretation yet.',
+        questions: ['What do you notice?', 'What stands out to you?'] },
+      { key: 'T', label: 'Think', colour: '#f59e0b',
+        description: 'What do you think is going on? Interpret what you see.',
+        questions: ['What do you think about what you see?', 'What does it make you think of?'] },
+      { key: 'W', label: 'Wonder', colour: '#8b5cf6',
+        description: 'What questions does it raise?',
+        questions: ['What does it make you wonder?', 'What would you like to find out?'] },
+    ]
+  },
+  {
+    name: 'Connect-Extend-Challenge',
+    description: 'Link new learning to prior knowledge, extend thinking, and identify challenges.',
+    isBuiltIn: true,
+    steps: [
+      { key: 'C', label: 'Connect', colour: '#3b82f6',
+        description: 'How do the ideas connect to what you already know?',
+        questions: ['What connections can you make to things you already knew?', 'How does this link to previous lessons?'] },
+      { key: 'E', label: 'Extend', colour: '#10b981',
+        description: 'What new ideas pushed your thinking further?',
+        questions: ['What new ideas extended your thinking in new directions?', 'What surprised you?'] },
+      { key: 'Ch', label: 'Challenge', colour: '#ef4444',
+        description: 'What is still challenging or confusing?',
+        questions: ['What is still challenging or confusing for you?', 'What questions do you still have?'] },
+    ]
+  },
+  {
+    name: '3-2-1',
+    description: 'Quick reflection: 3 things learned, 2 questions, 1 insight.',
+    isBuiltIn: true,
+    steps: [
+      { key: '3', label: '3 Things I Learned', colour: '#3b82f6',
+        description: 'List three things you learned or found interesting.',
+        questions: ['What are three things you learned today?', 'Which facts or ideas stood out?'] },
+      { key: '2', label: '2 Questions I Have', colour: '#f59e0b',
+        description: 'What two questions do you still have?',
+        questions: ['What are two things you are still curious about?', 'What would you like explained further?'] },
+      { key: '1', label: '1 Key Takeaway', colour: '#22c55e',
+        description: 'What is the single most important thing from today?',
+        questions: ['What is the one thing you will remember most?', 'If you could tell someone one thing about today\u2019s lesson, what would it be?'] },
+    ]
+  },
+  {
+    name: 'I Used to Think\u2026 Now I Think',
+    description: 'Captures conceptual change — powerful for revealing shifts in understanding.',
+    isBuiltIn: true,
+    steps: [
+      { key: 'B', label: 'I Used to Think', colour: '#6366f1',
+        description: 'What did you believe or think before this lesson?',
+        questions: ['Before this lesson, what did you think about this topic?', 'What was your initial understanding?'] },
+      { key: 'A', label: 'Now I Think', colour: '#10b981',
+        description: 'How has your thinking changed? What do you now understand?',
+        questions: ['How has your thinking changed after this lesson?', 'What new understanding do you have now?'] },
+    ]
+  },
+];
+
+/* ── Built-in Observation Checklists ── */
+const BUILT_IN_CHECKLISTS = [
+  {
+    name: 'GPAI \u2014 Game Performance',
+    type: 'observation',
+    subject: 'PE',
+    isBuiltIn: true,
+    criteria: [
+      { text: 'Decision Making \u2014 Makes appropriate choices about what to do with the ball', scale: '1-5' },
+      { text: 'Skill Execution \u2014 Efficient execution of selected skills (passing, shooting, etc.)', scale: '1-5' },
+      { text: 'Support \u2014 Off-the-ball movement to receive a pass', scale: '1-5' },
+      { text: 'Guard/Mark \u2014 Positioning between opponent and goal/target', scale: '1-5' },
+      { text: 'Cover \u2014 Defensive help and backing up teammates', scale: '1-5' },
+      { text: 'Adjust \u2014 Movement to flow of the game (repositioning)', scale: '1-5' },
+      { text: 'Base \u2014 Returns to home/recovery position between plays', scale: '1-5' },
+    ]
+  },
+  {
+    name: 'Lab Skills Observation',
+    type: 'observation',
+    subject: 'Science',
+    isBuiltIn: true,
+    criteria: [
+      { text: 'Safety \u2014 Follows lab safety procedures (goggles, gloves, awareness)', scale: 'rag' },
+      { text: 'Apparatus Handling \u2014 Sets up and uses equipment correctly', scale: 'rag' },
+      { text: 'Measurement \u2014 Takes accurate readings and records data', scale: 'rag' },
+      { text: 'Procedure \u2014 Follows steps methodically and independently', scale: 'rag' },
+      { text: 'Teamwork \u2014 Collaborates effectively with lab partner(s)', scale: 'rag' },
+      { text: 'Clean-up \u2014 Returns equipment and cleans workstation', scale: 'rag' },
+    ]
+  },
+  {
+    name: 'Oral Presentation',
+    type: 'observation',
+    subject: 'General',
+    isBuiltIn: true,
+    criteria: [
+      { text: 'Content \u2014 Accuracy, depth, and relevance of information', scale: '1-5' },
+      { text: 'Organisation \u2014 Clear structure (intro, body, conclusion)', scale: '1-5' },
+      { text: 'Delivery \u2014 Eye contact, voice projection, pacing', scale: '1-5' },
+      { text: 'Engagement \u2014 Holds audience attention, uses visuals effectively', scale: '1-5' },
+      { text: 'Response to Questions \u2014 Answers audience questions confidently', scale: '1-5' },
+    ]
+  },
+];
 
 /* ── Student name pools ── */
 const NAMES = [
@@ -1048,4 +1179,50 @@ export function seedLessonsIfNeeded() {
   });
 
   localStorage.setItem(LESSON_SEED_KEY, '1');
+}
+
+/* ══════════════════════════════════════════════════════
+   Assessment Seeding — Routines & Checklists
+   ══════════════════════════════════════════════════════ */
+
+export function seedAssessmentIfNeeded() {
+  if (localStorage.getItem(ASSESSMENT_SEED_KEY)) return;
+  const existing = Store.getRoutines();
+  if (existing.length > 0) {
+    localStorage.setItem(ASSESSMENT_SEED_KEY, '1');
+    return;
+  }
+
+  // Seed built-in metacognitive routines
+  BUILT_IN_ROUTINES.forEach(r => {
+    Store.addRoutine({
+      name: r.name,
+      description: r.description,
+      isBuiltIn: true,
+      steps: r.steps.map(s => ({
+        key: s.key,
+        label: s.label,
+        colour: s.colour,
+        description: s.description,
+        questions: s.questions
+      }))
+    });
+  });
+
+  // Seed built-in observation checklists
+  BUILT_IN_CHECKLISTS.forEach(c => {
+    Store.addChecklist({
+      name: c.name,
+      type: c.type,
+      subject: c.subject,
+      isBuiltIn: true,
+      criteria: c.criteria.map(cr => ({
+        id: generateId(),
+        text: cr.text,
+        scale: cr.scale
+      }))
+    });
+  });
+
+  localStorage.setItem(ASSESSMENT_SEED_KEY, '1');
 }

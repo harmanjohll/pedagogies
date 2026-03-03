@@ -8,7 +8,7 @@ import { Store } from './state.js';
 import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome } from './components/welcome.js';
-import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded } from './seed-data.js';
+import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedAssessmentIfNeeded } from './seed-data.js';
 
 /* ── Views ── */
 import { render as renderDashboard } from './views/dashboard.js';
@@ -32,6 +32,7 @@ function init() {
   seedIfNeeded();
   seedPdIfNeeded();
   seedLessonsIfNeeded();
+  seedAssessmentIfNeeded();
 
   app.innerHTML = `
     <aside class="sidebar" id="sidebar"></aside>

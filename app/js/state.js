@@ -32,7 +32,10 @@ const DEFAULT_STATE = {
   classes: [],
   lessons: [],
   chatHistory: [],
-  recentActivity: []
+  recentActivity: [],
+  assessmentRoutines: [],
+  savedTOS: [],
+  assessmentChecklists: []
 };
 
 const _state = Object.assign({}, DEFAULT_STATE, loadFromStorage());
@@ -81,6 +84,9 @@ export const Store = {
       adminEvents: _state.adminEvents || [],
       knowledgeUploads: _state.knowledgeUploads || [],
       pdFolders: _state.pdFolders || [],
+      assessmentRoutines: _state.assessmentRoutines || [],
+      savedTOS: _state.savedTOS || [],
+      assessmentChecklists: _state.assessmentChecklists || [],
       recentActivity: _state.recentActivity
     });
     // Also keep legacy keys in sync
@@ -290,6 +296,113 @@ export const Store = {
     this._notify();
   },
 
+  /* ══════════ Assessment Routines CRUD ══════════ */
+
+  getRoutines() {
+    return _state.assessmentRoutines || [];
+  },
+
+  getRoutine(id) {
+    return (_state.assessmentRoutines || []).find(r => r.id === id) || null;
+  },
+
+  addRoutine(data) {
+    const routine = {
+      id: generateId(),
+      name: data.name || 'Untitled Routine',
+      description: data.description || '',
+      isBuiltIn: data.isBuiltIn || false,
+      steps: data.steps || [],
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    _state.assessmentRoutines = [...(_state.assessmentRoutines || []), routine];
+    this._addActivity('routine_created', `Created routine "${routine.name}"`);
+    this._persist();
+    this._notify();
+    return routine;
+  },
+
+  updateRoutine(id, data) {
+    _state.assessmentRoutines = (_state.assessmentRoutines || []).map(r =>
+      r.id === id ? { ...r, ...data, updatedAt: Date.now() } : r
+    );
+    this._persist();
+    this._notify();
+  },
+
+  deleteRoutine(id) {
+    _state.assessmentRoutines = (_state.assessmentRoutines || []).filter(r => r.id !== id);
+    this._persist();
+    this._notify();
+  },
+
+  /* ══════════ Saved TOS CRUD ══════════ */
+
+  getSavedTOS() {
+    return _state.savedTOS || [];
+  },
+
+  addSavedTOS(data) {
+    const tos = {
+      id: generateId(),
+      name: data.name || 'Untitled TOS',
+      mode: data.mode || '1d',
+      objectives: data.objectives || [],
+      totalMarks: data.totalMarks || 50,
+      cells: data.cells || {},
+      createdAt: Date.now()
+    };
+    _state.savedTOS = [...(_state.savedTOS || []), tos];
+    this._addActivity('tos_saved', `Saved TOS "${tos.name}"`);
+    this._persist();
+    this._notify();
+    return tos;
+  },
+
+  deleteSavedTOS(id) {
+    _state.savedTOS = (_state.savedTOS || []).filter(t => t.id !== id);
+    this._persist();
+    this._notify();
+  },
+
+  /* ══════════ Assessment Checklists CRUD ══════════ */
+
+  getChecklists() {
+    return _state.assessmentChecklists || [];
+  },
+
+  addChecklist(data) {
+    const cl = {
+      id: generateId(),
+      name: data.name || 'Untitled Checklist',
+      type: data.type || 'observation',
+      subject: data.subject || '',
+      criteria: data.criteria || [],
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    _state.assessmentChecklists = [...(_state.assessmentChecklists || []), cl];
+    this._addActivity('checklist_created', `Created checklist "${cl.name}"`);
+    this._persist();
+    this._notify();
+    return cl;
+  },
+
+  updateChecklist(id, data) {
+    _state.assessmentChecklists = (_state.assessmentChecklists || []).map(c =>
+      c.id === id ? { ...c, ...data, updatedAt: Date.now() } : c
+    );
+    this._persist();
+    this._notify();
+  },
+
+  deleteChecklist(id) {
+    _state.assessmentChecklists = (_state.assessmentChecklists || []).filter(c => c.id !== id);
+    this._persist();
+    this._notify();
+  },
+
   /* ══════════ Activity Feed ══════════ */
 
   _addActivity(type, description) {
@@ -313,6 +426,9 @@ export const Store = {
       adminEvents: _state.adminEvents || [],
       knowledgeUploads: _state.knowledgeUploads || [],
       pdFolders: _state.pdFolders || [],
+      assessmentRoutines: _state.assessmentRoutines || [],
+      savedTOS: _state.savedTOS || [],
+      assessmentChecklists: _state.assessmentChecklists || [],
       recentActivity: _state.recentActivity
     }, null, 2);
   },
@@ -326,6 +442,9 @@ export const Store = {
       if (data.adminEvents) _state.adminEvents = data.adminEvents;
       if (data.knowledgeUploads) _state.knowledgeUploads = data.knowledgeUploads;
       if (data.pdFolders) _state.pdFolders = data.pdFolders;
+      if (data.assessmentRoutines) _state.assessmentRoutines = data.assessmentRoutines;
+      if (data.savedTOS) _state.savedTOS = data.savedTOS;
+      if (data.assessmentChecklists) _state.assessmentChecklists = data.assessmentChecklists;
       if (data.recentActivity) _state.recentActivity = data.recentActivity;
       this._persist();
       this._notify();
@@ -342,6 +461,9 @@ export const Store = {
     _state.adminEvents = [];
     _state.knowledgeUploads = [];
     _state.pdFolders = [];
+    _state.assessmentRoutines = [];
+    _state.savedTOS = [];
+    _state.assessmentChecklists = [];
     _state.recentActivity = [];
     _state.chatHistory = [];
     this._persist();
