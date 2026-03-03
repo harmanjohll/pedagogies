@@ -651,8 +651,15 @@ export function render(container) {
       const rect = panel.querySelector('rect');
       const h = +rect.getAttribute('height');
       ny = clamp(ny, h / 2, VB_H - h / 2);
-      nx = clamp(nx, 0, VB_W);
-      panel.setAttribute('transform', `translate(${nx},${ny}) rotate(${getRotate(panel)})`);
+      // Constrain to wall track line when panel is vertical (like a real operable wall sliding on a ceiling track)
+      const wallId = panel.getAttribute('data-wall');
+      const rot = getRotate(panel);
+      if (wallId && rot % 180 === 0) {
+        nx = wallId === 'A' ? WALL_A_X : WALL_B_X;
+      } else {
+        nx = clamp(nx, 0, VB_W);
+      }
+      panel.setAttribute('transform', `translate(${nx},${ny}) rotate(${rot})`);
       drawSelectionBox();
     });
     panel.addEventListener('pointerup', () => {
@@ -1411,18 +1418,10 @@ export function render(container) {
       selected.forEach(g => {
         const [tx, ty] = getTranslate(g);
 
-        // Wall panel rotation: toggle between 0° and 90° and swap rect dimensions
+        // Wall panel rotation: rotate in 90° increments (no dimension swap — group transform handles visual rotation)
         if (g.getAttribute('data-wall')) {
-          const currentRot = getRotate(g);
-          const nextRot = currentRot === 0 ? 90 : 0;
+          const nextRot = (getRotate(g) + step) % 360;
           g.setAttribute('transform', `translate(${tx},${ty}) rotate(${nextRot})`);
-          const rect = g.querySelector('rect');
-          const rw = +rect.getAttribute('width');
-          const rh = +rect.getAttribute('height');
-          rect.setAttribute('width', rh);
-          rect.setAttribute('height', rw);
-          rect.setAttribute('x', -rh / 2);
-          rect.setAttribute('y', -rw / 2);
         } else {
           let nextRot = getRotate(g) + step;
           // Snap rotation for desks

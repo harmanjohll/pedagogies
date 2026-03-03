@@ -31,7 +31,7 @@ const EVENT_TASKS = [
     label: 'Bus Booking',
     desc: 'Arrange transport for students to and from the venue.',
     icon: '🚌',
-    externalLink: { url: 'https://go.gov.sg/btybus', label: 'Open Bus Booking Form' },
+    externalLink: { url: 'https://form.gov.sg/697319e97621e837dda7c331', label: 'Open Bus Booking Form' },
     fields: [
       { id: 'pickup_point', label: 'Pick-up Point', type: 'text', placeholder: 'e.g. School Main Gate' },
       { id: 'destination', label: 'Destination', type: 'text', placeholder: 'e.g. Singapore Science Centre' },
@@ -84,7 +84,7 @@ const EVENT_TASKS = [
     label: 'Approval of Request (AOR)',
     desc: 'Submit finance-related approval for activity costs.',
     icon: '💰',
-    externalLink: { url: 'https://go.gov.sg/btyaor', label: 'Open AOR Form' },
+    externalLink: { url: 'https://form.gov.sg/6957392872041c1d962c3ab1', label: 'Open AOR Form' },
     fields: [
       { id: 'budget_code', label: 'Budget Code', type: 'text', placeholder: 'e.g. SC-MATH-2026' },
       { id: 'estimated_cost', label: 'Estimated Total Cost', type: 'text', placeholder: 'e.g. $850.00' },
@@ -123,8 +123,8 @@ const EVENT_TASKS = [
 /* ── Standalone admin tools ── */
 const ADMIN_TOOLS = [
   { key: 'quick_aor', label: 'Quick AOR', desc: 'Submit a standalone Approval of Request for purchases or services.', icon: '📄' },
-  { key: 'aor_form', label: 'AOR Form', desc: 'Open the official Approval of Request form.', icon: '💰', href: 'https://go.gov.sg/btyaor' },
-  { key: 'bus_form', label: 'Bus Booking', desc: 'Open the official bus booking form.', icon: '🚌', href: 'https://go.gov.sg/btybus' },
+  { key: 'aor_form', label: 'AOR Form', desc: 'Open the official Approval of Request form.', icon: '💰', href: 'https://form.gov.sg/6957392872041c1d962c3ab1' },
+  { key: 'bus_form', label: 'Bus Booking', desc: 'Open the official bus booking form.', icon: '🚌', href: 'https://form.gov.sg/697319e97621e837dda7c331' },
   { key: 'relief_timetable', label: 'Relief Timetable', desc: 'Plan teacher relief assignments when staff are away.', icon: '🔄', href: 'btyrelief/relief.html' },
   { key: 'org_chart', label: 'Org Chart', desc: 'View and edit the school organisational chart.', icon: '🏢', href: 'btyrelief/orgstruc.html' },
   { key: 'framework', label: 'Framework Builder', desc: 'Create cycle-arrow diagrams for frameworks and processes.', icon: '🔃', href: 'btyrelief/framework.html' },

@@ -43,10 +43,11 @@ const NAMES = [
 ];
 
 function randomE21CC() {
+  // Wide spread (15–95) so trial classes have diverse profiles for grouping
   return {
-    cait: 30 + Math.floor(Math.random() * 50),
-    cci:  30 + Math.floor(Math.random() * 50),
-    cgc:  30 + Math.floor(Math.random() * 50)
+    cait: 15 + Math.floor(Math.random() * 81),
+    cci:  15 + Math.floor(Math.random() * 81),
+    cgc:  15 + Math.floor(Math.random() * 81)
   };
 }
 
