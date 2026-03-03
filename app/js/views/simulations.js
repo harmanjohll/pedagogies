@@ -97,6 +97,15 @@ function openOverlay(container, title, opts) {
   else if (opts.srcdoc) iframe.srcdoc = opts.srcdoc;
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
 
+  // Inject layout overrides into labsim simulations after load
+  iframe.addEventListener('load', () => {
+    try {
+      const doc = iframe.contentDocument;
+      if (!doc || !doc.querySelector('.practical-layout')) return;
+      injectSimLayoutOverrides(doc);
+    } catch (e) { /* cross-origin or sandbox restriction */ }
+  });
+
   win.appendChild(topBar);
   win.appendChild(iframe);
 
@@ -189,6 +198,142 @@ function openOverlay(container, title, opts) {
   overlay.querySelector('#sim-overlay-close').addEventListener('click', closeOverlay);
   const escHandler = (e) => { if (e.key === 'Escape') closeOverlay(); };
   document.addEventListener('keydown', escHandler);
+}
+
+/* ── Inject layout overrides into labsim simulation iframes ── */
+function injectSimLayoutOverrides(doc) {
+  // 1. CSS overrides: narrower panels, scrollable body, collapsible notebook
+  const style = doc.createElement('style');
+  style.id = 'cocher-sim-overrides';
+  style.textContent = `
+    body { overflow-y: auto !important; }
+    .practical-layout {
+      display: flex !important;
+    }
+    .guide-panel {
+      flex: 0 0 180px !important;
+      min-width: 120px !important;
+      max-width: 360px !important;
+    }
+    .workbench-panel {
+      flex: 1 1 auto !important;
+      min-width: 300px !important;
+    }
+    .data-panel {
+      flex: 0 0 200px !important;
+      min-width: 140px !important;
+      max-width: 360px !important;
+    }
+    .cocher-col-handle {
+      flex: 0 0 5px;
+      cursor: col-resize;
+      background: transparent;
+      position: relative;
+      z-index: 5;
+      transition: background 0.15s;
+    }
+    .cocher-col-handle:hover, .cocher-col-handle.active {
+      background: rgba(67,97,238,0.25);
+    }
+    .cocher-col-handle::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      width: 2px; height: 36px;
+      background: rgba(160,170,195,0.3);
+      border-radius: 1px;
+    }
+    .cocher-col-handle:hover::after, .cocher-col-handle.active::after {
+      background: rgba(67,97,238,0.5);
+      height: 48px;
+    }
+    .lab-notebook-slot {
+      border: 1px solid var(--color-border, #e2e5ea);
+      border-radius: 8px;
+      margin: 8px auto !important;
+      overflow: hidden !important;
+    }
+    .lab-notebook-slot.nb-collapsed > *:not(.nb-toggle) { display: none !important; }
+    .nb-toggle {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px; cursor: pointer;
+      font-size: 0.8125rem; font-weight: 600;
+      color: var(--color-text-secondary, #5a5f6d);
+      background: var(--color-surface-alt, #f8f9fb);
+      user-select: none;
+    }
+    .nb-toggle:hover { background: var(--color-primary-light, #eef1fd); }
+  `;
+  doc.head.appendChild(style);
+
+  // 2. Insert resize handles between panels
+  const layout = doc.querySelector('.practical-layout');
+  if (layout) {
+    const guide = layout.querySelector('.guide-panel');
+    const workbench = layout.querySelector('.workbench-panel');
+    const data = layout.querySelector('.data-panel');
+
+    const h1 = doc.createElement('div');
+    h1.className = 'cocher-col-handle';
+    h1.dataset.side = 'left';
+    const h2 = doc.createElement('div');
+    h2.className = 'cocher-col-handle';
+    h2.dataset.side = 'right';
+
+    if (workbench) layout.insertBefore(h1, workbench);
+    if (data) layout.insertBefore(h2, data);
+
+    // Drag resize logic
+    let active = null, startX = 0, startW = 0;
+
+    layout.addEventListener('mousedown', (e) => {
+      const handle = e.target.closest('.cocher-col-handle');
+      if (!handle) return;
+      e.preventDefault();
+      active = handle;
+      startX = e.clientX;
+      const panel = handle.dataset.side === 'left' ? guide : data;
+      startW = panel ? panel.getBoundingClientRect().width : 0;
+      handle.classList.add('active');
+      doc.body.style.cursor = 'col-resize';
+      doc.body.style.userSelect = 'none';
+      if (workbench) workbench.style.pointerEvents = 'none';
+    });
+
+    doc.addEventListener('mousemove', (e) => {
+      if (!active) return;
+      const dx = e.clientX - startX;
+      if (active.dataset.side === 'left' && guide) {
+        guide.style.flex = `0 0 ${Math.max(120, Math.min(360, startW + dx))}px`;
+      } else if (active.dataset.side === 'right' && data) {
+        data.style.flex = `0 0 ${Math.max(140, Math.min(360, startW - dx))}px`;
+      }
+    });
+
+    doc.addEventListener('mouseup', () => {
+      if (!active) return;
+      active.classList.remove('active');
+      active = null;
+      doc.body.style.cursor = '';
+      doc.body.style.userSelect = '';
+      if (workbench) workbench.style.pointerEvents = '';
+    });
+  }
+
+  // 3. Collapse Lab Notebook by default with toggle bar
+  const notebook = doc.querySelector('.lab-notebook-slot');
+  if (notebook) {
+    notebook.classList.add('nb-collapsed');
+    const toggle = doc.createElement('div');
+    toggle.className = 'nb-toggle';
+    toggle.innerHTML = '<span>📓 Lab Notebook</span><span style="margin-left:auto;font-size:0.7rem;opacity:0.5;">▶ Expand</span>';
+    notebook.insertBefore(toggle, notebook.firstChild);
+    toggle.addEventListener('click', () => {
+      const collapsed = notebook.classList.toggle('nb-collapsed');
+      toggle.querySelector('span:last-child').textContent = collapsed ? '▶ Expand' : '▼ Collapse';
+    });
+  }
 }
 
 /* ── Extract HTML from AI response ── */

@@ -220,10 +220,10 @@ FORMAT — follow this exactly:
 ## Groups for ${activityType}
 
 **Group 1:** Name A, Name B, Name C, Name D
-_Rationale:_ One short sentence.
+**Rationale:** One short sentence.
 
 **Group 2:** Name E, Name F, Name G, Name H
-_Rationale:_ One short sentence.
+**Rationale:** One short sentence.
 
 (continue until ALL ${totalStudents} students are assigned)
 

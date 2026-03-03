@@ -441,7 +441,7 @@ function renderSetupInterface(container, eligibleLessons, classes) {
     });
   }
 
-  // Event: persona checkboxes
+  // Event: persona checkboxes — update state + styling in-place (no full re-render)
   container.querySelectorAll('.rh-persona-cb').forEach(cb => {
     cb.addEventListener('change', () => {
       if (cb.checked) {
@@ -449,8 +449,11 @@ function renderSetupInterface(container, eligibleLessons, classes) {
       } else {
         selectedPersonas = selectedPersonas.filter(p => p !== cb.value);
       }
-      // Re-render to update styling
-      renderView(container);
+      // Toggle highlight on the parent label without re-rendering
+      const label = cb.closest('label');
+      if (label) {
+        label.style.background = cb.checked ? 'var(--accent-light)' : 'transparent';
+      }
     });
   });
 
@@ -591,11 +594,19 @@ function renderRehearsalInterface(container) {
       <!-- Chat input -->
       ${!rehearsalEnded ? `
         <div style="padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border); background: var(--bg-card, var(--surface, #fff)); flex-shrink: 0;">
-          <form id="rh-chat-form" style="display: flex; gap: var(--sp-2);">
+          <form id="rh-chat-form" style="display: flex; gap: var(--sp-2); align-items: center;">
             <input type="text" id="rh-chat-input" class="input"
               placeholder="Speak to your class..."
               style="flex: 1; padding: 0.625rem 1rem; font-size: 0.9375rem;"
               ${isGenerating ? 'disabled' : ''} autocomplete="off" />
+            <button type="button" id="rh-mic-btn" title="Voice input — click to start"
+              style="padding: 0.5rem; flex-shrink: 0; border: 1px solid var(--border); background: var(--bg-card, var(--surface, #fff)); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;" ${isGenerating ? 'disabled' : ''}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
             <button type="submit" class="btn btn-primary" id="rh-send-btn"
               style="padding: 0.625rem 1.25rem; flex-shrink: 0;" ${isGenerating ? 'disabled' : ''}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -672,9 +683,71 @@ function renderRehearsalInterface(container) {
     });
   }
 
+  // Event: mic button (Web Speech API)
+  const micBtn = container.querySelector('#rh-mic-btn');
+  if (micBtn && chatInput) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      let recognition = null;
+      let isListening = false;
+
+      micBtn.addEventListener('click', () => {
+        if (isListening && recognition) {
+          recognition.stop();
+          return;
+        }
+        recognition = new SpeechRecognition();
+        recognition.lang = 'en-SG';
+        recognition.interimResults = true;
+        recognition.continuous = false;
+        recognition.maxAlternatives = 1;
+
+        const prevValue = chatInput.value;
+        isListening = true;
+        micBtn.style.background = '#ef4444';
+        micBtn.style.borderColor = '#ef4444';
+        micBtn.querySelector('svg').style.stroke = '#fff';
+        chatInput.placeholder = 'Listening...';
+
+        recognition.onresult = (event) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          chatInput.value = prevValue + (prevValue ? ' ' : '') + transcript;
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          micBtn.style.background = '';
+          micBtn.style.borderColor = '';
+          micBtn.querySelector('svg').style.stroke = '';
+          chatInput.placeholder = 'Speak to your class...';
+          chatInput.focus();
+        };
+
+        recognition.onerror = (event) => {
+          isListening = false;
+          micBtn.style.background = '';
+          micBtn.style.borderColor = '';
+          micBtn.querySelector('svg').style.stroke = '';
+          chatInput.placeholder = 'Speak to your class...';
+          if (event.error !== 'aborted') {
+            showToast(`Mic error: ${event.error}. Check browser permissions.`, 'warning');
+          }
+        };
+
+        recognition.start();
+      });
+    } else {
+      micBtn.disabled = true;
+      micBtn.title = 'Speech recognition not supported in this browser';
+      micBtn.style.opacity = '0.4';
+    }
+  }
+
   // Event: chat form submit
   const chatForm = container.querySelector('#rh-chat-form');
-  const chatInput = container.querySelector('#rh-chat-input');
   if (chatForm && chatInput) {
     chatInput.focus();
     chatForm.addEventListener('submit', async (e) => {
