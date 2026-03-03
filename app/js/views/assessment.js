@@ -134,16 +134,7 @@ const ASSESS_STYLES = `
     padding: 16px; border: 1px solid var(--border); border-radius: 8px;
     background: var(--bg-card); font-size: 0.875rem; line-height: 1.7;
     color: var(--ink); white-space: pre-wrap;
-    max-height: 400px; overflow-y: auto; position: relative;
   }
-  .ai-output-box.expanded { max-height: none; }
-  .ai-output-toggle {
-    display: inline-flex; align-items: center; gap: 4px;
-    margin-top: 8px; padding: 4px 10px; font-size: 0.75rem; font-weight: 600;
-    color: var(--accent, #4361ee); background: none; border: 1px solid var(--accent, #4361ee);
-    border-radius: 6px; cursor: pointer; transition: all 0.15s;
-  }
-  .ai-output-toggle:hover { background: var(--accent, #4361ee); color: #fff; }
 
   .tos-table-wrap { width: 100%; overflow-x: auto; margin-top: 12px; }
   .tos-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
@@ -248,23 +239,9 @@ function getTopicsForClass(classId) {
   })).filter(l => l.title !== 'Untitled' || l.objectives);
 }
 
-/* ── Helper: render AI output with scroll + expand toggle ── */
+/* ── Helper: render AI output ── */
 function renderAIOutput(text) {
-  return `
-    <div class="ai-output-box" id="ai-result-box">${escHtml(text)}</div>
-    <button class="ai-output-toggle" id="ai-expand-toggle">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-      Expand / Collapse
-    </button>
-  `;
-}
-
-function wireExpandToggle(container) {
-  const toggle = container.querySelector('#ai-expand-toggle');
-  const box = container.querySelector('#ai-result-box');
-  if (toggle && box) {
-    toggle.addEventListener('click', () => box.classList.toggle('expanded'));
-  }
+  return `<div class="ai-output-box">${escHtml(text)}</div>`;
 }
 
 
@@ -728,6 +705,57 @@ export function renderAaL(container) {
           <div id="aal-output" style="margin-top:12px;"></div>
         </div>
 
+        <!-- GROW Coaching Framework -->
+        <div class="assess-card">
+          <div class="assess-section-title">GROW Coaching Framework</div>
+          <div class="assess-section-desc">
+            A structured coaching conversation model adapted for student self-regulation.
+            Use GROW to guide students through reflective dialogue \u2014 individually, in pairs, or as a whole-class debrief.
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #3b82f6;background:rgba(59,130,246,0.04);">
+              <div style="font-weight:700;font-size:0.9375rem;color:#3b82f6;margin-bottom:4px;">G \u2014 Goal</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">What do you want to achieve? What does success look like for this task or topic?</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">\u201cBy the end of this lesson, I want to be able to\u2026\u201d</div>
+            </div>
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #f59e0b;background:rgba(245,158,11,0.04);">
+              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">R \u2014 Reality</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Where are you now? What do you already understand? What\u2019s still unclear?</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">\u201cRight now, I can\u2026 but I\u2019m struggling with\u2026\u201d</div>
+            </div>
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #10b981;background:rgba(16,185,129,0.04);">
+              <div style="font-weight:700;font-size:0.9375rem;color:#10b981;margin-bottom:4px;">O \u2014 Options</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">What could you try? What strategies or resources are available to help you get there?</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">\u201cI could try\u2026 I could ask\u2026 Another approach would be\u2026\u201d</div>
+            </div>
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #8b5cf6;background:rgba(139,92,246,0.04);">
+              <div style="font-weight:700;font-size:0.9375rem;color:#8b5cf6;margin-bottom:4px;">W \u2014 Way Forward</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">What will you do next? By when? How will you know it\u2019s working?</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">\u201cMy next step is to\u2026 I\u2019ll check my progress by\u2026\u201d</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class (optional)</label>
+              <select id="grow-class" class="input" style="width:100%;">
+                ${classDropdownOptions()}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic / context</label>
+              <input type="text" id="grow-topic" class="input" placeholder="e.g. Chemical bonding revision" style="width:100%;" />
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-sm" id="grow-generate-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Generate GROW Prompts
+          </button>
+          <div id="grow-output" style="margin-top:12px;"></div>
+        </div>
+
         <!-- SRL Strategies -->
         <div class="assess-card">
           <div class="assess-section-title">Self-Regulated Learning (SRL) Strategies</div>
@@ -776,6 +804,56 @@ function wireAaLEvents(container) {
       }
     });
   }
+
+  // GROW generate
+  container.querySelector('#grow-generate-btn')?.addEventListener('click', async () => {
+    const topic = container.querySelector('#grow-topic')?.value.trim() || '';
+    const growClassId = container.querySelector('#grow-class')?.value;
+    const output = container.querySelector('#grow-output');
+    const btn = container.querySelector('#grow-generate-btn');
+
+    let context = '';
+    if (growClassId) {
+      const cls = Store.getClass(growClassId);
+      if (cls) context += `Class: ${cls.name}${cls.subject ? ` (${cls.subject})` : ''}. `;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Generating\u2026';
+    output.innerHTML = '<p style="color:var(--ink-muted);font-size:0.8125rem;">Generating GROW prompts\u2026</p>';
+
+    try {
+      const prompt = `Generate a set of GROW coaching prompts a teacher can use with Singapore secondary students (age 13-17).
+
+GROW framework:
+G = Goal: What does the student want to achieve?
+R = Reality: Where is the student right now?
+O = Options: What strategies or approaches could help?
+W = Way Forward: What specific next steps will the student commit to?
+
+${topic ? `Topic/context: ${topic}` : ''}
+${context || ''}
+
+For each GROW stage, provide:
+1. A teacher prompt question
+2. A follow-up probe
+3. A student sentence starter
+
+Make them concrete, empathetic, and suitable for a classroom coaching conversation.`;
+
+      const text = await sendChat([{ role: 'user', content: prompt }], {
+        systemPrompt: 'You are a coaching and metacognition specialist for Singapore secondary schools. Generate practical, student-friendly GROW coaching prompts.',
+        temperature: 0.6, maxTokens: 1500
+      });
+
+      output.innerHTML = renderAIOutput(text);
+    } catch (err) {
+      output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Generate GROW Prompts';
+    }
+  });
 
   // SRL strategy click
   container.querySelectorAll('.srl-card').forEach(card => {
@@ -852,7 +930,6 @@ Format each as a numbered question. Make them concrete, student-friendly, and ap
       });
 
       output.innerHTML = renderAIOutput(text);
-      wireExpandToggle(container);
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {
@@ -1060,7 +1137,6 @@ function wireAfLEvents(container) {
       });
 
       output.innerHTML = renderAIOutput(text);
-      wireExpandToggle(container);
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {
