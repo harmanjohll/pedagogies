@@ -1070,14 +1070,14 @@ export function render(container) {
 
     if (def.zone) {
       const r = document.createElementNS(SVG_NS, 'rect');
-      setAttrs(r, { x: -w / 2, y: -h / 2, width: w, height: h, fill: def.color, stroke: def.border, 'stroke-width': 1.5, 'stroke-dasharray': '6,3', rx: 8 });
+      setAttrs(r, { x: -w / 2, y: -h / 2, width: w, height: h, fill: def.color, stroke: def.border, 'stroke-width': 1.5, rx: 8 });
       g.appendChild(r);
       const t = svgText(0, 4, def.label.replace('Zone: ', ''), 11, def.border);
       t.setAttribute('font-weight', '600');
       g.appendChild(t);
     } else if (def.text) {
       const r = document.createElementNS(SVG_NS, 'rect');
-      setAttrs(r, { x: -w / 2, y: -h / 2, width: w, height: h, fill: 'rgba(0,0,0,0.03)', stroke: '#cbd5e1', 'stroke-width': 0.5, 'stroke-dasharray': '3,3', rx: 4 });
+      setAttrs(r, { x: -w / 2, y: -h / 2, width: w, height: h, fill: 'rgba(0,0,0,0.03)', stroke: '#cbd5e1', 'stroke-width': 0.5, rx: 4 });
       g.appendChild(r);
       const t = svgText(0, 4, 'Label', 12, '#64748b');
       g.appendChild(t);

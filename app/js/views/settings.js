@@ -137,7 +137,10 @@ export function render(container) {
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">About Co-Cher</h3>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.6;">
-            <strong style="color: var(--ink);">Co-Cher</strong> is a lesson design assistant built for Singapore educators. It integrates AI-powered lesson planning, spatial classroom design, interactive science simulations, and the E21CC framework to support holistic lesson experiences.
+            <strong style="color: var(--ink);">Co-Cher</strong> is your co-teaching assistant, built for Singapore educators. It is an all-rounded system that supports the full spectrum of teaching practice \u2014 from lesson design and enactment to assessment, administrative operations, and professional growth.
+          </p>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.6;">
+            Co-Cher integrates the <strong style="color: var(--ink);">Singapore Teaching Practice (STP)</strong> framework, the <strong style="color: var(--ink);">E21CC</strong> competency framework, and the <strong style="color: var(--ink);">EdTech Masterplan 2030</strong> vision. It brings together AI-powered lesson planning, spatial classroom design, interactive simulations, assessment tools (AaL, AfL, AoL), lesson rehearsal, and admin workflows \u2014 all grounded in evidence-based pedagogy including Hattie\u2019s Visible Learning, Bloom\u2019s Taxonomy, and Schraw & Dennison\u2019s metacognitive frameworks.
           </p>
           <p style="font-size: 0.75rem; color: var(--ink-faint); line-height: 1.5;">
             Created by <strong style="color: var(--ink-muted);">Harman Johll</strong><br />
