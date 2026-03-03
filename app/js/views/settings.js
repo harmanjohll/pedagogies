@@ -133,6 +133,18 @@ export function render(container) {
           <input type="file" id="import-file" accept=".json" style="display: none;" />
         </div>
 
+        <!-- About -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">About Co-Cher</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.6;">
+            <strong style="color: var(--ink);">Co-Cher</strong> is a lesson design assistant built for Singapore educators. It integrates AI-powered lesson planning, spatial classroom design, interactive science simulations, and the E21CC framework to support holistic lesson experiences.
+          </p>
+          <p style="font-size: 0.75rem; color: var(--ink-faint); line-height: 1.5;">
+            Created by <strong style="color: var(--ink-muted);">Harman Johll</strong><br />
+            Built with care for the teaching community.
+          </p>
+        </div>
+
         <!-- Save Button -->
         <div style="display: flex; justify-content: flex-end;">
           <button class="btn btn-primary" id="save-settings">Save Settings</button>
