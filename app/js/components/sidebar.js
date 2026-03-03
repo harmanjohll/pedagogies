@@ -72,8 +72,8 @@ export function renderSidebar(container) {
     <a class="sidebar-brand" href="#/" style="text-decoration:none;cursor:pointer;">
       <div class="sidebar-brand-icon">C</div>
       <div class="sidebar-brand-text">
-        <div class="sidebar-brand-name">Co-Cher</div>
-        <div class="sidebar-brand-tagline">Lesson Design Assistant</div>
+        <div class="sidebar-brand-name">Co-Cher <span style="font-size:0.5em;font-weight:400;color:var(--ink-faint);opacity:0.7;vertical-align:middle;">by Harman Johll</span></div>
+        <div class="sidebar-brand-tagline">Your Co-Teaching Assistant</div>
       </div>
     </a>
 
@@ -90,7 +90,6 @@ export function renderSidebar(container) {
         <span class="sidebar-item-icon">${ICONS.settings}</span>
         <span class="sidebar-item-label">Settings</span>
       </button>
-      <div style="text-align:center;padding:6px 0 2px;margin-top:4px;font-size:0.625rem;color:var(--ink-faint);opacity:0.5;letter-spacing:0.02em;">by Harman Johll</div>
     </div>
   `;
 

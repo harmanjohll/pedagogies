@@ -39,9 +39,9 @@ const MAI_DOMAINS = {
     label: 'Knowledge of Cognition',
     desc: 'What learners know about their own thinking processes',
     subs: [
-      { key: 'declarative', label: 'Declarative Knowledge', desc: 'Knowing about oneself as a learner — strengths, weaknesses, and what strategies are available.' },
-      { key: 'procedural',  label: 'Procedural Knowledge',  desc: 'Knowing how to use learning strategies — when to skim, how to take notes, how to organise information.' },
-      { key: 'conditional', label: 'Conditional Knowledge', desc: 'Knowing when and why to use particular strategies — matching strategy to task demands.' },
+      { key: 'declarative', label: 'Declarative Knowledge', desc: 'Knowing about oneself as a learner \u2014 strengths, weaknesses, and what strategies are available.' },
+      { key: 'procedural',  label: 'Procedural Knowledge',  desc: 'Knowing how to use learning strategies \u2014 when to skim, how to take notes, how to organise information.' },
+      { key: 'conditional', label: 'Conditional Knowledge', desc: 'Knowing when and why to use particular strategies \u2014 matching strategy to task demands.' },
     ]
   },
   regulation: {
@@ -49,19 +49,71 @@ const MAI_DOMAINS = {
     desc: 'How learners manage and control their thinking processes',
     subs: [
       { key: 'planning',     label: 'Planning',              desc: 'Goal setting, activating prior knowledge, and allocating time before a task.' },
-      { key: 'information',  label: 'Information Management', desc: 'Strategies for processing information — organising, elaborating, summarising, selective focusing.' },
-      { key: 'monitoring',   label: 'Comprehension Monitoring', desc: 'Assessing understanding during learning — self-testing, checking pace, questioning.' },
-      { key: 'debugging',    label: 'Debugging Strategies',  desc: 'Fixing comprehension failures — re-reading, asking for help, trying a different approach.' },
-      { key: 'evaluation',   label: 'Evaluation',            desc: 'Appraising the outcomes of learning — did I meet my goal? What would I do differently?' },
+      { key: 'information',  label: 'Information Management', desc: 'Strategies for processing information \u2014 organising, elaborating, summarising, selective focusing.' },
+      { key: 'monitoring',   label: 'Comprehension Monitoring', desc: 'Assessing understanding during learning \u2014 self-testing, checking pace, questioning.' },
+      { key: 'debugging',    label: 'Debugging Strategies',  desc: 'Fixing comprehension failures \u2014 re-reading, asking for help, trying a different approach.' },
+      { key: 'evaluation',   label: 'Evaluation',            desc: 'Appraising the outcomes of learning \u2014 did I meet my goal? What would I do differently?' },
     ]
   }
 };
+
+/* ── SRL Strategies with topic-specific applications ── */
+const SRL_STRATEGIES = [
+  { title: 'Think-Aloud', desc: 'Teacher verbalises thought process while solving a problem, making invisible thinking visible to students.',
+    applications: {
+      Science: 'Model scientific reasoning: "I notice the test tube changed colour, so I\u2019m thinking an exothermic reaction occurred because\u2026"',
+      Mathematics: 'Walk through problem-solving steps: "First I identify what\u2019s given, then I choose the formula\u2026"',
+      English: 'Demonstrate reading comprehension: "This phrase suggests the author feels\u2026 I\u2019m connecting it to the earlier paragraph where\u2026"',
+      Humanities: 'Model source analysis: "The date tells me this was during the Cold War, so I should consider\u2026"',
+      default: 'Verbalise your decision-making process step by step so students can see how an expert thinks through the task.'
+    }},
+  { title: 'KWL Chart', desc: 'What I Know / What I Want to Know / What I Learned \u2014 activates prior knowledge and sets learning goals.',
+    applications: {
+      Science: 'Before a new topic (e.g., Electricity): K \u2014 "Batteries store energy", W \u2014 "How does current flow?", L \u2014 filled after experiments.',
+      Mathematics: 'Before a new chapter: K \u2014 "I know how to solve linear equations", W \u2014 "How do quadratics differ?", L \u2014 after practice.',
+      English: 'Before studying a new text: K \u2014 "I know about narrative perspective", W \u2014 "How does this author use it?", L \u2014 post-reading.',
+      Humanities: 'Before a new unit: K \u2014 "I know WWII started in 1939", W \u2014 "What caused the Pacific front?", L \u2014 after sources study.',
+      default: 'Have students fill in K and W columns before the lesson, then complete L at the end to track their own learning journey.'
+    }},
+  { title: 'Wrapper Activity', desc: 'Brief pre- and post-task reflection (e.g., \u201cHow will I approach this?\u201d \u2192 task \u2192 \u201cWhat worked?\u201d).',
+    applications: {
+      Science: 'Before a practical: "What safety steps will I follow?" After: "Did my prediction match the results? Why or why not?"',
+      Mathematics: 'Before a problem set: "Which methods will I try first?" After: "Where did I get stuck and what helped me move forward?"',
+      English: 'Before essay writing: "What structure will I use?" After: "Did I address the question fully? What could be stronger?"',
+      Humanities: 'Before source-based work: "What biases might I encounter?" After: "Did I cross-reference enough sources?"',
+      default: 'Ask students to briefly plan their approach before the task, then reflect on what worked and what they\u2019d change.'
+    }},
+  { title: 'Error Analysis', desc: 'Students examine their own mistakes, classify error types, and plan how to avoid them.',
+    applications: {
+      Science: 'Classify errors as conceptual (misunderstood the concept), procedural (wrong method), or careless (calculation slip).',
+      Mathematics: 'Sort mistakes into categories: sign errors, wrong formula, misread question, or conceptual gap \u2014 then target each.',
+      English: 'Review marked essays for patterns: grammar, argument structure, evidence use \u2014 create a personal improvement checklist.',
+      Humanities: 'Analyse test answers: Did I misinterpret the source? Lack evidence? Miss the command word? Plan targeted revision.',
+      default: 'Have students categorise their mistakes, identify patterns, and create a personal action plan for improvement.'
+    }},
+  { title: 'Learning Journals', desc: 'Regular reflective entries about what was learned, what was difficult, and strategies used.',
+    applications: {
+      Science: 'After each practical: "What did I observe? What confused me? How does this connect to the theory we learned?"',
+      Mathematics: 'Weekly entries: "This week I learned\u2026 The hardest part was\u2026 I overcame it by\u2026"',
+      English: 'Reading logs: "Today\u2019s passage made me think about\u2026 I found the vocabulary challenging because\u2026"',
+      Humanities: 'Reflective diary: "The most surprising thing I learned was\u2026 It changed my perspective on\u2026"',
+      default: 'Prompt students with structured questions to write brief reflections regularly, building a habit of self-awareness.'
+    }},
+  { title: 'Exam Wrappers', desc: 'Post-test reflection: How did you prepare? What types of errors did you make? What will you do differently?',
+    applications: {
+      Science: 'After a test: "I studied \u2026 hours. My errors were mostly in (topic). Next time I will revise (specific area) using (method)."',
+      Mathematics: 'After a quiz: "I practised \u2026 questions. I lost marks on (topic). I\u2019ll do more timed practice on (specific skill)."',
+      English: 'After a composition: "My weakest area was (e.g., paragraph transitions). I\u2019ll practise by (specific strategy)."',
+      Humanities: 'After an exam: "I was confident on (topics) but weak on (topics). I need to focus on (source skills / essay structure)."',
+      default: 'Return the graded assessment with a structured reflection sheet. Students analyse their preparation, errors, and next steps.'
+    }},
+];
 
 /* ── Hattie's AfL Strategies ── */
 const HATTIE_STRATEGIES = [
   { strategy: 'Feedback',                    effect: 0.70, desc: 'Specific information about task performance relative to success criteria.' },
   { strategy: 'Formative Evaluation',        effect: 0.48, desc: 'Using assessment evidence to adapt teaching in real-time.' },
-  { strategy: 'Self-Reported Grades',        effect: 1.33, desc: 'Students estimating their own performance — calibrating expectations.' },
+  { strategy: 'Self-Reported Grades',        effect: 1.33, desc: 'Students estimating their own performance \u2014 calibrating expectations.' },
   { strategy: 'Classroom Discussion',        effect: 0.82, desc: 'Purposeful dialogue that makes thinking visible.' },
   { strategy: 'Teacher Clarity',             effect: 0.75, desc: 'Clear learning intentions, success criteria, and task expectations.' },
   { strategy: 'Metacognitive Strategies',    effect: 0.60, desc: 'Teaching students to think about their own thinking.' },
@@ -78,7 +130,23 @@ const ASSESS_STYLES = `
   .assess-section-title { font-size: 1.0625rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
   .assess-section-desc { font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: 16px; line-height: 1.5; }
 
-  .tos-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; margin-top: 12px; }
+  .ai-output-box {
+    padding: 16px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg-card); font-size: 0.875rem; line-height: 1.7;
+    color: var(--ink); white-space: pre-wrap;
+    max-height: 400px; overflow-y: auto; position: relative;
+  }
+  .ai-output-box.expanded { max-height: none; }
+  .ai-output-toggle {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 8px; padding: 4px 10px; font-size: 0.75rem; font-weight: 600;
+    color: var(--accent, #4361ee); background: none; border: 1px solid var(--accent, #4361ee);
+    border-radius: 6px; cursor: pointer; transition: all 0.15s;
+  }
+  .ai-output-toggle:hover { background: var(--accent, #4361ee); color: #fff; }
+
+  .tos-table-wrap { width: 100%; overflow-x: auto; margin-top: 12px; }
+  .tos-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
   .tos-table th, .tos-table td { padding: 8px 10px; border: 1px solid var(--border, #e2e5ea); text-align: center; }
   .tos-table th { background: var(--bg-subtle, #f8f9fa); font-weight: 600; color: var(--ink); font-size: 0.75rem; text-transform: uppercase; }
   .tos-table td input {
@@ -87,10 +155,18 @@ const ASSESS_STYLES = `
   }
   .dark .tos-table td input { background: var(--bg-subtle, #1e1e2e); color: var(--ink, #e8e8f0); border-color: var(--border, #3e3e4e); }
   .tos-table .tos-obj-cell { text-align: left; font-weight: 500; min-width: 200px; }
-  .tos-table .tos-dim-cell { text-align: left; font-weight: 600; min-width: 180px; vertical-align: top; }
+  .tos-table .tos-dim-cell { text-align: left; font-weight: 600; min-width: 140px; vertical-align: top; white-space: normal; word-wrap: break-word; }
   .tos-table .tos-dim-desc { font-size: 0.6875rem; font-weight: 400; color: var(--ink-muted); display: block; margin-top: 2px; }
   .tos-table .tos-total { font-weight: 700; background: var(--accent-light, #eef1fd); }
   .tos-table td[title] { cursor: help; }
+
+  .tos-2d-obj-cell {
+    text-align: left; font-weight: 500; min-width: 120px; max-width: 260px;
+    font-size: 0.75rem; line-height: 1.4; white-space: normal; word-wrap: break-word;
+    vertical-align: top; padding: 6px 8px;
+  }
+  .tos-2d-obj-label { font-weight: 700; font-size: 0.8125rem; color: var(--ink); }
+  .tos-2d-obj-desc { color: var(--ink-muted); margin-top: 1px; }
 
   .tos-mode-toggle { display: inline-flex; border: 1px solid var(--border, #e2e5ea); border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
   .tos-mode-btn {
@@ -122,14 +198,79 @@ const ASSESS_STYLES = `
   .feedback-q { padding: 14px 16px; border-radius: 8px; margin-bottom: 8px; }
   .feedback-q-label { font-weight: 700; font-size: 0.875rem; margin-bottom: 4px; }
   .feedback-q-desc { font-size: 0.8125rem; color: var(--ink-muted); line-height: 1.5; }
+
+  .srl-card { padding: 12px; border: 1px solid var(--border, #e2e5ea); border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+  .srl-card:hover { border-color: var(--accent, #4361ee); box-shadow: 0 2px 8px rgba(67,97,238,0.1); }
+  .srl-card.active { border-color: var(--accent, #4361ee); background: rgba(67,97,238,0.04); }
+  .srl-detail-panel {
+    margin-top: 12px; padding: 16px; border: 1px solid var(--accent, #4361ee);
+    border-radius: 10px; background: rgba(67,97,238,0.03);
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .srl-detail-panel .srl-app-item {
+    padding: 8px 12px; border-radius: 6px; margin-bottom: 6px;
+    background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea);
+    font-size: 0.8125rem; line-height: 1.5; color: var(--ink);
+  }
+  .dark .srl-detail-panel .srl-app-item { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); }
+  .srl-app-subject { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; color: var(--accent, #4361ee); margin-bottom: 2px; }
+
+  .class-topic-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  @media (max-width: 600px) { .class-topic-grid { grid-template-columns: 1fr; } }
 `;
 
 /* ── TOS mode state ── */
 let tosMode = '1d';
 
-/* ══════════════════════════════════════════════════════
-   AoL — Assessment of Learning (Summative / TOS)
-   ══════════════════════════════════════════════════════ */
+/* ── Helper: build class dropdown options ── */
+function classDropdownOptions(includeEmpty = true) {
+  const classes = Store.getClasses();
+  let html = includeEmpty ? '<option value="">-- Select a class --</option>' : '';
+  classes.forEach(cls => {
+    const label = cls.subject ? `${escHtml(cls.name)} (${escHtml(cls.subject)})` : escHtml(cls.name);
+    html += `<option value="${cls.id}">${label}</option>`;
+  });
+  if (!classes.length) {
+    html = '<option value="">No classes yet \u2014 add via Classes page</option>';
+  }
+  return html;
+}
+
+/* ── Helper: get topics for a class from its lessons ── */
+function getTopicsForClass(classId) {
+  if (!classId) return [];
+  const lessons = Store.getLessonsForClass(classId);
+  return lessons.map(l => ({
+    id: l.id,
+    title: l.title || 'Untitled',
+    objectives: l.objectives || ''
+  })).filter(l => l.title !== 'Untitled' || l.objectives);
+}
+
+/* ── Helper: render AI output with scroll + expand toggle ── */
+function renderAIOutput(text) {
+  return `
+    <div class="ai-output-box" id="ai-result-box">${escHtml(text)}</div>
+    <button class="ai-output-toggle" id="ai-expand-toggle">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      Expand / Collapse
+    </button>
+  `;
+}
+
+function wireExpandToggle(container) {
+  const toggle = container.querySelector('#ai-expand-toggle');
+  const box = container.querySelector('#ai-result-box');
+  if (toggle && box) {
+    toggle.addEventListener('click', () => box.classList.toggle('expanded'));
+  }
+}
+
+
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   AoL \u2014 Assessment of Learning (Summative / TOS)
+   \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 
 export function renderAoL(container) {
   const lessons = Store.getLessons();
@@ -141,7 +282,7 @@ export function renderAoL(container) {
         <div class="page-header" style="margin-bottom: 8px;">
           <div>
             <h1 class="page-title" style="font-size:1.625rem;">Assessment of Learning</h1>
-            <p class="page-subtitle">Summative assessment design — Table of Specifications</p>
+            <p class="page-subtitle">Summative assessment design \u2014 Table of Specifications</p>
           </div>
         </div>
 
@@ -149,8 +290,8 @@ export function renderAoL(container) {
           <div class="assess-section-title">Table of Specifications (TOS)</div>
           <div class="assess-section-desc">
             A TOS maps assessment items to cognitive levels, ensuring balanced coverage.
-            Choose between the <strong>original 1D taxonomy</strong> (topics × cognitive levels) or the
-            <strong>revised 2D taxonomy</strong> (Anderson & Krathwohl — knowledge dimension × cognitive process).
+            Choose between the <strong>original 1D taxonomy</strong> (topics \u00d7 cognitive levels) or the
+            <strong>revised 2D taxonomy</strong> (Anderson & Krathwohl \u2014 knowledge dimension \u00d7 cognitive process).
           </div>
 
           <div class="tos-mode-toggle">
@@ -173,7 +314,7 @@ export function renderAoL(container) {
 
         <!-- Bloom's reference -->
         <div class="assess-card">
-          <div class="assess-section-title">Bloom's Taxonomy — Quick Reference</div>
+          <div class="assess-section-title">Bloom's Taxonomy \u2014 Quick Reference</div>
           ${tosMode === '2d' ? '<div class="assess-section-desc">The revised taxonomy (Anderson & Krathwohl, 2001) adds a <strong>Knowledge Dimension</strong> intersecting the cognitive process dimension.</div>' : ''}
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:12px;">
             ${BLOOMS.map((b, i) => {
@@ -231,7 +372,7 @@ function render2DInputs(lessons) {
       <div>
         <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#555);text-transform:uppercase;display:block;margin-bottom:4px;">Source (optional)</label>
         <select id="tos-lesson-select" class="input" style="width:100%;">
-          <option value="">—</option>
+          <option value="">\u2014</option>
           ${lessons.map(l => `<option value="${l.id}">${escHtml(l.title || 'Untitled')}</option>`).join('')}
         </select>
       </div>
@@ -240,9 +381,13 @@ function render2DInputs(lessons) {
         <input type="number" id="tos-total-marks" class="input" value="50" min="1" style="width:100%;" />
       </div>
     </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#555);text-transform:uppercase;display:block;margin-bottom:4px;">Learning Objectives (one per line, optional)</label>
+      <textarea id="tos-2d-objectives" class="input" rows="3" style="width:100%;resize:vertical;font-size:0.8125rem;" placeholder="e.g.\nExplain the concept of chemical equilibrium\nApply Le Chatelier's principle to predict shifts\n(Leave blank for a generic Knowledge Dimension \u00d7 Process grid)"></textarea>
+    </div>
     <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:12px;">
       The 2D grid maps <strong>Knowledge Dimension</strong> (rows) against <strong>Cognitive Process</strong> (columns).
-      Hover cells for example verbs at each intersection.
+      ${`Add objectives above to create a richer table with objectives mapped to each knowledge dimension, or leave blank for the standard 4\u00d76 grid.`}
     </p>
   `;
 }
@@ -264,10 +409,11 @@ function renderKnowledgeDimRef() {
   `;
 }
 
-/* ── 1D TOS table ── */
+/* \u2500\u2500 1D TOS table \u2500\u2500 */
 function build1DTOSTable(objectives, totalMarks) {
   if (!objectives.length) return '<p style="color:var(--ink-muted);font-size:0.8125rem;">Enter objectives above and click "Build TOS".</p>';
   return `
+    <div class="tos-table-wrap">
     <table class="tos-table">
       <thead><tr>
         <th style="text-align:left;">Learning Objective</th>
@@ -293,58 +439,77 @@ function build1DTOSTable(objectives, totalMarks) {
         </tr>
       </tbody>
     </table>
+    </div>
     <p style="font-size:0.75rem;color:var(--ink-muted);margin-top:8px;">Target total: <strong>${totalMarks}</strong> marks.</p>
   `;
 }
 
-/* ── 2D TOS table (Knowledge × Cognitive Process) ── */
-function build2DTOSTable(totalMarks) {
+/* \u2500\u2500 2D TOS table (Knowledge \u00d7 Cognitive Process) with objectives support \u2500\u2500 */
+function build2DTOSTable(totalMarks, objectives) {
+  const hasObj = objectives && objectives.length > 0;
   return `
-    <table class="tos-table">
+    <div class="tos-table-wrap">
+    <table class="tos-table" style="table-layout:fixed;width:100%;">
+      <colgroup>
+        <col style="width:${hasObj ? '22%' : '18%'};" />
+        ${hasObj ? '<col style="width:22%;" />' : ''}
+        ${BLOOMS.map(() => `<col style="width:${hasObj ? '8%' : '11%'};" />`).join('')}
+        <col style="width:${hasObj ? '5%' : '7%'};" />
+        <col style="width:${hasObj ? '5%' : '7%'};" />
+      </colgroup>
       <thead><tr>
         <th style="text-align:left;">Knowledge \\ Process</th>
-        ${BLOOMS.map(b => `<th title="${b.desc}\n${b.verbs}">${b.label}</th>`).join('')}
+        ${hasObj ? '<th style="text-align:left;">Objectives</th>' : ''}
+        ${BLOOMS.map(b => `<th title="${b.desc}\n${b.verbs}" style="font-size:0.6875rem;">${b.label}</th>`).join('')}
         <th>Total</th><th>%</th>
       </tr></thead>
       <tbody>
-        ${KNOWLEDGE_DIMS.map((dim, i) => `<tr>
+        ${KNOWLEDGE_DIMS.map((dim, i) => {
+          const dimObjs = hasObj ? objectives.filter((_, idx) => idx % KNOWLEDGE_DIMS.length === i) : [];
+          return `<tr>
           <td class="tos-dim-cell" title="${dim.desc}">
-            ${dim.label}
+            <span class="tos-2d-obj-label">${dim.label}</span>
             <span class="tos-dim-desc">${dim.desc}</span>
           </td>
+          ${hasObj ? `<td class="tos-2d-obj-cell">${dimObjs.length ? dimObjs.map(o => `<div style="margin-bottom:2px;">\u2022 ${escHtml(o)}</div>`).join('') : '<span style="color:var(--ink-faint);font-size:0.75rem;">\u2014</span>'}</td>` : ''}
           ${BLOOMS.map(b => `<td title="${dim.ex[b.key]}"><input type="number" class="tos-cell" data-row="${i}" data-col="${b.key}" value="0" min="0" /></td>`).join('')}
           <td class="tos-total" data-row-total="${i}">0</td>
           <td class="tos-total" data-row-pct="${i}">0%</td>
-        </tr>`).join('')}
+        </tr>`;
+        }).join('')}
         <tr style="font-weight:700;">
-          <td style="text-align:left;">Column Total</td>
+          <td style="text-align:left;" ${hasObj ? 'colspan="2"' : ''}>Column Total</td>
           ${BLOOMS.map(b => `<td data-col-total="${b.key}">0</td>`).join('')}
           <td data-grand-total>0</td><td>\u2014</td>
         </tr>
         <tr>
-          <td style="text-align:left;font-weight:600;">% of Paper</td>
+          <td style="text-align:left;font-weight:600;" ${hasObj ? 'colspan="2"' : ''}>% of Paper</td>
           ${BLOOMS.map(b => `<td data-col-pct="${b.key}">0%</td>`).join('')}
           <td>100%</td><td>\u2014</td>
         </tr>
       </tbody>
     </table>
+    </div>
     <p style="font-size:0.75rem;color:var(--ink-muted);margin-top:8px;">Target total: <strong>${totalMarks}</strong> marks. Hover cells for example verbs at each intersection.</p>
   `;
 }
 
-/* ── AoL event wiring ── */
+/* \u2500\u2500 AoL event wiring \u2500\u2500 */
 function wireAoLEvents(container, lessons) {
   const objArea = container.querySelector('#tos-objectives');
+  const obj2dArea = container.querySelector('#tos-2d-objectives');
   const lessonSel = container.querySelector('#tos-lesson-select');
   const output = container.querySelector('#tos-output');
   const totalInput = container.querySelector('#tos-total-marks');
 
-  // Pre-fill from selected lesson (1D mode only)
-  if (lessonSel && objArea) {
+  // Pre-fill from selected lesson
+  if (lessonSel) {
     lessonSel.addEventListener('change', () => {
       const lesson = Store.getLesson(lessonSel.value);
       if (lesson && lesson.objectives) {
-        objArea.value = lesson.objectives.split(/[;,\n]/).map(o => o.trim()).filter(Boolean).join('\n');
+        const objectives = lesson.objectives.split(/[;,\n]/).map(o => o.trim()).filter(Boolean).join('\n');
+        if (objArea) objArea.value = objectives;
+        if (obj2dArea) obj2dArea.value = objectives;
       }
     });
   }
@@ -358,7 +523,8 @@ function wireAoLEvents(container, lessons) {
       output.innerHTML = build1DTOSTable(objs, total);
       attachTOSCalc(container, objs.length, total);
     } else {
-      output.innerHTML = build2DTOSTable(total);
+      const objs2d = obj2dArea ? obj2dArea.value.split('\n').map(o => o.trim()).filter(Boolean) : [];
+      output.innerHTML = build2DTOSTable(total, objs2d.length ? objs2d : null);
       attachTOSCalc(container, KNOWLEDGE_DIMS.length, total);
     }
   });
@@ -398,7 +564,9 @@ function wireAoLEvents(container, lessons) {
       } else {
         // 2D AI suggest
         const lessonCtx = lessonSel?.value ? Store.getLesson(lessonSel.value) : null;
-        const context = lessonCtx ? `Lesson: ${lessonCtx.title}. Objectives: ${lessonCtx.objectives || 'not specified'}.` : 'General assessment.';
+        const objs2d = obj2dArea ? obj2dArea.value.split('\n').map(o => o.trim()).filter(Boolean) : [];
+        const context = lessonCtx ? `Lesson: ${lessonCtx.title}. Objectives: ${lessonCtx.objectives || 'not specified'}.` :
+                        objs2d.length ? `Objectives:\n${objs2d.map((o,i) => `${i+1}. ${o}`).join('\n')}` : 'General assessment.';
 
         const prompt = `Create a 2D Table of Specifications (Anderson & Krathwohl revised taxonomy) for an assessment with ${total} total marks.\n\n${context}\n\nDistribute marks across a 4\u00d76 grid:\nRows (Knowledge Dimension): Factual, Conceptual, Procedural, Metacognitive\nColumns (Cognitive Process): Remember, Understand, Apply, Analyse, Evaluate, Create\n\nReturn ONLY a JSON array of 4 objects (one per knowledge dimension, in order):\n[{"dimension":"factual","remember":2,"understand":3,"apply":4,"analyse":1,"evaluate":0,"create":0},\u2026]\nEnsure total sums to exactly ${total}. Weight appropriately.`;
 
@@ -410,7 +578,7 @@ function wireAoLEvents(container, lessons) {
         const jsonMatch = text.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           const data = JSON.parse(jsonMatch[0]);
-          output.innerHTML = build2DTOSTable(total);
+          output.innerHTML = build2DTOSTable(total, objs2d.length ? objs2d : null);
           attachTOSCalc(container, KNOWLEDGE_DIMS.length, total);
           data.forEach((row, i) => {
             BLOOMS.forEach(b => {
@@ -474,11 +642,13 @@ function recalcTOS(container, rowCount, totalMarks) {
 }
 
 
-/* ══════════════════════════════════════════════════════
-   AaL — Assessment as Learning (Metacognition)
-   ══════════════════════════════════════════════════════ */
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   AaL \u2014 Assessment as Learning (Metacognition)
+   \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 
 export function renderAaL(container) {
+  const classes = Store.getClasses();
+
   container.innerHTML = `
     <style>${ASSESS_STYLES}</style>
     <div class="main-scroll">
@@ -520,7 +690,7 @@ export function renderAaL(container) {
             Select a domain focus and the AI will create age-appropriate prompts aligned to Singapore\u2019s curriculum context.
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div class="class-topic-grid">
             <div>
               <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Focus Domain</label>
               <select id="aal-domain" class="input" style="width:100%;">
@@ -532,7 +702,21 @@ export function renderAaL(container) {
               </select>
             </div>
             <div>
-              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Subject Context</label>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class</label>
+              <select id="aal-class" class="input" style="width:100%;">
+                ${classDropdownOptions()}
+              </select>
+            </div>
+          </div>
+          <div class="class-topic-grid">
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic</label>
+              <select id="aal-topic" class="input" style="width:100%;">
+                <option value="">-- Select class first --</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Or type subject context</label>
               <input type="text" id="aal-subject" class="input" placeholder="e.g. Chemistry, Math\u2026" style="width:100%;" />
             </div>
           </div>
@@ -547,22 +731,16 @@ export function renderAaL(container) {
         <!-- SRL Strategies -->
         <div class="assess-card">
           <div class="assess-section-title">Self-Regulated Learning (SRL) Strategies</div>
-          <div class="assess-section-desc">Key strategies teachers can model and scaffold for students.</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;">
-            ${[
-              { title: 'Think-Aloud', desc: 'Teacher verbalises thought process while solving a problem, making invisible thinking visible to students.' },
-              { title: 'KWL Chart', desc: 'What I Know / What I Want to Know / What I Learned \u2014 activates prior knowledge and sets learning goals.' },
-              { title: 'Wrapper Activity', desc: 'Brief pre- and post-task reflection (e.g., \u201cHow will I approach this?\u201d \u2192 task \u2192 \u201cWhat worked?\u201d).' },
-              { title: 'Error Analysis', desc: 'Students examine their own mistakes, classify error types, and plan how to avoid them.' },
-              { title: 'Learning Journals', desc: 'Regular reflective entries about what was learned, what was difficult, and strategies used.' },
-              { title: 'Exam Wrappers', desc: 'Post-test reflection: How did you prepare? What types of errors did you make? What will you do differently?' },
-            ].map(s => `
-              <div style="padding:12px;border:1px solid var(--border,#e2e5ea);border-radius:8px;">
+          <div class="assess-section-desc">Key strategies teachers can model and scaffold for students. Click a strategy to see subject-specific applications.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;" id="srl-grid">
+            ${SRL_STRATEGIES.map((s, i) => `
+              <div class="srl-card" data-srl-idx="${i}">
                 <div style="font-weight:600;font-size:0.875rem;color:var(--ink);margin-bottom:4px;">${s.title}</div>
                 <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">${s.desc}</div>
               </div>
             `).join('')}
           </div>
+          <div id="srl-detail"></div>
         </div>
       </div>
     </div>
@@ -572,11 +750,89 @@ export function renderAaL(container) {
 }
 
 function wireAaLEvents(container) {
+  // Class -> Topic cascade
+  const classSel = container.querySelector('#aal-class');
+  const topicSel = container.querySelector('#aal-topic');
+  const subjectInput = container.querySelector('#aal-subject');
+
+  if (classSel && topicSel) {
+    classSel.addEventListener('change', () => {
+      const classId = classSel.value;
+      const topics = getTopicsForClass(classId);
+      const cls = Store.getClass(classId);
+
+      if (topics.length) {
+        topicSel.innerHTML = '<option value="">-- Select a topic --</option>' +
+          topics.map(t => `<option value="${t.id}">${escHtml(t.title)}</option>`).join('');
+      } else {
+        topicSel.innerHTML = classId
+          ? '<option value="">No lessons found for this class</option>'
+          : '<option value="">-- Select class first --</option>';
+      }
+
+      // Auto-fill subject from class
+      if (cls && cls.subject && subjectInput) {
+        subjectInput.value = cls.subject;
+      }
+    });
+  }
+
+  // SRL strategy click
+  container.querySelectorAll('.srl-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.srlIdx);
+      const strategy = SRL_STRATEGIES[idx];
+      const detail = container.querySelector('#srl-detail');
+      const wasActive = card.classList.contains('active');
+
+      // Clear all active
+      container.querySelectorAll('.srl-card').forEach(c => c.classList.remove('active'));
+
+      if (wasActive) {
+        detail.innerHTML = '';
+        return;
+      }
+
+      card.classList.add('active');
+      const subjects = Object.entries(strategy.applications).filter(([k]) => k !== 'default');
+
+      detail.innerHTML = `
+        <div class="srl-detail-panel">
+          <div style="font-weight:700;font-size:0.9375rem;color:var(--ink);margin-bottom:8px;">${strategy.title} \u2014 Subject Applications</div>
+          ${subjects.map(([subj, app]) => `
+            <div class="srl-app-item">
+              <div class="srl-app-subject">${subj}</div>
+              <div>${app}</div>
+            </div>
+          `).join('')}
+          <div class="srl-app-item" style="border-style:dashed;">
+            <div class="srl-app-subject" style="color:var(--ink-muted);">General Tip</div>
+            <div style="color:var(--ink-muted);">${strategy.applications.default}</div>
+          </div>
+        </div>
+      `;
+    });
+  });
+
+  // Generate button
   container.querySelector('#aal-generate-btn')?.addEventListener('click', async () => {
     const domain = container.querySelector('#aal-domain')?.value || 'general';
     const subject = container.querySelector('#aal-subject')?.value.trim() || '';
+    const topicId = container.querySelector('#aal-topic')?.value;
+    const classId = container.querySelector('#aal-class')?.value;
     const output = container.querySelector('#aal-output');
     const btn = container.querySelector('#aal-generate-btn');
+
+    // Build context from selections
+    let contextStr = '';
+    if (classId) {
+      const cls = Store.getClass(classId);
+      if (cls) contextStr += `Class: ${cls.name}${cls.subject ? ` (${cls.subject})` : ''}. `;
+    }
+    if (topicId) {
+      const lesson = Store.getLesson(topicId);
+      if (lesson) contextStr += `Topic: ${lesson.title}. ${lesson.objectives ? `Objectives: ${lesson.objectives}` : ''}`;
+    }
 
     btn.disabled = true;
     btn.textContent = 'Generating\u2026';
@@ -586,6 +842,7 @@ function wireAaLEvents(container) {
       const prompt = `Generate 5 metacognitive reflection prompts for Singapore secondary students.
 Focus: ${domain} (${domain === 'planning' ? 'before learning' : domain === 'monitoring' ? 'during learning' : domain === 'evaluation' ? 'after learning' : domain === 'debugging' ? 'when stuck' : 'general'})
 ${subject ? `Subject context: ${subject}` : ''}
+${contextStr ? `Additional context: ${contextStr}` : ''}
 
 Format each as a numbered question. Make them concrete, student-friendly, and appropriate for 13-17 year olds.`;
 
@@ -594,7 +851,8 @@ Format each as a numbered question. Make them concrete, student-friendly, and ap
         temperature: 0.6, maxTokens: 1024
       });
 
-      output.innerHTML = `<div style="padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);font-size:0.875rem;line-height:1.7;color:var(--ink);white-space:pre-wrap;">${escHtml(text)}</div>`;
+      output.innerHTML = renderAIOutput(text);
+      wireExpandToggle(container);
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {
@@ -605,9 +863,9 @@ Format each as a numbered question. Make them concrete, student-friendly, and ap
 }
 
 
-/* ══════════════════════════════════════════════════════
-   AfL — Assessment for Learning (Hattie / Formative)
-   ══════════════════════════════════════════════════════ */
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   AfL \u2014 Assessment for Learning (Hattie / Formative)
+   \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 
 export function renderAfL(container) {
   const maxEffect = Math.max(...HATTIE_STRATEGIES.map(s => s.effect));
@@ -649,8 +907,22 @@ export function renderAfL(container) {
             </div>
           </div>
 
+          <div class="class-topic-grid">
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class</label>
+              <select id="afl-class" class="input" style="width:100%;">
+                ${classDropdownOptions()}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic</label>
+              <select id="afl-topic" class="input" style="width:100%;">
+                <option value="">-- Select class first --</option>
+              </select>
+            </div>
+          </div>
           <div style="margin-bottom:12px;">
-            <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic / Lesson Focus</label>
+            <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Or type topic / lesson focus</label>
             <input type="text" id="afl-lisc-topic" class="input" placeholder="e.g. Chemical bonding \u2014 ionic compounds" style="width:100%;" />
           </div>
           <button class="btn btn-primary btn-sm" id="afl-lisc-btn">
@@ -717,9 +989,61 @@ export function renderAfL(container) {
 }
 
 function wireAfLEvents(container) {
+  // Class -> Topic cascade
+  const classSel = container.querySelector('#afl-class');
+  const topicSel = container.querySelector('#afl-topic');
+  const topicInput = container.querySelector('#afl-lisc-topic');
+
+  if (classSel && topicSel) {
+    classSel.addEventListener('change', () => {
+      const classId = classSel.value;
+      const topics = getTopicsForClass(classId);
+
+      if (topics.length) {
+        topicSel.innerHTML = '<option value="">-- Select a topic --</option>' +
+          topics.map(t => `<option value="${t.id}">${escHtml(t.title)}</option>`).join('');
+      } else {
+        topicSel.innerHTML = classId
+          ? '<option value="">No lessons found for this class</option>'
+          : '<option value="">-- Select class first --</option>';
+      }
+    });
+
+    // Auto-fill topic input when topic selected
+    if (topicSel && topicInput) {
+      topicSel.addEventListener('change', () => {
+        const lessonId = topicSel.value;
+        if (lessonId) {
+          const lesson = Store.getLesson(lessonId);
+          if (lesson) topicInput.value = lesson.title;
+        }
+      });
+    }
+  }
+
   container.querySelector('#afl-lisc-btn')?.addEventListener('click', async () => {
     const topic = container.querySelector('#afl-lisc-topic')?.value.trim();
-    if (!topic) { showToast('Enter a topic or lesson focus.', 'warning'); return; }
+    const classId = container.querySelector('#afl-class')?.value;
+    const topicId = container.querySelector('#afl-topic')?.value;
+
+    // Build context
+    let topicStr = topic || '';
+    if (!topicStr && topicId) {
+      const lesson = Store.getLesson(topicId);
+      if (lesson) topicStr = lesson.title;
+    }
+
+    if (!topicStr) { showToast('Enter a topic or select one from a class.', 'warning'); return; }
+
+    let context = '';
+    if (classId) {
+      const cls = Store.getClass(classId);
+      if (cls) context += `Class: ${cls.name}${cls.subject ? ` (${cls.subject})` : ''}. `;
+    }
+    if (topicId) {
+      const lesson = Store.getLesson(topicId);
+      if (lesson && lesson.objectives) context += `Objectives: ${lesson.objectives}`;
+    }
 
     const output = container.querySelector('#afl-lisc-output');
     const btn = container.querySelector('#afl-lisc-btn');
@@ -729,13 +1053,14 @@ function wireAfLEvents(container) {
     try {
       const text = await sendChat([{
         role: 'user',
-        content: `Generate Learning Intentions and Success Criteria for: ${topic}\n\nFormat:\n**Learning Intention:** We are learning to...\n\n**Success Criteria:**\n- I can...\n- I can...\n- I can...\n\nAlso suggest 2 formative check questions a teacher could ask during the lesson.`
+        content: `Generate Learning Intentions and Success Criteria for: ${topicStr}\n${context ? `\nContext: ${context}` : ''}\n\nFormat:\n**Learning Intention:** We are learning to...\n\n**Success Criteria:**\n- I can...\n- I can...\n- I can...\n\nAlso suggest 2 formative check questions a teacher could ask during the lesson.`
       }], {
         systemPrompt: 'You are a Visible Learning specialist for Singapore secondary schools. Generate clear, student-friendly LISC aligned to Singapore MOE curriculum.',
         temperature: 0.5, maxTokens: 1024
       });
 
-      output.innerHTML = `<div style="padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);font-size:0.875rem;line-height:1.7;color:var(--ink);white-space:pre-wrap;">${escHtml(text)}</div>`;
+      output.innerHTML = renderAIOutput(text);
+      wireExpandToggle(container);
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {
@@ -745,7 +1070,7 @@ function wireAfLEvents(container) {
   });
 }
 
-/* ── Utility ── */
+/* \u2500\u2500 Utility \u2500\u2500 */
 function escHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
