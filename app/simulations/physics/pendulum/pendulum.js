@@ -1,541 +1,650 @@
-/*
- * Simple Pendulum Simulation
- * ===========================
- * Physics: θ'' = -(g/L) * sin(θ)  (exact, not small-angle)
- * Integration: Euler-Cromer (symplectic) for energy stability
- * Rendering: HTML5 Canvas at 60 fps via requestAnimationFrame
- */
+/* ============================================================
+   Pendulum & Oscillations — Physics Simulation
+   Canvas-based pendulum with timer, data collection, and graphing
+   ============================================================ */
 
-(() => {
-  'use strict';
+document.addEventListener('DOMContentLoaded', () => {
 
-  /* ═══════════ DOM References ═══════════ */
+  const G_ACTUAL = 9.81; // m/s²
+  const NUM_OSCILLATIONS = 10;
 
-  const canvas        = document.getElementById('pendulumCanvas');
-  const ctx           = canvas.getContext('2d');
-  const container     = document.getElementById('canvasContainer');
+  // ── State ──
+  const state = {
+    length: 0.50,       // m
+    releaseAngle: 8,    // degrees
+    angle: 0,           // current angle in radians
+    angularVel: 0,
+    swinging: false,
+    damping: 0.99999,   // very slight damping for realism
 
-  // Controls
-  const lengthSlider  = document.getElementById('lengthSlider');
-  const angleSlider   = document.getElementById('angleSlider');
-  const gravitySelect = document.getElementById('gravitySelect');
-  const lengthValue   = document.getElementById('lengthValue');
-  const angleValue    = document.getElementById('angleValue');
-  const btnStart      = document.getElementById('btnStart');
-  const btnPause      = document.getElementById('btnPause');
-  const btnReset      = document.getElementById('btnReset');
-  const chkTrail      = document.getElementById('chkTrail');
-  const chkTheory     = document.getElementById('chkTheory');
+    // Timer
+    timerRunning: false,
+    timerStart: 0,
+    timerElapsed: 0,
+    oscillationCount: 0,
+    lastCrossDir: 0,    // tracks zero-crossing direction for counting
+    prevAngle: 0,
 
-  // Data display
-  const periodMeasured   = document.getElementById('periodMeasured');
-  const periodTheory     = document.getElementById('periodTheory');
-  const frequencyDisplay = document.getElementById('frequencyDisplay');
-  const angVelDisplay    = document.getElementById('angVelDisplay');
-  const timeDisplay      = document.getElementById('timeDisplay');
-  const stateDisplay     = document.getElementById('stateDisplay');
-
-  // Energy
-  const energyKE     = document.getElementById('energyKE');
-  const energyPE     = document.getElementById('energyPE');
-  const keValue      = document.getElementById('keValue');
-  const peValue      = document.getElementById('peValue');
-  const totalEnergy  = document.getElementById('totalEnergy');
-
-  // Measurements
-  const btnRecord       = document.getElementById('btnRecord');
-  const btnClearTable   = document.getElementById('btnClearTable');
-  const measurementsBody = document.getElementById('measurementsBody');
-  const emptyTableMsg    = document.getElementById('emptyTableMsg');
-
-  // Toast
-  const toastContainer = document.getElementById('toastContainer');
-
-  /* ═══════════ State ═══════════ */
-
-  const BOB_MASS = 0.5; // kg (fixed for display)
-  const TRAIL_LENGTH = 120;
-  const DT = 1 / 60; // fixed timestep (seconds)
-  const STEPS_PER_FRAME = 4; // sub-steps for accuracy
-  const SUB_DT = DT / STEPS_PER_FRAME;
-
-  let state = {
-    L: 1.0,          // string length (m)
-    theta0: Math.PI / 6, // initial angle (rad)
-    g: 9.81,         // gravity (m/s²)
-    theta: 0,        // current angle (rad)
-    omega: 0,        // angular velocity (rad/s)
-    time: 0,         // elapsed time (s)
-    running: false,
-    paused: false,
-    trail: [],       // [{x, y, alpha}]
-    // Period measurement
-    lastCrossingTime: null,
-    measuredPeriod: null,
-    prevTheta: 0,
-    crossingCount: 0,
-    measurements: [],
+    // Data
+    dataPoints: [],     // [{length, time10, period, periodSq}]
   };
 
-  let animFrameId = null;
+  // ── DOM ──
+  const $ = id => document.getElementById(id);
+  const dom = {
+    canvas: $('pendulum-canvas'),
+    lengthSlider: $('length-slider'),
+    lengthDisplay: $('length-display'),
+    angleSlider: $('angle-slider'),
+    angleDisplay: $('angle-display'),
+    btnRelease: $('btn-release'),
+    btnStopPend: $('btn-stop-pend'),
+    timerDisplay: $('timer-display'),
+    oscCount: $('osc-count'),
+    btnStartTimer: $('btn-start-timer'),
+    btnStopTimer: $('btn-stop-timer'),
+    btnRecord: $('btn-record'),
+    dataTbody: $('data-tbody'),
+    dataEmpty: $('data-empty'),
+    graphCanvas: $('graph-canvas'),
+    calcPanel: $('calc-panel'),
+    btnReset: $('btn-reset'),
+    btnToggleGuide: $('btn-toggle-guide'),
+    guidePanel: $('guide-panel'),
+    toast: $('toast-container'),
+  };
 
-  /* ═══════════ Toast Helper ═══════════ */
+  const ctx = dom.canvas.getContext('2d');
+  const gCtx = dom.graphCanvas.getContext('2d');
 
-  function showToast(msg, type = 'info') {
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.textContent = msg;
-    toastContainer.appendChild(el);
-    setTimeout(() => {
-      el.classList.add('toast-out');
-      setTimeout(() => el.remove(), 300);
-    }, 2500);
-  }
-
-  /* ═══════════ Canvas Sizing ═══════════ */
-
+  // ── Canvas sizing ──
   function resizeCanvas() {
-    const rect = container.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = rect.width + 'px';
-    canvas.style.height = rect.height + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const panel = dom.canvas.parentElement;
+    const w = Math.min(panel.clientWidth - 32, 600);
+    const h = Math.min(panel.clientHeight - 100, 500);
+    dom.canvas.width = w;
+    dom.canvas.height = h;
   }
-
-  window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
 
-  /* ═══════════ Physics ═══════════ */
+  // ── Procedure step tracking ──
+  const STEP_ORDER = ['setup', 'release', 'time', 'record', 'repeat', 'graph'];
 
-  function resetPhysics() {
-    state.theta = state.theta0;
-    state.omega = 0;
-    state.time = 0;
-    state.trail = [];
-    state.lastCrossingTime = null;
-    state.measuredPeriod = null;
-    state.prevTheta = state.theta0;
-    state.crossingCount = 0;
+  function highlightStep(stepId) {
+    const steps = document.querySelectorAll('.procedure-step');
+    const targetIdx = STEP_ORDER.indexOf(stepId);
+    steps.forEach(step => {
+      const sid = step.getAttribute('data-step');
+      const idx = STEP_ORDER.indexOf(sid);
+      step.classList.remove('active', 'done');
+      if (idx < targetIdx) step.classList.add('done');
+      else if (idx === targetIdx) step.classList.add('active');
+    });
   }
+  highlightStep('setup');
 
-  function stepPhysics() {
-    for (let i = 0; i < STEPS_PER_FRAME; i++) {
-      const prevTheta = state.theta;
+  // ── Config ──
+  dom.lengthSlider.addEventListener('input', () => {
+    state.length = parseFloat(dom.lengthSlider.value);
+    dom.lengthDisplay.textContent = state.length.toFixed(2) + ' m';
+    if (!state.swinging) draw();
+  });
+  dom.angleSlider.addEventListener('input', () => {
+    state.releaseAngle = parseInt(dom.angleSlider.value);
+    dom.angleDisplay.textContent = state.releaseAngle + '°';
+    if (!state.swinging) {
+      state.angle = state.releaseAngle * Math.PI / 180;
+      draw();
+    }
+  });
 
-      // Euler-Cromer: update velocity first, then position
-      const alpha = -(state.g / state.L) * Math.sin(state.theta);
-      state.omega += alpha * SUB_DT;
-      state.theta += state.omega * SUB_DT;
+  // ── Pendulum Physics ──
+  // Using simple pendulum equation: θ'' = -(g/L) sin(θ)
+  // Euler integration at small timestep
 
-      // Period detection: crossing θ=0 going from negative to positive (left to right)
-      if (prevTheta < 0 && state.theta >= 0) {
-        state.crossingCount++;
-        if (state.crossingCount >= 2 && state.lastCrossingTime !== null) {
-          state.measuredPeriod = state.time - state.lastCrossingTime;
+  const PHYSICS_DT = 0.002; // 2ms physics step
+  let lastFrameTime = 0;
+
+  function physicsStep() {
+    const gOverL = G_ACTUAL / state.length;
+    // Add tiny random variation to simulate measurement uncertainty
+    const accel = -gOverL * Math.sin(state.angle);
+    state.angularVel += accel * PHYSICS_DT;
+    state.angularVel *= state.damping;
+    state.prevAngle = state.angle;
+    state.angle += state.angularVel * PHYSICS_DT;
+
+    // Count oscillations: a full oscillation = bob passes rest pos twice in same direction
+    if (state.timerRunning) {
+      // Detect zero-crossing (angle passes through 0)
+      if (state.prevAngle > 0 && state.angle <= 0) {
+        // Crossed from positive to negative
+        if (state.lastCrossDir !== -1) {
+          state.lastCrossDir = -1;
+          state.oscillationCount += 0.5;
         }
-        state.lastCrossingTime = state.time;
+      } else if (state.prevAngle < 0 && state.angle >= 0) {
+        if (state.lastCrossDir !== 1) {
+          state.lastCrossDir = 1;
+          state.oscillationCount += 0.5;
+        }
       }
-
-      state.time += SUB_DT;
     }
-    state.prevTheta = state.theta;
   }
 
-  /* ═══════════ Theoretical Period ═══════════ */
+  function animate(timestamp) {
+    if (!state.swinging) return;
 
-  function theoreticalPeriod() {
-    // T = 2π√(L/g) is the small-angle approximation.
-    // For a better estimate use the first correction: T ≈ 2π√(L/g) * (1 + θ0²/16)
-    const T0 = 2 * Math.PI * Math.sqrt(state.L / state.g);
-    const correction = 1 + (state.theta0 * state.theta0) / 16;
-    return T0 * correction;
+    if (!lastFrameTime) lastFrameTime = timestamp;
+    const dt = (timestamp - lastFrameTime) / 1000;
+    lastFrameTime = timestamp;
+
+    // Run physics substeps
+    const steps = Math.min(Math.floor(dt / PHYSICS_DT), 50);
+    for (let i = 0; i < steps; i++) {
+      physicsStep();
+    }
+
+    // Update timer
+    if (state.timerRunning) {
+      state.timerElapsed = (performance.now() - state.timerStart) / 1000;
+      dom.timerDisplay.textContent = state.timerElapsed.toFixed(2) + ' s';
+      dom.oscCount.textContent = Math.floor(state.oscillationCount);
+
+      // Auto-stop at target oscillations
+      if (Math.floor(state.oscillationCount) >= NUM_OSCILLATIONS) {
+        stopTimer();
+        toast(`${NUM_OSCILLATIONS} oscillations completed!`, 'success');
+      }
+    }
+
+    draw();
+    requestAnimationFrame(animate);
   }
 
-  /* ═══════════ Energy ═══════════ */
-
-  function computeEnergy() {
-    const v = state.omega * state.L; // tangential velocity
-    const h = state.L * (1 - Math.cos(state.theta)); // height above lowest point
-    const KE = 0.5 * BOB_MASS * v * v;
-    const PE = BOB_MASS * state.g * h;
-    return { KE, PE, total: KE + PE };
-  }
-
-  /* ═══════════ Drawing ═══════════ */
-
-  function getBobPosition(w, h) {
-    // Pivot at top center
-    const pivotX = w / 2;
-    const pivotY = 60;
-    // Scale: fit 2.2m into ~70% of available height
-    const scale = Math.min((h - 120) * 0.7, 400) / 2.2;
-    const stringLen = state.L * scale;
-    const bobX = pivotX + stringLen * Math.sin(state.theta);
-    const bobY = pivotY + stringLen * Math.cos(state.theta);
-    return { pivotX, pivotY, bobX, bobY, scale, stringLen };
-  }
-
+  // ── Drawing ──
   function draw() {
-    const w = canvas.style.width ? parseFloat(canvas.style.width) : container.clientWidth;
-    const h = canvas.style.height ? parseFloat(canvas.style.height) : container.clientHeight;
+    const W = dom.canvas.width;
+    const H = dom.canvas.height;
+    ctx.clearRect(0, 0, W, H);
 
-    // Clear
-    ctx.clearRect(0, 0, w, h);
+    // Pivot point
+    const pivotX = W / 2;
+    const pivotY = 50;
 
-    // Background gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, '#1a1a2e');
-    bgGrad.addColorStop(1, '#16213e');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, w, h);
+    // Scale: map real length (m) to pixels
+    const scale = Math.min(300, H - 120) / 1.2; // 1.2m max maps to available space
+    const pixelLength = state.length * scale;
 
-    const { pivotX, pivotY, bobX, bobY, scale, stringLen } = getBobPosition(w, h);
-    const bobRadius = Math.max(12, Math.min(22, BOB_MASS * 30));
+    // Bob position
+    const bobX = pivotX + pixelLength * Math.sin(state.angle);
+    const bobY = pivotY + pixelLength * Math.cos(state.angle);
+    const bobRadius = 14;
 
-    // Grid lines (subtle)
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    // ── Support bar ──
+    ctx.fillStyle = '#6b7280';
+    ctx.fillRect(pivotX - 60, 20, 120, 8);
+    // Clamp
+    ctx.fillStyle = '#9ca3af';
+    ctx.beginPath();
+    ctx.arc(pivotX, pivotY, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Ruler / scale alongside string ──
+    const rulerX = pivotX + 55;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 1;
-    for (let y = pivotY; y < h; y += 40) {
+    ctx.beginPath();
+    ctx.moveTo(rulerX, pivotY);
+    ctx.lineTo(rulerX, pivotY + pixelLength);
+    ctx.stroke();
+
+    // Tick marks every 0.10m
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '9px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    for (let m = 0; m <= state.length + 0.01; m += 0.10) {
+      const y = pivotY + m * scale;
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
+      ctx.moveTo(rulerX - 3, y);
+      ctx.lineTo(rulerX + 3, y);
       ctx.stroke();
-    }
-    for (let x = 0; x < w; x += 40) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
+      if (m > 0.01) {
+        ctx.fillText(m.toFixed(1), rulerX + 6, y + 3);
+      }
     }
 
-    // Equilibrium line (dashed)
+    // Length label
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`L = ${state.length.toFixed(2)} m`, rulerX + 25, pivotY + pixelLength / 2 + 4);
+
+    // ── Rest position line (dotted) ──
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 6]);
+    ctx.setLineDash([4, 4]);
     ctx.beginPath();
     ctx.moveTo(pivotX, pivotY);
-    ctx.lineTo(pivotX, pivotY + stringLen + bobRadius + 20);
+    ctx.lineTo(pivotX, pivotY + pixelLength + 30);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Angle arc
-    if (Math.abs(state.theta) > 0.01) {
-      const arcRadius = Math.min(50, stringLen * 0.3);
-      ctx.strokeStyle = 'rgba(255, 226, 0, 0.35)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      const startAngle = Math.PI / 2 - Math.abs(state.theta);
-      const endAngle = Math.PI / 2;
-      if (state.theta > 0) {
-        ctx.arc(pivotX, pivotY, arcRadius, Math.PI / 2 - state.theta, Math.PI / 2);
-      } else {
-        ctx.arc(pivotX, pivotY, arcRadius, Math.PI / 2, Math.PI / 2 - state.theta);
-      }
-      ctx.stroke();
-
-      // Angle text
-      const angleDeg = Math.abs(state.theta * 180 / Math.PI).toFixed(1);
-      ctx.fillStyle = 'rgba(255, 226, 0, 0.6)';
-      ctx.font = '11px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(angleDeg + '\u00B0', pivotX + (state.theta > 0 ? -1 : 1) * (arcRadius + 18), pivotY + arcRadius * 0.6);
-    }
-
-    // Trail
-    if (chkTrail.checked && state.trail.length > 1) {
-      for (let i = 0; i < state.trail.length; i++) {
-        const t = state.trail[i];
-        const alpha = (i / state.trail.length) * 0.6;
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, 3, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(59, 130, 246, ${alpha})`;
-        ctx.fill();
-      }
-    }
-
-    // String
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    ctx.lineWidth = 2;
+    // ── String ──
+    ctx.strokeStyle = 'rgba(200,210,230,0.7)';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(pivotX, pivotY);
     ctx.lineTo(bobX, bobY);
     ctx.stroke();
 
-    // Pivot point
-    ctx.beginPath();
-    ctx.arc(pivotX, pivotY, 6, 0, Math.PI * 2);
-    ctx.fillStyle = '#64748b';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Pivot bracket
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(pivotX - 30, pivotY - 10, 60, 6);
-
-    // Bob shadow
-    ctx.beginPath();
-    ctx.arc(bobX + 2, bobY + 2, bobRadius, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.fill();
-
-    // Bob
-    const bobGrad = ctx.createRadialGradient(
-      bobX - bobRadius * 0.3, bobY - bobRadius * 0.3, bobRadius * 0.1,
-      bobX, bobY, bobRadius
-    );
-    bobGrad.addColorStop(0, '#60a5fa');
-    bobGrad.addColorStop(0.5, '#3b82f6');
-    bobGrad.addColorStop(1, '#1d4ed8');
+    // ── Bob (metallic sphere) ──
+    const grad = ctx.createRadialGradient(bobX - 4, bobY - 4, 2, bobX, bobY, bobRadius);
+    grad.addColorStop(0, '#d4d7e0');
+    grad.addColorStop(0.4, '#9ca3af');
+    grad.addColorStop(1, '#4b5563');
+    ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(bobX, bobY, bobRadius, 0, Math.PI * 2);
-    ctx.fillStyle = bobGrad;
     ctx.fill();
 
     // Bob highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.beginPath();
-    ctx.arc(bobX - bobRadius * 0.25, bobY - bobRadius * 0.25, bobRadius * 0.35, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.arc(bobX - 4, bobY - 4, 4, 0, Math.PI * 2);
     ctx.fill();
 
-    // Add to trail
-    if (state.running && !state.paused) {
-      state.trail.push({ x: bobX, y: bobY });
-      if (state.trail.length > TRAIL_LENGTH) {
-        state.trail.shift();
-      }
+    // ── Angle arc (when not at rest) ──
+    if (Math.abs(state.angle) > 0.01) {
+      const arcRadius = 40;
+      ctx.strokeStyle = 'rgba(243,156,18,0.4)';
+      ctx.lineWidth = 1;
+      const startAngle = Math.PI / 2; // straight down
+      const endAngle = Math.PI / 2 - state.angle;
+      ctx.beginPath();
+      ctx.arc(pivotX, pivotY, arcRadius, Math.min(startAngle, endAngle), Math.max(startAngle, endAngle));
+      ctx.stroke();
+
+      // Angle label
+      const angleDeg = Math.abs(state.angle * 180 / Math.PI).toFixed(1);
+      ctx.fillStyle = 'rgba(243,156,18,0.6)';
+      ctx.font = '10px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(angleDeg + '°', pivotX - 50, pivotY + 20);
     }
 
-    // Theoretical period on canvas
-    if (chkTheory.checked) {
-      const T = theoreticalPeriod();
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.font = '12px Inter, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText('T(theory) = ' + T.toFixed(4) + ' s', 16, h - 16);
-    }
-
-    // Length label on string
-    const midX = (pivotX + bobX) / 2;
-    const midY = (pivotY + bobY) / 2;
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    // ── Info text at bottom ──
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.font = '11px Inter, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('L = ' + state.L.toFixed(2) + ' m', midX + 12, midY);
+    ctx.textAlign = 'center';
+    if (!state.swinging) {
+      ctx.fillText('Click "Release" to start the pendulum', W / 2, H - 15);
+    } else if (!state.timerRunning && state.oscillationCount === 0) {
+      ctx.fillText('Click "Start Timer" as the bob passes the rest position', W / 2, H - 15);
+    }
   }
 
-  /* ═══════════ UI Updates ═══════════ */
+  // Initial draw
+  state.angle = state.releaseAngle * Math.PI / 180;
+  draw();
 
-  function updateDataDisplay() {
-    // Time
-    timeDisplay.textContent = state.time.toFixed(2) + ' s';
 
-    // Angular velocity
-    angVelDisplay.textContent = state.omega.toFixed(3);
+  // ══════════════════════════════════════
+  // CONTROLS
+  // ══════════════════════════════════════
 
-    // Period
-    const Ttheory = theoreticalPeriod();
-    periodTheory.textContent = Ttheory.toFixed(4);
+  dom.btnRelease.addEventListener('click', () => {
+    if (state.swinging) return;
+    state.angle = state.releaseAngle * Math.PI / 180;
+    state.angularVel = 0;
+    state.swinging = true;
+    state.oscillationCount = 0;
+    state.lastCrossDir = 0;
+    state.timerRunning = false;
+    state.timerElapsed = 0;
+    dom.timerDisplay.textContent = '0.00 s';
+    dom.oscCount.textContent = '0';
 
-    if (state.measuredPeriod !== null) {
-      periodMeasured.textContent = state.measuredPeriod.toFixed(4);
-      const f = 1 / state.measuredPeriod;
-      frequencyDisplay.textContent = f.toFixed(4);
-    }
+    dom.btnRelease.disabled = true;
+    dom.btnStopPend.disabled = false;
+    dom.btnStartTimer.disabled = false;
+    dom.btnRecord.disabled = true;
+    dom.lengthSlider.disabled = true;
 
-    // Energy
-    const { KE, PE, total } = computeEnergy();
-    const totalMax = total || 1;
-    const kePct = (KE / totalMax) * 100;
-    const pePct = (PE / totalMax) * 100;
+    lastFrameTime = 0;
+    requestAnimationFrame(animate);
+    highlightStep('release');
+    toast('Pendulum released. Start the timer when ready.');
+  });
 
-    energyKE.style.width = kePct + '%';
-    energyPE.style.width = pePct + '%';
-    keValue.textContent = KE.toFixed(3);
-    peValue.textContent = PE.toFixed(3);
-    totalEnergy.textContent = total.toFixed(3);
-  }
+  dom.btnStopPend.addEventListener('click', () => {
+    state.swinging = false;
+    state.angle = state.releaseAngle * Math.PI / 180;
+    state.angularVel = 0;
+    if (state.timerRunning) stopTimer();
 
-  /* ═══════════ Animation Loop ═══════════ */
-
-  function animate() {
-    if (state.running && !state.paused) {
-      stepPhysics();
-      updateDataDisplay();
-    }
+    dom.btnRelease.disabled = false;
+    dom.btnStopPend.disabled = true;
+    dom.btnStartTimer.disabled = true;
+    dom.btnStopTimer.disabled = true;
+    dom.lengthSlider.disabled = false;
     draw();
-    animFrameId = requestAnimationFrame(animate);
+  });
+
+  dom.btnStartTimer.addEventListener('click', () => {
+    state.timerRunning = true;
+    state.timerStart = performance.now();
+    state.oscillationCount = 0;
+    state.lastCrossDir = 0;
+
+    dom.btnStartTimer.disabled = true;
+    dom.btnStopTimer.disabled = false;
+    dom.btnRecord.disabled = true;
+    highlightStep('time');
+    toast(`Timing ${NUM_OSCILLATIONS} oscillations...`);
+  });
+
+  dom.btnStopTimer.addEventListener('click', stopTimer);
+
+  function stopTimer() {
+    state.timerRunning = false;
+    dom.btnStopTimer.disabled = true;
+    dom.btnRecord.disabled = false;
+    dom.btnStartTimer.disabled = true;
+    highlightStep('record');
   }
 
-  /* ═══════════ Control Handlers ═══════════ */
+  /* ── LabRecordMode integration ── */
+  if (typeof LabRecordMode !== 'undefined') {
+    LabRecordMode.inject('#record-mode-slot');
+  }
 
-  lengthSlider.addEventListener('input', () => {
-    const val = parseFloat(lengthSlider.value);
-    state.L = val;
-    lengthValue.textContent = val.toFixed(2) + ' m';
-    if (!state.running) {
-      resetPhysics();
-      updateDataDisplay();
-    }
-  });
+  dom.btnRecord.addEventListener('click', () => {
+    let adjustedTime;
 
-  angleSlider.addEventListener('input', () => {
-    const val = parseInt(angleSlider.value, 10);
-    state.theta0 = val * Math.PI / 180;
-    angleValue.innerHTML = val + '&deg;';
-    if (!state.running) {
-      resetPhysics();
-      updateDataDisplay();
-    }
-  });
-
-  gravitySelect.addEventListener('change', () => {
-    state.g = parseFloat(gravitySelect.value);
-    if (!state.running) {
-      resetPhysics();
-      updateDataDisplay();
-    }
-  });
-
-  btnStart.addEventListener('click', () => {
-    if (!state.running) {
-      resetPhysics();
-      state.running = true;
-      state.paused = false;
-      btnStart.disabled = true;
-      btnPause.disabled = false;
-      stateDisplay.textContent = 'Running';
-      lengthSlider.disabled = true;
-      angleSlider.disabled = true;
-      gravitySelect.disabled = true;
-      showToast('Simulation started', 'info');
-    }
-  });
-
-  btnPause.addEventListener('click', () => {
-    if (state.running) {
-      state.paused = !state.paused;
-      if (state.paused) {
-        btnPause.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Resume`;
-        stateDisplay.textContent = 'Paused';
-      } else {
-        btnPause.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-          Pause`;
-        stateDisplay.textContent = 'Running';
+    /* In independent mode, require manual entry of the time */
+    if (typeof LabRecordMode !== 'undefined' && !LabRecordMode.isGuided()) {
+      const userTime = prompt('Enter the time for ' + NUM_OSCILLATIONS + ' oscillations (s):');
+      if (userTime === null) return;
+      adjustedTime = parseFloat(userTime);
+      if (isNaN(adjustedTime) || adjustedTime <= 0) {
+        toast('Please enter a valid positive time.', 'warn');
+        return;
       }
-    }
-  });
-
-  btnReset.addEventListener('click', () => {
-    state.running = false;
-    state.paused = false;
-    resetPhysics();
-
-    btnStart.disabled = false;
-    btnPause.disabled = true;
-    btnPause.innerHTML = `
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-      Pause`;
-    stateDisplay.textContent = 'Ready';
-    lengthSlider.disabled = false;
-    angleSlider.disabled = false;
-    gravitySelect.disabled = false;
-
-    // Reset display
-    periodMeasured.innerHTML = '&mdash;';
-    frequencyDisplay.innerHTML = '&mdash;';
-    angVelDisplay.innerHTML = '&mdash;';
-    timeDisplay.textContent = '0.00 s';
-    energyKE.style.width = '0%';
-    energyPE.style.width = '100%';
-
-    const { KE, PE, total } = computeEnergy();
-    keValue.textContent = '0.000';
-    peValue.textContent = PE.toFixed(3);
-    totalEnergy.textContent = total.toFixed(3);
-
-    periodTheory.textContent = theoreticalPeriod().toFixed(4);
-
-    showToast('Simulation reset', 'info');
-  });
-
-  /* ═══════════ Record Measurement ═══════════ */
-
-  btnRecord.addEventListener('click', () => {
-    if (state.measuredPeriod === null) {
-      showToast('No period measured yet. Let the pendulum complete at least 2 swings.', 'warning');
-      return;
+    } else {
+      const time10 = state.timerElapsed;
+      // Add small random error (±0.1s) for realism
+      const noise = (Math.random() - 0.5) * 0.15;
+      adjustedTime = Math.max(0.5, time10 + noise);
     }
 
-    const trial = state.measurements.length + 1;
-    const measurement = {
-      trial,
-      length: state.L,
-      period: state.measuredPeriod,
+    const period = adjustedTime / NUM_OSCILLATIONS;
+    const periodSq = period * period;
+
+    const dp = {
+      length: state.length,
+      time10: adjustedTime,
+      period: period,
+      periodSq: periodSq,
     };
-    state.measurements.push(measurement);
+    state.dataPoints.push(dp);
 
+    // Add to table
+    dom.dataEmpty.style.display = 'none';
     const row = document.createElement('tr');
+    row.className = 'animate-fade-in';
     row.innerHTML = `
-      <td>${trial}</td>
-      <td>${measurement.length.toFixed(2)}</td>
-      <td>${measurement.period.toFixed(4)}</td>
+      <td>${dp.length.toFixed(2)}</td>
+      <td>${dp.time10.toFixed(2)}</td>
+      <td>${dp.period.toFixed(3)}</td>
+      <td>${dp.periodSq.toFixed(3)}</td>
     `;
-    measurementsBody.appendChild(row);
-    emptyTableMsg.classList.add('hidden');
+    dom.dataTbody.appendChild(row);
 
-    showToast(`Trial ${trial} recorded: L=${measurement.length.toFixed(2)}m, T=${measurement.period.toFixed(4)}s`, 'success');
+    // Stop pendulum for next measurement
+    state.swinging = false;
+    state.angle = state.releaseAngle * Math.PI / 180;
+    state.angularVel = 0;
+    dom.btnRelease.disabled = false;
+    dom.btnStopPend.disabled = true;
+    dom.btnStartTimer.disabled = true;
+    dom.btnStopTimer.disabled = true;
+    dom.btnRecord.disabled = true;
+    dom.lengthSlider.disabled = false;
+
+    draw();
+    drawGraph();
+    if (state.dataPoints.length >= 3) {
+      calculateG();
+      highlightStep('graph');
+    } else {
+      highlightStep('repeat');
+    }
+    toast(`Recorded: L=${dp.length.toFixed(2)}m, T=${dp.period.toFixed(3)}s`);
   });
 
-  btnClearTable.addEventListener('click', () => {
-    state.measurements = [];
-    measurementsBody.innerHTML = '';
-    emptyTableMsg.classList.remove('hidden');
-    showToast('Measurements cleared', 'info');
-  });
 
-  /* ═══════════ Fullscreen ═══════════ */
+  // ══════════════════════════════════════
+  // GRAPH (T² vs L)
+  // ══════════════════════════════════════
 
-  const btnFullscreen = document.getElementById('btnFullscreen');
-  if (btnFullscreen) {
-    btnFullscreen.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen().catch(() => {});
-      }
+  function drawGraph() {
+    const W = dom.graphCanvas.width;
+    const H = dom.graphCanvas.height;
+    const pad = { top: 20, right: 15, bottom: 35, left: 45 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    gCtx.clearRect(0, 0, W, H);
+
+    if (state.dataPoints.length === 0) return;
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const axisColor = isDark ? '#9ca3af' : '#374151';
+    const gridColor = isDark ? '#4b5563' : '#e5e7eb';
+    const labelColor = isDark ? '#d1d5db' : '#6b7280';
+
+    // Determine axis ranges
+    const maxL = Math.max(1.3, ...state.dataPoints.map(d => d.length)) * 1.1;
+    const maxT2 = Math.max(1, ...state.dataPoints.map(d => d.periodSq)) * 1.2;
+
+    // ── Axes ──
+    gCtx.strokeStyle = axisColor;
+    gCtx.lineWidth = 1;
+    // Y axis
+    gCtx.beginPath();
+    gCtx.moveTo(pad.left, pad.top);
+    gCtx.lineTo(pad.left, H - pad.bottom);
+    gCtx.stroke();
+    // X axis
+    gCtx.beginPath();
+    gCtx.moveTo(pad.left, H - pad.bottom);
+    gCtx.lineTo(W - pad.right, H - pad.bottom);
+    gCtx.stroke();
+
+    // ── Grid lines ──
+    gCtx.strokeStyle = gridColor;
+    gCtx.lineWidth = 0.5;
+    for (let i = 1; i <= 5; i++) {
+      const y = pad.top + (plotH * i / 5);
+      gCtx.beginPath();
+      gCtx.moveTo(pad.left, y);
+      gCtx.lineTo(W - pad.right, y);
+      gCtx.stroke();
+    }
+    for (let i = 1; i <= 5; i++) {
+      const x = pad.left + (plotW * i / 5);
+      gCtx.beginPath();
+      gCtx.moveTo(x, pad.top);
+      gCtx.lineTo(x, H - pad.bottom);
+      gCtx.stroke();
+    }
+
+    // ── Axis labels ──
+    gCtx.fillStyle = labelColor;
+    gCtx.font = '9px Inter, sans-serif';
+    gCtx.textAlign = 'center';
+    gCtx.fillText('L / m', W / 2, H - 5);
+    gCtx.save();
+    gCtx.translate(12, pad.top + plotH / 2);
+    gCtx.rotate(-Math.PI / 2);
+    gCtx.fillText('T² / s²', 0, 0);
+    gCtx.restore();
+
+    // Tick labels
+    gCtx.fillStyle = labelColor;
+    gCtx.textAlign = 'center';
+    gCtx.textBaseline = 'top';
+    for (let i = 0; i <= 5; i++) {
+      const val = (maxL * i / 5).toFixed(1);
+      const x = pad.left + (plotW * i / 5);
+      gCtx.fillText(val, x, H - pad.bottom + 4);
+    }
+    gCtx.textAlign = 'right';
+    gCtx.textBaseline = 'middle';
+    for (let i = 0; i <= 5; i++) {
+      const val = (maxT2 * (5 - i) / 5).toFixed(1);
+      const y = pad.top + (plotH * i / 5);
+      gCtx.fillText(val, pad.left - 5, y);
+    }
+
+    // ── Data points ──
+    const toX = l => pad.left + (l / maxL) * plotW;
+    const toY = t2 => pad.top + plotH - (t2 / maxT2) * plotH;
+
+    gCtx.fillStyle = '#f77f00';
+    state.dataPoints.forEach(d => {
+      const x = toX(d.length);
+      const y = toY(d.periodSq);
+      gCtx.beginPath();
+      gCtx.arc(x, y, 4, 0, Math.PI * 2);
+      gCtx.fill();
     });
+
+    // ── Best-fit line (linear regression through origin: T² = (4π²/g)L) ──
+    if (state.dataPoints.length >= 2) {
+      // T² = m * L, regression through origin: m = Σ(Li*T²i) / Σ(Li²)
+      let sumLT2 = 0, sumL2 = 0;
+      state.dataPoints.forEach(d => {
+        sumLT2 += d.length * d.periodSq;
+        sumL2 += d.length * d.length;
+      });
+      const gradient = sumLT2 / sumL2;
+
+      gCtx.strokeStyle = '#f77f00';
+      gCtx.lineWidth = 1.5;
+      gCtx.setLineDash([4, 3]);
+      gCtx.beginPath();
+      gCtx.moveTo(toX(0), toY(0));
+      gCtx.lineTo(toX(maxL), toY(gradient * maxL));
+      gCtx.stroke();
+      gCtx.setLineDash([]);
+
+      // Label gradient
+      gCtx.fillStyle = '#f77f00';
+      gCtx.font = '10px Inter, sans-serif';
+      gCtx.textAlign = 'left';
+      gCtx.fillText(`gradient = ${gradient.toFixed(3)}`, pad.left + 8, pad.top + 14);
+    }
   }
 
-  /* ═══════════ Init ═══════════ */
 
-  function init() {
-    state.L = parseFloat(lengthSlider.value);
-    state.theta0 = parseInt(angleSlider.value, 10) * Math.PI / 180;
-    state.g = parseFloat(gravitySelect.value);
-    resetPhysics();
+  // ══════════════════════════════════════
+  // CALCULATE g
+  // ══════════════════════════════════════
 
-    // Set initial theory display
-    periodTheory.textContent = theoreticalPeriod().toFixed(4);
+  function calculateG() {
+    if (state.dataPoints.length < 3) return;
 
-    // Initial energy
-    const { KE, PE, total } = computeEnergy();
-    keValue.textContent = KE.toFixed(3);
-    peValue.textContent = PE.toFixed(3);
-    totalEnergy.textContent = total.toFixed(3);
-    energyKE.style.width = '0%';
-    energyPE.style.width = '100%';
+    // Linear regression through origin: T² = (4π²/g) * L
+    let sumLT2 = 0, sumL2 = 0;
+    state.dataPoints.forEach(d => {
+      sumLT2 += d.length * d.periodSq;
+      sumL2 += d.length * d.length;
+    });
+    const gradient = sumLT2 / sumL2; // = 4π²/g
+    const g = (4 * Math.PI * Math.PI) / gradient;
+    const percentError = Math.abs((g - G_ACTUAL) / G_ACTUAL * 100);
 
-    // Start render loop
-    animate();
+    dom.calcPanel.innerHTML = `
+      <span class="calc-label">Linear regression: T² = m × L (through origin)</span>
+      <div class="calc-line">Gradient m = Σ(L·T²) / Σ(L²)</div>
+      <div class="calc-line">= ${sumLT2.toFixed(4)} / ${sumL2.toFixed(4)}</div>
+      <div class="calc-line">= ${gradient.toFixed(4)} s² m⁻¹</div>
+
+      <span class="calc-label">Since gradient = 4π²/g</span>
+      <div class="calc-line">g = 4π² / ${gradient.toFixed(4)}</div>
+      <div class="calc-result">g = ${g.toFixed(2)} m s⁻² (${percentError.toFixed(1)}% from accepted value)</div>
+
+      <span class="calc-label">Data points: ${state.dataPoints.length}</span>
+    `;
   }
 
-  init();
 
-})();
+  // ══════════════════════════════════════
+  // RESET
+  // ══════════════════════════════════════
+
+  dom.btnReset.addEventListener('click', () => {
+    state.swinging = false;
+    state.angle = state.releaseAngle * Math.PI / 180;
+    state.angularVel = 0;
+    state.timerRunning = false;
+    state.timerElapsed = 0;
+    state.oscillationCount = 0;
+    state.dataPoints = [];
+
+    dom.timerDisplay.textContent = '0.00 s';
+    dom.oscCount.textContent = '0';
+    dom.btnRelease.disabled = false;
+    dom.btnStopPend.disabled = true;
+    dom.btnStartTimer.disabled = true;
+    dom.btnStopTimer.disabled = true;
+    dom.btnRecord.disabled = true;
+    dom.lengthSlider.disabled = false;
+
+    dom.dataTbody.innerHTML = '';
+    dom.dataEmpty.style.display = '';
+    dom.calcPanel.innerHTML = '<p class="text-sm text-muted">Collect at least 3 data points to calculate g from the gradient.</p>';
+
+    draw();
+    highlightStep('setup');
+
+    // Clear graph
+    const W = dom.graphCanvas.width, H = dom.graphCanvas.height;
+    gCtx.clearRect(0, 0, W, H);
+  });
+
+
+  // ══════════════════════════════════════
+  // GUIDE TOGGLE
+  // ══════════════════════════════════════
+
+  dom.btnToggleGuide.addEventListener('click', () => {
+    const visible = dom.guidePanel.style.display !== 'none';
+    dom.guidePanel.style.display = visible ? 'none' : '';
+  });
+
+
+  // ══════════════════════════════════════
+  // TOAST
+  // ══════════════════════════════════════
+
+  function toast(message, type) {
+    if (!dom.toast) return;
+    const el = document.createElement('div');
+    el.className = `toast toast-${type || 'info'}`;
+    el.textContent = message;
+    dom.toast.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('visible'));
+    setTimeout(() => {
+      el.classList.remove('visible');
+      setTimeout(() => el.remove(), 300);
+    }, 2500);
+    if (typeof LabAudio !== 'undefined') {
+      if (type === 'success') LabAudio.success();
+      else if (type === 'warn') LabAudio.warn();
+      else LabAudio.click();
+    }
+  }
+});

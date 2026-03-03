@@ -1,5 +1,5 @@
 /* ============================================================
-   Pendulum & Oscillations — Styles
+   Ohm's Law Practical — Styles
    ============================================================ */
 
 body {
@@ -10,27 +10,27 @@ body {
 }
 
 /* --- Layout --- */
-.pend-layout {
+.ohm-layout {
   display: grid;
   grid-template-columns: 260px 1fr 300px;
   flex: 1;
   overflow: hidden;
 }
 
-.pend-guide-panel {
+.ohm-guide-panel {
   padding: var(--sp-4);
   overflow-y: auto;
   border-right: 1px solid var(--color-border);
   background: var(--color-surface-alt);
 }
 
-.pend-workbench-panel {
+.ohm-workbench-panel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.pend-data-panel {
+.ohm-data-panel {
   padding: var(--sp-4);
   overflow-y: auto;
   border-left: 1px solid var(--color-border);
@@ -38,7 +38,7 @@ body {
 }
 
 
-/* --- Config (reused from titration) --- */
+/* --- Config --- */
 .config-row {
   display: flex;
   flex-direction: column;
@@ -62,9 +62,18 @@ body {
   min-width: 60px;
   text-align: right;
 }
+.config-select {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
 
 
-/* --- Procedure list (reused from QA) --- */
+/* --- Procedure list --- */
 .procedure-list {
   list-style: none;
   counter-reset: procedure;
@@ -98,10 +107,10 @@ body {
 }
 .procedure-step.active {
   color: var(--color-text);
-  border-left-color: var(--color-primary);
+  border-left-color: var(--phys-color);
 }
 .procedure-step.active::before {
-  background: var(--color-primary);
+  background: var(--phys-color);
   color: #fff;
 }
 .procedure-step.done::before {
@@ -111,7 +120,7 @@ body {
 
 
 /* --- Workbench --- */
-.pend-workbench {
+.ohm-workbench {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -122,38 +131,46 @@ body {
   padding: var(--sp-4);
   min-height: 400px;
 }
-.pend-workbench canvas {
+.ohm-workbench canvas {
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, #1e1f2b 0%, #252638 60%, #2d2e42 100%);
 }
 
 
-/* --- Controls --- */
-.pend-controls {
+/* --- Meter readings overlay --- */
+.meter-readings {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-4);
+  gap: var(--sp-4);
+  margin-top: var(--sp-3);
+  padding: var(--sp-3) var(--sp-5);
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-lg);
-  margin-top: var(--sp-3);
-  flex-wrap: wrap;
 }
-
-.timer-display, .osc-display {
+.meter-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  min-width: 110px;
 }
-.timer-label {
+.meter-card.ammeter {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.meter-card.voltmeter {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.meter-label {
   font-size: var(--text-xs);
   color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.timer-value {
+.meter-value {
   font-family: var(--font-mono);
   font-size: var(--text-xl);
   font-weight: 700;
@@ -201,7 +218,7 @@ body {
 }
 
 
-/* --- Toast (shared) --- */
+/* --- Toast --- */
 .toast-container {
   position: fixed;
   top: 60px;
@@ -233,11 +250,11 @@ body {
 
 /* --- Responsive --- */
 @media (max-width: 1024px) {
-  .pend-layout {
+  .ohm-layout {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr auto;
   }
-  .pend-guide-panel {
+  .ohm-guide-panel {
     border-right: none;
     border-bottom: 1px solid var(--color-border);
     display: flex;
@@ -245,9 +262,9 @@ body {
     overflow-y: visible;
     padding: var(--sp-3);
   }
-  .pend-guide-panel .panel { flex: 1; }
-  .pend-guide-panel .mt-4 { margin-top: 0; }
-  .pend-data-panel {
+  .ohm-guide-panel .panel { flex: 1; }
+  .ohm-guide-panel .mt-4 { margin-top: 0; }
+  .ohm-data-panel {
     border-left: none;
     border-top: 1px solid var(--color-border);
   }
