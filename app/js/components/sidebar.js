@@ -84,6 +84,7 @@ export function renderSidebar(container) {
         <span class="sidebar-item-icon">${ICONS.settings}</span>
         <span class="sidebar-item-label">Settings</span>
       </button>
+      <div style="text-align:center;padding:6px 0 2px;margin-top:4px;font-size:0.625rem;color:var(--ink-faint);opacity:0.5;letter-spacing:0.02em;">by Harman Johll</div>
     </div>
   `;
 

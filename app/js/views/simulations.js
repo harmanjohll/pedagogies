@@ -70,82 +70,124 @@ function saveCustomSims(sims) {
   localStorage.setItem('cocher_custom_sims', JSON.stringify(sims));
 }
 
-/* ── Iframe overlay with window-size controls ── */
+/* ── Iframe overlay with drag-to-resize edges ── */
 function openOverlay(container, title, opts) {
   // opts: { src } or { srcdoc }
   const overlay = document.createElement('div');
   overlay.id = 'sim-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);animation:simFadeIn 0.2s ease;';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);animation:simFadeIn 0.2s ease;';
 
-  // Window wrapper (resizable via presets)
+  // Window — starts full viewport, user drags edges to resize
   const win = document.createElement('div');
   win.id = 'sim-window';
-  win.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;border-radius:0;overflow:hidden;transition:all 0.25s ease;background:#1a1a2e;';
+  win.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;overflow:hidden;background:#1a1a2e;transition:border-radius 0.15s;';
 
+  // Top bar: title + hint + close
   const topBar = document.createElement('div');
-  topBar.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 16px;background:#1a1a2e;color:#fff;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.08);';
+  topBar.style.cssText = 'display:flex;align-items:center;gap:12px;padding:6px 16px;background:#12122a;color:#fff;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.08);user-select:none;';
   topBar.innerHTML = `
     <span style="font-weight:600;font-size:0.9375rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${title}</span>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <button class="sim-size-btn" data-size="windowed" title="Windowed (80%)" style="background:none;border:1px solid rgba(255,255,255,0.2);color:#fff;cursor:pointer;padding:3px 10px;font-size:0.75rem;border-radius:4px;transition:all 0.15s;">Windowed</button>
-      <button class="sim-size-btn active" data-size="fullscreen" title="Fullscreen" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;cursor:pointer;padding:3px 10px;font-size:0.75rem;border-radius:4px;transition:all 0.15s;">Fullscreen</button>
-      <span style="width:1px;height:18px;background:rgba(255,255,255,0.15);margin:0 4px;"></span>
-      <button id="sim-overlay-close" style="background:none;border:none;color:#fff;cursor:pointer;padding:2px 8px;font-size:1.25rem;line-height:1;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='none'">&times;</button>
-    </div>
+    <span style="font-size:0.6875rem;color:rgba(255,255,255,0.3);">Drag edges to resize</span>
+    <button id="sim-overlay-close" style="background:none;border:none;color:#fff;cursor:pointer;padding:4px 10px;font-size:1.25rem;line-height:1;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='none'">&times;</button>
   `;
 
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'flex:1;border:none;width:100%;background:#1e1f2b;';
-  if (opts.src) {
-    iframe.src = opts.src;
-  } else if (opts.srcdoc) {
-    iframe.srcdoc = opts.srcdoc;
-  }
+  if (opts.src) iframe.src = opts.src;
+  else if (opts.srcdoc) iframe.srcdoc = opts.srcdoc;
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
 
   win.appendChild(topBar);
   win.appendChild(iframe);
+
+  // ── Resize state ──
+  let resizing = null;
+  let startX, startY, startBounds;
+  const cursors = {
+    top: 'ns-resize', bottom: 'ns-resize', left: 'ew-resize', right: 'ew-resize',
+    'top-left': 'nwse-resize', 'bottom-right': 'nwse-resize',
+    'top-right': 'nesw-resize', 'bottom-left': 'nesw-resize'
+  };
+
+  // ── Resize handles on all edges and corners ──
+  const E = 7, C = 14;
+  const handleDefs = {
+    top:            `top:0;left:${C}px;right:${C}px;height:${E}px;`,
+    bottom:         `bottom:0;left:${C}px;right:${C}px;height:${E}px;`,
+    left:           `left:0;top:${C}px;bottom:${C}px;width:${E}px;`,
+    right:          `right:0;top:${C}px;bottom:${C}px;width:${E}px;`,
+    'top-left':     `top:0;left:0;width:${C}px;height:${C}px;`,
+    'top-right':    `top:0;right:0;width:${C}px;height:${C}px;`,
+    'bottom-left':  `bottom:0;left:0;width:${C}px;height:${C}px;`,
+    'bottom-right': `bottom:0;right:0;width:${C}px;height:${C}px;`,
+  };
+
+  Object.entries(handleDefs).forEach(([pos, css]) => {
+    const h = document.createElement('div');
+    h.dataset.resize = pos;
+    h.style.cssText = `position:absolute;z-index:10;cursor:${cursors[pos]};${css}`;
+    h.addEventListener('mouseenter', () => { if (!resizing) h.style.background = 'rgba(67,97,238,0.2)'; });
+    h.addEventListener('mouseleave', () => { if (!resizing) h.style.background = ''; });
+    win.appendChild(h);
+  });
+
   overlay.appendChild(win);
   document.body.appendChild(overlay);
 
-  // Size presets
-  const SIZE_PRESETS = {
-    fullscreen: { width: '100%', height: '100%', borderRadius: '0' },
-    windowed: { width: '85%', height: '85%', borderRadius: '12px' },
-  };
+  // ── Resize drag logic ──
+  function getBounds() {
+    return { top: parseInt(win.style.top)||0, left: parseInt(win.style.left)||0,
+             right: parseInt(win.style.right)||0, bottom: parseInt(win.style.bottom)||0 };
+  }
 
-  topBar.querySelectorAll('.sim-size-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const size = btn.dataset.size;
-      const preset = SIZE_PRESETS[size];
-      if (!preset) return;
-      win.style.width = preset.width;
-      win.style.height = preset.height;
-      win.style.borderRadius = preset.borderRadius;
-      topBar.querySelectorAll('.sim-size-btn').forEach(b => {
-        b.style.background = 'none';
-        b.style.borderColor = 'rgba(255,255,255,0.2)';
-      });
-      btn.style.background = 'rgba(255,255,255,0.15)';
-      btn.style.borderColor = 'rgba(255,255,255,0.3)';
-    });
+  win.addEventListener('mousedown', (e) => {
+    const h = e.target.closest('[data-resize]');
+    if (!h) return;
+    e.preventDefault();
+    resizing = h.dataset.resize;
+    startX = e.clientX; startY = e.clientY;
+    startBounds = getBounds();
+    iframe.style.pointerEvents = 'none';
+    document.body.style.cursor = cursors[resizing];
+    document.body.style.userSelect = 'none';
   });
 
+  function onMouseMove(e) {
+    if (!resizing) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    const MIN = 400, vw = window.innerWidth, vh = window.innerHeight;
+    let { top, left, right, bottom } = startBounds;
+    if (resizing.includes('top'))    top    = Math.max(0, Math.min(top + dy, vh - MIN - bottom));
+    if (resizing.includes('bottom')) bottom = Math.max(0, Math.min(bottom - dy, vh - MIN - top));
+    if (resizing.includes('left'))   left   = Math.max(0, Math.min(left + dx, vw - MIN - right));
+    if (resizing.includes('right'))  right  = Math.max(0, Math.min(right - dx, vw - MIN - left));
+    win.style.top = top + 'px'; win.style.left = left + 'px';
+    win.style.right = right + 'px'; win.style.bottom = bottom + 'px';
+    win.style.borderRadius = (top > 0 || left > 0 || right > 0 || bottom > 0) ? '10px' : '0';
+  }
+
+  function onMouseUp() {
+    if (!resizing) return;
+    resizing = null;
+    iframe.style.pointerEvents = '';
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    win.querySelectorAll('[data-resize]').forEach(h => h.style.background = '');
+  }
+
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+
+  // ── Close ──
   const closeOverlay = () => {
     overlay.remove();
     document.removeEventListener('keydown', escHandler);
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
   };
 
-  const closeBtn = overlay.querySelector('#sim-overlay-close');
-  closeBtn.addEventListener('click', closeOverlay);
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeOverlay();
-  });
-
-  // Escape key
-  const escHandler = (e) => {
-    if (e.key === 'Escape') closeOverlay();
-  };
+  overlay.querySelector('#sim-overlay-close').addEventListener('click', closeOverlay);
+  const escHandler = (e) => { if (e.key === 'Escape') closeOverlay(); };
   document.addEventListener('keydown', escHandler);
 }
 
@@ -802,15 +844,35 @@ export function render(container) {
       loadingEl.style.display = 'flex';
 
       try {
-        const systemPrompt = `You are LabSim Builder, an expert at creating interactive science simulations for Singapore secondary school / JC students. Generate a complete, self-contained HTML page with embedded CSS and JavaScript. Requirements:
-- Dark theme (background #1a1a2e, text #e8e8f0, accent #4361ee)
-- Use HTML5 Canvas or SVG for visual elements
-- Include labelled interactive controls (sliders, buttons, dropdowns) for each variable
-- Show real-time data readouts or a data table where appropriate
-- Add a brief instruction/guide panel explaining what to do
-- Make it scientifically accurate and educationally meaningful
-- The page must be fully self-contained — no external dependencies
-- Return ONLY the complete HTML — no explanation or markdown`;
+        const systemPrompt = `You are LabSim Builder, an expert at creating visually rich, interactive science simulations for Singapore secondary / JC students. Generate a COMPLETE, self-contained HTML page with embedded CSS and JavaScript.
+
+VISUAL QUALITY — CRITICAL:
+- Use HTML5 Canvas 2D API for ALL apparatus and equipment visuals — do NOT use plain HTML divs for the simulation area.
+- Draw realistic apparatus: use ctx.createLinearGradient, ctx.createRadialGradient, ctx.arc, ctx.bezierCurveTo, shadows (ctx.shadowBlur), and layered strokes+fills.
+- Lab glassware: semi-transparent glass rgba(200,225,255,0.25) with white highlights, graduation marks, meniscus curves, rounded test-tube bottoms.
+- Metals/equipment: linear gradients light-to-dark grey, bevelled edges, proper proportions.
+- Liquids: semi-transparent coloured fills, meniscus at surface, colour-change animations for reactions.
+- Physics apparatus: clean vector drawings with labelled force arrows, proper circuit symbols, realistic pendulum bobs with shadows.
+- Canvas must be at least 600x450 px and visually prominent — it is the MAIN element.
+- Add smooth animations using requestAnimationFrame for dynamic elements.
+
+LAYOUT:
+- Preferred 3-section layout: LEFT guide panel (200px), CENTRE large canvas (flexible, fills space), RIGHT data+controls panel (260px).
+- Alternative 2-column: LEFT canvas 65-70%, RIGHT controls 30-35%.
+- Dark theme: background #1a1a2e, panels #252540, text #e8e8f0, accent #4361ee, success #22c55e, danger #ef4444.
+- Rounded panels (12px radius), subtle borders rgba(255,255,255,0.08), system-ui font.
+
+CONTROLS & DATA:
+- Labelled sliders/buttons/dropdowns for each variable with live numeric readout.
+- Data table that accumulates recorded readings.
+- Reset button. Brief instruction text at top.
+
+SCIENCE: Accurate equations, correct SI units, reasonable significant figures, annotated labels on canvas.
+
+TECHNICAL:
+- Fully self-contained: NO external libraries, NO CDN, NO images.
+- requestAnimationFrame for animations.
+- Return ONLY the raw HTML. No markdown fences, no explanation.`;
 
         const text = await sendChat(
           [{ role: 'user', content: prompt }],
