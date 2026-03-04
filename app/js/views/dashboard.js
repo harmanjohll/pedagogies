@@ -7,12 +7,84 @@
 
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
+import { getCurrentUser } from '../components/login.js';
 
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Good Morning';
   if (h < 17) return 'Good Afternoon';
   return 'Good Evening';
+}
+
+function getFirstName() {
+  const user = getCurrentUser();
+  if (!user || !user.name) return null;
+  return user.name.split(' ')[0];
+}
+
+/* ── Curated quotes — one per day, rotated by period ── */
+const QUOTES_MORNING = [
+  { text: 'The art of teaching is the art of assisting discovery.', attr: 'Mark Van Doren' },
+  { text: 'Every day is a chance to begin again.', attr: '' },
+  { text: 'Start where you are. Use what you have. Do what you can.', attr: 'Arthur Ashe' },
+  { text: 'What we learn with pleasure we never forget.', attr: 'Alfred Mercier' },
+  { text: 'A good teacher can inspire hope, ignite the imagination, and instil a love of learning.', attr: 'Brad Henry' },
+  { text: 'Small steps every day lead to big results.', attr: '' },
+  { text: 'The beautiful thing about learning is that no one can take it away from you.', attr: 'B.B. King' },
+  { text: 'Be the teacher you needed when you were younger.', attr: '' },
+  { text: 'Education is not preparation for life; education is life itself.', attr: 'John Dewey' },
+  { text: 'You are making more of a difference than you know.', attr: '' },
+  { text: 'The best way to predict the future is to create it.', attr: 'Peter Drucker' },
+  { text: 'What teachers know and can do is the most important influence on what students learn.', attr: 'Linda Darling-Hammond' },
+  { text: 'The seed you plant today determines the harvest of tomorrow.', attr: '' },
+  { text: 'Tell me and I forget. Teach me and I remember. Involve me and I learn.', attr: 'Benjamin Franklin' },
+  { text: 'Teaching is not about filling a pail but lighting a fire.', attr: 'W.B. Yeats' },
+];
+
+const QUOTES_AFTERNOON = [
+  { text: 'Rest when you need to, but don\'t quit.', attr: '' },
+  { text: 'You don\'t have to be perfect to be a great teacher — just present.', attr: '' },
+  { text: 'Progress, not perfection.', attr: '' },
+  { text: 'Take a breath. You\'re doing important work.', attr: '' },
+  { text: 'The afternoon knows what the morning never suspected.', attr: 'Robert Frost' },
+  { text: 'Your patience is shaping someone\'s future.', attr: '' },
+  { text: 'Even the smallest act of caring can turn a life around.', attr: '' },
+  { text: 'A moment of pause makes the rest of the day possible.', attr: '' },
+  { text: 'Not everything that counts can be counted.', attr: 'William Bruce Cameron' },
+  { text: 'Stay curious. Stay kind.', attr: '' },
+  { text: 'Half the day is done. You\'ve already made a difference.', attr: '' },
+  { text: 'Energy and persistence conquer all things.', attr: 'Benjamin Franklin' },
+  { text: 'In the middle of difficulty lies opportunity.', attr: 'Albert Einstein' },
+  { text: 'You are allowed to take it one class at a time.', attr: '' },
+  { text: 'Teaching is a work of heart.', attr: '' },
+];
+
+const QUOTES_EVENING = [
+  { text: 'You showed up. That matters more than you think.', attr: '' },
+  { text: 'Rest is not a reward — it is a requirement.', attr: '' },
+  { text: 'Let it be enough for today.', attr: '' },
+  { text: 'Well done is better than well said.', attr: 'Benjamin Franklin' },
+  { text: 'The work you did today will ripple forward.', attr: '' },
+  { text: 'Take care of yourself. You can\'t pour from an empty cup.', attr: '' },
+  { text: 'Reflect, recover, return stronger.', attr: '' },
+  { text: 'Your best is always enough.', attr: '' },
+  { text: 'Tomorrow is another chance to make a difference.', attr: '' },
+  { text: 'The teachers who get "burned out" are the ones who cared the most.', attr: '' },
+  { text: 'What lies behind us and what lies before us are tiny matters compared to what lies within us.', attr: 'Ralph Waldo Emerson' },
+  { text: 'Be proud of how hard you are trying.', attr: '' },
+  { text: 'A day of learning is never wasted.', attr: '' },
+  { text: 'Switch off. Recharge. You\'ve earned it.', attr: '' },
+  { text: 'The impact you made today may not be visible yet — but it is real.', attr: '' },
+];
+
+function getDailyQuote() {
+  const now = new Date();
+  const h = now.getHours();
+  const pool = h < 12 ? QUOTES_MORNING : h < 17 ? QUOTES_AFTERNOON : QUOTES_EVENING;
+  // Deterministic pick based on day-of-year
+  const start = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now - start) / 86400000);
+  return pool[dayOfYear % pool.length];
 }
 
 function timeAgo(ts) {
@@ -334,7 +406,10 @@ export function render(container) {
         <!-- Greeting -->
         <div class="greeting-card animate-fade-in-up">
           <div class="greeting-title">${getGreeting()}, Cher!</div>
-          <div class="greeting-subtitle">What would you like to do today?</div>
+          <div class="greeting-subtitle">What would you like to do today${getFirstName() ? ', ' + getFirstName() : ''}?</div>
+          <div style="margin-top:12px;font-size:0.875rem;font-style:italic;opacity:0.85;line-height:1.5;">
+            "${getDailyQuote().text}"${getDailyQuote().attr ? `<span style="font-style:normal;opacity:0.7;margin-left:6px;">— ${getDailyQuote().attr}</span>` : ''}
+          </div>
         </div>
 
         <!-- Smart Suggestions -->
