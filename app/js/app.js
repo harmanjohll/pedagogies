@@ -8,6 +8,7 @@ import { Store } from './state.js';
 import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome } from './components/welcome.js';
+import { renderLogin, isLoggedIn } from './components/login.js';
 import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedAssessmentIfNeeded } from './seed-data.js';
 
 /* ── Views ── */
@@ -104,9 +105,17 @@ function init() {
 
 /* ── Bootstrap ── */
 document.addEventListener('DOMContentLoaded', () => {
-  if (shouldShowWelcome()) {
-    renderWelcome(() => init());
+  function startApp() {
+    if (shouldShowWelcome()) {
+      renderWelcome(() => init());
+    } else {
+      init();
+    }
+  }
+
+  if (!isLoggedIn()) {
+    renderLogin(() => startApp());
   } else {
-    init();
+    startApp();
   }
 });

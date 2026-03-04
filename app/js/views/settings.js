@@ -8,6 +8,7 @@ import { Store } from '../state.js';
 import { validateApiKey, AVAILABLE_MODELS } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
+import { getCurrentUser, clearCurrentUser } from '../components/login.js';
 
 export function render(container) {
   const apiKey = Store.get('apiKey') || '';
@@ -133,6 +134,18 @@ export function render(container) {
           <input type="file" id="import-file" accept=".json" style="display: none;" />
         </div>
 
+        <!-- Account -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Account</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            ${getCurrentUser() ? `Signed in as <strong style="color: var(--ink);">${getCurrentUser().name}</strong>` : 'Not signed in'}
+          </p>
+          <button class="btn btn-ghost btn-sm" id="sign-out-btn" style="color: var(--danger);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign Out
+          </button>
+        </div>
+
         <!-- About -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">About Co-Cher</h3>
@@ -235,6 +248,18 @@ export function render(container) {
       Store.clearAllData();
       showToast('All data cleared.', 'danger');
       render(container);
+    }
+  });
+
+  // Sign out
+  container.querySelector('#sign-out-btn').addEventListener('click', async () => {
+    const ok = await confirmDialog({
+      title: 'Sign Out',
+      message: 'You will be returned to the login screen. Your data will not be deleted.'
+    });
+    if (ok) {
+      clearCurrentUser();
+      window.location.reload();
     }
   });
 
