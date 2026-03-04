@@ -1,8 +1,10 @@
 /*
  * Co-Cher Login Screen
  * ====================
- * Simple name-based login against teachers.json
+ * Email-based login validated against teachers.json
  */
+
+import { Store } from '../state.js';
 
 const TEACHERS_URL = './data/teachers.json';
 
@@ -32,6 +34,9 @@ export function setCurrentUser(user) {
 
 export function clearCurrentUser() {
   localStorage.removeItem('cocher_current_user');
+  // Clear API key so next user must enter their own
+  Store.set('apiKey', '');
+  localStorage.removeItem('cocher_api_key');
 }
 
 export async function renderLogin(onComplete) {
@@ -59,29 +64,33 @@ export async function renderLogin(onComplete) {
         <span style="
           display: inline-block; background: #eef2ff; color: #4338ca;
           padding: 5px 14px; border-radius: 999px; font-size: 0.8rem; font-weight: 500;
-        ">Welcome back</span>
+        ">Built for Singapore Educators</span>
       </div>
 
       <div style="text-align: left;">
         <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; color: #334155;">
-          Who are you?
+          Email
         </label>
-        <select id="login-teacher-select" style="
-          width: 100%; padding: 12px 32px 12px 14px;
-          border: 1.5px solid #e2e8f0; border-radius: 12px;
-          font-size: 0.9rem; font-family: inherit;
-          background: #f8fafc; color: #0f172a; outline: none;
-          appearance: none; cursor: pointer; box-sizing: border-box;
-          background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%2764748b%27 stroke-width=%272%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E');
-          background-repeat: no-repeat; background-position: right 10px center;
-          margin-bottom: 24px;
-        "
+        <input
+          type="email"
+          id="login-email"
+          placeholder="e.g. name@schools.gov.sg"
+          autocomplete="email"
+          style="
+            width: 100%; padding: 12px 14px;
+            border: 1.5px solid #e2e8f0; border-radius: 12px;
+            font-size: 0.9rem; font-family: inherit;
+            background: #f8fafc; color: #0f172a; outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            margin-bottom: 8px;
+          "
           onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px #dbeafe';"
           onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none';"
-        >
-          <option value="" disabled selected>Select your name...</option>
-          ${teachers.map((t, i) => `<option value="${i}">${t.name}</option>`).join('')}
-        </select>
+        />
+        <p style="font-size: 0.75rem; color: #94a3b8; margin: 0 0 20px; line-height: 1.5;">
+          Use the email registered with your school.
+        </p>
 
         <p id="login-error" style="
           color: #f43f5e; font-size: 0.8125rem; margin-bottom: 12px;
@@ -100,7 +109,7 @@ export async function renderLogin(onComplete) {
         onmouseleave="this.style.background='#000C53'; this.style.transform='translateY(0)';"
         onmousedown="this.style.transform='translateY(0)';"
         >
-          Let's Go
+          Sign In
         </button>
       </div>
     </div>
@@ -108,19 +117,30 @@ export async function renderLogin(onComplete) {
 
   document.body.appendChild(overlay);
 
-  const select = overlay.querySelector('#login-teacher-select');
+  const emailInput = overlay.querySelector('#login-email');
   const goBtn = overlay.querySelector('#login-go');
   const errorEl = overlay.querySelector('#login-error');
 
   goBtn.addEventListener('click', () => {
-    const idx = select.value;
-    if (idx === '' || idx === null) {
-      errorEl.textContent = 'Please select your name.';
+    const email = emailInput.value.trim().toLowerCase();
+    errorEl.style.display = 'none';
+
+    if (!email) {
+      errorEl.textContent = 'Please enter your email address.';
       errorEl.style.display = 'block';
       return;
     }
 
-    const teacher = teachers[parseInt(idx, 10)];
+    // Match against teachers list (case-insensitive)
+    const teacher = teachers.find(t => t.email.toLowerCase() === email);
+    if (!teacher) {
+      errorEl.textContent = 'Email not recognised. Please check with your administrator.';
+      errorEl.style.display = 'block';
+      emailInput.style.borderColor = '#f43f5e';
+      emailInput.style.boxShadow = '0 0 0 3px #ffe4e6';
+      return;
+    }
+
     setCurrentUser(teacher);
 
     // Animate out
@@ -137,12 +157,18 @@ export async function renderLogin(onComplete) {
     }, 500);
   });
 
-  // Enter key on select
-  select.addEventListener('keydown', (e) => {
+  emailInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') goBtn.click();
   });
 
-  setTimeout(() => select.focus(), 300);
+  // Reset styling on input
+  emailInput.addEventListener('input', () => {
+    errorEl.style.display = 'none';
+    emailInput.style.borderColor = '#e2e8f0';
+    emailInput.style.boxShadow = 'none';
+  });
+
+  setTimeout(() => emailInput.focus(), 300);
 }
 
 export function isLoggedIn() {

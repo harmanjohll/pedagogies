@@ -255,7 +255,7 @@ export function render(container) {
   container.querySelector('#sign-out-btn').addEventListener('click', async () => {
     const ok = await confirmDialog({
       title: 'Sign Out',
-      message: 'You will be returned to the login screen. Your data will not be deleted.'
+      message: 'You will be signed out and your API key will be cleared. Your class and lesson data will not be deleted.'
     });
     if (ok) {
       clearCurrentUser();
