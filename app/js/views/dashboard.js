@@ -3,11 +3,67 @@
  * =================
  * Context-aware landing page — "What would you like to do?"
  * Surfaces smart suggestions, admin tasks, and recent lessons.
+ * Customisable widget system with show/hide, collapse, reorder, and pinned links.
  */
 
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { getCurrentUser } from '../components/login.js';
+
+/* ── Dashboard Preferences (per-user, stored in localStorage) ── */
+const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
+
+const DEFAULT_WIDGET_ORDER = [
+  'schedule', 'notifications', 'weeklyOverview', 'suggestions',
+  'quickActions', 'stats', 'prepChecklist', 'insights',
+  'reflections', 'recentGrid', 'timetable', 'classes'
+];
+
+const WIDGET_LABELS = {
+  schedule:      "Today's Schedule",
+  notifications: 'Notifications & Reminders',
+  weeklyOverview:'Weekly Overview',
+  suggestions:   'Suggested for You',
+  quickActions:  'Quick Actions',
+  stats:         'Stats',
+  prepChecklist: 'Lesson Prep Checklist',
+  insights:      'Teaching Insights',
+  reflections:   'Reflection Analytics',
+  recentGrid:    'Recent Lessons / Events / Activity',
+  timetable:     'My Timetable',
+  classes:       'Your Classes'
+};
+
+function getDashPrefs() {
+  try {
+    const raw = localStorage.getItem(DASH_PREFS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {
+    widgetOrder: [...DEFAULT_WIDGET_ORDER],
+    hiddenWidgets: [],
+    collapsedWidgets: [],
+    pinnedLinks: []
+  };
+}
+
+function saveDashPrefs(prefs) {
+  try { localStorage.setItem(DASH_PREFS_KEY, JSON.stringify(prefs)); } catch {}
+}
+
+/* ── Pinned Links ── */
+const PINNABLE_ACTIONS = [
+  { id: 'lesson-planner', label: 'Lesson Planner', icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>', route: '/lesson-planner' },
+  { id: 'spatial', label: 'Spatial Designer', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>', route: '/spatial' },
+  { id: 'classes', label: 'Manage Classes', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', route: '/classes' },
+  { id: 'admin', label: 'Admin', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>', route: '/admin' },
+  { id: 'lessons', label: 'Lessons Library', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>', route: '/lessons' },
+  { id: 'simulations', label: 'Simulations', icon: '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5"/><circle cx="12" cy="12" r="10"/>', route: '/simulations' },
+  { id: 'knowledge', label: 'Knowledge Base', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>', route: '/knowledge' },
+  { id: 'assessment-afl', label: 'Assessment (AfL)', icon: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>', route: '/assessment/afl' },
+  { id: 'my-growth', label: 'PD Portfolio', icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>', route: '/my-growth' },
+  { id: 'settings', label: 'Settings', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>', route: '/settings' },
+];
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -133,7 +189,12 @@ export function getTTPeriodKey() {
 
 /* ── Demo role-play mapping: login email → TT teacher email prefix ── */
 const DEMO_ROLE_MAP = {
-  'harman_johll': 'nurain_hamzah'   // Harman role-plays as Ms Ain (Chemistry)
+  'harman_johll': 'nurain_hamzah'   // Harman uses Ms Ain's timetable for demo
+};
+
+/* ── Display name overrides: when role-playing, show the real user's name ── */
+const DEMO_DISPLAY_NAME = {
+  'harman_johll': { name: 'Mr Johll', dept: null }   // null dept = keep timetable dept
 };
 
 /* ── Flexible teacher lookup: match exact email or prefix (cross-domain) ── */
@@ -259,8 +320,12 @@ function buildTTScheduleCard(teacherRow) {
   const pk = getTTPeriodKey();
   if (!pk) return ''; // Weekend
 
-  const name = teacherRow['NAME'] || '';
-  const dept = teacherRow['DEPARTMENT'] || '';
+  // Check for display name override (e.g. Harman sees "Mr Johll" not Ms Ain)
+  const user = getCurrentUser();
+  const loginPrefix = user?.email?.toLowerCase().split('@')[0] || '';
+  const override = DEMO_DISPLAY_NAME[loginPrefix];
+  const name = override?.name || teacherRow['NAME'] || '';
+  const dept = override?.dept || teacherRow['DEPARTMENT'] || '';
   const { dayStr, period, weekType, mins } = pk;
 
   // Build today's full schedule
@@ -631,6 +696,357 @@ function renderReflectionAnalytics(lessons) {
     </div>`;
 }
 
+/* ── Notifications & Reminders ── */
+function buildNotifications(classes, lessons, events) {
+  const items = [];
+
+  // Overdue reflections (taught 2+ days ago with no reflection)
+  lessons.forEach(l => {
+    if ((l.status === 'ready' || l.status === 'completed') && !l.reflection) {
+      const age = Date.now() - (l.updatedAt || l.createdAt || 0);
+      if (age > 2 * 86400000) {
+        items.push({
+          type: 'warning',
+          icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+          text: `Reflection overdue for "${l.title || 'Untitled'}" (taught ${Math.floor(age / 86400000)}d ago)`,
+          action: () => navigate(`/lessons/${l.id}`)
+        });
+      }
+    }
+  });
+
+  // Draft lessons unfinished
+  const drafts = lessons.filter(l => l.status === 'draft');
+  if (drafts.length > 0) {
+    items.push({
+      type: 'info',
+      icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+      text: `${drafts.length} draft lesson${drafts.length > 1 ? 's' : ''} unfinished`,
+      action: () => navigate('/lessons')
+    });
+  }
+
+  // Upcoming admin events with deadlines
+  events.filter(e => e.status !== 'completed').forEach(ev => {
+    const enabled = ev.tasks.filter(t => t.enabled);
+    const done = enabled.filter(t => t.status === 'completed').length;
+    if (enabled.length > 0 && done < enabled.length) {
+      items.push({
+        type: 'info',
+        icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+        text: `${ev.name}: ${done}/${enabled.length} tasks done${ev.date ? ' (due: ' + ev.date + ')' : ''}`,
+        action: () => navigate('/admin')
+      });
+    }
+  });
+
+  // Classes without lessons
+  const classesWithoutLessons = classes.filter(cls => !lessons.some(l => l.classId === cls.id));
+  if (classesWithoutLessons.length > 0) {
+    items.push({
+      type: 'suggestion',
+      icon: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+      text: `${classesWithoutLessons.length} class${classesWithoutLessons.length > 1 ? 'es' : ''} with no linked lessons`,
+      action: () => navigate('/lesson-planner')
+    });
+  }
+
+  if (items.length === 0) return '';
+
+  const typeStyles = {
+    warning: { bg: 'var(--warning-light, #fef3c7)', border: 'var(--warning, #f59e0b)', color: 'var(--warning, #f59e0b)' },
+    info: { bg: 'var(--info-light, #dbeafe)', border: 'var(--info, #3b82f6)', color: 'var(--info, #3b82f6)' },
+    suggestion: { bg: 'var(--success-light, #d1fae5)', border: 'var(--success, #22c55e)', color: 'var(--success, #22c55e)' }
+  };
+
+  return items.slice(0, 5).map(item => {
+    const s = typeStyles[item.type] || typeStyles.info;
+    return `<div class="notification-item card card-hover card-interactive" style="padding:var(--sp-3) var(--sp-4);border-left:3px solid ${s.border};margin-bottom:var(--sp-2);display:flex;align-items:center;gap:var(--sp-3);cursor:pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${s.color}" stroke-width="2" style="flex-shrink:0;">${item.icon}</svg>
+      <span style="font-size:0.8125rem;color:var(--ink-secondary);flex:1;">${item.text}</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`;
+  }).join('');
+}
+
+/* ── Weekly Overview (populated async with TT data) ── */
+function buildWeeklyOverview(teacherRow, lessons, classes) {
+  if (!teacherRow) return '';
+  const pk = getTTPeriodKey();
+  if (!pk) return '';
+  const { weekType } = pk;
+
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const today = new Date().getDay(); // 0=Sun, 1=Mon...
+  const todayIdx = today >= 1 && today <= 5 ? today - 1 : -1;
+
+  const dayColumns = days.map((day, idx) => {
+    const periods = [];
+    for (let p = 1; p <= 11; p++) {
+      const col = `${weekType}${day}${p}`;
+      const val = teacherRow[col];
+      if (val && val !== '0') {
+        const parts = val.split(' / ');
+        periods.push({ p, classCode: parts[0]?.trim(), room: parts[1]?.trim() || '' });
+      }
+    }
+    const isToday = idx === todayIdx;
+    const isPast = todayIdx >= 0 && idx < todayIdx;
+
+    return `<div style="flex:1;min-width:0;${isToday ? 'background:var(--accent-light, #eff6ff);border-radius:var(--radius-lg);' : ''}${isPast ? 'opacity:0.5;' : ''}">
+      <div style="text-align:center;font-weight:700;font-size:0.75rem;color:${isToday ? 'var(--accent, #4361ee)' : 'var(--ink-muted)'};padding:var(--sp-2);text-transform:uppercase;letter-spacing:0.05em;">
+        ${day}${isToday ? ' (Today)' : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;padding:0 var(--sp-1);">
+        ${periods.length === 0 ? '<div style="text-align:center;font-size:0.6875rem;color:var(--ink-faint);padding:var(--sp-2);">No classes</div>' :
+          periods.map(s => `<div style="font-size:0.6875rem;padding:3px 6px;background:var(--bg-card, #fff);border:1px solid var(--border-light, #e5e7eb);border-radius:4px;text-align:center;">
+            <div style="font-weight:600;color:var(--ink);">P${s.p} ${s.classCode}</div>
+            <div style="color:var(--ink-faint);">${s.room}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Count teaching periods this week
+  let totalPeriods = 0;
+  days.forEach(day => {
+    for (let p = 1; p <= 11; p++) {
+      const col = `${weekType}${day}${p}`;
+      const val = teacherRow[col];
+      if (val && val !== '0') totalPeriods++;
+    }
+  });
+
+  return `
+    <div style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">${weekType} Week &middot; ${totalPeriods} teaching periods</div>
+    <div style="display:flex;gap:var(--sp-2);overflow-x:auto;">
+      ${dayColumns}
+    </div>`;
+}
+
+/* ── Lesson Prep Checklist (for next/current lesson) ── */
+function buildPrepChecklist(teacherRow, lessons, classes) {
+  if (!teacherRow) return '';
+  const pk = getTTPeriodKey();
+  if (!pk) return '';
+  const { dayStr, period, weekType, mins } = pk;
+
+  // Find next upcoming lesson
+  const allPeriods = [];
+  for (let p = 1; p <= 11; p++) {
+    const col = `${weekType}${dayStr}${p}`;
+    const val = teacherRow[col];
+    if (val && val !== '0') {
+      const parts = val.split(' / ');
+      allPeriods.push({ p, classCode: parts[0]?.trim(), room: parts[1]?.trim() || '' });
+    }
+  }
+
+  const beforeSchool = mins < 450;
+  const nextLesson = allPeriods.find(s => beforeSchool ? true : (period !== null ? s.p >= period : false));
+  if (!nextLesson) return '<div style="font-size:0.8125rem;color:var(--ink-muted);padding:var(--sp-2);">No upcoming lessons today. You\'re all set!</div>';
+
+  // Find matching class and lesson plan
+  const matchingClass = classes.find(c => c.name === nextLesson.classCode || c.name?.includes(nextLesson.classCode));
+  const linkedLesson = matchingClass ? lessons.find(l => l.classId === matchingClass.id && l.status === 'ready') : null;
+
+  const checks = [
+    { label: 'Lesson plan prepared', done: !!linkedLesson, action: linkedLesson ? `/lesson-planner/${linkedLesson.id}` : '/lesson-planner' },
+    { label: `Room ${nextLesson.room} ready`, done: false, action: null },
+    { label: 'Materials / handouts printed', done: false, action: null },
+    { label: 'Tech / simulation tested', done: false, action: linkedLesson?.components?.simulations ? '/simulations' : null },
+    { label: 'Spatial layout configured', done: !!linkedLesson?.spatialLayout, action: '/spatial' },
+  ];
+
+  return `
+    <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-3);">
+      Next: P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
+      ${checks.map(c => `<div class="prep-check-item" style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;${c.action ? 'cursor:pointer;' : ''}" ${c.action ? `data-action-route="${c.action}"` : ''}>
+        <div style="width:18px;height:18px;border-radius:4px;border:2px solid ${c.done ? 'var(--success, #22c55e)' : 'var(--border, #d1d5db)'};background:${c.done ? 'var(--success, #22c55e)' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          ${c.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+        </div>
+        <span style="color:${c.done ? 'var(--success, #22c55e)' : 'var(--ink-secondary)'};${c.done ? 'text-decoration:line-through;' : ''}">${c.label}</span>
+      </div>`).join('')}
+    </div>`;
+}
+
+/* ── Pinned Links bar ── */
+function renderPinnedLinks(pinnedIds) {
+  if (!pinnedIds || pinnedIds.length === 0) return '';
+  const links = pinnedIds.map(id => PINNABLE_ACTIONS.find(a => a.id === id)).filter(Boolean);
+  if (links.length === 0) return '';
+
+  return `
+    <div style="margin-bottom:var(--sp-6);">
+      <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);">
+        <span class="text-overline" style="font-size:0.6875rem;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Pinned</span>
+      </div>
+      <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
+        ${links.map(l => `
+          <button class="btn btn-ghost btn-sm pinned-link" data-route="${l.route}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-lg);font-size:0.8125rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${l.icon}</svg>
+            ${l.label}
+          </button>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+/* ── Customise Dashboard Modal ── */
+function showCustomiseModal(container) {
+  const prefs = getDashPrefs();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:200;';
+
+  const widgetOrder = prefs.widgetOrder.length > 0 ? prefs.widgetOrder : [...DEFAULT_WIDGET_ORDER];
+  // Ensure all widgets are in the order list
+  DEFAULT_WIDGET_ORDER.forEach(w => { if (!widgetOrder.includes(w)) widgetOrder.push(w); });
+
+  overlay.innerHTML = `
+    <div style="background:var(--bg-card, #fff);color:var(--ink);padding:var(--sp-6);border-radius:var(--radius-xl, 1rem);box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);width:90%;max-width:500px;max-height:80vh;overflow:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-5);">
+        <h3 style="font-size:1.125rem;font-weight:700;margin:0;">Customise Dashboard</h3>
+        <button class="btn btn-ghost btn-sm modal-close" style="padding:4px 8px;">&times;</button>
+      </div>
+
+      <div style="margin-bottom:var(--sp-5);">
+        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-3);">Show / Hide Widgets</h4>
+        <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">Toggle which sections appear on your dashboard. Drag to reorder.</p>
+        <div id="widget-toggle-list" style="display:flex;flex-direction:column;gap:var(--sp-2);">
+          ${widgetOrder.map(wId => {
+            const visible = !prefs.hiddenWidgets.includes(wId);
+            return `<div class="widget-toggle-row" data-widget="${wId}" draggable="true" style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light, #e5e7eb);border-radius:var(--radius);cursor:grab;background:var(--bg-card, #fff);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" style="flex-shrink:0;cursor:grab;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              <label style="flex:1;font-size:0.8125rem;font-weight:500;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:var(--sp-2);">
+                <input type="checkbox" class="widget-vis-toggle" data-widget="${wId}" ${visible ? 'checked' : ''} />
+                ${WIDGET_LABELS[wId] || wId}
+              </label>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:var(--sp-5);">
+        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-3);">Pinned Quick Links</h4>
+        <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">Choose shortcuts to pin at the top of your dashboard.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+          ${PINNABLE_ACTIONS.map(a => {
+            const pinned = prefs.pinnedLinks.includes(a.id);
+            return `<label class="pin-toggle" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid ${pinned ? 'var(--accent, #4361ee)' : 'var(--border-light, #e5e7eb)'};border-radius:var(--radius-full, 999px);font-size:0.75rem;cursor:pointer;background:${pinned ? 'var(--accent-light, #eff6ff)' : 'transparent'};">
+              <input type="checkbox" class="pin-cb" data-pin="${a.id}" ${pinned ? 'checked' : ''} style="display:none;" />
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${a.icon}</svg>
+              ${a.label}
+            </label>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;gap:var(--sp-2);">
+        <button class="btn btn-ghost btn-sm" id="reset-dash-prefs">Reset to Default</button>
+        <button class="btn btn-primary btn-sm" id="save-dash-prefs">Save & Apply</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  // Drag-and-drop reorder
+  const list = overlay.querySelector('#widget-toggle-list');
+  let dragSrc = null;
+  list.querySelectorAll('.widget-toggle-row').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragSrc = row;
+      row.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => { row.style.opacity = '1'; });
+    row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragSrc && dragSrc !== row) {
+        const parent = row.parentNode;
+        const rows = [...parent.children];
+        const srcIdx = rows.indexOf(dragSrc);
+        const tgtIdx = rows.indexOf(row);
+        if (srcIdx < tgtIdx) row.after(dragSrc);
+        else row.before(dragSrc);
+      }
+    });
+  });
+
+  // Close
+  overlay.querySelector('.modal-close').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  // Pin toggle styling
+  overlay.querySelectorAll('.pin-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const label = cb.closest('.pin-toggle');
+      if (cb.checked) {
+        label.style.borderColor = 'var(--accent, #4361ee)';
+        label.style.background = 'var(--accent-light, #eff6ff)';
+      } else {
+        label.style.borderColor = 'var(--border-light, #e5e7eb)';
+        label.style.background = 'transparent';
+      }
+    });
+  });
+
+  // Reset
+  overlay.querySelector('#reset-dash-prefs').addEventListener('click', () => {
+    saveDashPrefs({
+      widgetOrder: [...DEFAULT_WIDGET_ORDER],
+      hiddenWidgets: [],
+      collapsedWidgets: [],
+      pinnedLinks: []
+    });
+    overlay.remove();
+    render(container);
+  });
+
+  // Save
+  overlay.querySelector('#save-dash-prefs').addEventListener('click', () => {
+    const newOrder = [...list.querySelectorAll('.widget-toggle-row')].map(r => r.dataset.widget);
+    const hidden = [];
+    overlay.querySelectorAll('.widget-vis-toggle').forEach(cb => {
+      if (!cb.checked) hidden.push(cb.dataset.widget);
+    });
+    const pins = [];
+    overlay.querySelectorAll('.pin-cb').forEach(cb => {
+      if (cb.checked) pins.push(cb.dataset.pin);
+    });
+    saveDashPrefs({
+      widgetOrder: newOrder,
+      hiddenWidgets: hidden,
+      collapsedWidgets: prefs.collapsedWidgets || [],
+      pinnedLinks: pins
+    });
+    overlay.remove();
+    render(container);
+  });
+}
+
+/* ── Collapsible widget wrapper ── */
+function widgetWrap(id, title, content, prefs, extraHeaderHtml = '') {
+  if (!content) return '';
+  if (prefs.hiddenWidgets.includes(id)) return '';
+  const collapsed = prefs.collapsedWidgets.includes(id);
+  return `<div class="dashboard-widget" data-widget-id="${id}" style="margin-bottom:var(--sp-6);">
+    <details ${collapsed ? '' : 'open'}>
+      <summary style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:var(--sp-3);" class="widget-summary" data-widget-id="${id}">
+        <h2 class="section-title" style="font-size:1.125rem;margin:0;">${title}</h2>
+        <div style="display:flex;align-items:center;gap:var(--sp-2);">
+          ${extraHeaderHtml}
+          <svg class="widget-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </summary>
+      <div class="widget-body">${content}</div>
+    </details>
+  </div>`;
+}
+
 export function render(container) {
   const classes = Store.getClasses();
   const lessons = Store.getLessons();
@@ -647,6 +1063,241 @@ export function render(container) {
 
   // Admin events summary
   const pendingEvents = events.filter(e => e.status !== 'completed');
+  const prefs = getDashPrefs();
+
+  // Build notification content
+  const notificationsContent = buildNotifications(classes, lessons, events);
+
+  // Build widget content map (keyed by widget id)
+  const suggestionsHTML = suggestions.length > 0 ? `
+    <div class="stagger" style="display:flex;flex-direction:column;gap:var(--sp-3);">
+      ${suggestions.map(s => `
+        <div class="card card-hover card-interactive suggestion-card" style="padding:var(--sp-4) var(--sp-5);">
+          <div style="display:flex;align-items:center;gap:var(--sp-4);">
+            <div style="width:40px;height:40px;border-radius:var(--radius-lg);background:${s.bg};color:${s.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              ${s.icon}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;color:var(--ink);font-size:0.9375rem;">${s.title}</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);margin-top:2px;">${s.desc}</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+      `).join('')}
+    </div>` : '';
+
+  const quickActionsHTML = `
+    <div class="grid-4 stagger">
+      <div class="action-card" data-action="lesson-planner">
+        <div class="action-card-icon" style="background: var(--accent-light); color: var(--accent);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        <div class="action-card-title">Lesson Planner</div>
+        <div class="action-card-desc">Chat with Co-Cher to design engaging lessons</div>
+      </div>
+      <div class="action-card" data-action="spatial">
+        <div class="action-card-icon" style="background: var(--success-light); color: var(--success);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        </div>
+        <div class="action-card-title">Spatial Designer</div>
+        <div class="action-card-desc">Arrange your classroom for optimal learning</div>
+      </div>
+      <div class="action-card" data-action="classes">
+        <div class="action-card-icon" style="background: var(--warning-light); color: var(--warning);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="action-card-title">Manage Classes</div>
+        <div class="action-card-desc">Add classes, students, and track E21CC growth</div>
+      </div>
+      <div class="action-card" data-action="admin">
+        <div class="action-card-icon" style="background: var(--info-light); color: var(--info);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="action-card-title">Admin</div>
+        <div class="action-card-desc">Events, RAMS, approvals & school operations</div>
+      </div>
+    </div>`;
+
+  const statsHTML = `
+    <div class="grid-4 stagger">
+      <div class="stat-card">
+        <div class="stat-label">Classes</div>
+        <div class="stat-value">${classes.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Students</div>
+        <div class="stat-value">${totalStudents}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Lessons</div>
+        <div class="stat-value">${lessons.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Events</div>
+        <div class="stat-value">${events.length}</div>
+      </div>
+    </div>`;
+
+  const recentGridHTML = `
+    <div class="grid-3">
+      <!-- Recent Lessons -->
+      <div>
+        <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-3);">Recent Lessons
+          ${lessons.length > 0 ? `<button class="btn btn-ghost btn-sm" data-action="lessons" style="float:right;">View all</button>` : ''}
+        </div>
+        ${recentLessons.length === 0 ? `
+          <div class="card" style="text-align:center;padding:var(--sp-6);">
+            <div style="opacity:0.3;margin-bottom:var(--sp-3);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <p style="color:var(--ink-muted);font-size:0.8125rem;margin-bottom:var(--sp-3);">No lessons yet.</p>
+            <button class="btn btn-primary btn-sm" data-action="lesson-planner">Start Planning</button>
+          </div>
+        ` : `
+          <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+            ${recentLessons.map(l => {
+              const statusBadge = l.status === 'completed' ? 'badge-green' : l.status === 'ready' ? 'badge-blue' : 'badge-gray';
+              const statusLabel = l.status === 'completed' ? 'Done' : l.status === 'ready' ? 'Ready' : 'Draft';
+              const linkedClass = l.classId ? classes.find(c => c.id === l.classId) : null;
+              return `
+                <div class="card card-hover card-interactive" data-lesson-id="${l.id}" style="padding:var(--sp-4) var(--sp-5);">
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="min-width:0;flex:1;">
+                      <div style="font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.title || 'Untitled'}</div>
+                      <div style="font-size:0.75rem;color:var(--ink-muted);margin-top:2px;">
+                        ${linkedClass ? linkedClass.name + ' · ' : ''}${timeAgo(l.updatedAt || l.createdAt)}
+                      </div>
+                    </div>
+                    <span class="badge ${statusBadge} badge-dot" style="flex-shrink:0;margin-left:var(--sp-2);">${statusLabel}</span>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+        `}
+      </div>
+      <!-- Admin Events -->
+      <div>
+        <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-3);">Events
+          <button class="btn btn-ghost btn-sm" data-action="admin" style="float:right;">Admin</button>
+        </div>
+        ${pendingEvents.length === 0 ? `
+          <div class="card" style="text-align:center;padding:var(--sp-6);">
+            <div style="opacity:0.3;margin-bottom:var(--sp-3);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <p style="color:var(--ink-muted);font-size:0.8125rem;margin-bottom:var(--sp-3);">No upcoming events.</p>
+            <button class="btn btn-primary btn-sm" data-action="admin">Plan an Event</button>
+          </div>
+        ` : `
+          <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+            ${pendingEvents.slice(0, 3).map(ev => {
+              const enabled = ev.tasks.filter(t => t.enabled);
+              const done = enabled.filter(t => t.status === 'completed').length;
+              const progress = enabled.length > 0 ? Math.round((done / enabled.length) * 100) : 0;
+              return `
+                <div class="card card-hover card-interactive" data-action="admin" style="padding:var(--sp-4) var(--sp-5);">
+                  <div style="font-weight:600;color:var(--ink);font-size:0.875rem;margin-bottom:var(--sp-1);">${ev.name}</div>
+                  <div style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">${ev.eventType || 'Event'}${ev.date ? ' · ' + ev.date : ''}</div>
+                  <div style="display:flex;align-items:center;gap:var(--sp-2);">
+                    <div style="flex:1;height:5px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;">
+                      <div style="width:${progress}%;height:100%;background:${progress === 100 ? 'var(--success)' : 'var(--accent)'};border-radius:var(--radius-full);transition:width 0.3s;"></div>
+                    </div>
+                    <span style="font-size:0.6875rem;color:var(--ink-muted);white-space:nowrap;">${done}/${enabled.length}</span>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+        `}
+      </div>
+      <!-- Recent Activity -->
+      <div>
+        <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-3);">Activity</div>
+        ${activity.length === 0 ? `
+          <div class="card" style="text-align:center;padding:var(--sp-6);">
+            <div style="opacity:0.3;margin-bottom:var(--sp-3);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <p style="color:var(--ink-muted);font-size:0.8125rem;">Activity will appear here as you use Co-Cher.</p>
+          </div>
+        ` : `
+          <div class="card" style="padding:0;">
+            <div style="display:flex;flex-direction:column;">
+              ${activity.slice(0, 6).map(a => `
+                <div style="padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;">
+                  <span style="font-size:0.8125rem;color:var(--ink-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${a.description}</span>
+                  <span style="font-size:0.6875rem;color:var(--ink-faint);white-space:nowrap;margin-left:var(--sp-2);">${timeAgo(a.timestamp)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `}
+      </div>
+    </div>`;
+
+  const classesHTML = classes.length === 0 ? `
+    <div class="card" style="text-align:center;padding:var(--sp-8) var(--sp-6);">
+      <div style="opacity:0.3;margin-bottom:var(--sp-3);">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      </div>
+      <p style="color:var(--ink-muted);font-size:0.875rem;margin-bottom:var(--sp-4);">No classes yet. Create your first class to get started.</p>
+      <button class="btn btn-primary btn-sm" data-action="add-class">Create a Class</button>
+    </div>
+  ` : `
+    <div class="grid-3 stagger">
+      ${classes.slice(0, 6).map(cls => `
+        <div class="card card-hover card-interactive" data-class-id="${cls.id}" style="padding:var(--sp-4) var(--sp-5);">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-weight:600;color:var(--ink);">${cls.name}</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);margin-top:2px;">
+                ${[cls.level, cls.subject].filter(Boolean).join(' · ') || 'No details'}
+              </div>
+            </div>
+            <span class="badge badge-blue">${cls.students?.length || 0} students</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+
+  // Widget content map — content for each widget that can be rendered synchronously
+  const widgetContent = {
+    schedule: '',       // populated async
+    notifications: notificationsContent,
+    weeklyOverview: '', // populated async
+    suggestions: suggestionsHTML,
+    quickActions: quickActionsHTML,
+    stats: statsHTML,
+    prepChecklist: '',  // populated async
+    insights: totalStudents > 0 ? renderInsights(classes, lessons) : '',
+    reflections: renderReflectionAnalytics(lessons),
+    recentGrid: recentGridHTML,
+    timetable: '',      // populated async
+    classes: classesHTML
+  };
+
+  // Build ordered widgets HTML — insights/reflections already have their own wrapper
+  const widgetOrder = (prefs.widgetOrder.length > 0 ? prefs.widgetOrder : [...DEFAULT_WIDGET_ORDER]);
+  // Ensure all default widgets appear
+  DEFAULT_WIDGET_ORDER.forEach(w => { if (!widgetOrder.includes(w)) widgetOrder.push(w); });
+
+  // Some widgets are async-populated — for those, use a placeholder div
+  const asyncWidgets = new Set(['schedule', 'weeklyOverview', 'prepChecklist', 'timetable']);
+
+  const widgetsHTML = widgetOrder.map(wId => {
+    if (prefs.hiddenWidgets.includes(wId)) return '';
+    if (asyncWidgets.has(wId)) {
+      // Async widgets get a placeholder that will be filled later
+      return `<div id="widget-${wId}" class="dashboard-widget" data-widget-id="${wId}"></div>`;
+    }
+    // insights and reflections return their own section wrapper
+    if (wId === 'insights' || wId === 'reflections') {
+      return prefs.hiddenWidgets.includes(wId) ? '' : (widgetContent[wId] || '');
+    }
+    const content = widgetContent[wId];
+    if (!content) return '';
+    return widgetWrap(wId, WIDGET_LABELS[wId] || wId, content, prefs);
+  }).join('');
 
   container.innerHTML = `
     <div class="main-scroll">
@@ -654,8 +1305,16 @@ export function render(container) {
 
         <!-- Greeting -->
         <div class="greeting-card animate-fade-in-up">
-          <div class="greeting-title">${getGreeting()}, Cher!</div>
-          <div class="greeting-subtitle">What would you like to do today${getFirstName() ? ', ' + getFirstName() : ''}?</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div class="greeting-title">${getGreeting()}, Cher!</div>
+              <div class="greeting-subtitle">What would you like to do today${getFirstName() ? ', ' + getFirstName() : ''}?</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="customise-dashboard-btn" title="Customise your dashboard" style="display:inline-flex;align-items:center;gap:4px;font-size:0.75rem;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Customise
+            </button>
+          </div>
           <div style="margin-top:12px;font-size:0.875rem;font-style:italic;opacity:0.85;line-height:1.5;">
             "${getDailyQuote().text}"${getDailyQuote().attr ? `<span style="font-style:normal;opacity:0.7;margin-left:6px;">— ${getDailyQuote().attr}</span>` : ''}
           </div>
@@ -664,242 +1323,20 @@ export function render(container) {
         <!-- Status Banner (next lesson / done for day) -->
         <div id="tt-status-banner"></div>
 
-        <!-- TT Schedule Card (populated async) -->
-        <div id="tt-schedule-card"></div>
+        <!-- Pinned Links -->
+        ${renderPinnedLinks(prefs.pinnedLinks)}
 
-        <!-- Smart Suggestions -->
-        ${suggestions.length > 0 ? `
-          <div style="margin-bottom:var(--sp-8);">
-            <div class="section-header">
-              <h2 class="section-title" style="font-size:1.125rem;">Suggested for You</h2>
-            </div>
-            <div class="stagger" style="display:flex;flex-direction:column;gap:var(--sp-3);">
-              ${suggestions.map(s => `
-                <div class="card card-hover card-interactive suggestion-card" style="padding:var(--sp-4) var(--sp-5);">
-                  <div style="display:flex;align-items:center;gap:var(--sp-4);">
-                    <div style="width:40px;height:40px;border-radius:var(--radius-lg);background:${s.bg};color:${s.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                      ${s.icon}
-                    </div>
-                    <div style="flex:1;min-width:0;">
-                      <div style="font-weight:600;color:var(--ink);font-size:0.9375rem;">${s.title}</div>
-                      <div style="font-size:0.8125rem;color:var(--ink-muted);margin-top:2px;">${s.desc}</div>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        ` : ''}
-
-        <!-- Quick Actions -->
-        <div class="section-header">
-          <h2 class="section-title" style="font-size:1.125rem;">Quick Actions</h2>
-        </div>
-        <div class="grid-4 stagger" style="margin-bottom: var(--sp-8);">
-          <div class="action-card" data-action="lesson-planner">
-            <div class="action-card-icon" style="background: var(--accent-light); color: var(--accent);">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-            </div>
-            <div class="action-card-title">Lesson Planner</div>
-            <div class="action-card-desc">Chat with Co-Cher to design engaging lessons</div>
-          </div>
-
-          <div class="action-card" data-action="spatial">
-            <div class="action-card-icon" style="background: var(--success-light); color: var(--success);">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-            </div>
-            <div class="action-card-title">Spatial Designer</div>
-            <div class="action-card-desc">Arrange your classroom for optimal learning</div>
-          </div>
-
-          <div class="action-card" data-action="classes">
-            <div class="action-card-icon" style="background: var(--warning-light); color: var(--warning);">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <div class="action-card-title">Manage Classes</div>
-            <div class="action-card-desc">Add classes, students, and track E21CC growth</div>
-          </div>
-
-          <div class="action-card" data-action="admin">
-            <div class="action-card-icon" style="background: var(--info-light); color: var(--info);">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <div class="action-card-title">Admin</div>
-            <div class="action-card-desc">Events, RAMS, approvals & school operations</div>
-          </div>
-        </div>
-
-        <!-- Stats Row -->
-        <div class="grid-4 stagger" style="margin-bottom: var(--sp-8);">
-          <div class="stat-card">
-            <div class="stat-label">Classes</div>
-            <div class="stat-value">${classes.length}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Students</div>
-            <div class="stat-value">${totalStudents}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Lessons</div>
-            <div class="stat-value">${lessons.length}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Events</div>
-            <div class="stat-value">${events.length}</div>
-          </div>
-        </div>
-
-        <!-- Teaching Insights -->
-        ${totalStudents > 0 ? renderInsights(classes, lessons) : ''}
-
-        <!-- Reflection Analytics -->
-        ${renderReflectionAnalytics(lessons)}
-
-        <!-- Three Column: Recent Lessons + Admin Events + Activity -->
-        <div class="grid-3" style="margin-bottom: var(--sp-8);">
-
-          <!-- Recent Lessons -->
-          <div>
-            <div class="section-header">
-              <h2 class="section-title" style="font-size:1.125rem;">Recent Lessons</h2>
-              ${lessons.length > 0 ? `<button class="btn btn-ghost btn-sm" data-action="lessons">View all</button>` : ''}
-            </div>
-            ${recentLessons.length === 0 ? `
-              <div class="card" style="text-align:center;padding:var(--sp-6);">
-                <div style="opacity:0.3;margin-bottom:var(--sp-3);">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                </div>
-                <p style="color:var(--ink-muted);font-size:0.8125rem;margin-bottom:var(--sp-3);">No lessons yet.</p>
-                <button class="btn btn-primary btn-sm" data-action="lesson-planner">Start Planning</button>
-              </div>
-            ` : `
-              <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
-                ${recentLessons.map(l => {
-                  const statusBadge = l.status === 'completed' ? 'badge-green' :
-                                      l.status === 'ready' ? 'badge-blue' : 'badge-gray';
-                  const statusLabel = l.status === 'completed' ? 'Done' :
-                                      l.status === 'ready' ? 'Ready' : 'Draft';
-                  const linkedClass = l.classId ? classes.find(c => c.id === l.classId) : null;
-                  return `
-                    <div class="card card-hover card-interactive" data-lesson-id="${l.id}" style="padding:var(--sp-4) var(--sp-5);">
-                      <div style="display:flex;align-items:center;justify-content:space-between;">
-                        <div style="min-width:0;flex:1;">
-                          <div style="font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.title || 'Untitled'}</div>
-                          <div style="font-size:0.75rem;color:var(--ink-muted);margin-top:2px;">
-                            ${linkedClass ? linkedClass.name + ' · ' : ''}${timeAgo(l.updatedAt || l.createdAt)}
-                          </div>
-                        </div>
-                        <span class="badge ${statusBadge} badge-dot" style="flex-shrink:0;margin-left:var(--sp-2);">${statusLabel}</span>
-                      </div>
-                    </div>`;
-                }).join('')}
-              </div>
-            `}
-          </div>
-
-          <!-- Admin Events -->
-          <div>
-            <div class="section-header">
-              <h2 class="section-title" style="font-size:1.125rem;">Events</h2>
-              <button class="btn btn-ghost btn-sm" data-action="admin">Admin</button>
-            </div>
-            ${pendingEvents.length === 0 ? `
-              <div class="card" style="text-align:center;padding:var(--sp-6);">
-                <div style="opacity:0.3;margin-bottom:var(--sp-3);">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                </div>
-                <p style="color:var(--ink-muted);font-size:0.8125rem;margin-bottom:var(--sp-3);">No upcoming events.</p>
-                <button class="btn btn-primary btn-sm" data-action="admin">Plan an Event</button>
-              </div>
-            ` : `
-              <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
-                ${pendingEvents.slice(0, 3).map(ev => {
-                  const enabled = ev.tasks.filter(t => t.enabled);
-                  const done = enabled.filter(t => t.status === 'completed').length;
-                  const progress = enabled.length > 0 ? Math.round((done / enabled.length) * 100) : 0;
-                  return `
-                    <div class="card card-hover card-interactive" data-action="admin" style="padding:var(--sp-4) var(--sp-5);">
-                      <div style="font-weight:600;color:var(--ink);font-size:0.875rem;margin-bottom:var(--sp-1);">${ev.name}</div>
-                      <div style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">${ev.eventType || 'Event'}${ev.date ? ' · ' + ev.date : ''}</div>
-                      <div style="display:flex;align-items:center;gap:var(--sp-2);">
-                        <div style="flex:1;height:5px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;">
-                          <div style="width:${progress}%;height:100%;background:${progress === 100 ? 'var(--success)' : 'var(--accent)'};border-radius:var(--radius-full);transition:width 0.3s;"></div>
-                        </div>
-                        <span style="font-size:0.6875rem;color:var(--ink-muted);white-space:nowrap;">${done}/${enabled.length}</span>
-                      </div>
-                    </div>`;
-                }).join('')}
-              </div>
-            `}
-          </div>
-
-          <!-- Recent Activity -->
-          <div>
-            <div class="section-header">
-              <h2 class="section-title" style="font-size:1.125rem;">Activity</h2>
-            </div>
-            ${activity.length === 0 ? `
-              <div class="card" style="text-align:center;padding:var(--sp-6);">
-                <div style="opacity:0.3;margin-bottom:var(--sp-3);">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                </div>
-                <p style="color:var(--ink-muted);font-size:0.8125rem;">Activity will appear here as you use Co-Cher.</p>
-              </div>
-            ` : `
-              <div class="card" style="padding:0;">
-                <div style="display:flex;flex-direction:column;">
-                  ${activity.slice(0, 6).map(a => `
-                    <div style="padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;">
-                      <span style="font-size:0.8125rem;color:var(--ink-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${a.description}</span>
-                      <span style="font-size:0.6875rem;color:var(--ink-faint);white-space:nowrap;margin-left:var(--sp-2);">${timeAgo(a.timestamp)}</span>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            `}
-          </div>
-        </div>
-
-        <!-- My Timetable (populated async) -->
-        <div id="tt-my-timetable"></div>
-
-        <!-- Classes Overview -->
-        <div style="margin-bottom:var(--sp-8);">
-          <div class="section-header">
-            <h2 class="section-title" style="font-size:1.125rem;">Your Classes</h2>
-            ${classes.length > 0 ? `<button class="btn btn-ghost btn-sm" data-action="classes">View all</button>` : ''}
-          </div>
-          ${classes.length === 0 ? `
-            <div class="card" style="text-align:center;padding:var(--sp-8) var(--sp-6);">
-              <div style="opacity:0.3;margin-bottom:var(--sp-3);">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              </div>
-              <p style="color:var(--ink-muted);font-size:0.875rem;margin-bottom:var(--sp-4);">No classes yet. Create your first class to get started.</p>
-              <button class="btn btn-primary btn-sm" data-action="add-class">Create a Class</button>
-            </div>
-          ` : `
-            <div class="grid-3 stagger">
-              ${classes.slice(0, 6).map(cls => `
-                <div class="card card-hover card-interactive" data-class-id="${cls.id}" style="padding:var(--sp-4) var(--sp-5);">
-                  <div style="display:flex;align-items:center;justify-content:space-between;">
-                    <div>
-                      <div style="font-weight:600;color:var(--ink);">${cls.name}</div>
-                      <div style="font-size:0.8125rem;color:var(--ink-muted);margin-top:2px;">
-                        ${[cls.level, cls.subject].filter(Boolean).join(' · ') || 'No details'}
-                      </div>
-                    </div>
-                    <span class="badge badge-blue">${cls.students?.length || 0} students</span>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          `}
-        </div>
+        <!-- Ordered Widgets -->
+        ${widgetsHTML}
 
       </div>
     </div>
   `;
+
+  // Customise Dashboard button
+  container.querySelector('#customise-dashboard-btn')?.addEventListener('click', () => {
+    showCustomiseModal(container);
+  });
 
   // Quick action and navigation handlers
   const actions = {
@@ -916,6 +1353,24 @@ export function render(container) {
     el.addEventListener('click', () => {
       const action = el.dataset.action;
       if (actions[action]) actions[action]();
+    });
+  });
+
+  // Pinned link clicks
+  container.querySelectorAll('.pinned-link').forEach(el => {
+    el.addEventListener('click', () => navigate(el.dataset.route));
+  });
+
+  // Prep checklist route navigation
+  container.querySelectorAll('[data-action-route]').forEach(el => {
+    el.addEventListener('click', () => navigate(el.dataset.actionRoute));
+  });
+
+  // Notification item clicks
+  container.querySelectorAll('.notification-item').forEach((el, i) => {
+    el.addEventListener('click', () => {
+      const items = buildNotificationItems(classes, lessons, events);
+      if (items[i]?.action) items[i].action();
     });
   });
 
@@ -936,7 +1391,24 @@ export function render(container) {
     });
   });
 
-  // Async TT schedule card + status banner + My Timetable
+  // Track collapse state on details toggle
+  container.querySelectorAll('.dashboard-widget details').forEach(det => {
+    det.addEventListener('toggle', () => {
+      const wId = det.closest('.dashboard-widget')?.dataset.widgetId;
+      if (!wId) return;
+      const p = getDashPrefs();
+      if (det.open) {
+        p.collapsedWidgets = (p.collapsedWidgets || []).filter(w => w !== wId);
+      } else {
+        if (!(p.collapsedWidgets || []).includes(wId)) {
+          p.collapsedWidgets = [...(p.collapsedWidgets || []), wId];
+        }
+      }
+      saveDashPrefs(p);
+    });
+  });
+
+  // Async TT schedule card + status banner + My Timetable + Weekly Overview + Prep Checklist
   (async () => {
     try {
       const user = getCurrentUser();
@@ -944,14 +1416,89 @@ export function render(container) {
       const ttData = await loadTT();
       const teacherRow = findTeacherRow(ttData, user.email);
       if (!teacherRow) return;
+
+      // Status banner
       const banner = container.querySelector('#tt-status-banner');
       if (banner) banner.innerHTML = buildStatusBanner(teacherRow);
-      const card = container.querySelector('#tt-schedule-card');
-      if (card) card.innerHTML = buildTTScheduleCard(teacherRow);
-      const timetable = container.querySelector('#tt-my-timetable');
-      if (timetable) timetable.innerHTML = buildMyTimetable(teacherRow);
+
+      // Schedule widget
+      const scheduleEl = container.querySelector('#widget-schedule');
+      if (scheduleEl && !prefs.hiddenWidgets.includes('schedule')) {
+        scheduleEl.innerHTML = widgetWrap('schedule', "Today's Schedule", buildTTScheduleCard(teacherRow), prefs);
+      }
+
+      // Weekly overview widget
+      const weeklyEl = container.querySelector('#widget-weeklyOverview');
+      if (weeklyEl && !prefs.hiddenWidgets.includes('weeklyOverview')) {
+        const weeklyContent = buildWeeklyOverview(teacherRow, lessons, classes);
+        if (weeklyContent) {
+          weeklyEl.innerHTML = widgetWrap('weeklyOverview', 'Weekly Overview', weeklyContent, prefs);
+        }
+      }
+
+      // Prep checklist widget
+      const prepEl = container.querySelector('#widget-prepChecklist');
+      if (prepEl && !prefs.hiddenWidgets.includes('prepChecklist')) {
+        const prepContent = buildPrepChecklist(teacherRow, lessons, classes);
+        if (prepContent) {
+          prepEl.innerHTML = widgetWrap('prepChecklist', 'Lesson Prep Checklist', prepContent, prefs);
+          // Wire route clicks inside prep checklist
+          prepEl.querySelectorAll('[data-action-route]').forEach(el => {
+            el.addEventListener('click', () => navigate(el.dataset.actionRoute));
+          });
+        }
+      }
+
+      // My timetable widget
+      const timetableEl = container.querySelector('#widget-timetable');
+      if (timetableEl && !prefs.hiddenWidgets.includes('timetable')) {
+        const ttContent = buildMyTimetable(teacherRow);
+        if (ttContent) {
+          timetableEl.innerHTML = widgetWrap('timetable', 'My Timetable', ttContent, prefs);
+        }
+      }
+
+      // Re-wire collapse tracking for async widgets
+      container.querySelectorAll('.dashboard-widget details').forEach(det => {
+        det.addEventListener('toggle', () => {
+          const wId = det.closest('.dashboard-widget')?.dataset.widgetId;
+          if (!wId) return;
+          const p = getDashPrefs();
+          if (det.open) {
+            p.collapsedWidgets = (p.collapsedWidgets || []).filter(w => w !== wId);
+          } else {
+            if (!(p.collapsedWidgets || []).includes(wId)) {
+              p.collapsedWidgets = [...(p.collapsedWidgets || []), wId];
+            }
+          }
+          saveDashPrefs(p);
+        });
+      });
     } catch { /* TT is optional */ }
   })();
+}
+
+/* Helper for notification click routing — extract action items */
+function buildNotificationItems(classes, lessons, events) {
+  const items = [];
+  lessons.forEach(l => {
+    if ((l.status === 'ready' || l.status === 'completed') && !l.reflection) {
+      const age = Date.now() - (l.updatedAt || l.createdAt || 0);
+      if (age > 2 * 86400000) {
+        items.push({ action: () => navigate(`/lessons/${l.id}`) });
+      }
+    }
+  });
+  const drafts = lessons.filter(l => l.status === 'draft');
+  if (drafts.length > 0) items.push({ action: () => navigate('/lessons') });
+  events.filter(e => e.status !== 'completed').forEach(ev => {
+    const enabled = ev.tasks.filter(t => t.enabled);
+    const done = enabled.filter(t => t.status === 'completed').length;
+    if (enabled.length > 0 && done < enabled.length) items.push({ action: () => navigate('/admin') });
+  });
+  const classesWithoutLessons = classes.filter(cls => !lessons.some(l => l.classId === cls.id));
+  if (classesWithoutLessons.length > 0) items.push({ action: () => navigate('/lesson-planner') });
+  return items.slice(0, 5);
 }
 
 /* ── My Timetable — full day grid ── */

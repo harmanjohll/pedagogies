@@ -6,7 +6,7 @@
 
 const CLOSE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 
-export function openModal({ title, body, footer, width = 480, onClose }) {
+export function openModal({ title, body, footer, width = 480, onClose, onMount }) {
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
 
@@ -22,6 +22,9 @@ export function openModal({ title, body, footer, width = 480, onClose }) {
   `;
 
   document.body.appendChild(backdrop);
+
+  // Call onMount callback so callers can wire up event listeners
+  if (typeof onMount === 'function') onMount(backdrop);
 
   function close() {
     backdrop.style.opacity = '0';

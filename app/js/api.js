@@ -475,6 +475,198 @@ Be specific with video suggestions — name actual video titles and channels you
   });
 }
 
+/* ── Simulation Model Recommendations ── */
+export async function suggestSimulations(planText, subject, level) {
+  // Built-in simulation catalogue for matching
+  const BUILT_IN_SIMS = [
+    { id: 'diffusion', title: 'Diffusion', subject: 'Biology', path: 'simulations/biology/diffusion/index.html' },
+    { id: 'enzyme-activity', title: 'Enzyme Activity', subject: 'Biology', path: 'simulations/biology/enzyme-activity/index.html' },
+    { id: 'food-tests', title: 'Food Tests', subject: 'Biology', path: 'simulations/biology/food-tests/index.html' },
+    { id: 'microscopy', title: 'Microscopy & Cell Drawing', subject: 'Biology', path: 'simulations/biology/microscopy/index.html' },
+    { id: 'osmosis', title: 'Osmosis', subject: 'Biology', path: 'simulations/biology/osmosis/index.html' },
+    { id: 'photosynthesis', title: 'Photosynthesis', subject: 'Biology', path: 'simulations/biology/photosynthesis/index.html' },
+    { id: 'chromatography', title: 'Paper Chromatography', subject: 'Chemistry', path: 'simulations/chemistry/chromatography/index.html' },
+    { id: 'electrolysis', title: 'Electrolysis', subject: 'Chemistry', path: 'simulations/chemistry/electrolysis/index.html' },
+    { id: 'gas-tests', title: 'Gas Tests', subject: 'Chemistry', path: 'simulations/chemistry/gas-tests/index.html' },
+    { id: 'qualitative-analysis', title: 'Qualitative Analysis', subject: 'Chemistry', path: 'simulations/chemistry/qualitative-analysis/index.html' },
+    { id: 'rates-of-reaction', title: 'Rates of Reaction', subject: 'Chemistry', path: 'simulations/chemistry/rates-of-reaction/index.html' },
+    { id: 'salts', title: 'Preparation of Salts', subject: 'Chemistry', path: 'simulations/chemistry/salts/index.html' },
+    { id: 'titration', title: 'Acid-Base Titration', subject: 'Chemistry', path: 'simulations/chemistry/titration/index.html' },
+    { id: 'density', title: 'Density', subject: 'Physics', path: 'simulations/physics/density/index.html' },
+    { id: 'electromagnets', title: 'Electromagnets', subject: 'Physics', path: 'simulations/physics/electromagnets/index.html' },
+    { id: 'lenses', title: 'Lenses & Light', subject: 'Physics', path: 'simulations/physics/lenses/index.html' },
+    { id: 'ohms-law', title: "Ohm's Law", subject: 'Physics', path: 'simulations/physics/ohms-law/index.html' },
+    { id: 'pendulum', title: 'Pendulum & Oscillations', subject: 'Physics', path: 'simulations/physics/pendulum/index.html' },
+    { id: 'specific-heat', title: 'Specific Heat Capacity', subject: 'Physics', path: 'simulations/physics/specific-heat/index.html' },
+    { id: 'waves', title: 'Waves & Ripple Tank', subject: 'Physics', path: 'simulations/physics/waves/index.html' }
+  ];
+
+  const simList = BUILT_IN_SIMS.map(s => `- ${s.title} (${s.subject})`).join('\n');
+
+  const messages = [{
+    role: 'user',
+    content: `Suggest simulation models that would support this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+  }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's simulation specialist for Singapore educators. Recommend interactive simulations that teachers can use to support their lessons — either as in-class demonstrations, student-driven exploration, or pre/post-lab activities.
+
+## Available Built-In Simulations (Co-Cher Platform)
+These simulations are already available in the app and can be launched directly:
+${simList}
+
+## Your Task
+1. **Match built-in simulations first.** If any of the above simulations are relevant to the lesson, recommend them with the tag [AVAILABLE IN CO-CHER].
+2. **Suggest external simulations** from well-known platforms: PhET (phet.colorado.edu), GeoGebra, Desmos, ChemCollective, Falstad, LabXchange, or other reputable educational simulation sites.
+3. **If no suitable simulation exists,** provide a "Build Your Own" suggestion describing:
+   - What the simulation should do
+   - Key variables / interactions students should control
+   - Suggested technology stack (HTML5 Canvas, p5.js, Three.js, or simple spreadsheet model)
+   - Approximate complexity (beginner / intermediate project)
+
+Format:
+
+## Recommended Simulations
+
+### Available in Co-Cher
+1. **[Simulation Title]** [AVAILABLE IN CO-CHER]
+   Subject: [Subject] | Difficulty: [Level]
+   How to use: [1-2 sentences on how it fits the lesson — demo, exploration, pre-lab, etc.]
+
+### External Simulations
+1. **[Simulation Title]**
+   Platform: [Platform name]
+   Search: \`[search query to find it]\`
+   How to use: [1-2 sentences]
+
+### Build Your Own (if no match)
+1. **[Proposed Simulation Title]**
+   What it does: [Description of the simulation]
+   Key variables: [What students can control/observe]
+   Tech suggestion: [HTML5 Canvas / p5.js / spreadsheet / etc.]
+   Complexity: [Beginner / Intermediate / Advanced]
+   Design notes: [2-3 sentences on how to build it]
+
+## Integration Tips
+- 2-3 tips on how to integrate simulations into the lesson flow (e.g., predict-observe-explain, guided inquiry worksheet, compare sim vs real experiment)
+
+Be practical and specific. Prioritise simulations that align with the Singapore O/N-Level or IP curriculum.`,
+    temperature: 0.6,
+    maxTokens: 2048
+  });
+}
+
+/* ── Worksheet / Handout Generator ── */
+export async function generateWorksheet(planText, subject, level) {
+  const messages = [{
+    role: 'user',
+    content: `Generate a student worksheet/handout for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+  }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's worksheet designer for Singapore educators. Create a print-ready student worksheet that teachers can use in class.
+
+Guidelines:
+- Design a structured worksheet with clear sections
+- Include a mix of question types: fill-in-the-blank, short answer, diagram labelling, calculation, structured response
+- Start with easier recall questions and progress to application/analysis
+- Include space indicators like [Space for answer] or [Draw diagram here]
+- Add a header with: Lesson Title, Name: ___, Class: ___, Date: ___
+- Align with Singapore O/N-Level or IP curriculum where possible
+- Include 8-12 questions appropriate for the topic
+- Add a bonus/extension question for advanced students
+- Keep instructions clear and student-friendly
+
+Format the worksheet in clean markdown that can be printed.`,
+    temperature: 0.6,
+    maxTokens: 2048
+  });
+}
+
+/* ── Discussion Prompts Generator ── */
+export async function generateDiscussionPrompts(planText, subject, level) {
+  const messages = [{
+    role: 'user',
+    content: `Generate discussion prompts and thinking questions for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+  }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's discussion facilitator for Singapore educators. Generate thoughtful discussion prompts that promote deep thinking and classroom discourse.
+
+Generate prompts in these categories:
+
+## Opening Questions (Hook / Activate Prior Knowledge)
+2-3 questions to start the lesson and spark curiosity
+
+## Core Discussion Questions (During Lesson)
+4-5 questions that probe understanding at different levels:
+- Recall/Understanding level
+- Application level
+- Analysis/Evaluation level
+- Create/Synthesize level
+
+## Think-Pair-Share Prompts
+2-3 prompts suitable for pair discussion format
+
+## Reflection / Closing Questions
+2-3 prompts for end-of-lesson reflection
+
+## Tips for Facilitation
+- 3-4 tips on how to facilitate productive discussion (wait time, cold calling, sentence starters, etc.)
+
+For each question, include a brief facilitator note on what kind of response to look for.`,
+    temperature: 0.7,
+    maxTokens: 2048
+  });
+}
+
+/* ── External Resources Recommender ── */
+export async function suggestExternalResources(planText, subject, level) {
+  const messages = [{
+    role: 'user',
+    content: `Suggest external educational resources for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+  }];
+
+  return sendChat(messages, {
+    systemPrompt: `You are Co-Cher's resource curator for Singapore educators. Recommend high-quality external educational resources that can enhance the lesson.
+
+Suggest resources from these categories:
+
+## Interactive Tools & Simulations
+- PhET (phet.colorado.edu) — physics, chemistry, biology, math simulations
+- GeoGebra — math visualisations and constructions
+- Desmos — graphing calculator and activities
+- ChemCollective — virtual labs
+- Falstad — circuit simulators, physics applets
+- LabXchange — Harvard's virtual lab platform
+
+## Reference & Content
+- Khan Academy — video explanations and practice
+- BBC Bitesize — curriculum-aligned content
+- CK-12 — free textbooks and simulations
+
+## Singapore-Specific
+- Student Learning Space (SLS) — MOE's e-learning portal
+- Singapore Examinations and Assessment Board resources
+
+## Classroom Tools
+- Padlet, Mentimeter, Kahoot, Nearpod — engagement tools
+- Google Arts & Culture — visual resources
+- Canva for Education — student creation
+
+For each resource:
+1. **[Resource name]**
+   Platform: [Name]
+   Search: \`[search query to find the specific resource]\`
+   Best for: [1 sentence on how it supports the lesson]
+   Free: Yes/No/Freemium
+
+Include 6-10 resources total. Prioritise free and curriculum-aligned options.`,
+    temperature: 0.6,
+    maxTokens: 2048
+  });
+}
+
 export function validateApiKey(key) {
   return key && key.trim().length >= 20;
 }

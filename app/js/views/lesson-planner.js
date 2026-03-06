@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, suggestYouTubeVideos } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -29,6 +29,10 @@ const COMPONENT_META = {
   exitTicket:      { label: 'Exit Ticket',             color: 'var(--e21cc-cait)',  icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', order: 6 },
   review:          { label: 'Lesson Review',           color: 'var(--accent)',      icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>', order: 7 },
   youtubeVideos:   { label: 'YouTube Videos',          color: '#ff0000',            icon: '<polygon points="5 3 19 12 5 21 5 3"/>', order: 8 },
+  simulations:     { label: 'Simulation Models',        color: '#8b5cf6',            icon: '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5"/><circle cx="12" cy="12" r="10"/>', order: 9 },
+  worksheet:       { label: 'Worksheet / Handout',      color: 'var(--info, #3b82f6)',icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>', order: 10 },
+  discussionPrompts: { label: 'Discussion Prompts',     color: 'var(--warning, #f59e0b)', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', order: 11 },
+  externalLinks:   { label: 'External Resources',       color: 'var(--success, #22c55e)', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>', order: 12 },
 };
 
 function setComponent(key, content, meta = '') {
@@ -119,6 +123,10 @@ function renderComponents(container) {
         exitTicket: '#ai-exit-ticket-btn',
         differentiation: '#ai-differentiation-btn',
         youtubeVideos: '#ai-youtube-btn',
+        simulations: '#ai-simulations-btn',
+        worksheet: '#ai-worksheet-btn',
+        discussionPrompts: '#ai-discussion-btn',
+        externalLinks: '#ai-external-btn',
       };
       if (toolBtnMap[key]) container.querySelector(toolBtnMap[key])?.click();
     });
@@ -346,6 +354,16 @@ export function render(container) {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                   Print
                 </button>
+                <button class="btn btn-ghost btn-sm" id="share-lesson-btn" title="Share lesson with a colleague (export/import JSON)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  Share
+                </button>
+                <div style="position:relative;display:inline-block;">
+                  <button class="btn btn-ghost btn-sm" id="templates-btn" title="Start from a lesson template">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                    Templates
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -379,6 +397,22 @@ export function render(container) {
               <button class="btn btn-ghost btn-sm" id="ai-youtube-btn" title="Suggest YouTube videos for this lesson" style="color:#ff0000;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 YouTube
+              </button>
+              <button class="btn btn-ghost btn-sm" id="ai-simulations-btn" title="Find or suggest simulation models for this lesson" style="color:#8b5cf6;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5"/><circle cx="12" cy="12" r="10"/></svg>
+                Simulations
+              </button>
+              <button class="btn btn-ghost btn-sm" id="ai-worksheet-btn" title="Generate a worksheet or handout for this lesson">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Worksheet
+              </button>
+              <button class="btn btn-ghost btn-sm" id="ai-discussion-btn" title="Generate discussion prompts and thinking questions">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Discussion
+              </button>
+              <button class="btn btn-ghost btn-sm" id="ai-external-btn" title="Suggest external resources (PhET, GeoGebra, Desmos, etc.)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Resources
               </button>
               <button class="btn btn-ghost btn-sm" id="spatial-layout-btn" title="Design or link a spatial classroom layout">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
@@ -724,6 +758,106 @@ export function render(container) {
     } catch (err) {
       resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
     }
+  });
+
+  // Simulation Models
+  container.querySelector('#ai-simulations-btn').addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Finding simulation models...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+      const result = await suggestSimulations(planText, cls.subject, cls.level);
+      setComponent('simulations', result, cls.subject || 'Simulations');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Simulation suggestions added!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
+  });
+
+  // Worksheet Generator
+  container.querySelector('#ai-worksheet-btn').addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Generating worksheet...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+    try {
+      const result = await generateWorksheet(planText, cls.subject, cls.level);
+      setComponent('worksheet', result, cls.subject || 'Worksheet');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Worksheet generated!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
+  });
+
+  // Discussion Prompts
+  container.querySelector('#ai-discussion-btn').addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Generating discussion prompts...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+    try {
+      const result = await generateDiscussionPrompts(planText, cls.subject, cls.level);
+      setComponent('discussionPrompts', result, cls.subject || 'Discussion');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Discussion prompts generated!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
+  });
+
+  // External Resources
+  container.querySelector('#ai-external-btn').addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Finding external resources...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+    try {
+      const result = await suggestExternalResources(planText, cls.subject, cls.level);
+      setComponent('externalLinks', result, cls.subject || 'Resources');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('External resources added!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
+  });
+
+  // Share Lesson (export/import JSON)
+  container.querySelector('#share-lesson-btn').addEventListener('click', () => {
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0 && Object.keys(lessonComponents).length === 0) {
+      showToast('No lesson content to share yet.', 'danger'); return;
+    }
+    showShareModal(container);
+  });
+
+  // Lesson Templates
+  container.querySelector('#templates-btn').addEventListener('click', () => {
+    showTemplateModal(container);
   });
 
   // Spatial Layout
@@ -1536,5 +1670,183 @@ function initResizeHandle(handle, leftPanel, rightPanel, parentContainer) {
   handle.addEventListener('dblclick', () => {
     leftPanel.style.flex = '1 1 50%';
     rightPanel.style.flex = '1 1 50%';
+  });
+}
+
+/* ══════════ Share Modal (Export / Import lesson JSON) ══════════ */
+function showShareModal(container) {
+  const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+  const planText = aiMsgs.map(m => m.content).join('\n\n');
+  const exportData = {
+    _cocherExport: true,
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    title: currentLessonId ? (Store.getLesson(currentLessonId)?.title || 'Untitled') : 'Untitled Lesson',
+    chatHistory: chatMessages,
+    components: { ...lessonComponents },
+    classContext: planClassContext ? { name: planClassContext.name, subject: planClassContext.subject, level: planClassContext.level } : null
+  };
+
+  let modalRef = null;
+  modalRef = openModal({
+    title: 'Share Lesson',
+    body: `
+      <div style="margin-bottom:var(--sp-4);">
+        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-2);">Export (send to colleague)</h4>
+        <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-2);">Copy the JSON below and share it. Your colleague can import it into their Co-Cher.</p>
+        <textarea id="share-export-json" readonly style="width:100%;height:120px;font-family:monospace;font-size:0.6875rem;resize:vertical;">${JSON.stringify(exportData, null, 2)}</textarea>
+        <button class="btn btn-secondary btn-sm" id="copy-share-json" style="margin-top:var(--sp-2);">Copy to Clipboard</button>
+        <button class="btn btn-secondary btn-sm" id="download-share-json" style="margin-top:var(--sp-2);">Download .json</button>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--border-light);margin:var(--sp-4) 0;">
+      <div>
+        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-2);">Import (from colleague)</h4>
+        <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-2);">Paste a shared lesson JSON or upload a .json file to load it.</p>
+        <textarea id="share-import-json" placeholder="Paste shared lesson JSON here..." style="width:100%;height:80px;font-family:monospace;font-size:0.6875rem;resize:vertical;"></textarea>
+        <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-2);">
+          <button class="btn btn-primary btn-sm" id="import-share-json">Import</button>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+            Upload .json
+            <input type="file" id="import-share-file" accept=".json" style="display:none;" />
+          </label>
+        </div>
+      </div>
+    `,
+    onMount: (modal) => {
+      modal.querySelector('#copy-share-json').addEventListener('click', () => {
+        const ta = modal.querySelector('#share-export-json');
+        ta.select();
+        navigator.clipboard.writeText(ta.value).then(() => showToast('Copied to clipboard!', 'success'));
+      });
+      modal.querySelector('#download-share-json').addEventListener('click', () => {
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `lesson_${exportData.title.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Downloaded!', 'success');
+      });
+      modal.querySelector('#import-share-json').addEventListener('click', () => {
+        const raw = modal.querySelector('#share-import-json').value.trim();
+        if (!raw) { showToast('Please paste lesson JSON first.', 'danger'); return; }
+        importSharedLesson(raw, container, modalRef);
+      });
+      modal.querySelector('#import-share-file').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          importSharedLesson(reader.result, container, modalRef);
+        };
+        reader.readAsText(file);
+      });
+    }
+  });
+}
+
+function importSharedLesson(jsonStr, container, modalRef) {
+  try {
+    const data = JSON.parse(jsonStr);
+    if (!data._cocherExport) { showToast('Not a valid Co-Cher lesson export.', 'danger'); return; }
+    chatMessages = data.chatHistory || [];
+    lessonComponents = data.components || {};
+    planClassContext = data.classContext || null;
+    currentLessonId = null;
+    if (modalRef?.close) modalRef.close();
+    render(container);
+    showToast(`Imported "${data.title}"! Save when ready.`, 'success');
+  } catch (err) {
+    showToast('Invalid JSON: ' + err.message, 'danger');
+  }
+}
+
+/* ══════════ Lesson Templates Modal ══════════ */
+const LESSON_TEMPLATES = [
+  {
+    id: '5e',
+    name: '5E Inquiry Model',
+    desc: 'Engage, Explore, Explain, Elaborate, Evaluate — ideal for science inquiry lessons.',
+    prompt: 'Design a lesson using the 5E Inquiry Model (Engage, Explore, Explain, Elaborate, Evaluate). Include activities for each phase. Make the Engage phase spark curiosity with a discrepant event or provocative question. The Explore phase should be student-driven hands-on investigation. Include formative checks.'
+  },
+  {
+    id: 'station-rotation',
+    name: 'Station Rotation',
+    desc: 'Students rotate through learning stations — great for differentiation and hands-on activities.',
+    prompt: 'Design a station rotation lesson with 4 stations. Each station should be 10-12 minutes. Include a mix of: teacher-led station, collaborative station, individual practice station, and a tech/simulation station. Provide clear instructions for each station and transition signals.'
+  },
+  {
+    id: 'flipped',
+    name: 'Flipped Classroom',
+    desc: 'Pre-class video/reading + in-class active learning and application.',
+    prompt: 'Design a flipped classroom lesson. Include: (1) Pre-class assignment (video, reading, or interactive resource ~10 min), (2) In-class warm-up check for understanding, (3) Active learning activity (problem-solving, discussion, or project work), (4) Wrap-up with exit ticket. Suggest specific resources for the pre-class component.'
+  },
+  {
+    id: 'tbl',
+    name: 'Team-Based Learning (TBL)',
+    desc: 'Individual readiness test, team discussion, application activity (4S framework).',
+    prompt: 'Design a Team-Based Learning (TBL) lesson with: (1) Pre-class preparation (reading/video), (2) Individual Readiness Assurance Test (iRAT, 5-8 MCQs), (3) Team Readiness Assurance Test (tRAT, same questions solved as a team), (4) Application Activity following the 4S framework (Significant problem, Same problem, Specific choice, Simultaneous report).'
+  },
+  {
+    id: 'thinking-routine',
+    name: 'Thinking Routine (VT)',
+    desc: 'Visible Thinking routine — See-Think-Wonder, Connect-Extend-Challenge, etc.',
+    prompt: 'Design a lesson built around Visible Thinking routines. Use at least 2 of these: See-Think-Wonder, Think-Pair-Share, Connect-Extend-Challenge, or I Used to Think...Now I Think. Show how each routine deepens understanding and makes student thinking visible. Include documentation of thinking (e.g., on mini-whiteboards or shared doc).'
+  },
+  {
+    id: 'pbl',
+    name: 'Project-Based Learning',
+    desc: 'Driving question, sustained inquiry, student voice & choice, public product.',
+    prompt: 'Design a project-based learning lesson segment. Include: a driving question that is open-ended and authentic, clear learning goals aligned to curriculum, scaffolded inquiry process, student voice and choice in how they investigate and present, and a public product or presentation. This can be one session of a multi-session project.'
+  },
+  {
+    id: 'direct',
+    name: 'Direct Instruction (I Do, We Do, You Do)',
+    desc: 'Explicit teaching with modelling, guided practice, and independent practice.',
+    prompt: 'Design a direct instruction lesson using the I Do, We Do, You Do framework. Include: (1) Hook/motivation (2 min), (2) I Do — teacher models with think-aloud (10 min), (3) We Do — guided practice with checking for understanding (10 min), (4) You Do — independent practice with differentiation for struggling and advanced learners (15 min), (5) Plenary with exit ticket.'
+  },
+  {
+    id: 'socratic',
+    name: 'Socratic Seminar',
+    desc: 'Student-led discussion using open-ended questions — builds critical thinking.',
+    prompt: 'Design a Socratic Seminar lesson. Include: (1) Pre-seminar preparation (text, article, or artefact for students to read/analyse), (2) Opening question, (3) Core discussion questions (3-4 open-ended questions), (4) Closing question, (5) Post-seminar reflection. Include discussion norms, roles (inner/outer circle), and how to assess participation.'
+  }
+];
+
+function showTemplateModal(container) {
+  let templateModalRef = null;
+  templateModalRef = openModal({
+    title: 'Lesson Templates',
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);">Choose a pedagogical structure. Co-Cher will use it as a starting prompt for your lesson.</p>
+      <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+        ${LESSON_TEMPLATES.map(t => `
+          <div class="card card-hover card-interactive template-card" data-template="${t.id}" style="padding:var(--sp-3) var(--sp-4);cursor:pointer;">
+            <div style="font-weight:600;color:var(--ink);font-size:0.875rem;">${t.name}</div>
+            <div style="font-size:0.75rem;color:var(--ink-muted);margin-top:2px;">${t.desc}</div>
+          </div>
+        `).join('')}
+      </div>
+    `,
+    onMount: (modal) => {
+      modal.querySelectorAll('.template-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const tId = card.dataset.template;
+          const template = LESSON_TEMPLATES.find(t => t.id === tId);
+          if (!template) return;
+          if (templateModalRef?.close) templateModalRef.close();
+          // Set the template prompt as the chat input
+          const chatInput = container.querySelector('#chat-input');
+          if (chatInput) {
+            const cls = planClassContext;
+            const classContext = cls ? ` This lesson is for ${cls.name} (${cls.subject || 'General'}, ${cls.level || 'Secondary'}).` : '';
+            chatInput.value = template.prompt + classContext;
+            chatInput.focus();
+            showToast(`Template "${template.name}" loaded. Hit Send to start!`, 'success');
+          }
+        });
+      });
+    }
   });
 }
