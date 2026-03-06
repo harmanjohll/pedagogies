@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pendulum &amp; Oscillations – LabSim</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../shared/design-system.css">
-  <link rel="stylesheet" href="pendulum.css">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="pendulum.css?v=5">
 </head>
 <body>
 
@@ -40,7 +40,7 @@
         <div class="panel-body">
           <ol class="procedure-list">
             <li class="procedure-step active" data-step="setup">
-              <strong>Setup</strong> — Adjust the pendulum length using the slider. The length is measured from the pivot to the centre of the bob.
+              <strong>Setup</strong> — Adjust the pendulum length using the slider above the simulation. The length is measured from the pivot to the centre of the bob.
             </li>
             <li class="procedure-step" data-step="release">
               <strong>Release</strong> — Pull the bob to one side (small angle &lt; 10°) and click "Release" to start the pendulum swinging.
@@ -60,31 +60,23 @@
           </ol>
         </div>
       </div>
-
-      <!-- Length control -->
-      <div class="panel mt-4">
-        <div class="panel-header">Pendulum Length</div>
-        <div class="panel-body">
-          <div class="config-row">
-            <label for="length-slider">Length L / m</label>
-            <div class="flex items-center gap-2">
-              <input type="range" id="length-slider" min="0.20" max="1.20" step="0.01" value="0.50" class="slider">
-              <span id="length-display" class="config-value">0.50 m</span>
-            </div>
-          </div>
-          <div class="config-row mt-2">
-            <label for="angle-slider">Release angle / °</label>
-            <div class="flex items-center gap-2">
-              <input type="range" id="angle-slider" min="3" max="15" step="1" value="8" class="slider">
-              <span id="angle-display" class="config-value">8°</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </aside>
 
     <!-- Centre: Simulation -->
     <section class="pend-workbench-panel">
+      <!-- Setup controls — always visible above the canvas -->
+      <div class="pend-setup-bar">
+        <div class="pend-setup-control">
+          <label for="length-slider">String length</label>
+          <input type="range" id="length-slider" min="0.20" max="1.20" step="0.01" value="0.50" class="slider">
+          <span id="length-display" class="config-value">0.50 m</span>
+        </div>
+        <div class="pend-setup-control">
+          <label for="angle-slider">Release angle</label>
+          <input type="range" id="angle-slider" min="3" max="15" step="1" value="8" class="slider">
+          <span id="angle-display" class="config-value">8°</span>
+        </div>
+      </div>
       <div class="pend-workbench">
         <canvas id="pendulum-canvas" width="500" height="480"></canvas>
 
@@ -144,21 +136,24 @@
           <p class="text-sm text-muted">Collect at least 3 data points to calculate g from the gradient.</p>
         </div>
       </div>
+
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="pendulum"></div>
     </aside>
 
   </div>
 
-
-  <!-- Lab Notebook -->
-  <div class="lab-notebook-slot" data-practical="pendulum" style="max-width:640px;margin:var(--sp-4) auto;padding:0 var(--sp-4);"></div>
   <!-- Toast container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="../../shared/lab-audio.js"></script>
-  <script src="../../shared/lab-score.js"></script>
-  <script src="../../shared/lab-record-mode.js"></script>
-  <script src="../../shared/guide-collapse.js"></script>
-  <script src="../../shared/lab-notebook.js"></script>
-  <script src="pendulum.js"></script>
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="pendulum.js?v=5"></script>
 </body>
 </html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photosynthesis – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="photo.css?v=5">
+</head>
+<body>
+
+  <a href="#main-canvas" class="skip-link">Skip to simulation</a>
+
+  <!-- Print-only header -->
+  <div class="print-header">
+    <h1>Photosynthesis</h1>
+    <p>LabSim Biology Practical</p>
+  </div>
+
+  <!-- Top bar -->
+  <nav class="topbar" role="navigation" aria-label="Main navigation">
+    <div class="topbar-inner">
+      <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+      <span class="topbar-breadcrumb">
+        <a href="../../index.html">LabSim</a>
+        <span class="separator">/</span>
+        <a href="../../index.html">Biology</a>
+        <span class="separator">/</span>
+        Photosynthesis
+      </span>
+      <div class="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-toggle-guide" class="btn btn-ghost btn-sm" aria-label="Toggle procedure guide">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+          Guide
+        </button>
+        <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main 3-column layout -->
+  <main class="photo-layout">
+
+    <!-- Left: Variable Selector + Controls + Procedure -->
+    <aside id="guide-panel" class="photo-guide-panel" aria-label="Variable selector and procedure guide">
+
+      <!-- Variable selector -->
+      <div class="panel">
+        <div class="panel-header">Investigation Variable</div>
+        <div class="panel-body">
+          <div class="var-selector">
+            <button class="var-btn selected" id="btn-var-light" data-var="light">Light Distance</button>
+            <button class="var-btn" id="btn-var-co2" data-var="co2">CO&#x2082; Concentration</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="panel mt-4">
+        <div class="panel-header">Controls</div>
+        <div class="panel-body">
+
+          <!-- Light distance controls -->
+          <div id="light-controls">
+            <label class="text-sm text-muted" for="distance-slider">Lamp distance (cm)</label>
+            <input type="range" id="distance-slider" min="5" max="50" step="5" value="10" class="w-full mt-1">
+            <div class="text-sm font-mono text-center mt-1" id="distance-display">10 cm</div>
+            <div class="value-selector mt-2" id="distance-presets"></div>
+          </div>
+
+          <!-- CO2 concentration controls (hidden by default) -->
+          <div id="co2-controls" style="display:none;">
+            <label class="text-sm text-muted">NaHCO&#x2083; concentration (% w/v)</label>
+            <div class="value-selector mt-2" id="co2-presets"></div>
+          </div>
+
+          <!-- Speed control -->
+          <div class="mt-4">
+            <label class="text-sm text-muted">Time acceleration</label>
+            <div class="var-selector mt-1">
+              <button class="var-btn selected" data-speed="1" id="btn-speed-1">x1</button>
+              <button class="var-btn" data-speed="10" id="btn-speed-10">x10</button>
+              <button class="var-btn" data-speed="30" id="btn-speed-30">x30</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Procedure guide -->
+      <div class="panel mt-4">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <ol class="procedure-list" id="procedure-list"></ol>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Centre: Simulation Canvas -->
+    <section class="photo-workbench-panel" aria-label="Simulation">
+      <div class="photo-workbench">
+
+        <!-- Equation display -->
+        <div class="equation-display" id="equation-display"></div>
+
+        <!-- Canvas -->
+        <canvas id="main-canvas" width="700" height="420"></canvas>
+
+        <!-- Bubble counter overlay -->
+        <div class="bubble-counter" id="bubble-counter">
+          <span class="counter-value" id="counter-value">0</span>
+          <span class="counter-label">bubbles</span>
+        </div>
+
+        <!-- Timer bar -->
+        <div class="timer-bar" id="timer-bar">
+          <div class="timer-info">
+            <span class="timer-label">Timer (1 min)</span>
+            <span class="timer-time" id="timer-time">0:00</span>
+          </div>
+          <div class="timer-track">
+            <div class="timer-fill" id="timer-fill"></div>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="action-bar" id="action-bar">
+          <button id="btn-count" class="btn btn-primary btn-sm">Count Bubbles</button>
+          <button id="btn-stop" class="btn btn-danger btn-sm" disabled>Stop</button>
+          <button id="btn-record" class="btn btn-success btn-sm" disabled>Record Result</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Right: Results + Graph + Analysis -->
+    <aside class="photo-data-panel" aria-label="Data and analysis">
+
+      <!-- Results table -->
+      <div class="panel">
+        <div class="panel-header">Results</div>
+        <div class="panel-body">
+          <table class="data-table" id="results-table">
+            <thead id="results-thead">
+              <tr>
+                <th>Distance / cm</th>
+                <th>Bubbles / min</th>
+              </tr>
+            </thead>
+            <tbody id="results-tbody"></tbody>
+          </table>
+          <p id="data-empty" class="text-sm text-muted text-center mt-2">
+            Select a value and count bubbles to begin.
+          </p>
+        </div>
+      </div>
+
+      <!-- Graph -->
+      <div class="panel mt-4">
+        <div class="panel-header">Graph</div>
+        <div class="panel-body">
+          <div class="graph-container">
+            <canvas id="graph-canvas" width="280" height="200"></canvas>
+            <div class="graph-empty-msg" id="graph-empty">Collect data to plot graph</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analysis questions -->
+      <div class="panel mt-4">
+        <div class="panel-header">Analysis Questions</div>
+        <div class="panel-body" id="analysis-panel"></div>
+      </div>
+
+      <!-- Score summary slot -->
+      <div id="score-slot" class="mt-4"></div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="photosynthesis"></div>
+    </aside>
+
+  </main>
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="photo-data.js?v=5"></script>
+  <script src="photo.js?v=5"></script>
+</body>
+</html>

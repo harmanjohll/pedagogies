@@ -198,6 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // TRANSFER unknown sample
     if (bottle === 'Unknown') {
+      if (!state.unknownData) {
+        toast('Confirm an unknown sample first.', 'warn');
+        return;
+      }
       transferSample(tubeIdx);
       return;
     }

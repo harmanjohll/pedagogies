@@ -451,12 +451,12 @@ body {
   z-index: 5;
 }
 .tile-surface {
-  width: 90px;
-  height: 14px;
+  width: 100px;
+  height: 22px;
   background: linear-gradient(180deg, #f8f9fb 0%, #e8eaed 100%);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 
@@ -513,6 +513,19 @@ body {
 .reading-actions {
   display: flex;
   gap: var(--sp-2);
+}
+
+
+/* --- Data table overrides --- */
+.data-panel {
+  overflow-x: auto;
+}
+.data-table td:first-child {
+  white-space: normal;
+  min-width: 70px;
+}
+.data-table input.reading-input {
+  min-width: 42px;
 }
 
 
@@ -689,6 +702,11 @@ body {
 }
 
 @media (max-width: 640px) {
+  body {
+    overflow: auto;
+    height: auto;
+    min-height: 100vh;
+  }
   .burette-controls {
     flex-wrap: wrap;
     gap: var(--sp-2);

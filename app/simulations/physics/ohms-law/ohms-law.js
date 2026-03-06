@@ -45,10 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Canvas sizing ──
   function resizeCanvas() {
     const panel = dom.canvas.parentElement;
+    const dpr = window.devicePixelRatio || 1;
     const w = Math.min(panel.clientWidth - 32, 560);
     const h = Math.min(panel.clientHeight - 100, 420);
-    dom.canvas.width = w;
-    dom.canvas.height = h;
+    dom.canvas.width = w * dpr;
+    dom.canvas.height = h * dpr;
+    dom.canvas.style.width = w + 'px';
+    dom.canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawCircuit();
   }
   resizeCanvas();
@@ -162,8 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // ══════════════════════════════════════
 
   function drawCircuit() {
-    const W = dom.canvas.width;
-    const H = dom.canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const W = dom.canvas.width / dpr;
+    const H = dom.canvas.height / dpr;
     ctx.clearRect(0, 0, W, H);
 
     const cx = W / 2;

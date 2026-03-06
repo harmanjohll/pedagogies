@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     baseSelect: $('base-select'),
     concordantMsg: $('concordant-msg'),
     calcWorkspace: $('calc-workspace'),
+    btnNextTitration: $('btn-next-titration'),
     toast: $('toast-container'),
   };
 
@@ -244,16 +245,14 @@ document.addEventListener('DOMContentLoaded', () => {
       dom.guideActions.appendChild(note);
     } else if (step.id === 'repeat') {
       if (state.run < 3) {
-        const nxt = document.createElement('button');
-        nxt.className = 'btn btn-primary btn-sm';
-        nxt.dataset.action = 'next-titration';
-        nxt.textContent = 'Next Titration';
-        dom.guideActions.appendChild(nxt);
+        dom.guideDesc.textContent = 'Titration recorded! Click below or use the green bar at the bottom to start the next run.';
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-success btn-sm';
+        btn.textContent = 'Next Titration';
+        btn.dataset.action = 'next-titration';
+        dom.guideActions.appendChild(btn);
       } else {
-        const done = document.createElement('span');
-        done.className = 'text-sm text-success';
-        done.textContent = 'All four titrations complete. Check your results.';
-        dom.guideActions.appendChild(done);
+        dom.guideDesc.textContent = 'All four titrations complete. Check your concordance results.';
       }
     }
 
@@ -270,6 +269,10 @@ document.addEventListener('DOMContentLoaded', () => {
       state.step++;
       renderStepsBar();
       updateGuide();
+      // Show the Next Titration bar when reaching the repeat step
+      if (STEPS[state.step] && STEPS[state.step].id === 'repeat') {
+        showNextRunBar();
+      }
     }
   }
 
@@ -531,23 +534,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const bur = dom.burette;
     const base = stand.querySelector('.retort-base');
 
-    // Calculate target position for the flask under the burette
-    const burRect = bur.getBoundingClientRect();
-    const flaskRect = dom.flask.getBoundingClientRect();
-    const wbRect = dom.workbench.getBoundingClientRect();
-
-    // Show white tile
+    // Show white tile — it's inside stand-assembly, so use stand-relative coords
+    const burCenter = bur.offsetLeft + bur.offsetWidth / 2;
     dom.whiteTile.style.display = '';
-    dom.whiteTile.style.position = 'absolute';
     dom.whiteTile.style.bottom = (base.offsetHeight + 2) + 'px';
-    dom.whiteTile.style.left = (bur.offsetLeft + bur.offsetWidth / 2 - 45) + 'px';
-    dom.whiteTile.style.zIndex = '5';
+    dom.whiteTile.style.left = (burCenter - 50) + 'px';
 
-    // Animate flask to position under burette
+    // Place flask inside stand-assembly, sitting on the white tile
     dom.flask.classList.add('placed');
     stand.appendChild(dom.flask);
-    dom.flask.style.bottom = (base.offsetHeight + 14) + 'px';
-    dom.flask.style.left = (bur.offsetLeft + bur.offsetWidth / 2 - 38) + 'px';
+    dom.flask.style.bottom = (base.offsetHeight + 22) + 'px';
+    dom.flask.style.left = (burCenter - 38) + 'px';
 
     // Show controls
     dom.buretteControls.style.display = '';
@@ -728,54 +725,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Log final
+  // Log final — records the final burette reading and completes the titration
   dom.btnLogFinal.addEventListener('click', () => {
+    if (state.initialReading === null) {
+      toast('Log the initial reading first.', 'warn');
+      return;
+    }
     const finalReading = getBuretteReading();
     const initialReading = parseFloat(document.getElementById(`initial-${state.run}`)?.value || '0');
     const titre = finalReading - initialReading;
-
     const finalInput = document.getElementById(`final-${state.run}`);
     const titreInput = document.getElementById(`titre-${state.run}`);
+    const isIndependent = typeof LabRecordMode !== 'undefined' && !LabRecordMode.isGuided();
 
-    if (typeof LabRecordMode !== 'undefined' && !LabRecordMode.isGuided()) {
-      // Independent mode: student enters final reading manually
-      if (finalInput) {
-        finalInput.readOnly = false;
-        finalInput.value = '';
-        finalInput.placeholder = finalReading.toFixed(2);
-        finalInput.focus();
-        finalInput.style.background = 'var(--color-primary-light)';
-        toast('Read the burette and type your final reading.', 'info');
-        const confirmHandler = () => {
-          const entered = parseFloat(finalInput.value);
-          if (isNaN(entered)) return;
-          finalInput.readOnly = true;
-          finalInput.style.background = '';
-          finalInput.removeEventListener('blur', confirmHandler);
-          finalInput.removeEventListener('keydown', keyHandler);
-          // Calculate titre from student-entered values
-          const studentInitial = parseFloat(document.getElementById(`initial-${state.run}`)?.value || '0');
-          const studentTitre = entered - studentInitial;
-          if (titreInput) titreInput.value = studentTitre.toFixed(2);
-          state.results.push({ initial: studentInitial, final: entered, titre: studentTitre, run: state.run });
-          enableFlowButtons(false);
-          checkConcordance();
-          toast(`Titre ${state.run === 0 ? '(rough)' : '#' + state.run}: ${studentTitre.toFixed(2)} cm\u00B3`);
-          if (state.step === 9) advanceStep();
-        };
-        const keyHandler = (e) => { if (e.key === 'Enter') confirmHandler(); };
-        finalInput.addEventListener('blur', confirmHandler);
-        finalInput.addEventListener('keydown', keyHandler);
+    // Helper: called after final reading is determined (immediately in guided, after input in independent)
+    function finishTitration(finalVal, initVal, titreVal) {
+      try {
+        if (finalInput) finalInput.value = finalVal.toFixed(2);
+        if (titreInput) titreInput.value = titreVal.toFixed(2);
+        state.results.push({ initial: initVal, final: finalVal, titre: titreVal, run: state.run });
+        enableFlowButtons(false);
+        checkConcordance();
+        toast(`Titre ${state.run === 0 ? '(rough)' : '#' + state.run}: ${titreVal.toFixed(2)} cm\u00B3`);
+        state.step = STEPS.length - 1;
+        renderStepsBar();
+        updateGuide();
+      } catch (err) {
+        console.error('[finishTitration] Error:', err);
       }
+      // Always show the next-run dialog, even if something above failed
+      showNextRunBar();
+    }
+
+    if (isIndependent && finalInput) {
+      // Independent mode: student types their own final reading
+      finalInput.readOnly = false;
+      finalInput.value = '';
+      finalInput.placeholder = finalReading.toFixed(2);
+      finalInput.focus();
+      finalInput.style.background = 'var(--color-primary-light)';
+      toast('Read the burette and type your final reading.', 'info');
+      const confirmHandler = () => {
+        const entered = parseFloat(finalInput.value);
+        if (isNaN(entered)) return;
+        finalInput.readOnly = true;
+        finalInput.style.background = '';
+        finalInput.removeEventListener('blur', confirmHandler);
+        finalInput.removeEventListener('keydown', keyHandler);
+        const studentInitial = parseFloat(document.getElementById(`initial-${state.run}`)?.value || '0');
+        finishTitration(entered, studentInitial, entered - studentInitial);
+      };
+      const keyHandler = (e) => { if (e.key === 'Enter') confirmHandler(); };
+      finalInput.addEventListener('blur', confirmHandler);
+      finalInput.addEventListener('keydown', keyHandler);
     } else {
-      // Guided mode: auto-fill
-      if (finalInput) finalInput.value = finalReading.toFixed(2);
-      if (titreInput) titreInput.value = titre.toFixed(2);
-      state.results.push({ initial: initialReading, final: finalReading, titre, run: state.run });
-      enableFlowButtons(false);
-      checkConcordance();
-      toast(`Titre ${state.run === 0 ? '(rough)' : '#' + state.run}: ${titre.toFixed(2)} cm\u00B3`);
-      if (state.step === 9) advanceStep();
+      // Guided mode: auto-fill immediately
+      finishTitration(finalReading, initialReading, titre);
     }
   });
 
@@ -852,28 +857,79 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn?.dataset.action === 'next-titration') startNextTitration();
   });
 
+  // Wire up the static topbar Next Titration button
+  if (dom.btnNextTitration) {
+    dom.btnNextTitration.addEventListener('click', () => {
+      if (state.results.length === 0) {
+        toast('Complete a titration first.', 'warn');
+        return;
+      }
+      startNextTitration();
+    });
+  }
+
+  // ── Next Run Bar ──
+
+  const nextRunBar = $('next-run-bar');
+  const nextRunLabel = $('next-run-label');
+  const btnNextRun = $('btn-next-run');
+
+  if (btnNextRun) {
+    btnNextRun.addEventListener('click', () => startNextTitration());
+  }
+
+  function showNextRunBar() {
+    if (state.run >= 3) {
+      toast('All four titrations complete! Check your concordance results.', 'success');
+      return;
+    }
+    const label = state.run === 0 ? '1st accurate' :
+                  state.run === 1 ? '2nd accurate' : '3rd accurate';
+
+    // Enable the topbar button
+    if (dom.btnNextTitration) dom.btnNextTitration.disabled = false;
+
+    // Show the green bottom bar
+    if (nextRunBar) {
+      if (nextRunLabel) nextRunLabel.textContent = `Titration recorded! Ready for ${label} run.`;
+      nextRunBar.style.display = '';
+    }
+  }
+
+  function hideNextRunBar() {
+    if (nextRunBar) nextRunBar.style.display = 'none';
+    if (dom.btnNextTitration) dom.btnNextTitration.disabled = true;
+  }
+
   function startNextTitration() {
     if (state.run >= 3) {
       toast('All four titrations complete.', 'info');
       return;
     }
+    hideNextRunBar();
 
     state.run++;
+    // Reset all per-titration state so guided steps advance correctly
+    state.pipetteRinsed = false;
     state.pipetteFilled = false;
     state.flaskFilled = false;
+    state.indicatorType = null;
     state.indicatorAdded = false;
     state.flaskPlaced = false;
     state.initialReading = null;
     state.endpointReached = false;
     state.endpointVol = (state.acidConc * PIPETTE_VOL) / state.baseConc;
 
+    // Reset visuals
+    dom.pipetteLiquid.style.height = '0';
+    dom.pipetteBulgeLiquid.style.height = '0';
     dom.flaskLiquid.style.height = '0';
     dom.flaskLiquid.style.backgroundColor = 'transparent';
     dom.indicator.querySelector('.indicator-label').textContent = 'Indicator';
     unplaceFlask();
     enableFlowButtons(false);
 
-    state.step = 2; // back to rinse-pipette
+    state.step = 2; // back to rinse-pipette (burette stays filled)
     renderStepsBar();
     updateGuide();
     toast(`Starting titration ${state.run === 1 ? '1st' : state.run === 2 ? '2nd' : '3rd'} accurate.`);
@@ -908,6 +964,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dom.beakerLiquid.style.height = '75%';
     cancelPick();
     closePopups();
+    hideNextRunBar();
 
     for (let i = 0; i < 4; i++) {
       ['final', 'initial', 'titre'].forEach(prefix => {

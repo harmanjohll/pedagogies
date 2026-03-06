@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Osmosis – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="osmosis.css?v=5">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="../../index.html">LabSim</a> <span class="sep">/</span>
+        <a href="../../index.html">Biology</a> <span class="sep">/</span>
+        <span>Osmosis</span>
+      </nav>
+      <div class="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-guide" class="btn btn-ghost btn-sm" aria-label="Toggle guide panel">Guide</button>
+        <button id="btn-reset" class="btn btn-ghost btn-sm" aria-label="Reset practical">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="osm-layout container">
+
+    <!-- Left: Guide -->
+    <aside id="guide-panel" class="osm-guide-panel panel" role="complementary" aria-label="Guide">
+      <div class="panel-header">Procedure</div>
+      <div class="panel-body">
+        <ol class="procedure-list" id="procedure-list" role="list" aria-label="Procedure steps">
+          <li class="procedure-step" data-step="cut">Cut 6 equal potato cylinders using a cork borer</li>
+          <li class="procedure-step" data-step="weigh">Weigh each cylinder and record initial mass</li>
+          <li class="procedure-step" data-step="place">Place one cylinder in each sucrose solution</li>
+          <li class="procedure-step" data-step="wait">Leave for 30 minutes (simulated)</li>
+          <li class="procedure-step" data-step="reweigh">Remove, blot dry, and reweigh each cylinder</li>
+          <li class="procedure-step" data-step="graph">Calculate % change and plot graph</li>
+        </ol>
+
+        <div class="osm-legend">
+          <div class="legend-title">Sucrose concentrations (mol/dm³)</div>
+          <div class="legend-chips" id="legend-chips"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Centre: Workbench -->
+    <section class="osm-workbench-panel" role="main" aria-label="Workbench">
+
+      <!-- Beakers row -->
+      <div class="beakers-row" id="beakers-row"></div>
+
+      <!-- Action bar -->
+      <div class="action-bar" id="action-bar">
+        <button id="btn-cut" class="btn btn-primary btn-sm">Cut Cylinders</button>
+        <button id="btn-weigh-init" class="btn btn-primary btn-sm" disabled>Weigh Initial</button>
+        <button id="btn-place" class="btn btn-primary btn-sm" disabled>Place in Solutions</button>
+        <button id="btn-wait" class="btn btn-primary btn-sm" disabled>Start Timer (30 min)</button>
+        <button id="btn-remove" class="btn btn-primary btn-sm" disabled>Remove &amp; Blot</button>
+        <button id="btn-weigh-final" class="btn btn-primary btn-sm" disabled>Weigh Final</button>
+      </div>
+
+      <!-- Timer -->
+      <div class="timer-bar" id="timer-bar" hidden>
+        <div class="timer-progress" id="timer-progress"></div>
+        <span class="timer-text" id="timer-text">0:00 / 30:00</span>
+      </div>
+
+      <!-- Balance -->
+      <div class="balance-display" id="balance-display" hidden>
+        <div class="balance-icon">&#9878;</div>
+        <div class="balance-reading" id="balance-reading">0.00 g</div>
+        <div class="balance-label" id="balance-label">—</div>
+      </div>
+
+    </section>
+
+    <!-- Right: Data -->
+    <aside class="osm-data-panel panel" role="complementary" aria-label="Data and analysis">
+      <div class="panel-header">Data</div>
+      <div class="panel-body">
+
+        <div class="table-scroll">
+          <table class="data-table" id="data-table" aria-label="Osmosis results">
+            <thead>
+              <tr>
+                <th>Conc.</th>
+                <th>Initial / g</th>
+                <th>Final / g</th>
+                <th>% Change</th>
+              </tr>
+            </thead>
+            <tbody id="data-tbody"></tbody>
+          </table>
+        </div>
+
+        <h4 class="section-sub">% Mass Change vs Concentration</h4>
+        <div class="graph-container">
+          <canvas id="graph-canvas" aria-label="Graph of percentage mass change vs sucrose concentration"></canvas>
+        </div>
+
+        <div class="calc-panel" id="calc-panel" hidden>
+          <h4 class="section-sub">Analysis</h4>
+          <div class="calc-line">
+            <span class="calc-label">Isotonic point:</span>
+            <span id="calc-isotonic" class="calc-result">—</span>
+          </div>
+          <p class="calc-note" id="calc-explanation"></p>
+        </div>
+
+      </div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="osmosis"></div>
+    </aside>
+
+  </div>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="osmosis.js?v=5"></script>
+</body>
+</html>

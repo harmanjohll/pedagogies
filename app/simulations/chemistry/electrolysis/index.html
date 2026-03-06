@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Electrolysis – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="electrolysis.css?v=5">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="../../index.html">LabSim</a> <span class="sep">/</span>
+        <a href="../../index.html">Chemistry</a> <span class="sep">/</span>
+        <span>Electrolysis</span>
+      </nav>
+      <div class="topbar-actions" id="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-guide" class="btn btn-ghost btn-sm" aria-label="Toggle guide panel">Guide</button>
+        <button id="btn-reset" class="btn btn-ghost btn-sm" aria-label="Reset practical">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="el-layout container">
+
+    <!-- Left: Guide + Config -->
+    <aside id="guide-panel" class="el-guide-panel panel" role="complementary" aria-label="Guide and configuration">
+      <div class="panel-header">Setup &amp; Guide</div>
+      <div class="panel-body">
+
+        <div class="config-group">
+          <label class="config-label" for="sel-electrolyte">Electrolyte</label>
+          <select id="sel-electrolyte" class="config-select" aria-label="Choose electrolyte">
+            <option value="">— Select —</option>
+          </select>
+        </div>
+
+        <div class="config-group">
+          <label class="config-label" for="sel-electrode">Electrodes</label>
+          <select id="sel-electrode" class="config-select" aria-label="Choose electrode type">
+            <option value="">— Select —</option>
+          </select>
+        </div>
+
+        <div id="ion-info" class="ion-info" aria-live="polite" hidden>
+          <div class="ion-info-title">Ions present</div>
+          <div id="ion-list" class="ion-list"></div>
+        </div>
+
+        <button id="btn-confirm" class="btn btn-primary btn-sm" disabled>Set Up Cell</button>
+
+        <ol class="procedure-list" id="procedure-list" role="list" aria-label="Procedure steps">
+          <li class="procedure-step" data-step="setup">Select electrolyte &amp; electrodes</li>
+          <li class="procedure-step" data-step="observe">Observe the cell before current flows</li>
+          <li class="procedure-step" data-step="switch-on">Close the switch to start electrolysis</li>
+          <li class="procedure-step" data-step="cathode">Record cathode observation</li>
+          <li class="procedure-step" data-step="anode">Record anode observation</li>
+          <li class="procedure-step" data-step="equations">Write electrode equations</li>
+        </ol>
+      </div>
+    </aside>
+
+    <!-- Centre: Canvas workbench -->
+    <section class="el-workbench-panel" role="main" aria-label="Electrolysis cell">
+      <div class="el-workbench">
+        <canvas id="cell-canvas" aria-label="Electrolysis cell diagram"></canvas>
+      </div>
+      <div class="el-controls" id="controls" hidden>
+        <button id="btn-switch" class="btn btn-primary btn-sm" aria-label="Toggle switch">Close Switch</button>
+        <div class="el-current-display" id="current-display" hidden>
+          <span class="current-label">Current:</span>
+          <span class="current-value" id="current-value">0.00 A</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Data -->
+    <aside class="el-data-panel panel" role="complementary" aria-label="Observations and results">
+      <div class="panel-header">Observations</div>
+      <div class="panel-body">
+
+        <div class="el-obs-section" id="obs-before" hidden>
+          <h4 class="obs-heading">Before current flows</h4>
+          <p class="obs-text" id="obs-before-text"></p>
+        </div>
+
+        <div class="el-obs-section" id="obs-cathode" hidden>
+          <h4 class="obs-heading">Cathode (−)</h4>
+          <p class="obs-text" id="obs-cathode-text"></p>
+          <div class="obs-product" id="obs-cathode-product"></div>
+        </div>
+
+        <div class="el-obs-section" id="obs-anode" hidden>
+          <h4 class="obs-heading">Anode (+)</h4>
+          <p class="obs-text" id="obs-anode-text"></p>
+          <div class="obs-product" id="obs-anode-product"></div>
+        </div>
+
+        <div class="el-equations" id="equations-panel" hidden>
+          <h4 class="obs-heading">Electrode Equations</h4>
+          <div class="eq-line"><span class="eq-label">Cathode:</span> <span id="eq-cathode"></span></div>
+          <div class="eq-line"><span class="eq-label">Anode:</span> <span id="eq-anode"></span></div>
+          <div class="eq-line eq-overall"><span class="eq-label">Overall:</span> <span id="eq-overall"></span></div>
+          <p class="eq-notes" id="eq-notes"></p>
+        </div>
+
+        <div class="el-id-section" id="id-section" hidden>
+          <h4 class="obs-heading">Identify the Products</h4>
+          <div class="id-row">
+            <label class="id-label" for="id-cathode">Cathode product</label>
+            <input id="id-cathode" class="id-input" type="text" placeholder="e.g. Copper" autocomplete="off">
+          </div>
+          <div class="id-row">
+            <label class="id-label" for="id-anode">Anode product</label>
+            <input id="id-anode" class="id-input" type="text" placeholder="e.g. Oxygen" autocomplete="off">
+          </div>
+          <button id="btn-check-id" class="btn btn-primary btn-sm">Check</button>
+          <div id="id-result" class="id-result" aria-live="polite"></div>
+        </div>
+
+      </div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="electrolysis"></div>
+    </aside>
+
+  </div>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="electrolysis-data.js?v=5"></script>
+  <script src="electrolysis.js?v=5"></script>
+</body>
+</html>

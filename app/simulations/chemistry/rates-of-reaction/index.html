@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rates of Reaction – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="rates.css?v=5">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="../../index.html">LabSim</a> <span class="sep">/</span>
+        <a href="../../index.html">Chemistry</a> <span class="sep">/</span>
+        <span>Rates of Reaction</span>
+      </nav>
+    </div>
+  </header>
+
+  <div class="rates-layout container">
+
+    <!-- Left: Guide -->
+    <aside class="panel guide-panel" id="guide">
+      <div class="panel-header">Procedure</div>
+      <div class="panel-body">
+        <div class="equation-display" id="equation"></div>
+        <ol class="procedure-list" id="procedure-list"></ol>
+      </div>
+    </aside>
+
+    <!-- Centre: Workbench -->
+    <main class="rates-workbench">
+      <div class="config-row">
+        <div class="config-group">
+          <label for="sel-conc">Concentration</label>
+          <select id="sel-conc" class="config-select"></select>
+        </div>
+        <div class="config-group">
+          <label for="sel-chips">Chip size</label>
+          <select id="sel-chips" class="config-select">
+            <option value="large">Large chips</option>
+            <option value="small">Small chips</option>
+            <option value="powder">Powder</option>
+          </select>
+        </div>
+      </div>
+
+      <canvas id="canvas" width="560" height="380"></canvas>
+
+      <div class="action-bar">
+        <button class="btn btn-primary btn-sm" id="btn-start">Start Reaction</button>
+        <button class="btn btn-ghost btn-sm" id="btn-reset">Reset</button>
+        <span class="timer-display" id="timer">0 s</span>
+      </div>
+
+      <div class="record-prompt" id="record-prompt" hidden>
+        <div class="prompt-inner">
+          <div class="prompt-icon">&#9201;</div>
+          <div class="prompt-text">
+            Time: <strong><span class="prompt-time">0</span> s</strong> &mdash;
+            Read the gas syringe and enter the volume of CO&#x2082; collected:
+          </div>
+          <div class="prompt-input-row">
+            <input type="number" class="reading-input" min="0" max="65" step="0.5" placeholder="e.g. 24.5" autocomplete="off">
+            <span class="prompt-unit">cm&sup3;</span>
+            <button class="btn btn-primary btn-sm" id="btn-record" disabled>Record Reading</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right: Data -->
+    <aside class="panel data-panel">
+      <div class="panel-header">Results</div>
+      <div class="panel-body">
+        <table class="data-table" id="data-table">
+          <thead>
+            <tr>
+              <th>Time / s</th>
+              <th>Vol CO₂ / cm³</th>
+            </tr>
+          </thead>
+          <tbody id="data-body"></tbody>
+        </table>
+        <div class="graph-container">
+          <canvas id="graph" width="280" height="200"></canvas>
+        </div>
+        <div class="rate-calc" id="rate-calc" hidden>
+          <div class="rate-label">Initial rate:</div>
+          <div class="rate-value" id="rate-value"></div>
+        </div>
+        <div id="export-area"></div>
+      </div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="rates-of-reaction"></div>
+    </aside>
+
+  </div>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="rates-data.js?v=5"></script>
+  <script src="rates.js?v=5"></script>
+</body>
+</html>
