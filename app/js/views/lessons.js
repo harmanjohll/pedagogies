@@ -8,6 +8,8 @@ import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { confirmDialog } from '../components/modals.js';
 import { showToast } from '../components/toast.js';
+import { getCurrentUser } from '../components/login.js';
+import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
 
 const STATUS_MAP = {
   draft: { label: 'Draft', badge: 'badge-gray' },
@@ -116,6 +118,9 @@ export function renderList(container) {
             </button>
           </div>
         </div>
+
+        <!-- My Timetable (populated async) -->
+        <div id="lessons-tt-timetable"></div>
 
         ${lessons.length === 0 ? `
           <div class="empty-state">
@@ -232,6 +237,21 @@ export function renderList(container) {
       });
     });
   });
+
+  // Async My Timetable
+  (async () => {
+    try {
+      const user = getCurrentUser();
+      if (!user?.email) return;
+      const ttData = await loadTT();
+      const teacherRow = findTeacherRow(ttData, user.email);
+      const el = container.querySelector('#lessons-tt-timetable');
+      if (!el) return;
+      if (teacherRow) {
+        el.innerHTML = buildMyTimetable(teacherRow);
+      }
+    } catch { /* TT is optional */ }
+  })();
 }
 
 function renderCards(grid, lessons, classMap) {
