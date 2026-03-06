@@ -131,8 +131,10 @@ export async function renderLogin(onComplete) {
       return;
     }
 
-    // Match against teachers list (case-insensitive)
-    const teacher = teachers.find(t => t.email.toLowerCase() === email);
+    // Match against teachers list (case-insensitive, cross-domain via prefix)
+    const emailPrefix = email.split('@')[0];
+    const teacher = teachers.find(t => t.email.toLowerCase() === email)
+      || teachers.find(t => t.email.toLowerCase().split('@')[0] === emailPrefix);
     if (!teacher) {
       errorEl.textContent = 'Email not recognised. Please check with your administrator.';
       errorEl.style.display = 'block';

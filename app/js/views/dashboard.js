@@ -90,7 +90,7 @@ function getDailyQuote() {
 /* ── Timetable (TT) Awareness ── */
 let _ttCache = null;
 
-async function loadTT() {
+export async function loadTT() {
   if (_ttCache) return _ttCache;
   try {
     const res = await fetch('./btyrelief/BTYTT_2026Sem1_v1.csv');
@@ -108,7 +108,7 @@ async function loadTT() {
   return _ttCache;
 }
 
-function getTTPeriodKey() {
+export function getTTPeriodKey() {
   const now = new Date();
   const day = now.getDay();
   const dayNames = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -129,6 +129,29 @@ function getTTPeriodKey() {
     if (mins >= periods[i].start) { period = periods[i].p; break; }
   }
   return { dayStr, period, weekType, mins };
+}
+
+/* ── Demo role-play mapping: login email → TT teacher email prefix ── */
+const DEMO_ROLE_MAP = {
+  'harman_johll': 'nurain_hamzah'   // Harman role-plays as Ms Ain (Chemistry)
+};
+
+/* ── Flexible teacher lookup: match exact email or prefix (cross-domain) ── */
+export function findTeacherRow(ttData, email) {
+  if (!ttData || !email) return null;
+  const emailLower = email.toLowerCase();
+  const prefix = emailLower.split('@')[0];
+
+  // Check if this user has a demo role-play mapping
+  const lookupPrefix = DEMO_ROLE_MAP[prefix] || prefix;
+
+  // 1. Exact match on Teacher's Email
+  let row = ttData.find(r => (r["Teacher's Email"] || '').toLowerCase() === emailLower);
+  if (row) return row;
+  // 2. Prefix match on Teacher's Email (handles cross-domain + role-play)
+  row = ttData.find(r => (r["Teacher's Email"] || '').toLowerCase().split('@')[0] === lookupPrefix);
+  if (row) return row;
+  return null;
 }
 
 /* ── Top-of-dashboard status banner: next lesson or done for the day ── */
@@ -919,10 +942,7 @@ export function render(container) {
       const user = getCurrentUser();
       if (!user?.email) return;
       const ttData = await loadTT();
-      const emailLower = user.email.toLowerCase();
-      const teacherRow = ttData.find(row =>
-        (row["Teacher's Email"] || '').toLowerCase() === emailLower
-      );
+      const teacherRow = findTeacherRow(ttData, user.email);
       if (!teacherRow) return;
       const banner = container.querySelector('#tt-status-banner');
       if (banner) banner.innerHTML = buildStatusBanner(teacherRow);
@@ -935,7 +955,7 @@ export function render(container) {
 }
 
 /* ── My Timetable — full day grid ── */
-function buildMyTimetable(teacherRow) {
+export function buildMyTimetable(teacherRow) {
   if (!teacherRow) return '';
   const pk = getTTPeriodKey();
   if (!pk) return '';
