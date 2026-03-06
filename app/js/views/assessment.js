@@ -756,6 +756,73 @@ export function renderAaL(container) {
           <div id="grow-output" style="margin-top:12px;"></div>
         </div>
 
+        <!-- ACT Coaching Framework -->
+        <div class="assess-card">
+          <div class="assess-section-title">ACT Coaching Framework</div>
+          <div class="assess-section-desc">
+            A complementary coaching model focused on three dimensions of student engagement during learning activities.
+            Use ACT alongside GROW for a more holistic coaching approach that connects metacognition to observable classroom behaviour.
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #ef4444;background:rgba(239,68,68,0.03);">
+              <div style="font-weight:700;font-size:0.9375rem;color:#ef4444;margin-bottom:4px;">A &mdash; Action</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">What are students <em>doing</em>? Are they actively engaged with the task, or passively watching?</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
+                <strong>Look for:</strong> Hands on materials, writing, experimenting, sketching, manipulating tools.<br/>
+                <strong>Red flags:</strong> Off-task, idle, waiting, copying without understanding.
+              </div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">&ldquo;I see you&rsquo;ve set up the apparatus. What&rsquo;s your next step?&rdquo;</div>
+            </div>
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #f59e0b;background:rgba(245,158,11,0.03);">
+              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">C &mdash; Collaboration</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">How are students <em>interacting</em>? Are they building on each other&rsquo;s ideas or working in isolation?</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
+                <strong>Look for:</strong> Turn-taking, building on ideas, shared artefacts, constructive disagreement.<br/>
+                <strong>Red flags:</strong> Dominance by one voice, social loafing, parallel (not joint) work.
+              </div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">&ldquo;Has everyone in the group contributed an idea? How did you decide?&rdquo;</div>
+            </div>
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #3b82f6;background:rgba(59,130,246,0.03);">
+              <div style="font-weight:700;font-size:0.9375rem;color:#3b82f6;margin-bottom:4px;">T &mdash; Thinking</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">What level of <em>thinking</em> is happening? Surface recall or deeper reasoning?</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
+                <strong>Look for:</strong> Questioning, justifying, connecting to prior knowledge, hypothesising, evaluating.<br/>
+                <strong>Red flags:</strong> Rote responses, no evidence of reasoning, inability to explain choices.
+              </div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">&ldquo;Can you explain <em>why</em> you chose that approach? What would happen if&hellip;?&rdquo;</div>
+            </div>
+          </div>
+
+          <div style="padding:12px 16px;border-radius:8px;background:var(--bg-subtle,#f8f9fa);border:1px solid var(--border,#e2e5ea);margin-bottom:12px;">
+            <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Using GROW + ACT Together</div>
+            <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
+              <strong>Before the lesson:</strong> Use <span style="color:#3b82f6;font-weight:600;">GROW</span> to set goals and plan strategies with students.<br/>
+              <strong>During the lesson:</strong> Use <span style="color:#ef4444;font-weight:600;">ACT</span> as a walk-around observation lens &mdash; scan for Action, Collaboration, and Thinking quality.<br/>
+              <strong>After the lesson:</strong> Use <span style="color:#3b82f6;font-weight:600;">GROW (W)</span> to reflect: What worked? What would you change?
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class (optional)</label>
+              <select id="act-class" class="input" style="width:100%;">
+                ${classDropdownOptions()}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic / activity</label>
+              <input type="text" id="act-topic" class="input" placeholder="e.g. Group investigation on acids" style="width:100%;" />
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-sm" id="act-generate-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Generate ACT Observation Prompts
+          </button>
+          <div id="act-output" style="margin-top:12px;"></div>
+        </div>
+
         <!-- SRL Strategies -->
         <div class="assess-card">
           <div class="assess-section-title">Self-Regulated Learning (SRL) Strategies</div>
@@ -852,6 +919,55 @@ Make them concrete, empathetic, and suitable for a classroom coaching conversati
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Generate GROW Prompts';
+    }
+  });
+
+  // ACT generate
+  container.querySelector('#act-generate-btn')?.addEventListener('click', async () => {
+    const topic = container.querySelector('#act-topic')?.value.trim() || '';
+    const actClassId = container.querySelector('#act-class')?.value;
+    const output = container.querySelector('#act-output');
+    const btn = container.querySelector('#act-generate-btn');
+
+    let context = '';
+    if (actClassId) {
+      const cls = Store.getClass(actClassId);
+      if (cls) context += `Class: ${cls.name}${cls.subject ? ` (${cls.subject})` : ''}. `;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Generating\u2026';
+    output.innerHTML = '<p style="color:var(--ink-muted);font-size:0.8125rem;">Generating ACT observation prompts\u2026</p>';
+
+    try {
+      const prompt = `Generate a set of ACT coaching observation prompts for a teacher doing a walk-around during a lesson with Singapore secondary students (age 13-17).
+
+ACT framework:
+A = Action: What are students physically DOING? Are they actively engaged?
+C = Collaboration: How are students INTERACTING? Building on each other's ideas?
+T = Thinking: What depth of THINKING is happening? Surface or deep reasoning?
+
+${topic ? `Lesson activity/context: ${topic}` : ''}
+${context || ''}
+
+For each ACT dimension, provide:
+1. Two specific observation questions the teacher can ask themselves while scanning the room
+2. Two coaching questions to ask students (one to praise, one to push deeper)
+3. One red-flag indicator and a teacher move to address it
+
+Make them practical, specific to the activity context, and suitable for Singapore classrooms.`;
+
+      const text = await sendChat([{ role: 'user', content: prompt }], {
+        systemPrompt: 'You are a pedagogical coaching specialist for Singapore secondary schools. Generate practical ACT (Action-Collaboration-Thinking) observation prompts that help teachers monitor and deepen student engagement during lessons.',
+        temperature: 0.6, maxTokens: 1500
+      });
+
+      output.innerHTML = renderAIOutput(text);
+    } catch (err) {
+      output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Generate ACT Observation Prompts';
     }
   });
 

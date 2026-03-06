@@ -16,6 +16,88 @@ import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { sendChat } from '../api.js';
 import { navigate } from '../router.js';
+import { getCurrentUser } from '../components/login.js';
+
+/* ═══════════ Timetable (TT) Awareness ═══════════ */
+let _ttData = null;
+
+async function loadTimetable() {
+  if (_ttData) return _ttData;
+  try {
+    const res = await fetch('./btyrelief/BTYTT_2026Sem1_v1.csv');
+    const text = await res.text();
+    _ttData = parseTTCSV(text);
+  } catch { _ttData = []; }
+  return _ttData;
+}
+
+function parseTTCSV(csv) {
+  const lines = csv.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',');
+  return lines.slice(1).map(line => {
+    const cols = line.split(',');
+    const row = {};
+    headers.forEach((h, i) => row[h.trim()] = (cols[i] || '').trim());
+    return row;
+  });
+}
+
+function getCurrentPeriodKey() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const dayNames = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  if (day < 1 || day > 5) return null;
+  const dayStr = dayNames[day];
+
+  // Determine week parity (Odd/Even) — use ISO week number
+  const start = new Date(now.getFullYear(), 0, 1);
+  const weekNum = Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
+  const weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
+
+  // Approximate period from time (BTYSS bell schedule)
+  const h = now.getHours(), m = now.getMinutes();
+  const mins = h * 60 + m;
+  // Rough period mapping: P1 starts ~7:30, each ~35-40 min
+  const periods = [
+    { p: 1, start: 450 }, { p: 2, start: 490 }, { p: 3, start: 530 },
+    { p: 4, start: 570 }, { p: 5, start: 620 }, { p: 6, start: 660 },
+    { p: 7, start: 700 }, { p: 8, start: 740 }, { p: 9, start: 790 },
+    { p: 10, start: 830 }, { p: 11, start: 870 }
+  ];
+  let period = null;
+  for (let i = periods.length - 1; i >= 0; i--) {
+    if (mins >= periods[i].start) { period = periods[i].p; break; }
+  }
+  if (!period) return null;
+  return { col: `${weekType}${dayStr}${period}`, dayStr, period, weekType };
+}
+
+function getTTForTeacher(ttData, email) {
+  if (!email || !ttData?.length) return null;
+  const emailLower = email.toLowerCase();
+  return ttData.find(row => {
+    const e = (row["Teacher's Email"] || '').toLowerCase();
+    return e === emailLower;
+  }) || null;
+}
+
+function getCurrentSlot(teacherRow) {
+  if (!teacherRow) return null;
+  const pk = getCurrentPeriodKey();
+  if (!pk) return null;
+  const val = teacherRow[pk.col];
+  if (!val || val === '0') return { ...pk, free: true };
+  // Format: "1DT161 / 1-6" → class code / room
+  const parts = val.split(' / ');
+  return {
+    ...pk,
+    free: false,
+    classCode: parts[0]?.trim() || val,
+    room: parts[1]?.trim() || '',
+    raw: val
+  };
+}
 
 /* ═══════════ Constants ═══════════ */
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -222,6 +304,11 @@ export function render(container) {
               <select class="input" id="brief-venue" style="font-size:0.8125rem;padding:var(--sp-1) var(--sp-2);">
                 ${VENUE_TYPES.map(v => `<option value="${v.id}">${v.icon} ${v.label}</option>`).join('')}
               </select>
+            </div>
+            <!-- TT Context Banner (populated async) -->
+            <div id="tt-context-banner" style="display:none;padding:10px 12px;border-radius:8px;background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);margin-bottom:var(--sp-2);">
+              <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--accent,#4361ee);margin-bottom:4px;">Current Period</div>
+              <div id="tt-context-text" style="font-size:0.8125rem;color:var(--ink);line-height:1.5;"></div>
             </div>
             <div class="input-group" style="margin-bottom:0;">
               <label class="input-label" style="font-size:0.75rem;">Class</label>
@@ -737,6 +824,51 @@ export function render(container) {
   });
   // Initial venue render (hide PE palette/presets by default)
   applyVenue('classroom');
+
+  /* ══════ TT Awareness — show current period context ══════ */
+  (async () => {
+    try {
+      const user = getCurrentUser();
+      if (!user?.email) return;
+      const ttData = await loadTimetable();
+      const teacherRow = getTTForTeacher(ttData, user.email);
+      if (!teacherRow) return;
+
+      const slot = getCurrentSlot(teacherRow);
+      const banner = container.querySelector('#tt-context-banner');
+      const textEl = container.querySelector('#tt-context-text');
+      if (!banner || !textEl) return;
+
+      const teacherName = teacherRow['NAME'] || '';
+      const dept = teacherRow['DEPARTMENT'] || '';
+      const subject = teacherRow['SUBJECT'] || '';
+
+      if (slot?.free) {
+        textEl.innerHTML = `<strong>${teacherName}</strong> &middot; ${dept}<br/>
+          ${slot.weekType} Week &middot; ${slot.dayStr} P${slot.period} &mdash; <span style="color:var(--success,#22c55e);font-weight:600;">Free period</span>`;
+      } else if (slot) {
+        textEl.innerHTML = `<strong>${teacherName}</strong> &middot; ${dept}<br/>
+          ${slot.weekType} Week &middot; ${slot.dayStr} P${slot.period} &mdash; <strong>${slot.classCode}</strong> in <strong>${slot.room}</strong>`;
+
+        // Auto-suggest venue based on room name
+        const room = (slot.room || '').toLowerCase();
+        if (room.includes('field')) {
+          briefVenue.value = 'field'; applyVenue('field');
+        } else if (room.includes('basketball') || room.includes('court')) {
+          briefVenue.value = 'basketball'; applyVenue('basketball');
+        } else if (room.includes('hall')) {
+          briefVenue.value = 'hall'; applyVenue('hall');
+        }
+
+        // Auto-fill topic with subject context
+        const topicInput = container.querySelector('#brief-topic');
+        if (topicInput && !topicInput.value) {
+          topicInput.placeholder = `e.g. ${subject || 'lesson'} activity for ${slot.classCode}`;
+        }
+      }
+      banner.style.display = '';
+    } catch { /* silently fail — TT is optional */ }
+  })();
 
   /* ══════ Design Brief — AI Suggest Layout ══════ */
   const briefClassSelect = container.querySelector('#brief-class');
