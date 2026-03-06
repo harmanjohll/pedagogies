@@ -386,16 +386,94 @@ function deriveTitle(prompt) {
   return first.length > 60 ? first.slice(0, 57) + '...' : first || 'Custom Simulation';
 }
 
+/* ── Filter / display state ── */
+const SIM_DISPLAY_LIMIT_KEY = 'cocher_sim_display_limit';
+const SIM_FILTER_KEY = 'cocher_sim_filter';
+
+function getDisplayLimit() {
+  return parseInt(localStorage.getItem(SIM_DISPLAY_LIMIT_KEY) || '3', 10);
+}
+function setDisplayLimit(n) {
+  localStorage.setItem(SIM_DISPLAY_LIMIT_KEY, String(n));
+}
+function getSubjectFilter() {
+  return localStorage.getItem(SIM_FILTER_KEY) || 'All';
+}
+function setSubjectFilter(v) {
+  localStorage.setItem(SIM_FILTER_KEY, v);
+}
+
+function getFilteredSims() {
+  const filter = getSubjectFilter();
+  return filter === 'All' ? SIMULATIONS : SIMULATIONS.filter(s => s.subject === filter);
+}
+
 /* ── Main render ── */
 export function render(container) {
 
   function renderView() {
     const customSims = getCustomSims();
     const isDark = document.documentElement.classList.contains('dark');
+    const displayLimit = getDisplayLimit();
+    const subjectFilter = getSubjectFilter();
+    const filtered = getFilteredSims();
+    const visible = filtered.slice(0, displayLimit);
+    const remaining = filtered.slice(displayLimit);
+    const subjects = [...new Set(SIMULATIONS.map(s => s.subject))];
 
     container.innerHTML = `
       <style>
         @keyframes simFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .sim-toolbar {
+          display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+          padding: 14px 18px; border-radius: 12px;
+          background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea);
+        }
+        .dark .sim-toolbar { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); }
+        .sim-toolbar label { font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary, #555); text-transform: uppercase; letter-spacing: 0.03em; }
+        .sim-toolbar select {
+          padding: 6px 12px; border: 1px solid var(--border, #e2e5ea); border-radius: 8px;
+          font-size: 0.8125rem; font-family: inherit; background: var(--bg, #fff); color: var(--ink, #1a1a2e);
+        }
+        .dark .sim-toolbar select { background: var(--bg-subtle, #16161e); color: var(--ink, #e8e8f0); border-color: var(--border, #3e3e4e); }
+        .sim-filter-tab {
+          padding: 5px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+          border: 1px solid var(--border, #e2e5ea); background: transparent; color: var(--ink-muted, #777);
+          transition: all 0.15s;
+        }
+        .sim-filter-tab:hover { border-color: #4361ee; color: #4361ee; }
+        .sim-filter-tab.active { background: #4361ee; color: #fff; border-color: #4361ee; }
+        .sim-more-dropdown {
+          position: relative; display: inline-block;
+        }
+        .sim-more-btn {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 8px 16px; border-radius: 8px; font-size: 0.8125rem; font-weight: 600;
+          background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); color: var(--ink, #1a1a2e);
+          cursor: pointer; transition: all 0.15s;
+        }
+        .sim-more-btn:hover { border-color: #4361ee; color: #4361ee; }
+        .dark .sim-more-btn { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); color: var(--ink, #e8e8f0); }
+        .sim-more-menu {
+          display: none; position: absolute; top: 100%; left: 0; z-index: 100; margin-top: 6px;
+          min-width: 340px; max-height: 360px; overflow-y: auto;
+          background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea);
+          border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); padding: 8px;
+        }
+        .dark .sim-more-menu { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+        .sim-more-menu.open { display: block; animation: simFadeIn 0.15s ease; }
+        .sim-more-item {
+          display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px;
+          cursor: pointer; transition: background 0.1s; border: none; background: none; width: 100%; text-align: left;
+          color: var(--ink, #1a1a2e);
+        }
+        .sim-more-item:hover { background: var(--bg-subtle, #f8f9fa); }
+        .dark .sim-more-item { color: var(--ink, #e8e8f0); }
+        .dark .sim-more-item:hover { background: var(--bg-subtle, #252540); }
+        .sim-more-item-tag { font-size: 0.625rem; font-weight: 600; color: #fff; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; white-space: nowrap; }
+        .sim-more-item-info { flex: 1; }
+        .sim-more-item-title { font-size: 0.8125rem; font-weight: 600; }
+        .sim-more-item-desc { font-size: 0.6875rem; color: var(--ink-muted, #888); line-height: 1.4; margin-top: 2px; }
         .sim-card {
           background: var(--bg-card, #fff);
           border: 1px solid var(--border, #e2e5ea);
@@ -700,16 +778,31 @@ export function render(container) {
         <div class="page-container">
 
           <!-- Header -->
-          <div class="page-header" style="margin-bottom: 28px;">
+          <div class="page-header" style="margin-bottom: 20px;">
             <div>
               <h1 class="page-title" style="font-size:1.625rem;font-weight:700;color:var(--ink, #1a1a2e);margin:0 0 4px;">Simulations</h1>
               <p class="page-subtitle" style="font-size:0.9375rem;color:var(--ink-muted, #777);margin:0;">Interactive science practicals and custom simulations</p>
             </div>
           </div>
 
-          <!-- Simulation Cards Grid -->
+          <!-- Toolbar: Subject filter tabs + display limit -->
+          <div class="sim-toolbar">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <button class="sim-filter-tab ${subjectFilter === 'All' ? 'active' : ''}" data-filter="All">All</button>
+              ${subjects.map(s => `<button class="sim-filter-tab ${subjectFilter === s ? 'active' : ''}" data-filter="${s}">${s}</button>`).join('')}
+            </div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+              <label>Show</label>
+              <select id="sim-display-limit">
+                ${[3,4,6].map(n => `<option value="${n}" ${displayLimit === n ? 'selected' : ''}>${n} cards</option>`).join('')}
+                <option value="99" ${displayLimit >= 99 ? 'selected' : ''}>All</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Simulation Cards Grid (limited) -->
           <div class="sim-grid" id="sim-gallery">
-            ${SIMULATIONS.map(sim => {
+            ${visible.map(sim => {
               const sc = subjectColor(sim.subject);
               const dc = difficultyColor(sim.difficulty);
               return `
@@ -729,6 +822,30 @@ export function render(container) {
                 </div>`;
             }).join('')}
           </div>
+
+          <!-- More Simulations Dropdown (for remaining sims) -->
+          ${remaining.length > 0 ? `
+          <div style="margin-top:16px;display:flex;align-items:center;gap:12px;">
+            <div class="sim-more-dropdown" id="sim-more-dropdown">
+              <button class="sim-more-btn" id="sim-more-toggle">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                ${remaining.length} more simulation${remaining.length > 1 ? 's' : ''}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="sim-more-menu" id="sim-more-menu">
+                ${remaining.map(sim => `
+                  <button class="sim-more-item" data-sim-id="${sim.id}">
+                    <span class="sim-more-item-tag" style="background:${subjectColor(sim.subject)};">${sim.subject}</span>
+                    <div class="sim-more-item-info">
+                      <div class="sim-more-item-title">${sim.title}</div>
+                      <div class="sim-more-item-desc">${sim.description}</div>
+                    </div>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          ` : ''}
 
           <!-- Build Your Own Section -->
           <hr class="sim-section-divider" />
@@ -946,11 +1063,40 @@ export function render(container) {
 
     /* ── Event listeners ── */
 
-    // Launch built-in sims
+    // Subject filter tabs
+    container.querySelectorAll('.sim-filter-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        setSubjectFilter(tab.dataset.filter);
+        renderView();
+      });
+    });
+
+    // Display limit dropdown
+    const limitSel = container.querySelector('#sim-display-limit');
+    if (limitSel) {
+      limitSel.addEventListener('change', () => {
+        setDisplayLimit(parseInt(limitSel.value, 10));
+        renderView();
+      });
+    }
+
+    // More simulations dropdown toggle
+    const moreToggle = container.querySelector('#sim-more-toggle');
+    const moreMenu = container.querySelector('#sim-more-menu');
+    if (moreToggle && moreMenu) {
+      moreToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moreMenu.classList.toggle('open');
+      });
+      document.addEventListener('click', () => moreMenu.classList.remove('open'), { once: false });
+    }
+
+    // Launch built-in sims (cards + dropdown items)
     container.querySelectorAll('[data-sim-id]').forEach(btn => {
       btn.addEventListener('click', () => {
         const sim = SIMULATIONS.find(s => s.id === btn.dataset.simId);
         if (sim) {
+          if (moreMenu) moreMenu.classList.remove('open');
           openOverlay(container, sim.title, { src: sim.path });
         }
       });
