@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wave Properties – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css">
+  <link rel="stylesheet" href="waves.css">
+</head>
+<body>
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../../index.html">Practicals</a>
+      <span class="separator">/</span>
+      Physics
+      <span class="separator">/</span>
+      Wave Properties
+    </span>
+    <div class="topbar-actions">
+      <button id="btn-toggle-guide" class="btn btn-ghost btn-sm">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+        Guide
+      </button>
+      <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+    </div>
+  </nav>
+
+  <!-- Main layout -->
+  <div class="wave-layout">
+
+    <!-- Left: Guide -->
+    <aside id="guide-panel" class="wave-guide-panel">
+      <div class="panel">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <ol class="procedure-list">
+            <li class="procedure-step active" data-step="setup">
+              <strong>Setup</strong> — Choose between transverse and longitudinal wave. Set the amplitude and frequency using the sliders.
+            </li>
+            <li class="procedure-step" data-step="observe">
+              <strong>Observe</strong> — Click "Start" to generate a continuous wave. Watch how particles move.
+            </li>
+            <li class="procedure-step" data-step="measure">
+              <strong>Measure</strong> — Use "Freeze" to pause the wave. Identify wavelength, amplitude, crest, trough, compression, and rarefaction.
+            </li>
+            <li class="procedure-step" data-step="investigate">
+              <strong>Investigate</strong> — Change frequency and amplitude. How does each affect wavelength and wave speed? Record your findings.
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="panel mt-4">
+        <div class="panel-header">Key Equations</div>
+        <div class="panel-body" style="font-size: var(--text-sm); color: var(--color-text-secondary); line-height: 1.7;">
+          <p><strong>Wave speed:</strong> v = f &times; &lambda;</p>
+          <p><strong>Period:</strong> T = 1 / f</p>
+          <p><strong>Frequency:</strong> f = 1 / T</p>
+          <p style="margin-top:8px;font-size:var(--text-xs);color:var(--color-text-muted);">
+            v = wave speed (m/s)<br>
+            f = frequency (Hz)<br>
+            &lambda; = wavelength (m)<br>
+            T = period (s)
+          </p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Centre: Workbench -->
+    <main class="wave-workbench-panel">
+      <div class="wave-workbench">
+        <canvas id="wave-canvas" width="650" height="400"></canvas>
+      </div>
+      <div class="wave-controls">
+        <button id="btn-start" class="btn btn-primary btn-sm">Start</button>
+        <button id="btn-freeze" class="btn btn-ghost btn-sm" disabled>Freeze</button>
+        <button id="btn-pulse" class="btn btn-ghost btn-sm">Single Pulse</button>
+        <label class="toggle-inline">
+          <input type="checkbox" id="show-labels" checked />
+          <span>Labels</span>
+        </label>
+        <label class="toggle-inline">
+          <input type="checkbox" id="show-particles" checked />
+          <span>Particles</span>
+        </label>
+      </div>
+    </main>
+
+    <!-- Right: Data & Config -->
+    <aside class="wave-data-panel">
+      <div class="panel">
+        <div class="panel-header">Configuration</div>
+        <div class="panel-body">
+          <div class="config-row">
+            <label>Wave type</label>
+            <select id="wave-type" class="config-select">
+              <option value="transverse">Transverse</option>
+              <option value="longitudinal">Longitudinal</option>
+            </select>
+          </div>
+          <div class="config-row mt-3">
+            <label>Frequency (Hz)</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" id="frequency" class="slider" min="0.5" max="5" value="1.5" step="0.1" />
+              <span class="config-value" id="freq-val">1.5 Hz</span>
+            </div>
+          </div>
+          <div class="config-row mt-3">
+            <label>Amplitude (cm)</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" id="amplitude" class="slider" min="10" max="80" value="40" />
+              <span class="config-value" id="amp-val">40 cm</span>
+            </div>
+          </div>
+          <div class="config-row mt-3">
+            <label>Wave speed (m/s)</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" id="wave-speed" class="slider" min="50" max="300" value="150" />
+              <span class="config-value" id="speed-val">150</span>
+            </div>
+          </div>
+          <div class="config-row mt-3">
+            <label>Damping</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" id="damping" class="slider" min="0" max="100" value="5" />
+              <span class="config-value" id="damp-val">5%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Measurements -->
+      <div class="panel mt-4">
+        <div class="panel-header">Live Measurements</div>
+        <div class="panel-body">
+          <div class="measurement-grid">
+            <div class="measurement">
+              <span class="measurement-label">Wavelength (&lambda;)</span>
+              <span class="measurement-value" id="meas-wavelength">—</span>
+            </div>
+            <div class="measurement">
+              <span class="measurement-label">Period (T)</span>
+              <span class="measurement-value" id="meas-period">—</span>
+            </div>
+            <div class="measurement">
+              <span class="measurement-label">Speed (v)</span>
+              <span class="measurement-value" id="meas-speed">—</span>
+            </div>
+            <div class="measurement">
+              <span class="measurement-label">v = f &times; &lambda;</span>
+              <span class="measurement-value" id="meas-check">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="panel mt-4">
+        <div class="panel-header">
+          Data Table
+          <button id="btn-record" class="btn btn-success btn-sm" style="float:right;margin-top:-4px;">Record</button>
+        </div>
+        <div class="panel-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>f (Hz)</th>
+                <th>A (cm)</th>
+                <th>&lambda; (m)</th>
+                <th>v (m/s)</th>
+              </tr>
+            </thead>
+            <tbody id="data-tbody">
+            </tbody>
+          </table>
+          <p id="data-empty" class="text-muted text-sm mt-2">Click "Record" to log current wave parameters.</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="../../shared/guide-collapse.js"></script>
+  <script src="waves.js"></script>
+</body>
+</html>

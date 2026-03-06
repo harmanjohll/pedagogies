@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diffusion &amp; Osmosis – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css">
+  <link rel="stylesheet" href="diffusion.css">
+</head>
+<body>
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../../index.html">Practicals</a>
+      <span class="separator">/</span>
+      Biology
+      <span class="separator">/</span>
+      Diffusion &amp; Osmosis
+    </span>
+    <div class="topbar-actions">
+      <button id="btn-toggle-guide" class="btn btn-ghost btn-sm">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+        Guide
+      </button>
+      <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+    </div>
+  </nav>
+
+  <!-- Main layout -->
+  <div class="diff-layout">
+
+    <!-- Left: Guide -->
+    <aside id="guide-panel" class="diff-guide-panel">
+      <div class="panel">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <ol class="procedure-list">
+            <li class="procedure-step active" data-step="setup">
+              <strong>Setup</strong> — Choose between Diffusion or Osmosis mode. Adjust the concentration using the sliders.
+            </li>
+            <li class="procedure-step" data-step="observe">
+              <strong>Observe</strong> — Click "Start" to begin the simulation. Watch how particles move across the membrane.
+            </li>
+            <li class="procedure-step" data-step="record">
+              <strong>Record</strong> — Note the particle counts on each side at regular intervals. Click "Record" to log a data point.
+            </li>
+            <li class="procedure-step" data-step="analyse">
+              <strong>Analyse</strong> — Observe the graph. When does equilibrium occur? What affects the rate of diffusion?
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="panel mt-4">
+        <div class="panel-header">Key Concepts</div>
+        <div class="panel-body" style="font-size: var(--text-sm); color: var(--color-text-secondary); line-height: 1.6;">
+          <p><strong>Diffusion</strong> is the net movement of particles from a region of higher concentration to a region of lower concentration, down the concentration gradient.</p>
+          <p style="margin-top:8px;"><strong>Osmosis</strong> is the net movement of water molecules from a region of higher water potential to a region of lower water potential through a partially permeable membrane.</p>
+          <p style="margin-top:8px;">Both processes are <strong>passive</strong> — they require no energy input from the cell.</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Centre: Workbench -->
+    <main class="diff-workbench-panel">
+      <div class="diff-workbench">
+        <canvas id="diff-canvas" width="600" height="450"></canvas>
+      </div>
+      <div class="diff-controls">
+        <button id="btn-start" class="btn btn-primary btn-sm">Start</button>
+        <button id="btn-pause" class="btn btn-ghost btn-sm" disabled>Pause</button>
+        <button id="btn-record" class="btn btn-success btn-sm" disabled>Record Data</button>
+        <div class="timer-display">
+          <span class="timer-label">Time</span>
+          <span class="timer-value" id="timer-display">0.0 s</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right: Data & Config -->
+    <aside class="diff-data-panel">
+      <div class="panel">
+        <div class="panel-header">Configuration</div>
+        <div class="panel-body">
+          <div class="config-row">
+            <label>Mode</label>
+            <select id="mode-select" class="config-select">
+              <option value="diffusion">Diffusion (solute particles)</option>
+              <option value="osmosis">Osmosis (water molecules)</option>
+            </select>
+          </div>
+          <div class="config-row mt-3">
+            <label>Left concentration</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" id="conc-left" class="slider" min="5" max="60" value="40" />
+              <span class="config-value" id="conc-left-val">40</span>
+            </div>
+          </div>
+          <div class="config-row mt-3">
+            <label>Right concentration</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" id="conc-right" class="slider" min="5" max="60" value="10" />
+              <span class="config-value" id="conc-right-val">10</span>
+            </div>
+          </div>
+          <div class="config-row mt-3">
+            <label>Membrane permeability</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" id="permeability" class="slider" min="1" max="10" value="5" />
+              <span class="config-value" id="perm-val">5</span>
+            </div>
+          </div>
+          <div class="config-row mt-3">
+            <label>Temperature</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" id="temperature" class="slider" min="10" max="50" value="25" />
+              <span class="config-value" id="temp-val">25 °C</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="panel mt-4">
+        <div class="panel-header">Data Table</div>
+        <div class="panel-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Time (s)</th>
+                <th>Left</th>
+                <th>Right</th>
+              </tr>
+            </thead>
+            <tbody id="data-tbody">
+            </tbody>
+          </table>
+          <p id="data-empty" class="text-muted text-sm mt-2">No data recorded yet. Click "Record" during the simulation.</p>
+        </div>
+      </div>
+
+      <!-- Graph -->
+      <div class="panel mt-4">
+        <div class="panel-header">Concentration vs Time</div>
+        <div class="panel-body">
+          <div class="graph-container">
+            <canvas id="graph-canvas" width="260" height="180"></canvas>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="../../shared/guide-collapse.js"></script>
+  <script src="diffusion.js"></script>
+</body>
+</html>

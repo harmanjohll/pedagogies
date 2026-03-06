@@ -41,12 +41,38 @@ const SIMULATIONS = [
     description: 'Set up a circuit with ammeter and voltmeter. Vary EMF, record V and I, plot V vs I and determine resistance.',
     difficulty: 'Intermediate',
     path: 'simulations/physics/electricity/index.html'
+  },
+  {
+    id: 'diffusion-osmosis',
+    title: 'Diffusion & Osmosis',
+    subject: 'Biology',
+    description: 'Observe particle movement across a partially permeable membrane. Compare diffusion and osmosis, vary concentration and temperature.',
+    difficulty: 'Beginner',
+    path: 'simulations/biology/diffusion-osmosis/index.html'
+  },
+  {
+    id: 'waves',
+    title: 'Wave Properties',
+    subject: 'Physics',
+    description: 'Explore transverse and longitudinal waves. Adjust frequency, amplitude, and speed. Measure wavelength and verify v = f\u03BB.',
+    difficulty: 'Intermediate',
+    path: 'simulations/physics/waves/index.html'
+  },
+  {
+    id: 'light-refraction',
+    title: 'Light & Refraction',
+    subject: 'Physics',
+    description: 'Investigate reflection, refraction, and total internal reflection. Verify Snell\u2019s law by plotting sin(i) vs sin(r).',
+    difficulty: 'Intermediate',
+    path: 'simulations/physics/light/index.html'
   }
 ];
 
 /* ── Helpers ── */
 function subjectColor(subject) {
-  return subject === 'Chemistry' ? '#4361ee' : '#f77f00';
+  if (subject === 'Chemistry') return '#4361ee';
+  if (subject === 'Biology') return '#06d6a0';
+  return '#f77f00';
 }
 
 function difficultyColor(level) {
