@@ -131,21 +131,26 @@ export function getTTPeriodKey() {
   return { dayStr, period, weekType, mins };
 }
 
-/* ── Flexible teacher lookup: match exact email, prefix, or RO email ── */
+/* ── Demo role-play mapping: login email → TT teacher email prefix ── */
+const DEMO_ROLE_MAP = {
+  'harman_johll': 'nurain_hamzah'   // Harman role-plays as Ms Ain (Chemistry)
+};
+
+/* ── Flexible teacher lookup: match exact email or prefix (cross-domain) ── */
 export function findTeacherRow(ttData, email) {
   if (!ttData || !email) return null;
   const emailLower = email.toLowerCase();
   const prefix = emailLower.split('@')[0];
+
+  // Check if this user has a demo role-play mapping
+  const lookupPrefix = DEMO_ROLE_MAP[prefix] || prefix;
+
   // 1. Exact match on Teacher's Email
   let row = ttData.find(r => (r["Teacher's Email"] || '').toLowerCase() === emailLower);
   if (row) return row;
-  // 2. Prefix match on Teacher's Email (handles domain mismatch)
-  row = ttData.find(r => (r["Teacher's Email"] || '').toLowerCase().split('@')[0] === prefix);
+  // 2. Prefix match on Teacher's Email (handles cross-domain + role-play)
+  row = ttData.find(r => (r["Teacher's Email"] || '').toLowerCase().split('@')[0] === lookupPrefix);
   if (row) return row;
-  // 3. Match on RO's Email (Reporting Officer may want to see their own view)
-  row = ttData.find(r => (r["RO's Email"] || '').toLowerCase().split('@')[0] === prefix);
-  // For RO match, return a synthetic row with the user's info but no schedule
-  // (ROs don't have their own teaching schedule in the CSV)
   return null;
 }
 
