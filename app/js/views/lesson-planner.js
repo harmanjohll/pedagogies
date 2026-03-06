@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, suggestYouTubeVideos } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -28,6 +28,7 @@ const COMPONENT_META = {
   rubric:          { label: 'Assessment Rubric',       color: 'var(--success)',     icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>', order: 5 },
   exitTicket:      { label: 'Exit Ticket',             color: 'var(--e21cc-cait)',  icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', order: 6 },
   review:          { label: 'Lesson Review',           color: 'var(--accent)',      icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>', order: 7 },
+  youtubeVideos:   { label: 'YouTube Videos',          color: '#ff0000',            icon: '<polygon points="5 3 19 12 5 21 5 3"/>', order: 8 },
 };
 
 function setComponent(key, content, meta = '') {
@@ -117,6 +118,7 @@ function renderComponents(container) {
         timeline: '#ai-timeline-btn',
         exitTicket: '#ai-exit-ticket-btn',
         differentiation: '#ai-differentiation-btn',
+        youtubeVideos: '#ai-youtube-btn',
       };
       if (toolBtnMap[key]) container.querySelector(toolBtnMap[key])?.click();
     });
@@ -373,6 +375,10 @@ export function render(container) {
               <button class="btn btn-ghost btn-sm" id="ai-differentiation-btn" title="Get differentiation suggestions based on student profiles">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
                 Differentiate
+              </button>
+              <button class="btn btn-ghost btn-sm" id="ai-youtube-btn" title="Suggest YouTube videos for this lesson" style="color:#ff0000;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                YouTube
               </button>
               <button class="btn btn-ghost btn-sm" id="spatial-layout-btn" title="Design or link a spatial classroom layout">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
@@ -695,6 +701,29 @@ export function render(container) {
     if (allClasses.length === 0) { showToast('No students found. Add students to a class first.', 'danger'); return; }
 
     showDifferentiationModal(container, allClasses);
+  });
+
+  // YouTube recommendations
+  container.querySelector('#ai-youtube-btn').addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Finding YouTube recommendations...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+      const result = await suggestYouTubeVideos(planText, cls.subject, cls.level);
+      setComponent('youtubeVideos', result, cls.subject || 'Videos');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('YouTube recommendations added!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
   });
 
   // Spatial Layout
