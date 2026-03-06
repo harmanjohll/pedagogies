@@ -87,6 +87,132 @@ function getDailyQuote() {
   return pool[dayOfYear % pool.length];
 }
 
+/* ── Timetable (TT) Awareness ── */
+let _ttCache = null;
+
+async function loadTT() {
+  if (_ttCache) return _ttCache;
+  try {
+    const res = await fetch('./btyrelief/BTYTT_2026Sem1_v1.csv');
+    const text = await res.text();
+    const lines = text.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { _ttCache = []; return _ttCache; }
+    const headers = lines[0].split(',');
+    _ttCache = lines.slice(1).map(line => {
+      const cols = line.split(',');
+      const row = {};
+      headers.forEach((h, i) => row[h.trim()] = (cols[i] || '').trim());
+      return row;
+    });
+  } catch { _ttCache = []; }
+  return _ttCache;
+}
+
+function getTTPeriodKey() {
+  const now = new Date();
+  const day = now.getDay();
+  const dayNames = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  if (day < 1 || day > 5) return null;
+  const dayStr = dayNames[day];
+  const start = new Date(now.getFullYear(), 0, 1);
+  const weekNum = Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
+  const weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
+  const h = now.getHours(), m = now.getMinutes(), mins = h * 60 + m;
+  const periods = [
+    { p: 1, start: 450 }, { p: 2, start: 490 }, { p: 3, start: 530 },
+    { p: 4, start: 570 }, { p: 5, start: 620 }, { p: 6, start: 660 },
+    { p: 7, start: 700 }, { p: 8, start: 740 }, { p: 9, start: 790 },
+    { p: 10, start: 830 }, { p: 11, start: 870 }
+  ];
+  let period = null;
+  for (let i = periods.length - 1; i >= 0; i--) {
+    if (mins >= periods[i].start) { period = periods[i].p; break; }
+  }
+  return { dayStr, period, weekType, mins };
+}
+
+function buildTTScheduleCard(teacherRow) {
+  if (!teacherRow) return '';
+  const pk = getTTPeriodKey();
+  if (!pk) return ''; // Weekend
+
+  const name = teacherRow['NAME'] || '';
+  const dept = teacherRow['DEPARTMENT'] || '';
+  const { dayStr, period, weekType, mins } = pk;
+
+  // Build today's full schedule
+  const allPeriods = [];
+  for (let p = 1; p <= 11; p++) {
+    const col = `${weekType}${dayStr}${p}`;
+    const val = teacherRow[col];
+    if (val && val !== '0') {
+      const parts = val.split(' / ');
+      allPeriods.push({ p, classCode: parts[0]?.trim(), room: parts[1]?.trim() || '' });
+    }
+  }
+
+  // Find last teaching period
+  const lastPeriod = allPeriods.length > 0 ? allPeriods[allPeriods.length - 1].p : 0;
+  const periodEndTimes = [0, 490, 530, 570, 610, 660, 700, 740, 780, 830, 870, 910];
+  const doneForDay = period !== null && period > lastPeriod && allPeriods.length > 0;
+  // School day hasn't started
+  const beforeSchool = mins < 450;
+
+  // Current slot
+  let currentLabel = '';
+  if (beforeSchool) {
+    currentLabel = '<span style="color:var(--ink-muted);">School hasn\u2019t started yet</span>';
+  } else if (doneForDay) {
+    currentLabel = '<span style="color:var(--success,#22c55e);font-weight:600;">Done for the day</span>';
+  } else if (period) {
+    const currentSlot = allPeriods.find(s => s.p === period);
+    if (currentSlot) {
+      currentLabel = `<strong>${currentSlot.classCode}</strong> in <strong>${currentSlot.room}</strong>`;
+    } else {
+      currentLabel = '<span style="color:var(--success,#22c55e);">Free period</span>';
+    }
+  } else {
+    currentLabel = '<span style="color:var(--ink-muted);">After school hours</span>';
+  }
+
+  // Build period pills
+  const periodPills = allPeriods.map(s => {
+    const isCurrent = period === s.p;
+    const isPast = period !== null && s.p < period;
+    const bg = isCurrent ? 'var(--accent,#4361ee)' : isPast ? 'var(--bg-subtle,#f0f0f4)' : 'var(--bg-card,#fff)';
+    const color = isCurrent ? '#fff' : isPast ? 'var(--ink-faint)' : 'var(--ink)';
+    const border = isCurrent ? 'var(--accent,#4361ee)' : 'var(--border,#e2e5ea)';
+    const textDec = isPast ? 'line-through' : 'none';
+    return `<div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1px solid ${border};background:${bg};color:${color};font-size:0.75rem;text-decoration:${textDec};">
+      <span style="font-weight:700;">P${s.p}</span>
+      <span>${s.classCode}</span>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="card" style="padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-6);border-left:4px solid var(--accent,#4361ee);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3);">
+        <div>
+          <div style="font-size:0.75rem;font-weight:600;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.03em;">Today\u2019s Schedule</div>
+          <div style="font-size:0.875rem;color:var(--ink);margin-top:2px;">
+            <strong>${name}</strong> &middot; ${dept} &middot; ${weekType} Week ${dayStr}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.75rem;color:var(--ink-muted);">${period ? `Period ${period}` : ''}</div>
+          <div style="font-size:0.875rem;">${currentLabel}</div>
+        </div>
+      </div>
+      ${allPeriods.length > 0 ? `
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${periodPills}
+        </div>
+        ${doneForDay ? '<div style="margin-top:8px;font-size:0.8125rem;color:var(--success,#22c55e);font-weight:500;">All classes done. Time to plan, reflect, or rest.</div>' : ''}
+      ` : '<div style="font-size:0.8125rem;color:var(--ink-muted);">No classes scheduled today.</div>'}
+    </div>
+  `;
+}
+
 function timeAgo(ts) {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
@@ -412,6 +538,9 @@ export function render(container) {
           </div>
         </div>
 
+        <!-- TT Schedule Card (populated async) -->
+        <div id="tt-schedule-card"></div>
+
         <!-- Smart Suggestions -->
         ${suggestions.length > 0 ? `
           <div style="margin-bottom:var(--sp-8);">
@@ -677,4 +806,20 @@ export function render(container) {
       if (suggestions[i]?.action) suggestions[i].action();
     });
   });
+
+  // Async TT schedule card
+  (async () => {
+    try {
+      const user = getCurrentUser();
+      if (!user?.email) return;
+      const ttData = await loadTT();
+      const emailLower = user.email.toLowerCase();
+      const teacherRow = ttData.find(row =>
+        (row["Teacher's Email"] || '').toLowerCase() === emailLower
+      );
+      if (!teacherRow) return;
+      const card = container.querySelector('#tt-schedule-card');
+      if (card) card.innerHTML = buildTTScheduleCard(teacherRow);
+    } catch { /* TT is optional */ }
+  })();
 }
