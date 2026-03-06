@@ -287,6 +287,79 @@ export function renderAoL(container) {
           </div>
 
           <div id="tos-output"></div>
+
+          <!-- Difficulty / Cognitive Level Selector -->
+          <div style="margin-top:16px;padding:16px;border:1px solid var(--border,#e2e5ea);border-radius:10px;background:var(--bg-subtle,#f8f9fa);">
+            <div style="font-weight:700;font-size:0.875rem;color:var(--ink);margin-bottom:8px;">Cognitive Level of Demand</div>
+            <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:10px;line-height:1.5;">
+              Set the difficulty distribution for generated questions. This maps to Bloom's taxonomy levels.
+            </p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.8125rem;cursor:pointer;">
+                <input type="radio" name="aol-difficulty" value="lower" />
+                <span><strong>Lower Order</strong><br/><span style="font-size:0.6875rem;color:var(--ink-muted);">Remember, Understand</span></span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.8125rem;cursor:pointer;">
+                <input type="radio" name="aol-difficulty" value="balanced" checked />
+                <span><strong>Balanced</strong><br/><span style="font-size:0.6875rem;color:var(--ink-muted);">Mix across all levels</span></span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.8125rem;cursor:pointer;">
+                <input type="radio" name="aol-difficulty" value="higher" />
+                <span><strong>Higher Order</strong><br/><span style="font-size:0.6875rem;color:var(--ink-muted);">Analyse, Evaluate, Create</span></span>
+              </label>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+              <div>
+                <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Subject</label>
+                <input type="text" id="aol-subject" class="input" placeholder="e.g. Chemistry, Physics" style="width:100%;" />
+              </div>
+              <div>
+                <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Level</label>
+                <input type="text" id="aol-level" class="input" placeholder="e.g. Sec 4, JC1" style="width:100%;" />
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-sm" id="aol-generate-questions-btn" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Generate Draft Questions
+            </button>
+            <p style="font-size:0.6875rem;color:var(--ink-faint);margin-top:6px;">Build the TOS and fill in mark allocations first, then generate questions.</p>
+          </div>
+
+          <!-- AI Review Banner (non-dismissable) -->
+          <div id="aol-review-banner" style="display:none;margin-top:16px;padding:14px 18px;border-radius:10px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #f59e0b;position:sticky;top:0;z-index:10;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <strong style="color:#92400e;font-size:0.9375rem;">Teacher Review Required</strong>
+            </div>
+            <p style="font-size:0.8125rem;color:#78350f;line-height:1.5;margin-bottom:0;">
+              AI-generated questions require your professional review. You MUST review, edit, and approve every question before exporting.
+              Use the Keep / Edit / Delete controls below each question.
+            </p>
+          </div>
+
+          <!-- Generated Questions Output -->
+          <div id="aol-questions-output" style="margin-top:16px;"></div>
+
+          <!-- Review Confirmation & Export (hidden until questions generated) -->
+          <div id="aol-export-section" style="display:none;margin-top:16px;padding:16px;border:1px solid var(--border,#e2e5ea);border-radius:10px;">
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-bottom:12px;">
+              <input type="checkbox" id="aol-review-confirm" style="margin-top:3px;" />
+              <span style="font-size:0.875rem;color:var(--ink);line-height:1.5;">
+                <strong>I have reviewed and verified all questions.</strong> I confirm that each question is accurate, appropriate for my students, and aligned with the Table of Specifications.
+              </span>
+            </label>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary btn-sm" id="aol-export-btn" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export / Print
+              </button>
+              <button class="btn btn-secondary btn-sm" id="aol-copy-btn" disabled>
+                Copy to Clipboard
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Bloom's reference -->
@@ -572,6 +645,413 @@ function wireAoLEvents(container, lessons) {
       btn.disabled = false;
       resetAIBtn(btn);
     }
+  });
+
+  // ── Enable Generate Questions button when TOS has data ──
+  const genQBtn = container.querySelector('#aol-generate-questions-btn');
+  if (genQBtn) {
+    // Monitor TOS cell changes to enable the button
+    const observer = new MutationObserver(() => {
+      const cells = container.querySelectorAll('.tos-cell');
+      const hasData = [...cells].some(c => parseInt(c.value) > 0);
+      genQBtn.disabled = !hasData;
+    });
+    observer.observe(container.querySelector('#tos-output') || container, { childList: true, subtree: true });
+
+    // Also enable on input changes
+    container.addEventListener('input', (e) => {
+      if (e.target.classList.contains('tos-cell')) {
+        const cells = container.querySelectorAll('.tos-cell');
+        const hasData = [...cells].some(c => parseInt(c.value) > 0);
+        genQBtn.disabled = !hasData;
+      }
+    });
+
+    genQBtn.addEventListener('click', () => generateDraftQuestions(container));
+  }
+
+  // ── Review confirm checkbox ──
+  const confirmCb = container.querySelector('#aol-review-confirm');
+  if (confirmCb) {
+    confirmCb.addEventListener('change', () => {
+      const enabled = confirmCb.checked;
+      const exportBtn = container.querySelector('#aol-export-btn');
+      const copyBtn = container.querySelector('#aol-copy-btn');
+      if (exportBtn) exportBtn.disabled = !enabled;
+      if (copyBtn) copyBtn.disabled = !enabled;
+    });
+  }
+
+  // ── Export / Print ──
+  container.querySelector('#aol-export-btn')?.addEventListener('click', () => exportQuestions(container));
+  container.querySelector('#aol-copy-btn')?.addEventListener('click', () => copyQuestions(container));
+}
+
+/* ── Collect TOS data from the filled table ── */
+function collectTOSData(container) {
+  const cells = container.querySelectorAll('.tos-cell');
+  if (!cells.length) return null;
+
+  const data = [];
+  const rows = {};
+  cells.forEach(c => {
+    const row = parseInt(c.dataset.row);
+    const col = c.dataset.col;
+    const val = parseInt(c.value) || 0;
+    if (!rows[row]) rows[row] = {};
+    rows[row][col] = val;
+  });
+
+  // Get objective/dimension labels from the table
+  const objCells = container.querySelectorAll('.tos-obj-cell');
+  const dimCells = container.querySelectorAll('.tos-dim-cell');
+  const labelCells = objCells.length > 0 ? objCells : dimCells;
+
+  Object.keys(rows).sort((a,b) => a - b).forEach((rowIdx, i) => {
+    const label = labelCells[i]?.textContent?.trim() || `Row ${parseInt(rowIdx) + 1}`;
+    data.push({ label, marks: rows[rowIdx] });
+  });
+
+  return data;
+}
+
+/* ── Generate Draft Questions ── */
+async function generateDraftQuestions(container) {
+  const tosData = collectTOSData(container);
+  if (!tosData || tosData.length === 0) {
+    showToast('Build the TOS and fill in mark allocations first.', 'warning');
+    return;
+  }
+
+  const difficulty = container.querySelector('input[name="aol-difficulty"]:checked')?.value || 'balanced';
+  const subject = container.querySelector('#aol-subject')?.value?.trim() || '';
+  const level = container.querySelector('#aol-level')?.value?.trim() || '';
+  const totalMarks = parseInt(container.querySelector('#tos-total-marks')?.value) || 50;
+
+  const difficultyGuide = {
+    lower: 'Focus heavily on Remember and Understand levels (60-70% lower order). Include fewer Apply/Analyse questions.',
+    balanced: 'Distribute across all cognitive levels proportionally. Roughly 30% lower order, 40% middle, 30% higher order.',
+    higher: 'Focus heavily on Analyse, Evaluate, and Create levels (60-70% higher order). Include fewer Remember/Understand questions.'
+  };
+
+  // Build the TOS summary for the prompt
+  const tosSummary = tosData.map(row => {
+    const parts = BLOOMS.map(b => `${b.label}: ${row.marks[b.key] || 0} marks`).filter(p => !p.endsWith('0 marks'));
+    return `- ${row.label}: ${parts.join(', ')}`;
+  }).join('\n');
+
+  const btn = container.querySelector('#aol-generate-questions-btn');
+  btn.disabled = true;
+  btn.textContent = 'Generating questions\u2026';
+
+  try {
+    const prompt = `Generate draft assessment questions based on this Table of Specifications.
+
+Subject: ${subject || 'Not specified'}
+Level: ${level || 'Secondary'}
+Total marks: ${totalMarks}
+TOS mode: ${tosMode === '2d' ? '2D (Knowledge Dimension x Cognitive Process)' : '1D (Objectives x Cognitive Levels)'}
+Difficulty preference: ${difficultyGuide[difficulty]}
+
+Table of Specifications:
+${tosSummary}
+
+Generate questions that match EACH cell in the TOS where marks are allocated.
+For each question, provide:
+1. The question text
+2. The cognitive level (Bloom's taxonomy)
+3. The mark allocation
+4. A suggested answer or marking scheme
+5. The topic/objective it maps to
+
+Format as JSON array:
+[{
+  "question": "...",
+  "bloom_level": "remember|understand|apply|analyse|evaluate|create",
+  "marks": 3,
+  "topic": "...",
+  "answer": "...",
+  "question_type": "MCQ|short_answer|structured|essay|calculation"
+}]
+
+Generate enough questions to cover ALL marks in the TOS (total ${totalMarks} marks).
+Make questions appropriate for Singapore ${level || 'secondary'} students.
+Return ONLY the JSON array.`;
+
+    const text = await sendChat([{ role: 'user', content: prompt }], {
+      systemPrompt: `You are an expert assessment designer for Singapore schools. Generate high-quality exam questions aligned to Bloom's taxonomy. Return ONLY valid JSON. Each question must be clear, unambiguous, and curriculum-appropriate. Include marking schemes.`,
+      temperature: 0.5,
+      maxTokens: 8192
+    });
+
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      showToast('Failed to parse AI response. Please try again.', 'danger');
+      return;
+    }
+
+    const questions = JSON.parse(jsonMatch[0]);
+    renderGeneratedQuestions(container, questions);
+  } catch (err) {
+    showToast(`Error: ${err.message}`, 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Generate Draft Questions';
+  }
+}
+
+/* ── Render Generated Questions with Keep/Edit/Delete controls ── */
+function renderGeneratedQuestions(container, questions) {
+  const output = container.querySelector('#aol-questions-output');
+  const banner = container.querySelector('#aol-review-banner');
+  const exportSection = container.querySelector('#aol-export-section');
+
+  if (banner) banner.style.display = 'block';
+  if (exportSection) exportSection.style.display = 'block';
+
+  // Reset confirmation
+  const confirmCb = container.querySelector('#aol-review-confirm');
+  if (confirmCb) confirmCb.checked = false;
+  const exportBtn = container.querySelector('#aol-export-btn');
+  const copyBtn = container.querySelector('#aol-copy-btn');
+  if (exportBtn) exportBtn.disabled = true;
+  if (copyBtn) copyBtn.disabled = true;
+
+  const bloomColors = {
+    remember: '#3b82f6', understand: '#6366f1', apply: '#8b5cf6',
+    analyse: '#a855f7', evaluate: '#d946ef', create: '#ec4899'
+  };
+
+  const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
+
+  output.innerHTML = `
+    <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-weight:700;font-size:1rem;color:var(--ink);">Draft Questions (${questions.length} questions, ${totalMarks} marks)</div>
+      <span class="badge badge-amber badge-dot" style="font-size:0.75rem;">AI-Generated \u2014 Review Required</span>
+    </div>
+    ${questions.map((q, i) => {
+      const color = bloomColors[q.bloom_level] || '#6366f1';
+      return `
+      <div class="aol-question-card" data-q-idx="${i}" style="padding:16px;border:1px solid var(--border,#e2e5ea);border-radius:10px;margin-bottom:12px;border-left:4px solid ${color};background:var(--bg-card,#fff);transition:opacity 0.3s;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
+          <div>
+            <span class="badge" style="background:${color}15;color:${color};font-size:0.6875rem;font-weight:600;padding:2px 8px;border-radius:4px;">${(q.bloom_level || 'unknown').charAt(0).toUpperCase() + (q.bloom_level || '').slice(1)}</span>
+            <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:8px;">${q.question_type || 'structured'} \u2022 ${q.marks || 0} mark${q.marks !== 1 ? 's' : ''}</span>
+            <span style="font-size:0.75rem;color:var(--ink-faint);margin-left:8px;">${escHtml(q.topic || '')}</span>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0;">
+            <button class="btn btn-ghost btn-sm aol-q-keep" data-idx="${i}" style="font-size:0.6875rem;color:var(--success,#22c55e);padding:2px 8px;" title="Keep this question">Keep</button>
+            <button class="btn btn-ghost btn-sm aol-q-edit" data-idx="${i}" style="font-size:0.6875rem;color:var(--accent,#4361ee);padding:2px 8px;" title="Edit this question">Edit</button>
+            <button class="btn btn-ghost btn-sm aol-q-delete" data-idx="${i}" style="font-size:0.6875rem;color:var(--danger,#ef4444);padding:2px 8px;" title="Delete this question">Delete</button>
+          </div>
+        </div>
+        <div class="aol-q-display">
+          <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Q${i + 1}. ${escHtml(q.question)}</div>
+          <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;padding:8px 12px;background:var(--bg-subtle,#f8f9fa);border-radius:6px;">
+            <strong style="color:var(--ink-secondary);">Suggested Answer:</strong> ${escHtml(q.answer || 'No answer provided')}
+          </div>
+        </div>
+        <div class="aol-q-edit-area" style="display:none;">
+          <div style="margin-bottom:8px;">
+            <label style="font-size:0.6875rem;font-weight:600;color:var(--ink-secondary);display:block;margin-bottom:2px;">Question</label>
+            <textarea class="input aol-q-text" rows="3" style="width:100%;font-size:0.8125rem;resize:vertical;">${escHtml(q.question)}</textarea>
+          </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:0.6875rem;font-weight:600;color:var(--ink-secondary);display:block;margin-bottom:2px;">Answer / Marking Scheme</label>
+            <textarea class="input aol-q-answer" rows="2" style="width:100%;font-size:0.8125rem;resize:vertical;">${escHtml(q.answer || '')}</textarea>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <div>
+              <label style="font-size:0.6875rem;font-weight:600;color:var(--ink-secondary);display:block;margin-bottom:2px;">Marks</label>
+              <input type="number" class="input aol-q-marks" value="${q.marks || 0}" min="0" style="width:60px;font-size:0.8125rem;" />
+            </div>
+            <div>
+              <label style="font-size:0.6875rem;font-weight:600;color:var(--ink-secondary);display:block;margin-bottom:2px;">Level</label>
+              <select class="input aol-q-level" style="font-size:0.8125rem;">
+                ${BLOOMS.map(b => `<option value="${b.key}" ${b.key === q.bloom_level ? 'selected' : ''}>${b.label}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm aol-q-save" data-idx="${i}" style="font-size:0.6875rem;">Save Changes</button>
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+
+  // Store questions on the container for export
+  container._aolQuestions = [...questions];
+
+  // Wire Keep/Edit/Delete buttons
+  output.querySelectorAll('.aol-q-keep').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.aol-question-card');
+      card.style.borderLeftColor = 'var(--success, #22c55e)';
+      card.style.background = 'rgba(34,197,94,0.04)';
+      btn.textContent = 'Kept';
+      btn.disabled = true;
+    });
+  });
+
+  output.querySelectorAll('.aol-q-edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.aol-question-card');
+      const display = card.querySelector('.aol-q-display');
+      const editArea = card.querySelector('.aol-q-edit-area');
+      display.style.display = 'none';
+      editArea.style.display = 'block';
+    });
+  });
+
+  output.querySelectorAll('.aol-q-save').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const card = btn.closest('.aol-question-card');
+      const newText = card.querySelector('.aol-q-text').value.trim();
+      const newAnswer = card.querySelector('.aol-q-answer').value.trim();
+      const newMarks = parseInt(card.querySelector('.aol-q-marks').value) || 0;
+      const newLevel = card.querySelector('.aol-q-level').value;
+
+      // Update stored question
+      if (container._aolQuestions[idx]) {
+        container._aolQuestions[idx].question = newText;
+        container._aolQuestions[idx].answer = newAnswer;
+        container._aolQuestions[idx].marks = newMarks;
+        container._aolQuestions[idx].bloom_level = newLevel;
+      }
+
+      // Update display
+      const display = card.querySelector('.aol-q-display');
+      const editArea = card.querySelector('.aol-q-edit-area');
+      display.innerHTML = `
+        <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Q${idx + 1}. ${escHtml(newText)}</div>
+        <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;padding:8px 12px;background:var(--bg-subtle,#f8f9fa);border-radius:6px;">
+          <strong style="color:var(--ink-secondary);">Suggested Answer:</strong> ${escHtml(newAnswer || 'No answer provided')}
+        </div>`;
+      display.style.display = 'block';
+      editArea.style.display = 'none';
+
+      card.style.borderLeftColor = 'var(--accent, #4361ee)';
+      showToast('Question updated.', 'success');
+    });
+  });
+
+  output.querySelectorAll('.aol-q-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const card = btn.closest('.aol-question-card');
+      card.style.opacity = '0.3';
+      card.style.pointerEvents = 'none';
+      if (container._aolQuestions[idx]) {
+        container._aolQuestions[idx]._deleted = true;
+      }
+    });
+  });
+}
+
+/* ── Export Questions (print-ready with watermark) ── */
+function exportQuestions(container) {
+  const questions = (container._aolQuestions || []).filter(q => !q._deleted);
+  if (questions.length === 0) {
+    showToast('No questions to export.', 'warning');
+    return;
+  }
+
+  const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';
+  const level = container.querySelector('#aol-level')?.value?.trim() || '';
+  const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>${escHtml(subject)} Assessment</title>
+  <style>
+    @media print { @page { margin: 2cm; } .no-print { display: none !important; } }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px; color: #1e1e2e; position: relative; }
+    .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 5rem; font-weight: 900; color: rgba(0,0,0,0.04); pointer-events: none; z-index: 0; letter-spacing: 0.1em; white-space: nowrap; }
+    .header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid #1e1e2e; padding-bottom: 16px; }
+    .header h1 { font-size: 1.25rem; margin: 0 0 4px; }
+    .header p { font-size: 0.875rem; color: #666; margin: 0; }
+    .student-info { display: flex; gap: 24px; margin-bottom: 24px; font-size: 0.875rem; }
+    .student-info div { flex: 1; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+    .question { margin-bottom: 20px; page-break-inside: avoid; }
+    .q-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+    .q-number { font-weight: 700; font-size: 0.9375rem; }
+    .q-marks { font-size: 0.75rem; color: #666; }
+    .q-text { font-size: 0.9375rem; line-height: 1.6; margin-bottom: 8px; }
+    .q-lines { border-bottom: 1px solid #ddd; height: 28px; }
+    .answer-section { margin-top: 32px; border-top: 2px dashed #ccc; padding-top: 16px; }
+    .answer-section h2 { font-size: 1rem; margin-bottom: 12px; }
+    .answer { margin-bottom: 12px; font-size: 0.8125rem; line-height: 1.5; }
+    .footer { margin-top: 32px; text-align: center; font-size: 0.6875rem; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="watermark">Johll</div>
+  <div class="header">
+    <h1>${escHtml(subject)}${level ? ' \u2014 ' + escHtml(level) : ''}</h1>
+    <p>Total Marks: ${totalMarks} | Questions: ${questions.length}</p>
+  </div>
+  <div class="student-info">
+    <div>Name: ____________________</div>
+    <div>Class: ________</div>
+    <div>Date: ________</div>
+  </div>
+
+  ${questions.map((q, i) => `
+    <div class="question">
+      <div class="q-header">
+        <span class="q-number">Q${i + 1}.</span>
+        <span class="q-marks">[${q.marks} mark${q.marks !== 1 ? 's' : ''}]</span>
+      </div>
+      <div class="q-text">${escHtml(q.question)}</div>
+      ${Array.from({length: Math.max(2, Math.ceil((q.marks || 1) * 1.5))}, () => '<div class="q-lines"></div>').join('')}
+    </div>
+  `).join('')}
+
+  <div class="answer-section no-print">
+    <h2>Answer Key / Marking Scheme</h2>
+    ${questions.map((q, i) => `
+      <div class="answer">
+        <strong>Q${i + 1} (${(q.bloom_level || '').charAt(0).toUpperCase() + (q.bloom_level || '').slice(1)}, ${q.marks}m):</strong>
+        ${escHtml(q.answer || 'No answer provided')}
+      </div>
+    `).join('')}
+  </div>
+
+  <div class="footer">
+    Generated by Co-Cher | Teacher-reviewed and approved | Johll
+  </div>
+
+  <script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`);
+  printWindow.document.close();
+}
+
+/* ── Copy Questions to Clipboard ── */
+function copyQuestions(container) {
+  const questions = (container._aolQuestions || []).filter(q => !q._deleted);
+  if (questions.length === 0) {
+    showToast('No questions to copy.', 'warning');
+    return;
+  }
+
+  const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';
+  const level = container.querySelector('#aol-level')?.value?.trim() || '';
+  const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
+
+  let text = `${subject}${level ? ' \u2014 ' + level : ''}\nTotal Marks: ${totalMarks}\n\n`;
+  questions.forEach((q, i) => {
+    text += `Q${i + 1}. [${q.marks}m] (${q.bloom_level || 'unknown'})\n${q.question}\n`;
+    text += `Answer: ${q.answer || 'N/A'}\n\n`;
+  });
+  text += `\nGenerated by Co-Cher | Reviewed by teacher | Johll`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Questions copied to clipboard!', 'success');
+  }).catch(() => {
+    showToast('Failed to copy. Try selecting and copying manually.', 'danger');
   });
 }
 
