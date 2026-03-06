@@ -131,6 +131,106 @@ function getTTPeriodKey() {
   return { dayStr, period, weekType, mins };
 }
 
+/* ── Top-of-dashboard status banner: next lesson or done for the day ── */
+function buildStatusBanner(teacherRow) {
+  if (!teacherRow) return '';
+  const pk = getTTPeriodKey();
+  if (!pk) return ''; // Weekend
+
+  const { dayStr, period, weekType, mins } = pk;
+  const periodStartTimes = [0, 450, 490, 530, 570, 620, 660, 700, 740, 790, 830, 870];
+  const firstName = getFirstName() || 'Cher';
+
+  // Build today's full schedule
+  const allPeriods = [];
+  for (let p = 1; p <= 11; p++) {
+    const col = `${weekType}${dayStr}${p}`;
+    const val = teacherRow[col];
+    if (val && val !== '0') {
+      const parts = val.split(' / ');
+      allPeriods.push({ p, classCode: parts[0]?.trim(), room: parts[1]?.trim() || '' });
+    }
+  }
+
+  const lastPeriod = allPeriods.length > 0 ? allPeriods[allPeriods.length - 1].p : 0;
+  const beforeSchool = mins < 450;
+
+  // Find the next upcoming lesson (current or future)
+  const nextLesson = allPeriods.find(s => period === null ? true : s.p >= period);
+  const doneForDay = (period !== null && period > lastPeriod && allPeriods.length > 0) ||
+                     (allPeriods.length === 0) ||
+                     (!beforeSchool && !nextLesson);
+
+  const formatTime = (m) => {
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+    return `${h > 12 ? h - 12 : h}:${String(mm).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+  };
+
+  if (beforeSchool && nextLesson) {
+    // Before school — show first lesson
+    const startTime = formatTime(periodStartTimes[nextLesson.p]);
+    return `
+      <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent,#4361ee),#6366f1);color:#fff;display:flex;align-items:center;gap:var(--sp-4);">
+        <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div>
+          <div style="font-size:0.8125rem;opacity:0.85;">First lesson today</div>
+          <div style="font-size:1.125rem;font-weight:700;">P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room} at ${startTime}</div>
+        </div>
+      </div>`;
+  }
+
+  if (doneForDay) {
+    return `
+      <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--success,#22c55e),#16a34a);color:#fff;display:flex;align-items:center;gap:var(--sp-4);">
+        <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <div style="font-size:1.125rem;font-weight:700;">You are done with lessons for the day!</div>
+          <div style="font-size:0.875rem;opacity:0.9;">Take a break before you continue with marking or prep. Thank you, ${firstName}!</div>
+        </div>
+      </div>`;
+  }
+
+  if (nextLesson) {
+    const isCurrent = nextLesson.p === period;
+    const upNext = allPeriods.find(s => s.p > period);
+    if (isCurrent) {
+      const label = upNext
+        ? `Up next: P${upNext.p} — ${upNext.classCode} in ${upNext.room} at ${formatTime(periodStartTimes[upNext.p])}`
+        : 'This is your last lesson today';
+      return `
+        <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent,#4361ee),#6366f1);color:#fff;display:flex;align-items:center;gap:var(--sp-4);">
+          <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <div style="font-size:0.8125rem;opacity:0.85;">Now teaching</div>
+            <div style="font-size:1.125rem;font-weight:700;">P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room}</div>
+            <div style="font-size:0.8125rem;opacity:0.85;margin-top:2px;">${label}</div>
+          </div>
+        </div>`;
+    } else {
+      const startTime = formatTime(periodStartTimes[nextLesson.p]);
+      return `
+        <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent,#4361ee),#6366f1);color:#fff;display:flex;align-items:center;gap:var(--sp-4);">
+          <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <div style="font-size:0.8125rem;opacity:0.85;">Next lesson</div>
+            <div style="font-size:1.125rem;font-weight:700;">P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room} at ${startTime}</div>
+          </div>
+        </div>`;
+    }
+  }
+
+  return '';
+}
+
 function buildTTScheduleCard(teacherRow) {
   if (!teacherRow) return '';
   const pk = getTTPeriodKey();
@@ -538,6 +638,9 @@ export function render(container) {
           </div>
         </div>
 
+        <!-- Status Banner (next lesson / done for day) -->
+        <div id="tt-status-banner"></div>
+
         <!-- TT Schedule Card (populated async) -->
         <div id="tt-schedule-card"></div>
 
@@ -735,6 +838,9 @@ export function render(container) {
           </div>
         </div>
 
+        <!-- My Timetable (populated async) -->
+        <div id="tt-my-timetable"></div>
+
         <!-- Classes Overview -->
         <div style="margin-bottom:var(--sp-8);">
           <div class="section-header">
@@ -807,7 +913,7 @@ export function render(container) {
     });
   });
 
-  // Async TT schedule card
+  // Async TT schedule card + status banner + My Timetable
   (async () => {
     try {
       const user = getCurrentUser();
@@ -818,8 +924,64 @@ export function render(container) {
         (row["Teacher's Email"] || '').toLowerCase() === emailLower
       );
       if (!teacherRow) return;
+      const banner = container.querySelector('#tt-status-banner');
+      if (banner) banner.innerHTML = buildStatusBanner(teacherRow);
       const card = container.querySelector('#tt-schedule-card');
       if (card) card.innerHTML = buildTTScheduleCard(teacherRow);
+      const timetable = container.querySelector('#tt-my-timetable');
+      if (timetable) timetable.innerHTML = buildMyTimetable(teacherRow);
     } catch { /* TT is optional */ }
   })();
+}
+
+/* ── My Timetable — full day grid ── */
+function buildMyTimetable(teacherRow) {
+  if (!teacherRow) return '';
+  const pk = getTTPeriodKey();
+  if (!pk) return '';
+  const { dayStr, period, weekType } = pk;
+
+  const periodTimes = [
+    '7:30', '8:10', '8:50', '9:30', '10:20', '11:00', '11:40', '12:20', '1:10', '1:50', '2:30'
+  ];
+  const periodEndTimes = [
+    '8:10', '8:50', '9:30', '10:10', '11:00', '11:40', '12:20', '1:00', '1:50', '2:30', '3:10'
+  ];
+
+  const rows = [];
+  for (let p = 1; p <= 11; p++) {
+    const col = `${weekType}${dayStr}${p}`;
+    const val = teacherRow[col];
+    const hasClass = val && val !== '0';
+    const parts = hasClass ? val.split(' / ') : [];
+    const classCode = parts[0]?.trim() || '';
+    const room = parts[1]?.trim() || '';
+    const isCurrent = period === p;
+    const isPast = period !== null && p < period;
+    rows.push({ p, classCode, room, hasClass, isCurrent, isPast });
+  }
+
+  const rowsHTML = rows.map(r => {
+    const bg = r.isCurrent ? 'background:var(--accent-light);' : r.isPast ? 'opacity:0.5;' : '';
+    const leftBorder = r.isCurrent ? 'border-left:3px solid var(--accent,#4361ee);' : '';
+    const freeLabel = r.isPast ? 'Free' : '<span style="color:var(--success,#22c55e);">Free</span>';
+    return `<div style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);border-bottom:1px solid var(--border-light);font-size:0.8125rem;${bg}${leftBorder}">
+      <div style="width:36px;font-weight:700;color:var(--ink-muted);flex-shrink:0;">P${r.p}</div>
+      <div style="width:80px;font-size:0.75rem;color:var(--ink-faint);flex-shrink:0;">${periodTimes[r.p - 1]}–${periodEndTimes[r.p - 1]}</div>
+      <div style="flex:1;font-weight:${r.hasClass ? '600' : '400'};color:var(--ink);">${r.hasClass ? r.classCode : freeLabel}</div>
+      ${r.room ? `<div style="font-size:0.75rem;color:var(--ink-muted);">${r.room}</div>` : ''}
+      ${r.isCurrent ? '<span class="badge badge-blue" style="font-size:0.625rem;">NOW</span>' : ''}
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="margin-bottom:var(--sp-8);">
+      <div class="section-header">
+        <h2 class="section-title" style="font-size:1.125rem;">My Timetable</h2>
+        <span style="font-size:0.75rem;color:var(--ink-muted);">${weekType} Week &middot; ${dayStr}</span>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        ${rowsHTML}
+      </div>
+    </div>`;
 }
