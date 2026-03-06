@@ -10,61 +10,168 @@ import { sendChat } from '../api.js';
 
 /* ── Simulation catalogue ── */
 const SIMULATIONS = [
+  /* ─── Biology ─── */
   {
-    id: 'titration',
-    title: 'Acid-Base Titration',
-    subject: 'Chemistry',
-    description: 'Perform a guided titration practical. Rinse, pipette, titrate, and calculate concentration from concordant results.',
+    id: 'diffusion',
+    title: 'Diffusion',
+    subject: 'Biology',
+    description: 'Observe particle movement through a membrane. Vary concentration and temperature to explore the factors affecting diffusion rate.',
+    difficulty: 'Beginner',
+    path: 'simulations/biology/diffusion/index.html'
+  },
+  {
+    id: 'enzyme-activity',
+    title: 'Enzyme Activity',
+    subject: 'Biology',
+    description: 'Investigate how temperature affects amylase activity. Use the starch-iodine test to find the optimum temperature.',
     difficulty: 'Intermediate',
-    path: 'simulations/chemistry/titration/index.html'
+    path: 'simulations/biology/enzyme-activity/index.html'
+  },
+  {
+    id: 'food-tests',
+    title: 'Food Tests',
+    subject: 'Biology',
+    description: 'Test for starch, reducing sugars, proteins, and lipids using iodine, Benedict\u2019s, Biuret, and emulsion tests.',
+    difficulty: 'Beginner',
+    path: 'simulations/biology/food-tests/index.html'
+  },
+  {
+    id: 'microscopy',
+    title: 'Microscopy & Cell Drawing',
+    subject: 'Biology',
+    description: 'Observe plant and animal cells under the microscope. Practice focusing, labelling, and biological drawing.',
+    difficulty: 'Beginner',
+    path: 'simulations/biology/microscopy/index.html'
+  },
+  {
+    id: 'osmosis',
+    title: 'Osmosis',
+    subject: 'Biology',
+    description: 'Investigate osmosis using potato cylinders in sucrose solutions. Calculate percentage mass change and find the isotonic point.',
+    difficulty: 'Intermediate',
+    path: 'simulations/biology/osmosis/index.html'
+  },
+  {
+    id: 'photosynthesis',
+    title: 'Photosynthesis',
+    subject: 'Biology',
+    description: 'Investigate the rate of photosynthesis by counting oxygen bubbles. Vary light intensity, CO\u2082, and temperature.',
+    difficulty: 'Intermediate',
+    path: 'simulations/biology/photosynthesis/index.html'
+  },
+  /* ─── Chemistry ─── */
+  {
+    id: 'chromatography',
+    title: 'Paper Chromatography',
+    subject: 'Chemistry',
+    description: 'Separate mixtures of dyes and inks. Calculate Rf values and identify unknown substances.',
+    difficulty: 'Beginner',
+    path: 'simulations/chemistry/chromatography/index.html'
+  },
+  {
+    id: 'electrolysis',
+    title: 'Electrolysis',
+    subject: 'Chemistry',
+    description: 'Electrodes, electrolytes, and selective discharge. Observe products formed at the cathode and anode.',
+    difficulty: 'Intermediate',
+    path: 'simulations/chemistry/electrolysis/index.html'
+  },
+  {
+    id: 'gas-tests',
+    title: 'Gas Tests',
+    subject: 'Chemistry',
+    description: 'Test for O\u2082, CO\u2082, H\u2082, Cl\u2082, and NH\u2083 using splint tests, limewater, and litmus paper.',
+    difficulty: 'Beginner',
+    path: 'simulations/chemistry/gas-tests/index.html'
   },
   {
     id: 'qualitative-analysis',
     title: 'Qualitative Analysis',
     subject: 'Chemistry',
-    description: 'Identify unknown ionic compounds using systematic cation and anion tests, flame tests, and observation recording.',
+    description: 'Identify unknown cations and anions through systematic chemical tests with NaOH, NH\u2083, and more.',
     difficulty: 'Advanced',
     path: 'simulations/chemistry/qualitative-analysis/index.html'
   },
   {
-    id: 'pendulum',
-    title: 'Pendulum & Oscillations',
+    id: 'rates-of-reaction',
+    title: 'Rates of Reaction',
+    subject: 'Chemistry',
+    description: 'Marble chips and acid \u2014 measure gas production with a syringe. Investigate concentration and surface area effects.',
+    difficulty: 'Intermediate',
+    path: 'simulations/chemistry/rates-of-reaction/index.html'
+  },
+  {
+    id: 'salts',
+    title: 'Preparation of Salts',
+    subject: 'Chemistry',
+    description: 'React copper oxide with sulfuric acid, filter, evaporate, and crystallise to produce pure copper sulfate.',
+    difficulty: 'Intermediate',
+    path: 'simulations/chemistry/salts/index.html'
+  },
+  {
+    id: 'titration',
+    title: 'Acid-Base Titration',
+    subject: 'Chemistry',
+    description: 'Pipette, burette, indicators, and endpoint detection. Practice the full titration procedure with guided steps.',
+    difficulty: 'Intermediate',
+    path: 'simulations/chemistry/titration/index.html'
+  },
+  /* ─── Physics ─── */
+  {
+    id: 'density',
+    title: 'Density',
     subject: 'Physics',
-    description: 'Investigate the relationship between pendulum length and period. Time oscillations, record data, plot T\u00B2 vs L and calculate g.',
+    description: 'Measure mass and volume of regular and irregular objects. Calculate density and identify unknown materials.',
     difficulty: 'Beginner',
-    path: 'simulations/physics/pendulum/index.html'
+    path: 'simulations/physics/density/index.html'
+  },
+  {
+    id: 'electromagnets',
+    title: 'Electromagnets',
+    subject: 'Physics',
+    description: 'Build electromagnets and investigate how current, coils, and core material affect magnetic field strength.',
+    difficulty: 'Intermediate',
+    path: 'simulations/physics/electromagnets/index.html'
+  },
+  {
+    id: 'lenses',
+    title: 'Lenses & Light',
+    subject: 'Physics',
+    description: 'Converging lenses, image formation, and focal length determination using the lens equation.',
+    difficulty: 'Intermediate',
+    path: 'simulations/physics/lenses/index.html'
   },
   {
     id: 'ohms-law',
     title: 'Ohm\u2019s Law',
     subject: 'Physics',
-    description: 'Set up a circuit with ammeter and voltmeter. Vary EMF, record V and I, plot V vs I and determine resistance.',
+    description: 'Investigate V-I characteristics. Vary EMF, record readings, plot graphs, and calculate resistance.',
     difficulty: 'Intermediate',
-    path: 'simulations/physics/electricity/index.html'
+    path: 'simulations/physics/ohms-law/index.html'
   },
   {
-    id: 'diffusion-osmosis',
-    title: 'Diffusion & Osmosis',
-    subject: 'Biology',
-    description: 'Observe particle movement across a partially permeable membrane. Compare diffusion and osmosis, vary concentration and temperature.',
+    id: 'pendulum',
+    title: 'Pendulum & Oscillations',
+    subject: 'Physics',
+    description: 'Investigate the relationship between pendulum length and period. Plot T\u00B2 vs L and determine g.',
     difficulty: 'Beginner',
-    path: 'simulations/biology/diffusion-osmosis/index.html'
+    path: 'simulations/physics/pendulum/index.html'
+  },
+  {
+    id: 'specific-heat',
+    title: 'Specific Heat Capacity',
+    subject: 'Physics',
+    description: 'Heat a metal block with an electrical heater. Plot temperature rise and calculate specific heat capacity.',
+    difficulty: 'Intermediate',
+    path: 'simulations/physics/specific-heat/index.html'
   },
   {
     id: 'waves',
-    title: 'Wave Properties',
+    title: 'Waves & Ripple Tank',
     subject: 'Physics',
-    description: 'Explore transverse and longitudinal waves. Adjust frequency, amplitude, and speed. Measure wavelength and verify v = f\u03BB.',
+    description: 'Explore wave behaviour \u2014 reflection, refraction, and diffraction in a simulated ripple tank.',
     difficulty: 'Intermediate',
     path: 'simulations/physics/waves/index.html'
-  },
-  {
-    id: 'light-refraction',
-    title: 'Light & Refraction',
-    subject: 'Physics',
-    description: 'Investigate reflection, refraction, and total internal reflection. Verify Snell\u2019s law by plotting sin(i) vs sin(r).',
-    difficulty: 'Intermediate',
-    path: 'simulations/physics/light/index.html'
   }
 ];
 

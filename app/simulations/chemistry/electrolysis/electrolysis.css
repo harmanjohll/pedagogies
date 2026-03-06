@@ -1,0 +1,304 @@
+/* Electrolysis practical styles */
+
+.el-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 300px;
+  gap: var(--sp-4);
+  padding-top: var(--sp-4);
+  padding-bottom: var(--sp-6);
+  min-height: calc(100vh - 56px);
+}
+
+/* --- Guide panel --- */
+.el-guide-panel {
+  align-self: start;
+  position: sticky;
+  top: 72px;
+}
+
+.config-group {
+  margin-bottom: var(--sp-3);
+}
+.config-label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--sp-1);
+}
+.config-select {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.config-select:focus {
+  outline: none;
+  border-color: var(--chem-color);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.ion-info {
+  background: var(--chem-bg);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.ion-info-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--chem-color);
+  margin-bottom: var(--sp-1);
+}
+.ion-list {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+.procedure-list {
+  list-style: none;
+  counter-reset: proc;
+  padding: 0;
+  margin: var(--sp-4) 0 0;
+}
+.procedure-step {
+  counter-increment: proc;
+  position: relative;
+  padding: var(--sp-2) 0 var(--sp-2) 32px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  border-left: 2px solid var(--color-border);
+  margin-left: 11px;
+}
+.procedure-step::before {
+  content: counter(proc);
+  position: absolute;
+  left: -12px;
+  top: var(--sp-2);
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+.procedure-step.active {
+  color: var(--color-text);
+  font-weight: 500;
+}
+.procedure-step.active::before {
+  border-color: var(--chem-color);
+  color: var(--chem-color);
+  background: var(--chem-bg);
+}
+.procedure-step.done {
+  color: var(--color-text-muted);
+}
+.procedure-step.done::before {
+  border-color: var(--color-success);
+  background: var(--color-success);
+  color: #fff;
+  content: '\2713';
+}
+
+/* --- Workbench --- */
+.el-workbench-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.el-workbench {
+  flex: 1;
+  min-height: 420px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #1e2028 0%, #23252f 100%);
+  position: relative;
+  overflow: hidden;
+}
+.el-workbench canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.el-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+.el-current-display {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-left: auto;
+}
+.current-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.current-value {
+  font-family: 'Courier New', monospace;
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--chem-color);
+}
+
+/* --- Data panel --- */
+.el-data-panel {
+  align-self: start;
+  position: sticky;
+  top: 72px;
+  max-height: calc(100vh - 88px);
+  overflow-y: auto;
+}
+
+.el-obs-section {
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.el-obs-section:last-child {
+  border-bottom: none;
+}
+.obs-heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: var(--sp-1);
+}
+.obs-text {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+}
+.obs-product {
+  display: inline-block;
+  margin-top: var(--sp-1);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: var(--chem-bg);
+  color: var(--chem-color);
+}
+
+/* Equations */
+.el-equations {
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.eq-line {
+  font-size: var(--text-sm);
+  margin-bottom: var(--sp-1);
+  line-height: var(--leading-relaxed);
+}
+.eq-label {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.eq-overall {
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 1px dashed var(--color-border);
+}
+.eq-notes {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--sp-2);
+  line-height: var(--leading-relaxed);
+  font-style: italic;
+}
+
+/* Identification */
+.el-id-section {
+  padding: var(--sp-3) 0;
+}
+.id-row {
+  margin-bottom: var(--sp-2);
+}
+.id-label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 2px;
+}
+.id-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.id-input:focus {
+  outline: none;
+  border-color: var(--chem-color);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+.id-result {
+  margin-top: var(--sp-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.id-result.correct { color: var(--color-success); }
+.id-result.incorrect { color: var(--color-danger); }
+.id-result.partial { color: #d97706; }
+
+/* --- Toast --- */
+.toast-container {
+  position: fixed;
+  bottom: var(--sp-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  pointer-events: none;
+}
+.toast {
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  background: var(--color-text);
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn 0.2s ease;
+  pointer-events: auto;
+}
+.toast-info { background: var(--chem-color); }
+.toast-warn { background: #d97706; }
+.toast-success { background: var(--color-success); }
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+  .el-layout {
+    grid-template-columns: 1fr;
+  }
+  .el-guide-panel, .el-data-panel {
+    position: static;
+    max-height: none;
+  }
+}

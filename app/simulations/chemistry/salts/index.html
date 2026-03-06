@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preparation of Salts – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="salts.css?v=5">
+</head>
+<body>
+
+  <a class="skip-link" href="#workbench-canvas">Skip to simulation</a>
+
+  <header class="topbar">
+    <div class="topbar-inner container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="../../index.html">LabSim</a> <span class="sep">/</span>
+        <a href="../../index.html">Chemistry</a> <span class="sep">/</span>
+        <span>Preparation of Salts</span>
+      </nav>
+      <div class="topbar-actions" id="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-guide" class="btn btn-ghost btn-sm" aria-label="Toggle guide panel">Guide</button>
+        <button id="btn-reset" class="btn btn-ghost btn-sm" aria-label="Reset practical">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="salts-layout container">
+
+    <!-- Left: Procedure Guide -->
+    <aside id="guide-panel" class="salts-guide-panel panel" role="complementary" aria-label="Procedure guide and configuration">
+      <div class="panel-header">Setup &amp; Procedure</div>
+      <div class="panel-body">
+
+        <div class="config-group">
+          <label class="config-label" for="sel-pair">Acid–Base Pair</label>
+          <select id="sel-pair" class="config-select" aria-label="Choose acid-base pair">
+            <option value="">— Select —</option>
+          </select>
+        </div>
+
+        <div id="equation-info" class="equation-info" hidden>
+          <div class="equation-info-title">Balanced Equation</div>
+          <div id="equation-text" class="equation-text"></div>
+        </div>
+
+        <button id="btn-start" class="btn btn-primary btn-sm" disabled>Begin Practical</button>
+
+        <ol class="procedure-list" id="procedure-list" role="list" aria-label="Procedure steps">
+          <li class="procedure-step" data-step="warm">Warm the acid</li>
+          <li class="procedure-step" data-step="add">Add excess base</li>
+          <li class="procedure-step" data-step="stir">Stir the mixture</li>
+          <li class="procedure-step" data-step="filter">Filter the mixture</li>
+          <li class="procedure-step" data-step="evaporate">Evaporate the solution</li>
+          <li class="procedure-step" data-step="crystallise">Crystallise</li>
+          <li class="procedure-step" data-step="dry">Dry the crystals</li>
+        </ol>
+      </div>
+    </aside>
+
+    <!-- Centre: Canvas Workbench -->
+    <section class="salts-workbench-panel" role="main" aria-label="Salt preparation workbench">
+      <div class="salts-workbench">
+        <canvas id="workbench-canvas" aria-label="Salt preparation apparatus"></canvas>
+      </div>
+      <div class="salts-action-bar" id="action-bar" hidden>
+        <div class="action-step-info">
+          <span class="action-step-title" id="action-step-title"></span>
+          <span class="action-step-hint" id="action-step-hint"></span>
+        </div>
+        <button id="btn-action" class="btn btn-primary btn-sm" aria-label="Perform next step"></button>
+      </div>
+    </section>
+
+    <!-- Right: Observations -->
+    <aside class="salts-obs-panel panel" role="complementary" aria-label="Observations and results">
+      <div class="panel-header">Observations</div>
+      <div class="panel-body" id="obs-body">
+        <p class="obs-placeholder" id="obs-placeholder">Observations will appear here as you complete each step of the practical.</p>
+      </div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="salts"></div>
+    </aside>
+
+  </div>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="salts-data.js?v=5"></script>
+  <script src="salts.js?v=5"></script>
+</body>
+</html>

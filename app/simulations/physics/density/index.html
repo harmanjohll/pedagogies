@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Density – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="density.css?v=5">
+</head>
+<body>
+
+  <a href="#main-canvas" class="skip-link">Skip to simulation</a>
+
+  <!-- Print-only header -->
+  <div class="print-header">
+    <h1>Density</h1>
+    <p>LabSim Physics Practical</p>
+  </div>
+
+  <!-- Top bar -->
+  <nav class="topbar" role="navigation" aria-label="Main navigation">
+    <div class="topbar-inner">
+      <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+      <span class="topbar-breadcrumb">
+        <a href="../../index.html">LabSim</a>
+        <span class="separator">/</span>
+        <a href="../../index.html">Physics</a>
+        <span class="separator">/</span>
+        Density
+      </span>
+      <div class="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-toggle-guide" class="btn btn-ghost btn-sm" aria-label="Toggle procedure guide">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+          Guide
+        </button>
+        <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main 3-column layout -->
+  <main class="density-layout">
+
+    <!-- ═══ Left: Object Selector + Procedure ═══ -->
+    <aside id="guide-panel" class="density-guide-panel" aria-label="Object selector and procedure guide">
+
+      <!-- Object selector -->
+      <div class="panel">
+        <div class="panel-header">Objects</div>
+        <div class="panel-body" id="object-selector">
+          <div class="category-label">Regular Solids</div>
+          <div class="object-grid" id="regular-objects"></div>
+
+          <div class="category-label">Irregular Solids</div>
+          <div class="object-grid" id="irregular-objects"></div>
+
+          <div class="category-label">Liquids</div>
+          <div class="object-grid" id="liquid-objects"></div>
+        </div>
+      </div>
+
+      <!-- Procedure guide -->
+      <div class="panel mt-4">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <div class="object-info mb-2" id="method-info">
+            <span class="method-badge" id="method-badge">Regular Solid</span>
+          </div>
+          <ol class="procedure-list" id="procedure-list"></ol>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ═══ Centre: Simulation Canvas ═══ -->
+    <section class="density-workbench-panel" aria-label="Simulation">
+      <div class="density-workbench">
+        <canvas id="main-canvas" width="700" height="480"></canvas>
+
+        <!-- Instrument readouts below canvas -->
+        <div class="instrument-readings" id="instrument-readings">
+          <div class="reading-card balance-card">
+            <span class="reading-label">Balance</span>
+            <span class="reading-value" id="balance-value">0.00 g</span>
+          </div>
+          <div class="reading-card volume-card">
+            <span class="reading-label">Volume</span>
+            <span class="reading-value" id="volume-value">— cm&sup3;</span>
+          </div>
+          <div class="reading-card density-card">
+            <span class="reading-label">Density</span>
+            <span class="reading-value" id="density-value">— g/cm&sup3;</span>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="action-bar" id="action-bar">
+          <button id="btn-place" class="btn btn-primary btn-sm" disabled>Place on Balance</button>
+          <button id="btn-measure" class="btn btn-primary btn-sm" disabled>Measure Dimensions</button>
+          <button id="btn-immerse" class="btn btn-primary btn-sm" disabled>Lower into Cylinder</button>
+          <button id="btn-pour" class="btn btn-primary btn-sm" disabled>Pour Liquid</button>
+          <button id="btn-weigh-full" class="btn btn-primary btn-sm" disabled>Weigh with Liquid</button>
+          <button id="btn-calculate" class="btn btn-success btn-sm" disabled>Calculate Density</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Right: Results + Analysis ═══ -->
+    <aside class="density-data-panel" aria-label="Data and analysis">
+
+      <!-- Results table -->
+      <div class="panel">
+        <div class="panel-header">Results</div>
+        <div class="panel-body">
+          <table class="data-table" id="results-table">
+            <thead>
+              <tr>
+                <th>Object</th>
+                <th>Mass / g</th>
+                <th>Volume / cm&sup3;</th>
+                <th>Density / g/cm&sup3;</th>
+              </tr>
+            </thead>
+            <tbody id="results-tbody"></tbody>
+          </table>
+          <p id="data-empty" class="text-sm text-muted text-center mt-2">
+            Select an object and begin measuring.
+          </p>
+          <div id="export-buttons" class="mt-2"></div>
+        </div>
+      </div>
+
+      <!-- Calculation panel -->
+      <div class="panel mt-4">
+        <div class="panel-header">Calculate Density</div>
+        <div class="panel-body" id="calc-panel">
+          <div class="calc-formulae">
+            <div class="calc-formula-row">
+              <span class="calc-formula-label">Density:</span>
+              <span class="calc-formula font-mono">&rho; = m / V</span>
+            </div>
+            <div class="calc-formula-row">
+              <span class="calc-formula-label">Units:</span>
+              <span class="calc-formula font-mono">g/cm&sup3; or kg/m&sup3;</span>
+            </div>
+          </div>
+          <div class="calc-inputs" id="calc-inputs" style="display:none;">
+            <div class="calc-input-row">
+              <label for="input-mass">Mass (g)</label>
+              <input type="number" id="input-mass" class="calc-input" placeholder="Enter mass..." step="any">
+            </div>
+            <div class="calc-input-row">
+              <label for="input-volume">Volume (cm&sup3;)</label>
+              <input type="number" id="input-volume" class="calc-input" placeholder="Enter volume..." step="any">
+            </div>
+            <div class="calc-input-row">
+              <label for="input-density">Density (g/cm&sup3;)</label>
+              <input type="number" id="input-density" class="calc-input" placeholder="Enter density..." step="any">
+            </div>
+            <button id="btn-check" class="btn btn-success btn-sm w-full mt-2">Check Answer</button>
+            <div id="calc-result" class="calc-result-box" style="display:none;"></div>
+          </div>
+          <p id="calc-placeholder" class="text-sm text-muted">
+            Complete a measurement to unlock calculations.
+          </p>
+        </div>
+      </div>
+
+      <!-- Analysis questions -->
+      <div class="panel mt-4">
+        <div class="panel-header">Analysis Questions</div>
+        <div class="panel-body">
+          <ul class="analysis-list" id="analysis-list"></ul>
+        </div>
+      </div>
+
+      <!-- Score summary slot -->
+      <div id="score-slot" class="mt-4"></div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="density"></div>
+    </aside>
+
+  </main>
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="density-data.js?v=5"></script>
+  <script src="density.js?v=5"></script>
+</body>
+</html>

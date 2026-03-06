@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Acid-Base Titration – LabSim</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../shared/design-system.css">
-  <link rel="stylesheet" href="titration.css">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=15">
+  <link rel="stylesheet" href="titration.css?v=15">
 </head>
 <body>
 
@@ -26,6 +29,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
         Guide
       </button>
+      <button id="btn-next-titration" class="btn btn-success btn-sm" disabled>Next Titration</button>
       <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
     </div>
   </nav>
@@ -71,11 +75,6 @@
     <section class="workbench-panel">
       <div id="workbench" class="workbench">
         <div class="bench-surface"></div>
-
-        <!-- White tile (hidden until placed) -->
-        <div id="white-tile" class="white-tile" style="display:none;">
-          <div class="tile-surface"></div>
-        </div>
 
         <!-- Beaker (FA2) -->
         <div id="beaker" class="apparatus beaker-apparatus" data-item="beaker">
@@ -144,6 +143,10 @@
             <div class="burette-nozzle"></div>
             <!-- Drip animation element -->
             <div class="burette-drip" id="burette-drip"></div>
+          </div>
+          <!-- White tile (hidden until flask placed) -->
+          <div id="white-tile" class="white-tile" style="display:none;">
+            <div class="tile-surface"></div>
           </div>
           <!-- Flask placement zone under burette -->
           <div id="flask-zone" class="flask-under-zone" style="display:none;"></div>
@@ -222,22 +225,30 @@
           <p class="text-sm text-muted">Complete at least two concordant titrations to begin calculations.</p>
         </div>
       </div>
+
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="titration"></div>
     </aside>
 
   </div>
 
+  <!-- Next Titration overlay bar — fixed to bottom, impossible to miss -->
+  <div id="next-run-bar" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:10000; background:linear-gradient(135deg,#06d6a0,#05b384); padding:16px 24px; box-shadow:0 -4px 20px rgba(0,0,0,0.3); text-align:center;">
+    <span style="color:#fff; font-size:18px; font-weight:600; margin-right:16px;" id="next-run-label">Rough titration complete!</span>
+    <button id="btn-next-run" style="background:#fff; color:#059669; border:none; padding:12px 32px; font-size:18px; font-weight:700; border-radius:8px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+      Start Next Titration
+    </button>
+  </div>
 
-  <!-- Lab Notebook -->
-  <div class="lab-notebook-slot" data-practical="titration" style="max-width:640px;margin:var(--sp-4) auto;padding:0 var(--sp-4);"></div>
   <!-- Toast container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="../../shared/lab-audio.js"></script>
-  <script src="../../shared/lab-score.js"></script>
-  <script src="../../shared/dark-mode.js"></script>
-  <script src="../../shared/lab-record-mode.js"></script>
-  <script src="../../shared/guide-collapse.js"></script>
-  <script src="../../shared/lab-notebook.js"></script>
-  <script src="titration.js"></script>
+  <script src="../../shared/lab-audio.js?v=15"></script>
+  <script src="../../shared/lab-score.js?v=15"></script>
+  <script src="../../shared/dark-mode.js?v=15"></script>
+  <script src="../../shared/lab-record-mode.js?v=15"></script>
+  <script src="../../shared/guide-collapse.js?v=15"></script>
+  <script src="../../shared/lab-notebook.js?v=15"></script>
+  <script src="titration.js?v=15"></script>
 </body>
 </html>
