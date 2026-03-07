@@ -1,24 +1,48 @@
 /*
  * Co-Cher Login Screen
  * ====================
- * Email-based login validated against teachers.json
+ * Email-based login validated against the timetable CSV (single source of truth).
+ * Admin/tester accounts are also supported — they exist in the CSV but are
+ * excluded from operational lists like relief pools.
  */
 
 import { Store } from '../state.js';
 
-const TEACHERS_URL = './data/teachers.json';
+const TT_CSV_URL = './btyrelief/BTYTT_2026Sem1_v1.csv';
 
-let _teachersList = null;
+let _authorisedList = null;   // [{ name, email }]
 
-async function loadTeachers() {
-  if (_teachersList) return _teachersList;
+/**
+ * Load authorised teacher list from the timetable CSV.
+ * Extracts unique {name, email} pairs from the "NAME" and "Teacher's Email" columns.
+ */
+async function loadAuthorisedTeachers() {
+  if (_authorisedList) return _authorisedList;
   try {
-    const res = await fetch(TEACHERS_URL);
-    _teachersList = await res.json();
+    const res = await fetch(TT_CSV_URL);
+    const text = await res.text();
+    const lines = text.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { _authorisedList = []; return _authorisedList; }
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^\uFEFF/, ''));
+    const nameIdx = headers.indexOf('NAME');
+    const emailIdx = headers.indexOf("Teacher's Email");
+    if (nameIdx < 0 || emailIdx < 0) { _authorisedList = []; return _authorisedList; }
+
+    const seen = new Set();
+    _authorisedList = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',');
+      const email = (cols[emailIdx] || '').trim().toLowerCase();
+      const name = (cols[nameIdx] || '').trim();
+      if (email && !seen.has(email)) {
+        seen.add(email);
+        _authorisedList.push({ name, email });
+      }
+    }
   } catch {
-    _teachersList = [];
+    _authorisedList = [];
   }
-  return _teachersList;
+  return _authorisedList;
 }
 
 export function getCurrentUser() {
@@ -40,7 +64,7 @@ export function clearCurrentUser() {
 }
 
 export async function renderLogin(onComplete) {
-  const teachers = await loadTeachers();
+  const teachers = await loadAuthorisedTeachers();
 
   const overlay = document.createElement('div');
   overlay.className = 'welcome-overlay';
@@ -131,7 +155,7 @@ export async function renderLogin(onComplete) {
       return;
     }
 
-    // Match against teachers list (case-insensitive, cross-domain via prefix)
+    // Match against CSV teacher list (case-insensitive, cross-domain via prefix)
     const emailPrefix = email.split('@')[0];
     const teacher = teachers.find(t => t.email.toLowerCase() === email)
       || teachers.find(t => t.email.toLowerCase().split('@')[0] === emailPrefix);

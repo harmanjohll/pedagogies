@@ -10,12 +10,23 @@ import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { getCurrentUser } from '../components/login.js';
 
+/*
+ * Admin / tester accounts — present in the CSV (so they can log in and see
+ * their own timetable) but excluded from operational pools such as relief.
+ * Add email prefixes here as needed.
+ */
+export const ADMIN_PREFIXES = new Set(['harman_johll', 'sum_kar_mun']);
+export function isAdminUser(email) {
+  if (!email) return false;
+  return ADMIN_PREFIXES.has(email.toLowerCase().split('@')[0]);
+}
+
 /* ── Dashboard Preferences (per-user, stored in localStorage) ── */
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
 
 const DEFAULT_WIDGET_ORDER = [
   'schedule', 'notifications', 'weeklyOverview', 'suggestions',
-  'quickActions', 'stats', 'prepChecklist', 'insights',
+  'quickActions', 'stats', 'studentSpotlight', 'prepChecklist', 'insights',
   'reflections', 'recentGrid', 'timetable', 'classes'
 ];
 
@@ -30,6 +41,7 @@ const WIDGET_LABELS = {
   insights:      'Teaching Insights',
   reflections:   'Reflection Analytics',
   recentGrid:    'Recent Lessons / Events / Activity',
+  studentSpotlight: 'Student Spotlight',
   timetable:     'My Timetable',
   classes:       'Your Classes'
 };
@@ -203,30 +215,17 @@ export function getTTPeriodKey() {
   return { dayStr, period, weekType, mins };
 }
 
-/* ── Demo role-play mapping: login email → TT teacher email prefix ── */
-const DEMO_ROLE_MAP = {
-  'harman_johll': 'nurain_hamzah'   // Harman uses Ms Ain's timetable for demo
-};
-
-/* ── Display name overrides: when role-playing, show the real user's name ── */
-const DEMO_DISPLAY_NAME = {
-  'harman_johll': { name: 'Mr Johll', dept: null }   // null dept = keep timetable dept
-};
-
 /* ── Flexible teacher lookup: match exact email or prefix (cross-domain) ── */
 export function findTeacherRow(ttData, email) {
   if (!ttData || !email) return null;
   const emailLower = email.toLowerCase();
   const prefix = emailLower.split('@')[0];
 
-  // Check if this user has a demo role-play mapping
-  const lookupPrefix = DEMO_ROLE_MAP[prefix] || prefix;
-
   // 1. Exact match on Teacher's Email
   let row = ttData.find(r => (r["Teacher's Email"] || '').toLowerCase() === emailLower);
   if (row) return row;
-  // 2. Prefix match on Teacher's Email (handles cross-domain + role-play)
-  row = ttData.find(r => (r["Teacher's Email"] || '').toLowerCase().split('@')[0] === lookupPrefix);
+  // 2. Prefix match (handles cross-domain logins)
+  row = ttData.find(r => (r["Teacher's Email"] || '').toLowerCase().split('@')[0] === prefix);
   if (row) return row;
   return null;
 }
@@ -336,12 +335,8 @@ function buildTTScheduleCard(teacherRow) {
   const pk = getTTPeriodKey();
   if (!pk) return ''; // Weekend
 
-  // Check for display name override (e.g. Harman sees "Mr Johll" not Ms Ain)
-  const user = getCurrentUser();
-  const loginPrefix = user?.email?.toLowerCase().split('@')[0] || '';
-  const override = DEMO_DISPLAY_NAME[loginPrefix];
-  const name = override?.name || teacherRow['NAME'] || '';
-  const dept = override?.dept || teacherRow['DEPARTMENT'] || '';
+  const name = teacherRow['NAME'] || '';
+  const dept = teacherRow['DEPARTMENT'] || '';
   const { dayStr, period, weekType, mins } = pk;
 
   // Build today's full schedule
@@ -547,6 +542,96 @@ function buildSuggestions(classes, lessons, events) {
   }
 
   return suggestions.slice(0, 4);
+}
+
+/* ── Student Spotlight Widget ── */
+function buildStudentSpotlight(classes) {
+  if (classes.length === 0) return '';
+  const THRESHOLD = 50; // flag students below this E21CC average
+
+  const flagged = [];
+  classes.forEach(cls => {
+    if (!cls.students?.length) return;
+    cls.students.forEach(st => {
+      const cait = st.cait ?? st.e21cc_cait ?? 0;
+      const cci = st.cci ?? st.e21cc_cci ?? 0;
+      const cgc = st.cgc ?? st.e21cc_cgc ?? 0;
+      const avg = Math.round((cait + cci + cgc) / 3);
+      const lowest = Math.min(cait, cci, cgc);
+      const lowestLabel = lowest === cait ? 'CAIT' : lowest === cci ? 'CCI' : 'CGC';
+      if (avg < THRESHOLD || lowest < 40) {
+        flagged.push({
+          name: st.name,
+          className: cls.name,
+          classId: cls.id,
+          avg,
+          cait, cci, cgc,
+          lowest, lowestLabel,
+          suggestion: lowest < 40
+            ? `Needs support in ${lowestLabel} (${lowest}%). Consider scaffolding or differentiated tasks.`
+            : `Overall E21CC below ${THRESHOLD}%. Review across all competencies.`
+        });
+      }
+    });
+  });
+
+  if (flagged.length === 0) {
+    return `<div style="text-align:center;padding:var(--sp-4);">
+      <div style="font-size:2rem;margin-bottom:var(--sp-2);">&#x2728;</div>
+      <p style="color:var(--ink-muted);font-size:0.8125rem;">All students are above the E21CC threshold. Great work!</p>
+    </div>`;
+  }
+
+  // Sort by avg ascending (most needy first), take top 5
+  flagged.sort((a, b) => a.avg - b.avg);
+  const shown = flagged.slice(0, 5);
+
+  return `
+    <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+      ${shown.map(st => {
+        const barColor = st.avg < 30 ? 'var(--danger,#ef4444)' : st.avg < THRESHOLD ? 'var(--warning,#f59e0b)' : 'var(--success,#22c55e)';
+        return `
+          <div class="card card-hover card-interactive spotlight-student" data-class-id="${st.classId}" style="padding:var(--sp-3) var(--sp-4);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-2);">
+              <div>
+                <div style="font-weight:600;font-size:0.875rem;color:var(--ink);">${st.name}</div>
+                <div style="font-size:0.6875rem;color:var(--ink-muted);">${st.className}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-weight:700;font-size:1rem;color:${barColor};">${st.avg}%</div>
+                <div style="font-size:0.625rem;color:var(--ink-faint);">E21CC avg</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-2);">
+              <div style="flex:1;text-align:center;">
+                <div style="font-size:0.5625rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;">CAIT</div>
+                <div style="height:4px;background:var(--bg-subtle);border-radius:2px;overflow:hidden;margin-top:2px;">
+                  <div style="width:${st.cait}%;height:100%;background:var(--e21cc-cait,#6366f1);border-radius:2px;"></div>
+                </div>
+                <div style="font-size:0.625rem;color:var(--ink-muted);margin-top:1px;">${st.cait}%</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="font-size:0.5625rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;">CCI</div>
+                <div style="height:4px;background:var(--bg-subtle);border-radius:2px;overflow:hidden;margin-top:2px;">
+                  <div style="width:${st.cci}%;height:100%;background:var(--e21cc-cci,#06b6d4);border-radius:2px;"></div>
+                </div>
+                <div style="font-size:0.625rem;color:var(--ink-muted);margin-top:1px;">${st.cci}%</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="font-size:0.5625rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;">CGC</div>
+                <div style="height:4px;background:var(--bg-subtle);border-radius:2px;overflow:hidden;margin-top:2px;">
+                  <div style="width:${st.cgc}%;height:100%;background:var(--e21cc-cgc,#22c55e);border-radius:2px;"></div>
+                </div>
+                <div style="font-size:0.625rem;color:var(--ink-muted);margin-top:1px;">${st.cgc}%</div>
+              </div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--ink-secondary);background:var(--bg-subtle);padding:var(--sp-2) var(--sp-3);border-radius:var(--radius-md);line-height:1.4;">
+              ${st.suggestion}
+            </div>
+          </div>`;
+      }).join('')}
+      ${flagged.length > 5 ? `<p style="font-size:0.75rem;color:var(--ink-muted);text-align:center;">+${flagged.length - 5} more students need attention</p>` : ''}
+    </div>`;
 }
 
 function renderInsights(classes, lessons) {
@@ -1289,6 +1374,7 @@ export function render(container) {
     quickActions: quickActionsHTML,
     stats: statsHTML,
     prepChecklist: '',  // populated async
+    studentSpotlight: totalStudents > 0 ? buildStudentSpotlight(classes) : '',
     insights: totalStudents > 0 ? renderInsights(classes, lessons) : '',
     reflections: renderReflectionAnalytics(lessons),
     recentGrid: recentGridHTML,
@@ -1399,7 +1485,7 @@ export function render(container) {
     });
   });
 
-  // Class card clicks
+  // Class card clicks (including spotlight students)
   container.querySelectorAll('[data-class-id]').forEach(el => {
     el.addEventListener('click', () => navigate(`/classes/${el.dataset.classId}`));
   });
