@@ -19,6 +19,7 @@ let currentLessonId = null;  // if editing a saved lesson
 let planClassContext = null;  // class context from "Plan from Class"
 let attachedKBContext = [];   // attached knowledge base resources
 let lessonDateTime = null;    // { date, period, room, classCode } from timetable or manual
+let selectedIdeology = '';    // optional curriculum ideology lens
 
 /* ── Lesson Components: persistent AI tool results integrated into the plan ── */
 let lessonComponents = {};    // { review, rubric, grouping, timeline, exitTicket, differentiation, seatPlan }
@@ -476,6 +477,56 @@ function md(text) {
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+/* ── Build follow-up prompts based on conversation context ── */
+function buildFollowUpPrompts(messages) {
+  const lastAI = messages[messages.length - 1]?.content?.toLowerCase() || '';
+  const subj = planClassContext?.subject || '';
+  const followUps = [];
+  const eeeSelections = getEEESelections();
+  const componentKeys = Object.keys(lessonComponents);
+
+  // Context-aware follow-ups based on what AI just discussed
+  if (lastAI.includes('lesson') && !componentKeys.includes('lisc')) {
+    followUps.push({ label: 'Generate LI & SC for this', prompt: 'Based on the lesson plan above, generate the Learning Intentions and Success Criteria.' });
+  }
+  if (lastAI.includes('activit') || lastAI.includes('group')) {
+    followUps.push({ label: 'How should I group students?', prompt: 'What grouping strategies would work best for the activities described above?' });
+  }
+  if (lastAI.includes('lesson') && !componentKeys.includes('timeline')) {
+    followUps.push({ label: 'Create a timeline', prompt: 'Create a pacing timeline for this lesson. I have [40/60] minutes.' });
+  }
+  if ((lastAI.includes('differentiat') || lastAI.includes('scaffold')) && !componentKeys.includes('differentiation')) {
+    followUps.push({ label: 'Differentiation strategies', prompt: 'Suggest differentiation strategies for this lesson — both scaffolding for weaker students and extension for stronger learners.' });
+  }
+  if (lastAI.includes('assess') || lastAI.includes('check for understanding')) {
+    followUps.push({ label: 'Design an exit ticket', prompt: 'Design 3 exit ticket questions for this lesson that check for understanding at different levels.' });
+  }
+
+  // EEE-aware follow-ups
+  if (eeeSelections.includes('youtubeVideos') && !componentKeys.includes('youtubeVideos') && (lastAI.includes('video') || lastAI.includes('visual') || followUps.length < 2)) {
+    followUps.push({ label: 'Find YouTube videos', prompt: 'Find relevant YouTube videos I could use as a hook or to reinforce key concepts in this lesson.' });
+  }
+  if (eeeSelections.includes('stimulus') && !componentKeys.includes('stimulus') && (lastAI.includes('text') || lastAI.includes('passage') || lastAI.includes('source'))) {
+    followUps.push({ label: 'Create stimulus material', prompt: `Create a stimulus passage or source text for this lesson, suitable for ${subj || 'the subject'} students.` });
+  }
+  if (eeeSelections.includes('worksheet') && !componentKeys.includes('worksheet') && followUps.length < 3) {
+    followUps.push({ label: 'Generate a worksheet', prompt: 'Generate a student worksheet for this lesson with mixed question types and clear instructions.' });
+  }
+  if (eeeSelections.includes('vocabulary') && !componentKeys.includes('vocabulary') && (lastAI.includes('vocab') || lastAI.includes('key term') || lastAI.includes('word'))) {
+    followUps.push({ label: 'Build vocabulary list', prompt: 'Create a vocabulary word wall with key terms, definitions, and sentence frames for this lesson.' });
+  }
+
+  // General follow-ups if we have few
+  if (followUps.length < 2) {
+    followUps.push({ label: 'How can I make this more engaging?', prompt: 'How can I make this lesson more engaging and student-centred? Suggest concrete improvements.' });
+  }
+  if (followUps.length < 3) {
+    followUps.push({ label: 'Add an E21CC focus', prompt: 'Which E21CC domain (CAIT, CCI, or CGC) could I intentionally develop in this lesson, and how?' });
+  }
+
+  return followUps.slice(0, 3);
+}
+
 /* ── Build quick prompts based on classes/subjects ── */
 function buildQuickPrompts(classes) {
   const prompts = [];
@@ -492,47 +543,47 @@ function buildQuickPrompts(classes) {
   const level = levels[0] || '[level e.g. Sec 3]';
   const hasSub = subjects.length > 0;
 
-  // Subject-specific prompts
+  // Subject-specific prompts — each with label, desc (card hint), and prompt (full editable text)
   const subjectBank = {
     'Mathematics': [
-      { label: 'Plan a Maths lesson', prompt: `Plan a ${level} Mathematics lesson on [topic e.g. Quadratic Equations]. Include hands-on activities, real-world applications, and opportunities for collaborative problem-solving.` },
-      { label: 'Maths with E21CC', prompt: `Design a ${level} Mathematics lesson on [topic] that intentionally develops CAIT through [open-ended problem solving / pattern recognition]. Include a formative check and an EdTech-enhanced activity.` },
+      { label: 'Plan a Maths lesson', desc: 'Hands-on activities, real-world applications, collaborative problem-solving', prompt: `Plan a ${level} Mathematics lesson on [topic e.g. Quadratic Equations]. Include hands-on activities, real-world applications, and opportunities for collaborative problem-solving. The lesson is [40/60] minutes.` },
+      { label: 'Maths with E21CC focus', desc: 'Intentional CAIT development with formative checks', prompt: `Design a ${level} Mathematics lesson on [topic] that intentionally develops CAIT through [open-ended problem solving / pattern recognition]. Include a formative check and an EdTech-enhanced activity.` },
     ],
     'Science': [
-      { label: 'Plan a Science lesson', prompt: `Plan a ${level} Science lesson on [topic e.g. Chemical Bonding]. Use inquiry-based learning with a hands-on investigation and a clear link to real-world phenomena.` },
-      { label: 'Science practical', prompt: `Design a ${level} Science practical lesson on [topic]. Include pre-lab discussion, safety briefing, guided investigation with prediction-observation-explanation, and a debrief.` },
+      { label: 'Plan a Science lesson', desc: 'Inquiry-based learning with investigation and real-world links', prompt: `Plan a ${level} Science lesson on [topic e.g. Chemical Bonding]. Use inquiry-based learning with a hands-on investigation and a clear link to real-world phenomena. The lesson is [40/60] minutes.` },
+      { label: 'Design a practical lesson', desc: 'Pre-lab discussion, guided investigation, POE framework', prompt: `Design a ${level} Science practical lesson on [topic]. Include pre-lab discussion, safety briefing, guided investigation with prediction-observation-explanation, and a debrief.` },
     ],
     'Chemistry': [
-      { label: 'Plan a Chemistry lesson', prompt: `Plan a ${level} Chemistry lesson on [topic e.g. Organic Chemistry]. Connect concepts to real-world applications and include opportunities for molecular visualisation.` },
-      { label: 'Chemistry with simulations', prompt: `Design a ${level} Chemistry lesson on [topic] incorporating interactive simulations (PhET/virtual labs). Include scaffolded inquiry questions and an E21CC focus on CAIT.` },
+      { label: 'Plan a Chemistry lesson', desc: 'Concept-to-application with molecular visualisation', prompt: `Plan a ${level} Chemistry lesson on [topic e.g. Organic Chemistry]. Connect concepts to real-world applications and include opportunities for molecular visualisation. The lesson is [40/60] minutes.` },
+      { label: 'Chemistry with simulations', desc: 'PhET/virtual labs with scaffolded inquiry', prompt: `Design a ${level} Chemistry lesson on [topic] incorporating interactive simulations (PhET/virtual labs). Include scaffolded inquiry questions and an E21CC focus on CAIT.` },
     ],
     'Physics': [
-      { label: 'Plan a Physics lesson', prompt: `Plan a ${level} Physics lesson on [topic e.g. Forces & Motion]. Include demonstrations, collaborative problem-solving, and data analysis activities.` },
+      { label: 'Plan a Physics lesson', desc: 'Demonstrations, problem-solving, and data analysis', prompt: `Plan a ${level} Physics lesson on [topic e.g. Forces & Motion]. Include demonstrations, collaborative problem-solving, and data analysis activities. The lesson is [40/60] minutes.` },
     ],
     'Biology': [
-      { label: 'Plan a Biology lesson', prompt: `Plan a ${level} Biology lesson on [topic e.g. Cell Division]. Include visual models, collaborative investigation, and real-world applications in health or ecology.` },
+      { label: 'Plan a Biology lesson', desc: 'Visual models, investigation, real-world health/ecology links', prompt: `Plan a ${level} Biology lesson on [topic e.g. Cell Division]. Include visual models, collaborative investigation, and real-world applications in health or ecology. The lesson is [40/60] minutes.` },
     ],
     'English': [
-      { label: 'Plan an English lesson', prompt: `Plan a ${level} English Language lesson on [topic e.g. Persuasive Writing / Comprehension]. Include model texts, collaborative peer feedback, and differentiated scaffolding.` },
-      { label: 'English with discussion', prompt: `Design a ${level} English lesson on [text/theme] that develops CCI through structured academic discussion (e.g. Socratic seminar, think-pair-share). Include sentence frames for different ability levels.` },
+      { label: 'Plan an English lesson', desc: 'Model texts, peer feedback, differentiated scaffolding', prompt: `Plan a ${level} English Language lesson on [topic e.g. Persuasive Writing / Comprehension]. Include model texts, collaborative peer feedback, and differentiated scaffolding. The lesson is [40/60] minutes.` },
+      { label: 'English with structured discussion', desc: 'Socratic seminar, think-pair-share, sentence frames', prompt: `Design a ${level} English lesson on [text/theme] that develops CCI through structured academic discussion (e.g. Socratic seminar, think-pair-share). Include sentence frames for different ability levels.` },
     ],
     'History': [
-      { label: 'Plan a History lesson', prompt: `Plan a ${level} History lesson on [topic e.g. Fall of Singapore]. Use source-based inquiry, structured discussion, and multiple perspectives. Include an SBQ-style activity.` },
+      { label: 'Plan a History lesson', desc: 'Source-based inquiry, multiple perspectives, SBQ practice', prompt: `Plan a ${level} History lesson on [topic e.g. Fall of Singapore]. Use source-based inquiry, structured discussion, and multiple perspectives. Include an SBQ-style activity. The lesson is [40/60] minutes.` },
     ],
     'Geography': [
-      { label: 'Plan a Geography lesson', prompt: `Plan a ${level} Geography lesson on [topic e.g. Plate Tectonics / Tourism]. Include data analysis, fieldwork skills, and connections to sustainability (CGC).` },
+      { label: 'Plan a Geography lesson', desc: 'Data analysis, fieldwork skills, sustainability links', prompt: `Plan a ${level} Geography lesson on [topic e.g. Plate Tectonics / Tourism]. Include data analysis, fieldwork skills, and connections to sustainability (CGC). The lesson is [40/60] minutes.` },
     ],
     'Social Studies': [
-      { label: 'Plan a Social Studies lesson', prompt: `Plan a ${level} Social Studies lesson on [issue e.g. Governance / Diversity]. Use structured inquiry, source analysis, and develop CGC through perspective-taking activities.` },
+      { label: 'Plan a Social Studies lesson', desc: 'Structured inquiry, source analysis, perspective-taking', prompt: `Plan a ${level} Social Studies lesson on [issue e.g. Governance / Diversity]. Use structured inquiry, source analysis, and develop CGC through perspective-taking activities. The lesson is [40/60] minutes.` },
     ],
     'Chinese': [
-      { label: 'Plan a Chinese lesson', prompt: `Plan a ${level} Chinese Language lesson on [topic e.g. 口语交际 / 阅读理解]. Include vocabulary building, model texts, and peer interaction activities.` },
+      { label: 'Plan a Chinese lesson', desc: 'Vocabulary building, model texts, peer interaction', prompt: `Plan a ${level} Chinese Language lesson on [topic e.g. 口语交际 / 阅读理解]. Include vocabulary building, model texts, and peer interaction activities. The lesson is [40/60] minutes.` },
     ],
     'Malay': [
-      { label: 'Plan a Malay lesson', prompt: `Plan a ${level} Malay Language lesson on [topic e.g. Karangan / Kefahaman]. Include vocabulary enrichment, collaborative writing, and cultural connections.` },
+      { label: 'Plan a Malay lesson', desc: 'Vocabulary enrichment, collaborative writing, cultural links', prompt: `Plan a ${level} Malay Language lesson on [topic e.g. Karangan / Kefahaman]. Include vocabulary enrichment, collaborative writing, and cultural connections. The lesson is [40/60] minutes.` },
     ],
     'Tamil': [
-      { label: 'Plan a Tamil lesson', prompt: `Plan a ${level} Tamil Language lesson on [topic e.g. கட்டுரை / படிப்புணர்வு]. Include vocabulary strategies, model responses, and peer review activities.` },
+      { label: 'Plan a Tamil lesson', desc: 'Vocabulary strategies, model responses, peer review', prompt: `Plan a ${level} Tamil Language lesson on [topic e.g. கட்டுரை / படிப்புணர்வு]. Include vocabulary strategies, model responses, and peer review activities. The lesson is [40/60] minutes.` },
     ],
   };
 
@@ -548,22 +599,22 @@ function buildQuickPrompts(classes) {
 
   // Default subject prompt if no match
   if (prompts.length === 0) {
-    prompts.push({ label: 'Plan a lesson', prompt: `Plan a ${level} ${subj} lesson on [topic]. Include engaging activities, clear learning outcomes, and opportunities for student collaboration and E21CC development.` });
+    prompts.push({ label: 'Plan a lesson', desc: 'Engaging activities, clear outcomes, E21CC development', prompt: `Plan a ${level} ${subj} lesson on [topic]. Include engaging activities, clear learning outcomes, and opportunities for student collaboration and E21CC development. The lesson is [40/60] minutes.` });
   }
 
   // Universal prompts (always available)
-  prompts.push({ label: 'Develop CAIT in my lesson', prompt: `How can I intentionally develop Critical, Adaptive & Inventive Thinking (CAIT) in a ${level} ${subj} lesson on [topic]? Suggest 2-3 concrete activities with EdTech integration.` });
-  prompts.push({ label: 'Differentiate for my class', prompt: `Suggest differentiation strategies for a ${level} ${subj} lesson on [topic]. I have students who [need more scaffolding / are advanced / have specific learning needs]. Include both support and extension options.` });
-  prompts.push({ label: 'E21CC activity ideas', prompt: `Suggest classroom activities for ${level} ${subj} that build all three E21CC domains: CAIT, CCI, and CGC. The topic is [topic]. Make activities practical for a [40/60]-minute lesson.` });
-  prompts.push({ label: 'Engagement hooks', prompt: `Suggest 3 lesson starter hooks for ${level} ${subj} on [topic] that are motivating and connect to students' lives. Include at least one EdTech-enhanced option.` });
+  prompts.push({ label: 'Develop CAIT in my lesson', desc: 'Critical & Inventive Thinking with concrete activities', prompt: `How can I intentionally develop Critical, Adaptive & Inventive Thinking (CAIT) in a ${level} ${subj} lesson on [topic]? Suggest 2-3 concrete activities with EdTech integration.` });
+  prompts.push({ label: 'Differentiate for my class', desc: 'Scaffolding for weaker + extension for stronger learners', prompt: `Suggest differentiation strategies for a ${level} ${subj} lesson on [topic]. I have students who [need more scaffolding / are advanced / have specific learning needs]. Include both support and extension options.` });
+  prompts.push({ label: 'E21CC across all domains', desc: 'Activities that build CAIT, CCI, and CGC together', prompt: `Suggest classroom activities for ${level} ${subj} that build all three E21CC domains: CAIT, CCI, and CGC. The topic is [topic]. Make activities practical for a [40/60]-minute lesson.` });
+  prompts.push({ label: 'Lesson starter hooks', desc: '3 motivating openers that connect to students\' lives', prompt: `Suggest 3 lesson starter hooks for ${level} ${subj} on [topic] that are motivating and connect to students' lives. Include at least one EdTech-enhanced option.` });
 
   // EEE-aware prompts
   const eeeSelections = getEEESelections();
   if (eeeSelections.includes('stimulus')) {
-    prompts.push({ label: 'Create stimulus material', prompt: `Create a comprehension passage or source text for ${level} ${subj} on [topic]. The passage should be [200-400] words, suitable for [ability level], and include 3-4 guided questions.` });
+    prompts.push({ label: 'Create stimulus material', desc: 'Comprehension passage or source with guided questions', prompt: `Create a comprehension passage or source text for ${level} ${subj} on [topic]. The passage should be [200-400] words, suitable for [ability level], and include 3-4 guided questions.` });
   }
   if (eeeSelections.includes('vocabulary')) {
-    prompts.push({ label: 'Build a word wall', prompt: `Create a vocabulary word wall for ${level} ${subj} on [topic]. Include key terms with definitions, sentence frames, and one cloze passage for practice.` });
+    prompts.push({ label: 'Build a word wall', desc: 'Key terms, definitions, sentence frames, cloze passage', prompt: `Create a vocabulary word wall for ${level} ${subj} on [topic]. Include key terms with definitions, sentence frames, and one cloze passage for practice.` });
   }
 
   return prompts.slice(0, 6);
@@ -723,6 +774,13 @@ export function render(container) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 Attach Context
               </button>
+              <select id="ideology-lens" class="input" title="Optional: frame lesson through a curriculum ideology" style="width:auto;padding:2px 8px;font-size:0.6875rem;color:var(--ink-muted);border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-card);height:28px;">
+                <option value="">Ideology lens (optional)</option>
+                <option value="learner-centred" ${selectedIdeology === 'learner-centred' ? 'selected' : ''}>Learner-Centred</option>
+                <option value="scholar-academic" ${selectedIdeology === 'scholar-academic' ? 'selected' : ''}>Scholar-Academic</option>
+                <option value="social-efficiency" ${selectedIdeology === 'social-efficiency' ? 'selected' : ''}>Social Efficiency</option>
+                <option value="social-reconstructivist" ${selectedIdeology === 'social-reconstructivist' ? 'selected' : ''}>Social Reconstructivist</option>
+              </select>
             </div>
             <textarea class="chat-input" id="chat-input" placeholder="${planClassContext ? `Plan a lesson for ${planClassContext.name}...` : 'Describe your lesson idea, ask about spatial design, or explore frameworks...'}" rows="3"></textarea>
             <div class="chat-composer-footer">
@@ -933,13 +991,33 @@ export function render(container) {
         }
       }
     }
+    // KB context — attach on every message where KB is attached
     if (attachedKBContext.length > 0) {
       contextParts.push(...attachedKBContext.map(kb =>
         `[Reference — ${kb.title}]:\n${kb.content.slice(0, 2000)}`
       ));
     }
+    // Auto-attach SoW if available and first message (background context)
+    if (chatMessages.length === 0) {
+      const sowUploads = (Store.get('knowledgeUploads') || []).filter(u => u.category === 'Scheme of Work');
+      sowUploads.forEach(sow => {
+        if (!attachedKBContext.some(kb => kb.id === sow.id)) {
+          contextParts.push(`[Scheme of Work — ${sow.title}]:\n${sow.content.slice(0, 3000)}`);
+        }
+      });
+    }
+    // Ideology lens
+    if (selectedIdeology) {
+      const ideologyLabels = {
+        'learner-centred': 'Learner-Centred (student needs, interests, and agency at the centre)',
+        'scholar-academic': 'Scholar-Academic (disciplinary knowledge, rigour, and intellectual traditions)',
+        'social-efficiency': 'Social Efficiency (skills for workforce readiness and societal function)',
+        'social-reconstructivist': 'Social Reconstructivist (critical consciousness, social justice, and transformative action)',
+      };
+      contextParts.push(`[Curriculum Ideology Lens: ${ideologyLabels[selectedIdeology] || selectedIdeology}. Frame the lesson design, activity choices, and assessment approach through this orientation where it naturally fits.]`);
+    }
 
-    const enrichedContent = contextParts.length > 0 && chatMessages.length === 0
+    const enrichedContent = contextParts.length > 0
       ? `${contextParts.join('\n\n')}\n\n${text}`
       : text;
 
@@ -980,6 +1058,11 @@ export function render(container) {
     planClassContext = null;
     container.querySelector('#class-context-banner')?.remove();
     chatInput.placeholder = 'Describe your lesson idea, ask about spatial design, or explore frameworks...';
+  });
+
+  // Ideology lens
+  container.querySelector('#ideology-lens')?.addEventListener('change', (e) => {
+    selectedIdeology = e.target.value;
   });
 
   // KB context chips
@@ -1501,19 +1584,39 @@ function renderMessages(el, classes) {
     const prompts = buildQuickPrompts(classes || Store.getClasses());
     el.innerHTML = `
       <div style="padding:var(--sp-6) var(--sp-4);">
-        <div style="text-align:center;max-width:380px;margin:0 auto;">
-          <div style="width:52px;height:52px;margin:0 auto var(--sp-4);background:var(--accent-light);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:var(--accent);">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <div style="max-width:520px;margin:0 auto;">
+          <div style="text-align:center;margin-bottom:var(--sp-5);">
+            <div style="width:48px;height:48px;margin:0 auto var(--sp-3);background:var(--accent-light);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:var(--accent);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <h3 style="font-size:1.0625rem;font-weight:600;margin-bottom:var(--sp-1);color:var(--ink);">What would you like to plan?</h3>
+            <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">
+              Click a starter below to load it — edit the <span style="background:var(--accent-light);color:var(--accent);padding:0 4px;border-radius:3px;font-size:0.75rem;font-weight:500;">[placeholders]</span> before sending.
+            </p>
           </div>
-          <h3 style="font-size:1.125rem;font-weight:600;margin-bottom:var(--sp-2);color:var(--ink);">Chat with Co-Cher</h3>
-          <p style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-3);">
-            Design engaging lesson experiences, spatial arrangements, and E21CC-aligned activities.
-          </p>
-          <p style="font-size:0.6875rem;color:var(--ink-faint);margin-bottom:var(--sp-4);line-height:1.4;">
-            Click a prompt below to load it into the chat box. Edit the [placeholders] before sending.
-          </p>
-          <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
-            ${prompts.map(p => `<button class="chat-option quick-prompt" data-prompt="${esc(p.prompt)}" style="text-align:left;">${p.label}</button>`).join('')}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2);">
+            ${prompts.map((p, i) => {
+              const desc = p.desc || (p.prompt.length > 70 ? p.prompt.slice(0, 68).replace(/\s\S*$/, '') + '...' : p.prompt);
+              const icons = ['<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+                '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/>',
+                '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+                '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+                '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+                '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 3v18"/>'];
+              return `<button class="quick-prompt" data-prompt="${esc(p.prompt)}" style="
+                display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+                padding:var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius);
+                background:var(--bg-card);cursor:pointer;text-align:left;transition:all 0.15s;
+                min-height:60px;"
+                onmouseenter="this.style.borderColor='var(--accent)';this.style.background='var(--accent-light)'"
+                onmouseleave="this.style.borderColor='var(--border-light)';this.style.background='var(--bg-card)'">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="flex-shrink:0;">${icons[i % icons.length]}</svg>
+                  <span style="font-size:0.8125rem;font-weight:600;color:var(--ink);">${p.label}</span>
+                </div>
+                <span style="font-size:0.6875rem;color:var(--ink-muted);line-height:1.4;">${desc}</span>
+              </button>`;
+            }).join('')}
           </div>
         </div>
       </div>`;
@@ -1523,6 +1626,20 @@ function renderMessages(el, classes) {
         ${m.role === 'user' ? esc(m.content) : md(m.content)}
       </div>
     `).join('');
+
+    // Follow-up prompts after last AI response (only if not currently generating)
+    if (!isGenerating && chatMessages.length >= 2 && chatMessages[chatMessages.length - 1].role === 'assistant') {
+      const followUps = buildFollowUpPrompts(chatMessages);
+      if (followUps.length > 0) {
+        el.insertAdjacentHTML('beforeend', `
+          <div style="padding:var(--sp-2) var(--sp-4) var(--sp-3);display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;">
+            ${followUps.map(f => `<button class="quick-prompt" data-prompt="${esc(f.prompt)}" style="
+              font-size:0.75rem;padding:5px 12px;border-radius:16px;border:1px solid var(--border-light);
+              background:var(--bg-card);color:var(--ink-secondary);cursor:pointer;transition:all 0.15s;
+              white-space:nowrap;line-height:1.3;">${f.label}</button>`).join('')}
+          </div>`);
+      }
+    }
   }
   if (isGenerating) el.insertAdjacentHTML('beforeend', `<div class="chat-typing">Co-Cher is thinking...</div>`);
   el.scrollTop = el.scrollHeight;
