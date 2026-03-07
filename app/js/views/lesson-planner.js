@@ -274,11 +274,17 @@ function buildSeatPlanVisual(text) {
 
 /* ── Markdown renderer (improved — supports tables, links, YouTube embeds) ── */
 function md(text) {
+  // Normalize: collapse line breaks inside markdown link syntax [label](url)
+  // The AI often wraps long links across lines, breaking the regex
+  text = text.replace(/\]\s*\n\s*\(/g, '](');  // fix ]\n(
+  text = text.replace(/\[([^\]]*)\n([^\]]*)\]/g, '[$1 $2]');  // fix newline inside [label]
+
   // Preserve markdown links before HTML-escaping by extracting them first
+  // Matches both http(s) URLs and local paths like simulations/...
   const linkPlaceholders = [];
-  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, label, url) => {
+  text = text.replace(/\[([^\]]+)\]\(([^\s)]+)\)/g, (m, label, url) => {
     const idx = linkPlaceholders.length;
-    linkPlaceholders.push({ label, url });
+    linkPlaceholders.push({ label: label.trim(), url: url.trim() });
     return `%%MDLINK_${idx}%%`;
   });
 

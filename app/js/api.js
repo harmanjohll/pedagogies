@@ -438,10 +438,11 @@ IMPORTANT: You MUST suggest exactly 6–8 videos. YouTube has millions of educat
 
 Guidelines:
 - Suggest 6–8 specific YouTube videos that are directly relevant
-- For EACH video, you MUST provide a YouTube search link in this EXACT markdown format:
+- For EACH video, you MUST provide a YouTube search link as a SINGLE-LINE markdown link:
   [Video Title - Channel Name](https://www.youtube.com/results?search_query=ENCODED+QUERY)
-  Replace spaces with + signs in the search query.
-- Use highly specific search queries that will find the exact video (include channel name in query)
+  CRITICAL: The entire [label](url) MUST be on ONE line — no line breaks inside the brackets or parentheses.
+  Replace spaces with + signs in the search query. Keep queries SHORT (max 8 words).
+- Use specific search queries that will find the exact video (include channel name in query)
 - Categorise videos into: "Show in Class" (3-4), "Flipped Learning" (2-3), "Teacher Prep" (1-2)
 - Prefer well-known educational channels: CrashCourse, Veritasium, 3Blue1Brown, TED-Ed, Khan Academy, Professor Dave Explains, Organic Chemistry Tutor, Kurzgesagt, MinutePhysics, SmarterEveryDay, Mathologer, Numberphile, Tyler DeWitt, Bozeman Science, Amoeba Sisters, Stated Clearly, Science ABC, Physics Girl, Mr Thong (SG), SLS resources
 - Consider Singapore curriculum alignment (O-Level, N-Level, IP) where relevant
@@ -475,7 +476,7 @@ Format EXACTLY like this:
 
 You MUST include at least 6 videos total with YouTube search links. Be specific — name actual titles and channels you are confident exist.`,
     temperature: 0.7,
-    maxTokens: 3072
+    maxTokens: 8192
   });
 }
 
@@ -549,7 +550,7 @@ ${BUILT_IN_SIMS.map(s => `- [SIM:${s.id}] ${s.title} (${s.subject})`).join('\n')
 (ONLY if you can provide a direct URL)
 1. **[Simulation Title]**
    Platform: [name]
-   [Open Simulation](https://direct-url-here)
+   [Open Simulation](https://direct-url-here)  ← MUST be single line, no line breaks inside
    How to use: [1-2 sentences]
 
 ### Build Your Own
@@ -560,7 +561,7 @@ No ready-made simulation matches this specific topic. You can build one:
 ### Integration Tips
 - 2-3 practical tips (predict-observe-explain, guided inquiry, etc.)`,
     temperature: 0.5,
-    maxTokens: 2048
+    maxTokens: 4096
   });
 
   // Post-process: replace [SIM:id] tags with clickable launch links
