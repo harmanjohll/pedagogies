@@ -185,6 +185,45 @@ export function render(container) {
           </div>
         </div>
 
+        <!-- Settings Tabs -->
+        <div id="settings-tabs" style="display:flex;gap:2px;margin-bottom:var(--sp-4);border-bottom:2px solid var(--border-light);padding-bottom:0;">
+          <button class="settings-tab active" data-tab="general" style="
+            display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:0.8125rem;font-weight:600;
+            color:var(--accent);background:var(--accent-light);
+            border:none;border-bottom:2px solid var(--accent);margin-bottom:-2px;
+            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            General
+          </button>
+          <button class="settings-tab" data-tab="planner" style="
+            display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:0.8125rem;font-weight:400;
+            color:var(--ink-muted);background:transparent;
+            border:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Lesson Planner
+          </button>
+          <button class="settings-tab" data-tab="dashboard" style="
+            display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:0.8125rem;font-weight:400;
+            color:var(--ink-muted);background:transparent;
+            border:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            Dashboard
+          </button>
+          <button class="settings-tab" data-tab="data" style="
+            display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:0.8125rem;font-weight:400;
+            color:var(--ink-muted);background:transparent;
+            border:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Data
+          </button>
+        </div>
+
+        <!-- TAB: General -->
+        <div class="settings-panel" data-panel="general">
+
         <!-- API Key -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Gemini API Key</h3>
@@ -235,11 +274,48 @@ export function render(container) {
           </label>
         </div>
 
+        <!-- Account -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Account</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            ${getCurrentUser() ? `Signed in as <strong style="color: var(--ink);">${getCurrentUser().name}</strong>` : 'Not signed in'}
+          </p>
+          <button class="btn btn-ghost btn-sm" id="sign-out-btn" style="color: var(--danger);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign Out
+          </button>
+        </div>
+
+        <!-- About -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">About Co-Cher</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.6;">
+            <strong style="color: var(--ink);">Co-Cher</strong> \u2014 your co-teaching assistant. Designed for Singapore educators, Co-Cher supports lesson design, classroom enactment, assessment, admin operations, and professional growth in one place.
+          </p>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.6;">
+            Grounded in the <strong style="color: var(--ink);">Singapore Teaching Practice</strong>, <strong style="color: var(--ink);">E21CC</strong>, and <strong style="color: var(--ink);">EdTech Masterplan 2030</strong>. Powered by Hattie\u2019s Visible Learning, Bloom\u2019s Taxonomy, GROW coaching, and Schraw & Dennison\u2019s metacognitive frameworks.
+          </p>
+          <p style="font-size: 0.75rem; color: var(--ink-faint); line-height: 1.5;">
+            Created by <strong style="color: var(--ink-muted);">Harman Johll</strong><br />
+            Built with care for the teaching fraternity.
+          </p>
+        </div>
+
+        <!-- Save Button -->
+        <div style="display: flex; justify-content: flex-end;">
+          <button class="btn btn-primary" id="save-settings">Save Settings</button>
+        </div>
+
+        </div><!-- end general panel -->
+
+        <!-- TAB: Lesson Planner -->
+        <div class="settings-panel" data-panel="planner" style="display:none;">
+
         <!-- EEE: Enactment Enhancements for Engagement -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Enactment Enhancements</h3>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
-            Choose which tools appear in your Lesson Planner toolbar. Core tools are always available. Toggle enactment tools to match your teaching needs.
+            Choose which tools appear in your Lesson Planner toolbar. Core tools are always available. Toggle enactment tools to match your teaching needs — changes take effect immediately in the Lesson Planner.
           </p>
 
           <!-- Core tools (always on, shown for reference) -->
@@ -264,6 +340,11 @@ export function render(container) {
           </div>
           <button class="btn btn-primary btn-sm" id="eee-save-btn">Save Enactment Tools</button>
         </div>
+
+        </div><!-- end planner panel -->
+
+        <!-- TAB: Dashboard -->
+        <div class="settings-panel" data-panel="dashboard" style="display:none;">
 
         <!-- Dashboard Layout -->
         <div class="card" style="margin-bottom: var(--sp-6);">
@@ -310,6 +391,11 @@ export function render(container) {
             <button class="btn btn-primary btn-sm" id="dash-save-layout">Save Dashboard Layout</button>
           </div>
         </div>
+
+        </div><!-- end dashboard panel -->
+
+        <!-- TAB: Data -->
+        <div class="settings-panel" data-panel="data" style="display:none;">
 
         <!-- Import Classes from CSV -->
         <div class="card" style="margin-bottom: var(--sp-6);">
@@ -370,40 +456,30 @@ export function render(container) {
           <input type="file" id="import-file" accept=".json" style="display: none;" />
         </div>
 
-        <!-- Account -->
-        <div class="card" style="margin-bottom: var(--sp-6);">
-          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Account</h3>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
-            ${getCurrentUser() ? `Signed in as <strong style="color: var(--ink);">${getCurrentUser().name}</strong>` : 'Not signed in'}
-          </p>
-          <button class="btn btn-ghost btn-sm" id="sign-out-btn" style="color: var(--danger);">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Sign Out
-          </button>
-        </div>
+        </div><!-- end data panel -->
 
-        <!-- About -->
-        <div class="card" style="margin-bottom: var(--sp-6);">
-          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">About Co-Cher</h3>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.6;">
-            <strong style="color: var(--ink);">Co-Cher</strong> \u2014 your co-teaching assistant. Designed for Singapore educators, Co-Cher supports lesson design, classroom enactment, assessment, admin operations, and professional growth in one place.
-          </p>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.6;">
-            Grounded in the <strong style="color: var(--ink);">Singapore Teaching Practice</strong>, <strong style="color: var(--ink);">E21CC</strong>, and <strong style="color: var(--ink);">EdTech Masterplan 2030</strong>. Powered by Hattie\u2019s Visible Learning, Bloom\u2019s Taxonomy, GROW coaching, and Schraw & Dennison\u2019s metacognitive frameworks.
-          </p>
-          <p style="font-size: 0.75rem; color: var(--ink-faint); line-height: 1.5;">
-            Created by <strong style="color: var(--ink-muted);">Harman Johll</strong><br />
-            Built with care for the teaching fraternity.
-          </p>
-        </div>
-
-        <!-- Save Button -->
-        <div style="display: flex; justify-content: flex-end;">
-          <button class="btn btn-primary" id="save-settings">Save Settings</button>
-        </div>
       </div>
     </div>
   `;
+
+  // Tab switching
+  container.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      // Update tab styles
+      container.querySelectorAll('.settings-tab').forEach(t => {
+        const isActive = t.dataset.tab === target;
+        t.style.fontWeight = isActive ? '600' : '400';
+        t.style.color = isActive ? 'var(--accent)' : 'var(--ink-muted)';
+        t.style.background = isActive ? 'var(--accent-light)' : 'transparent';
+        t.style.borderBottomColor = isActive ? 'var(--accent)' : 'transparent';
+      });
+      // Show/hide panels
+      container.querySelectorAll('.settings-panel').forEach(p => {
+        p.style.display = p.dataset.panel === target ? '' : 'none';
+      });
+    });
+  });
 
   // Toggle key visibility
   const keyInput = container.querySelector('#settings-key');
@@ -420,11 +496,18 @@ export function render(container) {
     document.documentElement.classList.toggle('dark', dark);
   });
 
-  // EEE save
-  container.querySelector('#eee-save-btn')?.addEventListener('click', () => {
+  // EEE save — both on button click and auto-save on toggle
+  const saveEEE = () => {
     const checked = [...container.querySelectorAll('.eee-toggle:checked')].map(cb => cb.dataset.eee);
     saveEEESelections(checked);
+    return checked;
+  };
+  container.querySelector('#eee-save-btn')?.addEventListener('click', () => {
+    const checked = saveEEE();
     showToast(`Enactment tools updated! ${checked.length} tool${checked.length !== 1 ? 's' : ''} enabled.`, 'success');
+  });
+  container.querySelectorAll('.eee-toggle').forEach(cb => {
+    cb.addEventListener('change', () => saveEEE());
   });
 
   // Save
