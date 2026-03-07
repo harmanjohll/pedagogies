@@ -128,6 +128,7 @@ function renderComponents(container) {
             </button>
           </div>
         </div>
+        ${activeComponentTab === 'seatPlan' ? buildSeatPlanVisual(activeComp.content) : ''}
         <div style="padding:var(--sp-4);font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);max-height:600px;overflow-y:auto;">
           ${md(activeComp.content)}
         </div>
@@ -176,6 +177,99 @@ function renderComponents(container) {
       renderComponents(container);
     });
   });
+}
+
+/* ── Visual Seating Plan: parse AI text to render an SVG classroom view ── */
+function buildSeatPlanVisual(text) {
+  // Parse groups and positions from the AI seating plan text
+  const groups = [];
+  const groupRegex = /###?\s*Group\s*(\d+)[^]*?(?:\*\*Position:\*\*|Position:)\s*([^\n]+)[^]*?(?:\*\*Members?:\*\*|Members?:)\s*([^\n]+)/gi;
+  let m;
+  while ((m = groupRegex.exec(text)) !== null) {
+    const num = parseInt(m[1]);
+    const position = m[2].trim();
+    const members = m[3].replace(/\*\*/g, '').split(/,\s*/).map(n => n.trim()).filter(Boolean);
+    if (members.length > 0) groups.push({ num, position, members });
+  }
+
+  // Fallback: try simpler patterns if structured parsing didn't work
+  if (groups.length === 0) {
+    const simpleGroups = [];
+    const lines = text.split('\n');
+    let currentGroup = null;
+    for (const line of lines) {
+      const gm = line.match(/Group\s*(\d+)/i);
+      if (gm) {
+        if (currentGroup && currentGroup.members.length > 0) simpleGroups.push(currentGroup);
+        currentGroup = { num: parseInt(gm[1]), position: '', members: [] };
+      }
+      if (currentGroup) {
+        const posMatch = line.match(/Position:\s*(.+)/i);
+        if (posMatch) currentGroup.position = posMatch[1].replace(/\*\*/g, '').trim();
+        const memMatch = line.match(/Members?:\s*(.+)/i);
+        if (memMatch) {
+          currentGroup.members = memMatch[1].replace(/\*\*/g, '').split(/,\s*/).map(n => n.trim()).filter(Boolean);
+        }
+      }
+    }
+    if (currentGroup && currentGroup.members.length > 0) simpleGroups.push(currentGroup);
+    groups.push(...simpleGroups);
+  }
+
+  if (groups.length === 0) return '';
+
+  // Layout configuration
+  const W = 600, H = 320;
+  const DESK_W = 80, DESK_H = 50;
+  const colors = ['#4361ee', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6'];
+
+  // Position groups in a grid
+  const totalGroups = groups.length;
+  const cols = Math.min(totalGroups, 4);
+  const rows = Math.ceil(totalGroups / cols);
+  const cellW = W / cols;
+  const cellH = (H - 40) / rows; // reserve 40px for teacher area
+
+  let desks = '';
+  groups.forEach((g, idx) => {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    const cx = cellW * col + cellW / 2;
+    const cy = 40 + cellH * row + cellH / 2;
+    const color = colors[idx % colors.length];
+
+    // Draw desk rectangle
+    desks += `<rect x="${cx - DESK_W / 2}" y="${cy - DESK_H / 2}" width="${DESK_W}" height="${DESK_H}" rx="6" fill="${color}15" stroke="${color}" stroke-width="1.5"/>`;
+
+    // Group label
+    desks += `<text x="${cx}" y="${cy - DESK_H / 2 - 6}" text-anchor="middle" font-size="9" font-weight="700" fill="${color}">Group ${g.num}</text>`;
+
+    // Student names inside/around the desk
+    const maxShow = Math.min(g.members.length, 5);
+    const nameStart = cy - (maxShow - 1) * 7;
+    for (let i = 0; i < maxShow; i++) {
+      const name = g.members[i].length > 14 ? g.members[i].slice(0, 12) + '..' : g.members[i];
+      desks += `<text x="${cx}" y="${nameStart + i * 14}" text-anchor="middle" font-size="8" fill="var(--ink,#334155)">${esc(name)}</text>`;
+    }
+    if (g.members.length > maxShow) {
+      desks += `<text x="${cx}" y="${nameStart + maxShow * 14}" text-anchor="middle" font-size="7" fill="var(--ink-faint,#94a3b8)">+${g.members.length - maxShow} more</text>`;
+    }
+  });
+
+  // Teacher position at top
+  const teacherArea = `
+    <rect x="${W / 2 - 40}" y="4" width="80" height="22" rx="4" fill="var(--accent,#4361ee)" opacity="0.15" stroke="var(--accent,#4361ee)" stroke-width="1"/>
+    <text x="${W / 2}" y="19" text-anchor="middle" font-size="9" font-weight="600" fill="var(--accent,#4361ee)">Teacher</text>
+  `;
+
+  return `
+    <div style="padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-bottom:1px solid var(--border-light);">
+      <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);margin-bottom:var(--sp-2);">Classroom View</div>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;background:#fff;border-radius:8px;border:1px solid var(--border-light);">
+        ${teacherArea}
+        ${desks}
+      </svg>
+    </div>`;
 }
 
 /* ── Markdown renderer (improved — supports tables, links, YouTube embeds) ── */
@@ -260,17 +354,30 @@ function md(text) {
         </div>
       </div>`;
     }
-    // YouTube search URL → styled red search button
+    // YouTube search URL → thumbnail preview tile
     if (url.includes('youtube.com/results?search_query=')) {
-      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#ff0000;color:#fff;border-radius:6px;font-size:0.75rem;font-weight:500;text-decoration:none;margin:2px 0;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="#fff"/></svg>
-        ${label}
+      const query = decodeURIComponent(url.split('search_query=')[1] || '').replace(/\+/g, ' ');
+      return `<a href="${url}" target="_blank" rel="noopener" class="yt-tile" style="display:inline-flex;align-items:center;gap:10px;padding:8px 12px;background:#fafafa;border:1px solid #e5e5e5;border-radius:10px;text-decoration:none;margin:4px 0;max-width:400px;transition:box-shadow 0.15s,border-color 0.15s;" onmouseenter="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.1)';this.style.borderColor='#ff0000';" onmouseleave="this.style.boxShadow='none';this.style.borderColor='#e5e5e5';">
+        <div style="width:80px;height:45px;flex-shrink:0;background:#1a1a1a;border-radius:6px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff0000" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="#fff"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.8125rem;font-weight:600;color:#1a1a1a;line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${label}</div>
+          <div style="font-size:0.6875rem;color:#ff0000;font-weight:500;margin-top:2px;">Search on YouTube →</div>
+        </div>
       </a>`;
     }
     // Simulation platform links → styled accent button
     if (/phet\.colorado\.edu|geogebra\.org|desmos\.com|falstad\.com|labxchange\.org|chemcollective\.org/.test(url)) {
       return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--accent,#4361ee);color:#fff;border-radius:6px;font-size:0.75rem;font-weight:500;text-decoration:none;margin:2px 0;">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        ${label}
+      </a>`;
+    }
+    // Co-Cher built-in simulation launch link
+    if (url.startsWith('simulations/') && url.endsWith('.html')) {
+      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border-radius:8px;font-size:0.8125rem;font-weight:600;text-decoration:none;margin:4px 0;box-shadow:0 2px 8px rgba(139,92,246,0.3);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         ${label}
       </a>`;
     }
@@ -283,9 +390,14 @@ function md(text) {
     const url = bareUrlPlaceholders[parseInt(idx)];
     if (url.includes('youtube.com/results?search_query=')) {
       const q = decodeURIComponent(url.split('search_query=')[1] || '').replace(/\+/g, ' ');
-      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#ff0000;color:#fff;border-radius:6px;font-size:0.75rem;font-weight:500;text-decoration:none;margin:2px 0;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="#fff"/></svg>
-        Search: ${esc(q.slice(0, 50))}
+      return `<a href="${url}" target="_blank" rel="noopener" class="yt-tile" style="display:inline-flex;align-items:center;gap:10px;padding:8px 12px;background:#fafafa;border:1px solid #e5e5e5;border-radius:10px;text-decoration:none;margin:4px 0;max-width:400px;" onmouseenter="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.1)';this.style.borderColor='#ff0000';" onmouseleave="this.style.boxShadow='none';this.style.borderColor='#e5e5e5';">
+        <div style="width:60px;height:34px;flex-shrink:0;background:#1a1a1a;border-radius:5px;display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff0000" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="#fff"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.75rem;font-weight:600;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(q.slice(0, 50))}</div>
+          <div style="font-size:0.625rem;color:#ff0000;font-weight:500;">Search on YouTube →</div>
+        </div>
       </a>`;
     }
     if (/phet\.colorado\.edu|geogebra\.org|desmos\.com|falstad\.com/.test(url)) {
@@ -483,14 +595,19 @@ export function render(container) {
         <div class="chat-messages" id="chat-messages" style="flex:1;min-height:0;overflow-y:auto;"></div>
 
         <div class="chat-input-row" style="flex-shrink:0;">
-          <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-2);">
-            <button class="btn btn-ghost btn-sm" id="attach-kb-btn" title="Attach Knowledge Base resource as context" style="font-size:0.75rem;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-              Attach Context
-            </button>
+          <div class="chat-composer">
+            <div class="chat-composer-toolbar">
+              <button class="btn btn-ghost btn-sm" id="attach-kb-btn" title="Attach Knowledge Base resource as context">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                Attach Context
+              </button>
+            </div>
+            <textarea class="chat-input" id="chat-input" placeholder="${planClassContext ? `Plan a lesson for ${planClassContext.name}...` : 'Describe your lesson idea, ask about spatial design, or explore frameworks...'}" rows="3"></textarea>
+            <div class="chat-composer-footer">
+              <span style="font-size:0.6875rem;color:var(--ink-faint);">Shift+Enter for new line</span>
+              <button class="chat-send" id="chat-send" ${isGenerating ? 'disabled' : ''}>Send</button>
+            </div>
           </div>
-          <textarea class="chat-input" id="chat-input" placeholder="${planClassContext ? `Plan a lesson for ${planClassContext.name}...` : 'Describe your lesson idea, ask about spatial design, or explore frameworks...'}" rows="3"></textarea>
-          <button class="chat-send" id="chat-send" ${isGenerating ? 'disabled' : ''}>Send</button>
         </div>
       </div>
 
