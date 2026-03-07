@@ -10,10 +10,102 @@ import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser } from '../components/login.js';
 
+/* ── Dashboard Layout Prefs ── */
+const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
+
+const DEFAULT_WIDGET_ORDER = [
+  'schedule', 'notifications', 'weeklyOverview', 'suggestions',
+  'quickActions', 'stats', 'prepChecklist', 'insights',
+  'reflections', 'recentGrid', 'timetable', 'classes'
+];
+
+const DEFAULT_WIDGET_LABELS = {
+  schedule:       "Today's Schedule",
+  notifications:  'Notifications & Reminders',
+  weeklyOverview: 'Weekly Overview',
+  suggestions:    'Suggested for You',
+  quickActions:   'Quick Actions',
+  stats:          'Stats',
+  prepChecklist:  'Lesson Prep Checklist',
+  insights:       'Teaching Insights',
+  reflections:    'Reflection Analytics',
+  recentGrid:     'Recent Lessons / Events / Activity',
+  timetable:      'My Timetable',
+  classes:        'Your Classes'
+};
+
+const ROLE_PRESETS = {
+  teacher: {
+    hiddenWidgets: [],
+    description: 'All teaching-focused widgets'
+  },
+  hod: {
+    hiddenWidgets: ['prepChecklist', 'timetable'],
+    description: 'Focus on insights, stats, and classes'
+  },
+  admin: {
+    hiddenWidgets: ['prepChecklist', 'suggestions', 'reflections', 'timetable'],
+    description: 'Focus on stats, notifications, and admin'
+  },
+  all: {
+    hiddenWidgets: [],
+    description: 'Show everything'
+  }
+};
+
+function getDashPrefs() {
+  try {
+    const raw = localStorage.getItem(DASH_PREFS_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      return {
+        widgetOrder: p.widgetOrder || [...DEFAULT_WIDGET_ORDER],
+        hiddenWidgets: p.hiddenWidgets || [],
+        collapsedWidgets: p.collapsedWidgets || [],
+        pinnedLinks: p.pinnedLinks || [],
+        defaultView: p.defaultView || 'full',
+        widgetNames: p.widgetNames || {}
+      };
+    }
+  } catch {}
+  return {
+    widgetOrder: [...DEFAULT_WIDGET_ORDER],
+    hiddenWidgets: [],
+    collapsedWidgets: [],
+    pinnedLinks: [],
+    defaultView: 'full',
+    widgetNames: {}
+  };
+}
+
+function saveDashPrefs(prefs) {
+  try { localStorage.setItem(DASH_PREFS_KEY, JSON.stringify(prefs)); } catch {}
+}
+
+function buildWidgetListHTML(prefs) {
+  const order = prefs.widgetOrder.length > 0 ? [...prefs.widgetOrder] : [...DEFAULT_WIDGET_ORDER];
+  DEFAULT_WIDGET_ORDER.forEach(w => { if (!order.includes(w)) order.push(w); });
+
+  return order.map(wId => {
+    const visible = !prefs.hiddenWidgets.includes(wId);
+    const customName = prefs.widgetNames?.[wId] || '';
+    const displayName = customName || DEFAULT_WIDGET_LABELS[wId] || wId;
+    return `<div class="dash-widget-row" data-widget="${wId}" draggable="true" style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light, #e5e7eb);border-radius:var(--radius, 8px);cursor:grab;background:var(--bg-card, #fff);transition:box-shadow 0.15s;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" style="flex-shrink:0;cursor:grab;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <label style="display:flex;align-items:center;gap:var(--sp-2);flex-shrink:0;">
+        <input type="checkbox" class="dash-widget-toggle" data-widget="${wId}" ${visible ? 'checked' : ''} />
+      </label>
+      <span class="dash-widget-name" data-widget="${wId}" style="flex:1;font-size:0.8125rem;font-weight:500;color:var(--ink);cursor:pointer;padding:2px 4px;border-radius:4px;border:1px solid transparent;" title="Click to rename">${displayName}</span>
+      ${customName ? `<button class="dash-widget-reset-name btn btn-ghost" data-widget="${wId}" style="padding:2px 6px;font-size:0.625rem;color:var(--ink-faint);" title="Reset to default name">reset</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
 export function render(container) {
   const apiKey = Store.get('apiKey') || '';
   const model = Store.get('model') || 'gemini-2.5-flash';
   const darkMode = Store.get('darkMode');
+  const dashPrefs = getDashPrefs();
 
   container.innerHTML = `
     <div class="main-scroll">
@@ -73,6 +165,52 @@ export function render(container) {
             <span class="toggle-track"></span>
             <span class="toggle-label">Dark Mode</span>
           </label>
+        </div>
+
+        <!-- Dashboard Layout -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Dashboard Layout</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            Choose which widgets appear on your dashboard, rename them, reorder by dragging, and set role-based defaults.
+          </p>
+
+          <!-- Default View -->
+          <div style="margin-bottom: var(--sp-4);">
+            <label style="font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; display: block; margin-bottom: 4px;">Default View</label>
+            <select class="input" id="settings-default-view" style="width: 100%;">
+              <option value="full" ${dashPrefs.defaultView === 'full' ? 'selected' : ''}>Full Dashboard (all visible widgets)</option>
+              <option value="compact" ${dashPrefs.defaultView === 'compact' ? 'selected' : ''}>Compact (schedule + quick actions only)</option>
+              <option value="minimal" ${dashPrefs.defaultView === 'minimal' ? 'selected' : ''}>Minimal (schedule only)</option>
+            </select>
+          </div>
+
+          <!-- Role-based Defaults -->
+          <div style="margin-bottom: var(--sp-4);">
+            <label style="font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; display: block; margin-bottom: 4px;">Role Preset</label>
+            <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-2);">
+              <button class="btn btn-ghost btn-sm dash-role-preset" data-role="teacher" style="font-size: 0.75rem;">Classroom Teacher</button>
+              <button class="btn btn-ghost btn-sm dash-role-preset" data-role="hod" style="font-size: 0.75rem;">HOD / SH</button>
+              <button class="btn btn-ghost btn-sm dash-role-preset" data-role="admin" style="font-size: 0.75rem;">Admin / VP</button>
+              <button class="btn btn-ghost btn-sm dash-role-preset" data-role="all" style="font-size: 0.75rem;">Show All</button>
+            </div>
+            <p style="font-size: 0.6875rem; color: var(--ink-faint); line-height: 1.4;">
+              Presets adjust which widgets are shown by default. You can still customise individually below.
+            </p>
+          </div>
+
+          <!-- Widget Toggle List -->
+          <div style="margin-bottom: var(--sp-3);">
+            <label style="font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; display: block; margin-bottom: 4px;">Widgets</label>
+            <p style="font-size: 0.6875rem; color: var(--ink-faint); margin-bottom: var(--sp-2);">Toggle visibility, drag to reorder, click name to rename.</p>
+          </div>
+          <div id="settings-widget-list" style="display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-4);">
+            ${buildWidgetListHTML(dashPrefs)}
+          </div>
+
+          <div style="display: flex; gap: var(--sp-2);">
+            <button class="btn btn-ghost btn-sm" id="dash-reset-defaults" style="color: var(--warning);">Reset to Defaults</button>
+            <button class="btn btn-primary btn-sm" id="dash-save-layout">Save Dashboard Layout</button>
+          </div>
         </div>
 
         <!-- Import Classes from CSV -->
@@ -263,6 +401,9 @@ export function render(container) {
     }
   });
 
+  // ── Dashboard Layout ──
+  wireDashboardLayoutEvents(container);
+
   // ── CSV Upload ──
   let csvParsedStudents = [];
   const csvFileInput = container.querySelector('#csv-file');
@@ -322,6 +463,136 @@ export function render(container) {
       showToast('Sample data cleared. You can now add your own classes!', 'success');
       render(container);
     }
+  });
+}
+
+/* ── Dashboard Layout Events ── */
+function wireDashboardLayoutEvents(container) {
+  const list = container.querySelector('#settings-widget-list');
+  if (!list) return;
+
+  // Drag-and-drop reorder
+  let dragSrc = null;
+  list.querySelectorAll('.dash-widget-row').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragSrc = row;
+      row.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => { row.style.opacity = '1'; });
+    row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragSrc && dragSrc !== row) {
+        const rows = [...list.children];
+        const srcIdx = rows.indexOf(dragSrc);
+        const tgtIdx = rows.indexOf(row);
+        if (srcIdx < tgtIdx) row.after(dragSrc);
+        else row.before(dragSrc);
+      }
+    });
+  });
+
+  // Inline rename on click
+  list.querySelectorAll('.dash-widget-name').forEach(nameEl => {
+    nameEl.addEventListener('click', () => {
+      const wId = nameEl.dataset.widget;
+      const current = nameEl.textContent.trim();
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = current;
+      input.className = 'input';
+      input.style.cssText = 'font-size:0.8125rem;padding:2px 6px;width:100%;';
+      nameEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      const commit = () => {
+        const val = input.value.trim();
+        const prefs = getDashPrefs();
+        if (val && val !== DEFAULT_WIDGET_LABELS[wId]) {
+          prefs.widgetNames = { ...(prefs.widgetNames || {}), [wId]: val };
+        } else {
+          const names = { ...(prefs.widgetNames || {}) };
+          delete names[wId];
+          prefs.widgetNames = names;
+        }
+        saveDashPrefs(prefs);
+        // Rebuild the list to reflect changes
+        list.innerHTML = buildWidgetListHTML(getDashPrefs());
+        wireDashboardLayoutEvents(container);
+      };
+      input.addEventListener('blur', commit);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') { input.value = current; input.blur(); } });
+    });
+  });
+
+  // Reset name buttons
+  list.querySelectorAll('.dash-widget-reset-name').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const wId = btn.dataset.widget;
+      const prefs = getDashPrefs();
+      const names = { ...(prefs.widgetNames || {}) };
+      delete names[wId];
+      prefs.widgetNames = names;
+      saveDashPrefs(prefs);
+      list.innerHTML = buildWidgetListHTML(getDashPrefs());
+      wireDashboardLayoutEvents(container);
+    });
+  });
+
+  // Role presets
+  container.querySelectorAll('.dash-role-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const role = btn.dataset.role;
+      const preset = ROLE_PRESETS[role];
+      if (!preset) return;
+      const prefs = getDashPrefs();
+      prefs.hiddenWidgets = [...preset.hiddenWidgets];
+      saveDashPrefs(prefs);
+      list.innerHTML = buildWidgetListHTML(getDashPrefs());
+      wireDashboardLayoutEvents(container);
+      showToast(`Applied "${btn.textContent.trim()}" preset.`, 'success');
+    });
+  });
+
+  // Reset to defaults
+  container.querySelector('#dash-reset-defaults')?.addEventListener('click', () => {
+    saveDashPrefs({
+      widgetOrder: [...DEFAULT_WIDGET_ORDER],
+      hiddenWidgets: [],
+      collapsedWidgets: [],
+      pinnedLinks: [],
+      defaultView: 'full',
+      widgetNames: {}
+    });
+    // Re-render the settings page
+    render(container);
+    showToast('Dashboard reset to defaults.', 'success');
+  });
+
+  // Save dashboard layout
+  container.querySelector('#dash-save-layout')?.addEventListener('click', () => {
+    const prefs = getDashPrefs();
+
+    // Gather order from DOM
+    const newOrder = [...list.querySelectorAll('.dash-widget-row')].map(r => r.dataset.widget);
+    prefs.widgetOrder = newOrder;
+
+    // Gather visibility
+    const hidden = [];
+    list.querySelectorAll('.dash-widget-toggle').forEach(cb => {
+      if (!cb.checked) hidden.push(cb.dataset.widget);
+    });
+    prefs.hiddenWidgets = hidden;
+
+    // Default view
+    const viewSel = container.querySelector('#settings-default-view');
+    if (viewSel) prefs.defaultView = viewSel.value;
+
+    saveDashPrefs(prefs);
+    showToast('Dashboard layout saved! Changes will appear on your dashboard.', 'success');
   });
 }
 

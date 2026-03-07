@@ -37,14 +37,30 @@ const WIDGET_LABELS = {
 function getDashPrefs() {
   try {
     const raw = localStorage.getItem(DASH_PREFS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const p = JSON.parse(raw);
+      return {
+        widgetOrder: p.widgetOrder || [...DEFAULT_WIDGET_ORDER],
+        hiddenWidgets: p.hiddenWidgets || [],
+        collapsedWidgets: p.collapsedWidgets || [],
+        pinnedLinks: p.pinnedLinks || [],
+        defaultView: p.defaultView || 'full',
+        widgetNames: p.widgetNames || {}
+      };
+    }
   } catch {}
   return {
     widgetOrder: [...DEFAULT_WIDGET_ORDER],
     hiddenWidgets: [],
     collapsedWidgets: [],
-    pinnedLinks: []
+    pinnedLinks: [],
+    defaultView: 'full',
+    widgetNames: {}
   };
+}
+
+function getWidgetLabel(wId, prefs) {
+  return (prefs.widgetNames && prefs.widgetNames[wId]) || WIDGET_LABELS[wId] || wId;
 }
 
 function saveDashPrefs(prefs) {
@@ -922,7 +938,7 @@ function showCustomiseModal(container) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" style="flex-shrink:0;cursor:grab;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
               <label style="flex:1;font-size:0.8125rem;font-weight:500;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:var(--sp-2);">
                 <input type="checkbox" class="widget-vis-toggle" data-widget="${wId}" ${visible ? 'checked' : ''} />
-                ${WIDGET_LABELS[wId] || wId}
+                ${getWidgetLabel(wId, prefs)}
               </label>
             </div>`;
           }).join('')}
@@ -1000,7 +1016,9 @@ function showCustomiseModal(container) {
       widgetOrder: [...DEFAULT_WIDGET_ORDER],
       hiddenWidgets: [],
       collapsedWidgets: [],
-      pinnedLinks: []
+      pinnedLinks: [],
+      defaultView: 'full',
+      widgetNames: {}
     });
     overlay.remove();
     render(container);
@@ -1021,7 +1039,9 @@ function showCustomiseModal(container) {
       widgetOrder: newOrder,
       hiddenWidgets: hidden,
       collapsedWidgets: prefs.collapsedWidgets || [],
-      pinnedLinks: pins
+      pinnedLinks: pins,
+      defaultView: prefs.defaultView || 'full',
+      widgetNames: prefs.widgetNames || {}
     });
     overlay.remove();
     render(container);
@@ -1296,8 +1316,13 @@ export function render(container) {
     }
     const content = widgetContent[wId];
     if (!content) return '';
-    return widgetWrap(wId, WIDGET_LABELS[wId] || wId, content, prefs);
+    return widgetWrap(wId, getWidgetLabel(wId, prefs), content, prefs);
   }).join('');
+
+  // Apply default view mode — hide extra widgets for compact/minimal
+  const appliedView = prefs.defaultView || 'full';
+  const compactOnly = new Set(['schedule', 'quickActions', 'notifications']);
+  const minimalOnly = new Set(['schedule']);
 
   container.innerHTML = `
     <div class="main-scroll">
@@ -1424,7 +1449,7 @@ export function render(container) {
       // Schedule widget
       const scheduleEl = container.querySelector('#widget-schedule');
       if (scheduleEl && !prefs.hiddenWidgets.includes('schedule')) {
-        scheduleEl.innerHTML = widgetWrap('schedule', "Today's Schedule", buildTTScheduleCard(teacherRow), prefs);
+        scheduleEl.innerHTML = widgetWrap('schedule', getWidgetLabel('schedule', prefs), buildTTScheduleCard(teacherRow), prefs);
       }
 
       // Weekly overview widget
@@ -1432,7 +1457,7 @@ export function render(container) {
       if (weeklyEl && !prefs.hiddenWidgets.includes('weeklyOverview')) {
         const weeklyContent = buildWeeklyOverview(teacherRow, lessons, classes);
         if (weeklyContent) {
-          weeklyEl.innerHTML = widgetWrap('weeklyOverview', 'Weekly Overview', weeklyContent, prefs);
+          weeklyEl.innerHTML = widgetWrap('weeklyOverview', getWidgetLabel('weeklyOverview', prefs), weeklyContent, prefs);
         }
       }
 
@@ -1441,7 +1466,7 @@ export function render(container) {
       if (prepEl && !prefs.hiddenWidgets.includes('prepChecklist')) {
         const prepContent = buildPrepChecklist(teacherRow, lessons, classes);
         if (prepContent) {
-          prepEl.innerHTML = widgetWrap('prepChecklist', 'Lesson Prep Checklist', prepContent, prefs);
+          prepEl.innerHTML = widgetWrap('prepChecklist', getWidgetLabel('prepChecklist', prefs), prepContent, prefs);
           // Wire route clicks inside prep checklist
           prepEl.querySelectorAll('[data-action-route]').forEach(el => {
             el.addEventListener('click', () => navigate(el.dataset.actionRoute));
@@ -1454,7 +1479,7 @@ export function render(container) {
       if (timetableEl && !prefs.hiddenWidgets.includes('timetable')) {
         const ttContent = buildMyTimetable(teacherRow);
         if (ttContent) {
-          timetableEl.innerHTML = widgetWrap('timetable', 'My Timetable', ttContent, prefs);
+          timetableEl.innerHTML = widgetWrap('timetable', getWidgetLabel('timetable', prefs), ttContent, prefs);
         }
       }
 
