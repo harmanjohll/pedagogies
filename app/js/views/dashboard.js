@@ -378,9 +378,9 @@ function buildTTScheduleCard(teacherRow) {
   const periodPills = allPeriods.map(s => {
     const isCurrent = period === s.p;
     const isPast = period !== null && s.p < period;
-    const bg = isCurrent ? 'var(--accent,#4361ee)' : isPast ? 'var(--bg-subtle,#f0f0f4)' : 'var(--bg-card,#fff)';
+    const bg = isCurrent ? 'var(--accent)' : isPast ? 'var(--bg-subtle)' : 'var(--surface)';
     const color = isCurrent ? '#fff' : isPast ? 'var(--ink-faint)' : 'var(--ink)';
-    const border = isCurrent ? 'var(--accent,#4361ee)' : 'var(--border,#e2e5ea)';
+    const border = isCurrent ? 'var(--accent)' : 'var(--border)';
     const textDec = isPast ? 'line-through' : 'none';
     return `<div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1px solid ${border};background:${bg};color:${color};font-size:0.75rem;text-decoration:${textDec};">
       <span style="font-weight:700;">P${s.p}</span>
@@ -894,13 +894,13 @@ function buildWeeklyOverview(teacherRow, lessons, classes) {
     const isToday = idx === todayIdx;
     const isPast = todayIdx >= 0 && idx < todayIdx;
 
-    return `<div style="flex:1;min-width:0;${isToday ? 'background:var(--accent-light, #eff6ff);border-radius:var(--radius-lg);' : ''}${isPast ? 'opacity:0.5;' : ''}">
-      <div style="text-align:center;font-weight:700;font-size:0.75rem;color:${isToday ? 'var(--accent, #4361ee)' : 'var(--ink-muted)'};padding:var(--sp-2);text-transform:uppercase;letter-spacing:0.05em;">
+    return `<div style="flex:1;min-width:0;${isToday ? 'background:var(--accent-light);border-radius:var(--radius-lg);' : ''}${isPast ? 'opacity:0.5;' : ''}">
+      <div style="text-align:center;font-weight:700;font-size:0.75rem;color:${isToday ? 'var(--accent)' : 'var(--ink-muted)'};padding:var(--sp-2);text-transform:uppercase;letter-spacing:0.05em;">
         ${day}${isToday ? ' (Today)' : ''}
       </div>
       <div style="display:flex;flex-direction:column;gap:2px;padding:0 var(--sp-1);">
         ${periods.length === 0 ? '<div style="text-align:center;font-size:0.6875rem;color:var(--ink-faint);padding:var(--sp-2);">No classes</div>' :
-          periods.map(s => `<div style="font-size:0.6875rem;padding:3px 6px;background:var(--bg-card, #fff);border:1px solid var(--border-light, #e5e7eb);border-radius:4px;text-align:center;">
+          periods.map(s => `<div style="font-size:0.6875rem;padding:3px 6px;background:var(--surface);border:1px solid var(--border-light);border-radius:4px;text-align:center;">
             <div style="font-weight:600;color:var(--ink);">P${s.p} ${s.classCode}</div>
             <div style="color:var(--ink-faint);">${s.room}</div>
           </div>`).join('')}
@@ -1007,19 +1007,19 @@ function showCustomiseModal(container) {
   DEFAULT_WIDGET_ORDER.forEach(w => { if (!widgetOrder.includes(w)) widgetOrder.push(w); });
 
   overlay.innerHTML = `
-    <div style="background:var(--bg-card, #fff);color:var(--ink);padding:var(--sp-6);border-radius:var(--radius-xl, 1rem);box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);width:90%;max-width:500px;max-height:80vh;overflow:auto;">
+    <div style="background:var(--surface, #fff);color:var(--ink);padding:var(--sp-6);border-radius:var(--radius-xl, 1rem);box-shadow:var(--shadow-xl, 0 20px 25px -5px rgba(0,0,0,0.1));width:90%;max-width:500px;max-height:80vh;overflow:auto;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-5);">
-        <h3 style="font-size:1.125rem;font-weight:700;margin:0;">Customise Dashboard</h3>
-        <button class="btn btn-ghost btn-sm modal-close" style="padding:4px 8px;">&times;</button>
+        <h3 style="font-size:1.125rem;font-weight:700;margin:0;color:var(--ink);">Customise Dashboard</h3>
+        <button class="btn btn-ghost btn-sm modal-close" style="padding:4px 8px;color:var(--ink-muted);">&times;</button>
       </div>
 
       <div style="margin-bottom:var(--sp-5);">
-        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-3);">Show / Hide Widgets</h4>
+        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-3);color:var(--ink);">Show / Hide Widgets</h4>
         <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">Toggle which sections appear on your dashboard. Drag to reorder.</p>
         <div id="widget-toggle-list" style="display:flex;flex-direction:column;gap:var(--sp-2);">
           ${widgetOrder.map(wId => {
             const visible = !prefs.hiddenWidgets.includes(wId);
-            return `<div class="widget-toggle-row" data-widget="${wId}" draggable="true" style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light, #e5e7eb);border-radius:var(--radius);cursor:grab;background:var(--bg-card, #fff);">
+            return `<div class="widget-toggle-row" data-widget="${wId}" draggable="true" style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius);cursor:grab;background:var(--surface-hover, rgba(0,0,0,0.02));">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" style="flex-shrink:0;cursor:grab;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
               <label style="flex:1;font-size:0.8125rem;font-weight:500;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:var(--sp-2);">
                 <input type="checkbox" class="widget-vis-toggle" data-widget="${wId}" ${visible ? 'checked' : ''} />
@@ -1031,12 +1031,12 @@ function showCustomiseModal(container) {
       </div>
 
       <div style="margin-bottom:var(--sp-5);">
-        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-3);">Pinned Quick Links</h4>
+        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-3);color:var(--ink);">Pinned Quick Links</h4>
         <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">Choose shortcuts to pin at the top of your dashboard.</p>
         <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
           ${PINNABLE_ACTIONS.map(a => {
             const pinned = prefs.pinnedLinks.includes(a.id);
-            return `<label class="pin-toggle" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid ${pinned ? 'var(--accent, #4361ee)' : 'var(--border-light, #e5e7eb)'};border-radius:var(--radius-full, 999px);font-size:0.75rem;cursor:pointer;background:${pinned ? 'var(--accent-light, #eff6ff)' : 'transparent'};">
+            return `<label class="pin-toggle" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid ${pinned ? 'var(--accent)' : 'var(--border-light)'};border-radius:var(--radius-full, 999px);font-size:0.75rem;cursor:pointer;color:var(--ink);background:${pinned ? 'var(--accent-light)' : 'transparent'};">
               <input type="checkbox" class="pin-cb" data-pin="${a.id}" ${pinned ? 'checked' : ''} style="display:none;" />
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${a.icon}</svg>
               ${a.label}
@@ -1086,10 +1086,10 @@ function showCustomiseModal(container) {
     cb.addEventListener('change', () => {
       const label = cb.closest('.pin-toggle');
       if (cb.checked) {
-        label.style.borderColor = 'var(--accent, #4361ee)';
-        label.style.background = 'var(--accent-light, #eff6ff)';
+        label.style.borderColor = 'var(--accent)';
+        label.style.background = 'var(--accent-light)';
       } else {
-        label.style.borderColor = 'var(--border-light, #e5e7eb)';
+        label.style.borderColor = 'var(--border-light)';
         label.style.background = 'transparent';
       }
     });
