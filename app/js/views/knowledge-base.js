@@ -197,11 +197,41 @@ export function render(container) {
           <div class="grid-3 stagger" id="framework-cards"></div>
         </div>
 
+        <!-- SoW Upload -->
+        <div style="margin-bottom:var(--sp-6);" id="sow-section">
+          <div class="section-header">
+            <span class="section-title">Scheme of Work</span>
+            ${uploads.filter(u => u.category === 'Scheme of Work').length > 0
+              ? `<span class="badge badge-green badge-dot">${uploads.filter(u => u.category === 'Scheme of Work').length} uploaded</span>`
+              : `<span class="badge badge-amber badge-dot">Not uploaded</span>`}
+          </div>
+          ${uploads.filter(u => u.category === 'Scheme of Work').length === 0
+            ? `<div class="card" style="border:2px dashed var(--accent);background:var(--accent-light);padding:var(--sp-6);text-align:center;cursor:pointer;" id="sow-upload-card">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" style="margin:0 auto var(--sp-2);display:block;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3-3 3 3"/></svg>
+                <p style="font-size:0.875rem;font-weight:600;color:var(--accent);margin-bottom:var(--sp-1);">Upload your Scheme of Work</p>
+                <p style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Your SoW helps Co-Cher suggest lesson ideas, pacing, and content aligned to your teaching plan. Upload as .txt, .md, or .csv.</p>
+              </div>`
+            : `<div style="display:flex;flex-direction:column;gap:var(--sp-2);">
+                ${uploads.filter(u => u.category === 'Scheme of Work').map(u => `
+                  <div class="card card-hover" style="padding:var(--sp-3);display:flex;align-items:center;gap:var(--sp-3);cursor:pointer;" data-upload="${u.id}">
+                    <div style="width:36px;height:36px;border-radius:var(--radius-md);background:var(--accent-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(u.title)}</div>
+                      <div style="font-size:0.6875rem;color:var(--ink-muted);">${u.subject || 'General'} · ${formatSize(u.contentLength)} · ${formatDate(u.createdAt)}</div>
+                    </div>
+                  </div>
+                `).join('')}
+                <button class="btn btn-ghost btn-sm" id="sow-add-more" style="align-self:flex-start;font-size:0.75rem;">+ Add another SoW</button>
+              </div>`}
+        </div>
+
         <!-- Uploaded Resources -->
         <div style="margin-bottom:var(--sp-6);" id="uploads-section">
           <div class="section-header">
             <span class="section-title">Your Resources</span>
-            <span class="badge badge-blue badge-dot">${uploads.length} file${uploads.length !== 1 ? 's' : ''}</span>
+            <span class="badge badge-blue badge-dot">${uploads.filter(u => u.category !== 'Scheme of Work').length} file${uploads.filter(u => u.category !== 'Scheme of Work').length !== 1 ? 's' : ''}</span>
           </div>
           <div id="uploads-list"></div>
         </div>
@@ -217,7 +247,8 @@ export function render(container) {
   const uploadsEl = container.querySelector('#uploads-list');
 
   renderCards(cardsEl);
-  renderUploads(uploadsEl, uploads, detailEl);
+  const nonSowUploads = uploads.filter(u => u.category !== 'Scheme of Work');
+  renderUploads(uploadsEl, nonSowUploads, detailEl);
 
   cardsEl.addEventListener('click', e => {
     const card = e.target.closest('[data-fw]');
@@ -230,7 +261,7 @@ export function render(container) {
     const q = searchInput.value.toLowerCase().trim();
     if (!q) {
       renderCards(cardsEl);
-      renderUploads(uploadsEl, uploads, detailEl);
+      renderUploads(uploadsEl, nonSowUploads, detailEl);
       detailEl.innerHTML = '';
       return;
     }
@@ -238,6 +269,18 @@ export function render(container) {
   });
 
   container.querySelector('#upload-btn').addEventListener('click', () => showUploadModal(container));
+
+  // SoW shortcut upload
+  container.querySelector('#sow-upload-card')?.addEventListener('click', () => showUploadModal(container, 'Scheme of Work'));
+  container.querySelector('#sow-add-more')?.addEventListener('click', () => showUploadModal(container, 'Scheme of Work'));
+
+  // SoW card click to view detail
+  container.querySelectorAll('#sow-section [data-upload]').forEach(card => {
+    card.addEventListener('click', () => {
+      const u = uploads.find(u => u.id === card.dataset.upload);
+      if (u) renderUploadDetail(detailEl, u);
+    });
+  });
 }
 
 function renderCards(el) {
@@ -351,7 +394,7 @@ function renderUploadDetail(el, upload) {
 }
 
 /* ── Upload modal ── */
-function showUploadModal(container) {
+function showUploadModal(container, defaultCategory = null) {
   const classes = Store.getClasses();
 
   const { backdrop, close } = openModal({
@@ -364,7 +407,7 @@ function showUploadModal(container) {
       <div class="input-group">
         <label class="input-label">Category</label>
         <select class="input" id="upload-category">
-          ${UPLOAD_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('')}
+          ${UPLOAD_CATEGORIES.map(c => `<option value="${c}" ${defaultCategory === c ? 'selected' : ''}>${c}</option>`).join('')}
         </select>
       </div>
       <div class="input-group">
