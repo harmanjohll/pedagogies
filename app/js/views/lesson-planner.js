@@ -10,15 +10,30 @@ import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTi
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
+import { getCurrentUser } from '../components/login.js';
+import { loadTT, findTeacherRow } from './dashboard.js';
 
 let chatMessages = [];
 let isGenerating = false;
 let currentLessonId = null;  // if editing a saved lesson
 let planClassContext = null;  // class context from "Plan from Class"
 let attachedKBContext = [];   // attached knowledge base resources
+let lessonDateTime = null;    // { date, period, room, classCode } from timetable or manual
 
 /* ── Lesson Components: persistent AI tool results integrated into the plan ── */
 let lessonComponents = {};    // { review, rubric, grouping, timeline, exitTicket, differentiation, seatPlan }
+
+/* ── Toolbar display preference ── */
+const LP_PREFS_KEY = 'cocher_lp_prefs';
+function getLPPrefs() {
+  try { const r = localStorage.getItem(LP_PREFS_KEY); return r ? JSON.parse(r) : {}; } catch { return {}; }
+}
+function saveLPPrefs(p) {
+  try { localStorage.setItem(LP_PREFS_KEY, JSON.stringify(p)); } catch {}
+}
+
+/* ── Active component tab ── */
+let activeComponentTab = null;  // null = show all (auto-select first)
 
 const COMPONENT_META = {
   timeline:        { label: 'Timeline / Pacing',       color: 'var(--accent)',      icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', order: 1 },
@@ -61,8 +76,17 @@ function renderComponents(container) {
 
   if (keys.length === 0) {
     el.innerHTML = '';
+    activeComponentTab = null;
     return;
   }
+
+  // Auto-select first tab if none active or current tab removed
+  if (!activeComponentTab || !keys.includes(activeComponentTab)) {
+    activeComponentTab = keys[0];
+  }
+
+  const activeComp = lessonComponents[activeComponentTab];
+  const activeMeta = COMPONENT_META[activeComponentTab] || { label: activeComponentTab, color: 'var(--ink-muted)', icon: '', order: 99 };
 
   el.innerHTML = `
     <div style="margin-top:var(--sp-5);">
@@ -70,31 +94,44 @@ function renderComponents(container) {
         <span class="text-overline" style="color:var(--ink-faint);">Lesson Components</span>
         <span class="badge badge-blue" style="font-size:0.6875rem;">${keys.length}</span>
       </div>
-      ${keys.map(key => {
-        const comp = lessonComponents[key];
-        const m = COMPONENT_META[key] || { label: key, color: 'var(--ink-muted)', icon: '', order: 99 };
-        return `
-          <details class="lesson-component-card" open style="margin-bottom:var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius-lg);border-top:3px solid ${m.color};overflow:hidden;">
-            <summary style="display:flex;align-items:center;justify-content:space-between;padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);cursor:pointer;user-select:none;">
-              <div style="display:flex;align-items:center;gap:var(--sp-2);">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${m.color}" stroke-width="2">${m.icon}</svg>
-                <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">${m.label}</span>
-                ${comp.meta ? `<span style="font-size:0.6875rem;color:var(--ink-faint);">${esc(comp.meta)}</span>` : ''}
-              </div>
-              <div style="display:flex;align-items:center;gap:var(--sp-1);">
-                <button class="btn btn-ghost btn-sm component-refresh" data-key="${key}" title="Regenerate" style="padding:2px 4px;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                </button>
-                <button class="btn btn-ghost btn-sm component-remove" data-key="${key}" title="Remove" style="padding:2px 4px;color:var(--danger);">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-            </summary>
-            <div class="component-content-scroll" style="padding:var(--sp-4);font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);max-height:500px;overflow-y:auto;">
-              ${md(comp.content)}
-            </div>
-          </details>`;
-      }).join('')}
+
+      <!-- Component Tabs -->
+      <div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:var(--sp-3);border-bottom:2px solid var(--border-light);padding-bottom:0;">
+        ${keys.map(key => {
+          const m = COMPONENT_META[key] || { label: key, color: 'var(--ink-muted)', icon: '' };
+          const isActive = key === activeComponentTab;
+          return `<button class="component-tab" data-tab="${key}" style="
+            display:inline-flex;align-items:center;gap:4px;padding:6px 10px;font-size:0.75rem;font-weight:${isActive ? '600' : '400'};
+            color:${isActive ? 'var(--accent)' : 'var(--ink-muted)'};background:${isActive ? 'var(--accent-light)' : 'transparent'};
+            border:none;border-bottom:2px solid ${isActive ? 'var(--accent)' : 'transparent'};margin-bottom:-2px;
+            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;white-space:nowrap;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${isActive ? m.color : 'currentColor'}" stroke-width="2">${m.icon}</svg>
+            ${m.label}
+          </button>`;
+        }).join('')}
+      </div>
+
+      <!-- Active Component Content -->
+      <div class="card" style="border-top:3px solid ${activeMeta.color};overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);">
+          <div style="display:flex;align-items:center;gap:var(--sp-2);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${activeMeta.color}" stroke-width="2">${activeMeta.icon}</svg>
+            <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">${activeMeta.label}</span>
+            ${activeComp.meta ? `<span style="font-size:0.6875rem;color:var(--ink-faint);">${esc(activeComp.meta)}</span>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--sp-1);">
+            <button class="btn btn-ghost btn-sm component-refresh" data-key="${activeComponentTab}" title="Regenerate" style="padding:2px 4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            </button>
+            <button class="btn btn-ghost btn-sm component-remove" data-key="${activeComponentTab}" title="Remove" style="padding:2px 4px;color:var(--danger);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+        <div style="padding:var(--sp-4);font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);max-height:600px;overflow-y:auto;">
+          ${md(activeComp.content)}
+        </div>
+      </div>
     </div>`;
 
   // Wire remove buttons
@@ -129,6 +166,14 @@ function renderComponents(container) {
         externalLinks: '#ai-external-btn',
       };
       if (toolBtnMap[key]) container.querySelector(toolBtnMap[key])?.click();
+    });
+  });
+
+  // Wire tab clicks
+  el.querySelectorAll('.component-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      activeComponentTab = tab.dataset.tab;
+      renderComponents(container);
     });
   });
 }
@@ -237,6 +282,44 @@ export function renderForLesson(container, { id }) {
   render(container);
 }
 
+/* ── AI Tool definitions for compact toolbar ── */
+const AI_TOOLS = [
+  { id: 'ai-review-btn', label: 'Review', icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>', color: '', cat: 'planning' },
+  { id: 'ai-rubric-btn', label: 'Rubric', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>', color: '', cat: 'assess' },
+  { id: 'ai-group-btn', label: 'Grouping', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', color: '', cat: 'planning' },
+  { id: 'ai-timeline-btn', label: 'Timeline', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', color: '', cat: 'planning' },
+  { id: 'ai-exit-ticket-btn', label: 'Exit Ticket', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', color: '', cat: 'assess' },
+  { id: 'ai-differentiation-btn', label: 'Differentiate', icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>', color: '', cat: 'planning' },
+  { id: 'ai-youtube-btn', label: 'YouTube', icon: '<polygon points="5 3 19 12 5 21 5 3"/>', color: '#ff0000', cat: 'resources' },
+  { id: 'ai-simulations-btn', label: 'Simulations', icon: '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5"/><circle cx="12" cy="12" r="10"/>', color: '#8b5cf6', cat: 'resources' },
+  { id: 'ai-worksheet-btn', label: 'Worksheet', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', color: '', cat: 'resources' },
+  { id: 'ai-discussion-btn', label: 'Discussion', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', color: '', cat: 'planning' },
+  { id: 'ai-external-btn', label: 'Resources', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>', color: '', cat: 'resources' },
+  { id: 'spatial-layout-btn', label: 'Spatial Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', color: '', cat: 'planning' }
+];
+
+function buildToolbarHTML(mode) {
+  if (mode === 'dropdown') {
+    const cats = { planning: 'Planning', assess: 'Assessment', resources: 'Resources' };
+    return Object.entries(cats).map(([cat, label]) => {
+      const tools = AI_TOOLS.filter(t => t.cat === cat);
+      return `<div style="margin-bottom:var(--sp-2);">
+        <div style="font-size:0.625rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);margin-bottom:2px;">${label}</div>
+        ${tools.map(t => `<button class="btn btn-ghost btn-sm" id="${t.id}" title="${t.label}" style="width:100%;text-align:left;justify-content:flex-start;gap:var(--sp-2);${t.color ? 'color:' + t.color + ';' : ''}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
+          <span style="font-size:0.8125rem;">${t.label}</span>
+        </button>`).join('')}
+      </div>`;
+    }).join('');
+  }
+  // Icon mode — compact buttons with tooltip on hover
+  return AI_TOOLS.map(t =>
+    `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
+    </button>`
+  ).join('');
+}
+
 /* ══════════ Main render ══════════ */
 export function render(container) {
   const classes = Store.getClasses();
@@ -255,6 +338,20 @@ export function render(container) {
     sessionStorage.removeItem('cocher_plan_class_name');
     sessionStorage.removeItem('cocher_plan_class_subject');
     sessionStorage.removeItem('cocher_plan_class_level');
+  }
+
+  // Pick up spatial layout link from Spatial Designer
+  const incomingSpatialId = sessionStorage.getItem('cocher_link_spatial_layout');
+  if (incomingSpatialId) {
+    sessionStorage.removeItem('cocher_link_spatial_layout');
+    // If we have an existing lesson, link it; otherwise store for linking on save
+    if (currentLessonId) {
+      Store.updateLesson(currentLessonId, { spatialLayout: incomingSpatialId });
+    }
+    // Store so the spatial section renders the link
+    if (!currentLessonId) {
+      sessionStorage.setItem('cocher_pending_spatial_layout', incomingSpatialId);
+    }
   }
 
   // Status badge for current lesson
@@ -354,6 +451,10 @@ export function render(container) {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                   Print
                 </button>
+                <button class="btn btn-ghost btn-sm" id="export-word-btn" title="Export as Word document (.doc)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  Word
+                </button>
                 <button class="btn btn-ghost btn-sm" id="share-lesson-btn" title="Share lesson with a colleague (export/import JSON)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                   Share
@@ -367,57 +468,33 @@ export function render(container) {
               </div>
             </div>
 
-            <!-- AI Tools Bar -->
-            <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-bottom:var(--sp-4);padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-radius:var(--radius-lg);">
-              <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);align-self:center;margin-right:var(--sp-2);">AI Tools</span>
-              <button class="btn btn-ghost btn-sm" id="ai-review-btn" title="AI reviews your lesson plan for E21CC alignment">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                Review
-              </button>
-              <button class="btn btn-ghost btn-sm" id="ai-rubric-btn" title="Generate an assessment rubric">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
-                Rubric
-              </button>
-              <button class="btn btn-ghost btn-sm" id="ai-group-btn" title="Suggest student groupings based on E21CC profiles">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                Grouping
-              </button>
-              <button class="btn btn-ghost btn-sm" id="ai-timeline-btn" title="Generate a lesson timeline with pacing">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                Timeline
-              </button>
-              <button class="btn btn-ghost btn-sm" id="ai-exit-ticket-btn" title="Generate exit ticket questions">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                Exit Ticket
-              </button>
-              <button class="btn btn-ghost btn-sm" id="ai-differentiation-btn" title="Get differentiation suggestions based on student profiles">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-                Differentiate
-              </button>
-              <button class="btn btn-ghost btn-sm" id="ai-youtube-btn" title="Suggest YouTube videos for this lesson" style="color:#ff0000;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                YouTube
-              </button>
-              <button class="btn btn-ghost btn-sm" id="ai-simulations-btn" title="Find or suggest simulation models for this lesson" style="color:#8b5cf6;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5"/><circle cx="12" cy="12" r="10"/></svg>
-                Simulations
-              </button>
-              <button class="btn btn-ghost btn-sm" id="ai-worksheet-btn" title="Generate a worksheet or handout for this lesson">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                Worksheet
-              </button>
-              <button class="btn btn-ghost btn-sm" id="ai-discussion-btn" title="Generate discussion prompts and thinking questions">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                Discussion
-              </button>
-              <button class="btn btn-ghost btn-sm" id="ai-external-btn" title="Suggest external resources (PhET, GeoGebra, Desmos, etc.)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                Resources
-              </button>
-              <button class="btn btn-ghost btn-sm" id="spatial-layout-btn" title="Design or link a spatial classroom layout">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-                Spatial Layout
-              </button>
+            <!-- Lesson Date/Time -->
+            <div id="lesson-datetime-bar" style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-4);padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-radius:var(--radius-lg);flex-wrap:wrap;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <input type="date" id="lesson-date" class="input" style="width:auto;padding:4px 8px;font-size:0.8125rem;" />
+              <select id="lesson-period" class="input" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+                <option value="">Period</option>
+                <option value="1">P1 (7:30)</option><option value="2">P2 (8:10)</option>
+                <option value="3">P3 (8:50)</option><option value="4">P4 (9:30)</option>
+                <option value="5">P5 (10:20)</option><option value="6">P6 (11:00)</option>
+                <option value="7">P7 (11:40)</option><option value="8">P8 (12:20)</option>
+                <option value="9">P9 (1:10)</option><option value="10">P10 (1:50)</option>
+                <option value="11">P11 (2:30)</option>
+              </select>
+              <div id="lesson-tt-hint" style="font-size:0.75rem;color:var(--ink-muted);flex:1;min-width:120px;"></div>
+            </div>
+
+            <!-- AI Tools Bar (compact icons with tooltips, toggleable to dropdown) -->
+            <div id="ai-tools-bar" style="margin-bottom:var(--sp-4);">
+              <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-2);">
+                <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);">AI Tools</span>
+                <button class="btn btn-ghost btn-sm" id="toggle-toolbar-mode" title="Switch between icon bar and dropdown" style="padding:2px 6px;font-size:0.625rem;color:var(--ink-faint);">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div id="ai-tools-icons" style="display:flex;flex-wrap:wrap;gap:4px;">
+                ${buildToolbarHTML(getLPPrefs().toolbarMode || 'icons')}
+              </div>
             </div>
 
             <!-- Spatial Context Bar (when layout linked) -->
@@ -847,6 +924,9 @@ export function render(container) {
   });
 
   // Share Lesson (export/import JSON)
+  // Word export
+  container.querySelector('#export-word-btn')?.addEventListener('click', exportToWord);
+
   container.querySelector('#share-lesson-btn').addEventListener('click', () => {
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0 && Object.keys(lessonComponents).length === 0) {
@@ -868,6 +948,25 @@ export function render(container) {
     spatialSection.scrollIntoView({ behavior: 'smooth' });
     renderSpatialSection(container, true);
   });
+
+  // Toolbar mode toggle (icons ↔ dropdown) — full re-render to re-wire handlers
+  container.querySelector('#toggle-toolbar-mode')?.addEventListener('click', () => {
+    const prefs = getLPPrefs();
+    const newMode = (prefs.toolbarMode || 'icons') === 'icons' ? 'dropdown' : 'icons';
+    prefs.toolbarMode = newMode;
+    saveLPPrefs(prefs);
+    render(container);
+  });
+
+  // Date/time setup — populate with today and show timetable hints
+  const dateInput = container.querySelector('#lesson-date');
+  const periodSelect = container.querySelector('#lesson-period');
+  if (dateInput) {
+    const today = new Date();
+    dateInput.value = lessonDateTime?.date || today.toISOString().split('T')[0];
+    if (lessonDateTime?.period) periodSelect.value = lessonDateTime.period;
+  }
+  setupTimetableHints(container);
 }
 
 /* ── Messages render ── */
@@ -1674,6 +1773,152 @@ function initResizeHandle(handle, leftPanel, rightPanel, parentContainer) {
 }
 
 /* ══════════ Share Modal (Export / Import lesson JSON) ══════════ */
+/* ══════════ Timetable Hints for Date/Time ══════════ */
+async function setupTimetableHints(container) {
+  const dateInput = container.querySelector('#lesson-date');
+  const periodSelect = container.querySelector('#lesson-period');
+  const hintEl = container.querySelector('#lesson-tt-hint');
+  if (!dateInput || !hintEl) return;
+
+  try {
+    const user = getCurrentUser();
+    if (!user?.email) return;
+    const ttData = await loadTT();
+    const teacherRow = findTeacherRow(ttData, user.email);
+    if (!teacherRow) return;
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const periodTimes = ['7:30', '8:10', '8:50', '9:30', '10:20', '11:00', '11:40', '12:20', '1:10', '1:50', '2:30'];
+
+    function updateHint() {
+      const dateVal = dateInput.value;
+      if (!dateVal) { hintEl.innerHTML = ''; return; }
+      const d = new Date(dateVal + 'T00:00:00');
+      const dayIdx = d.getDay();
+      if (dayIdx === 0 || dayIdx === 6) { hintEl.innerHTML = '<em>Weekend</em>'; return; }
+      const dayStr = dayNames[dayIdx];
+
+      // Determine week type (Odd/Even) — simple: week number modulo 2
+      const startOfYear = new Date(d.getFullYear(), 0, 1);
+      const weekNum = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+      const weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
+
+      // Gather the day's lessons
+      const lessons = [];
+      for (let p = 1; p <= 11; p++) {
+        const col = `${weekType}${dayStr}${p}`;
+        const val = teacherRow[col];
+        if (val && val !== '0') {
+          const parts = val.split(' / ');
+          lessons.push({ p, code: parts[0]?.trim(), room: parts[1]?.trim() || '' });
+        }
+      }
+
+      if (lessons.length === 0) {
+        hintEl.innerHTML = `<em>${weekType} ${dayStr} — no lessons</em>`;
+        return;
+      }
+
+      hintEl.innerHTML = `<strong>${weekType} ${dayStr}:</strong> ` +
+        lessons.map(l => `<span style="display:inline-block;padding:1px 6px;background:var(--accent-light);border-radius:4px;margin:1px;cursor:pointer;font-size:0.6875rem;" class="tt-period-chip" data-period="${l.p}" data-code="${l.code}" data-room="${l.room}">P${l.p} ${l.code}</span>`).join(' ');
+
+      // Wire period chips
+      hintEl.querySelectorAll('.tt-period-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          periodSelect.value = chip.dataset.period;
+          lessonDateTime = {
+            date: dateVal,
+            period: chip.dataset.period,
+            classCode: chip.dataset.code,
+            room: chip.dataset.room
+          };
+        });
+      });
+    }
+
+    dateInput.addEventListener('change', updateHint);
+    periodSelect.addEventListener('change', () => {
+      lessonDateTime = {
+        date: dateInput.value,
+        period: periodSelect.value,
+        classCode: '',
+        room: ''
+      };
+    });
+    updateHint();
+  } catch { /* TT is optional */ }
+}
+
+/* ══════════ Word (.docx) Export ══════════ */
+function exportToWord() {
+  const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+  if (aiMsgs.length === 0 && Object.keys(lessonComponents).length === 0) {
+    showToast('No lesson content to export yet.', 'danger');
+    return;
+  }
+
+  const title = currentLessonId ? (Store.getLesson(currentLessonId)?.title || 'Lesson Plan') : 'Lesson Plan';
+  const planText = aiMsgs.map(m => m.content).join('\n\n---\n\n');
+
+  // Build components text
+  const compKeys = Object.keys(lessonComponents)
+    .filter(k => lessonComponents[k]?.content)
+    .sort((a, b) => (COMPONENT_META[a]?.order || 99) - (COMPONENT_META[b]?.order || 99));
+
+  let componentsText = '';
+  if (compKeys.length > 0) {
+    componentsText = '\n\n' + '='.repeat(60) + '\nLESSON COMPONENTS\n' + '='.repeat(60) + '\n\n';
+    componentsText += compKeys.map(key => {
+      const m = COMPONENT_META[key] || { label: key };
+      return `--- ${m.label} ---\n\n${lessonComponents[key].content}`;
+    }).join('\n\n');
+  }
+
+  // Date/time info
+  let dateInfo = '';
+  if (lessonDateTime?.date) {
+    dateInfo = `Date: ${lessonDateTime.date}`;
+    if (lessonDateTime.period) dateInfo += ` | Period ${lessonDateTime.period}`;
+    if (lessonDateTime.classCode) dateInfo += ` | ${lessonDateTime.classCode}`;
+    if (lessonDateTime.room) dateInfo += ` | Room: ${lessonDateTime.room}`;
+    dateInfo += '\n';
+  }
+
+  // Build a .docx using the Office Open XML format (minimal)
+  const fullText = `${title}\n${dateInfo}Exported from Co-Cher · ${new Date().toLocaleDateString('en-SG')}\n\n${planText}${componentsText}`;
+
+  // Convert to simple Word-compatible HTML wrapped in .doc
+  const htmlContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>${esc(title)}</title>
+<style>body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.6;color:#1e293b;max-width:700px;margin:0 auto;padding:24px}
+h1{font-size:16pt;color:#000C53;border-bottom:2px solid #000C53;padding-bottom:6px}
+h2{font-size:13pt;margin-top:18px}h3{font-size:11pt;margin-top:14px}
+table{border-collapse:collapse;width:100%;margin:10px 0}th,td{border:1px solid #ccc;padding:4px 8px;text-align:left;font-size:10pt}
+th{background:#f1f5f9;font-weight:bold}
+ul,ol{padding-left:20px}
+hr{border:none;border-top:1px solid #e2e8f0;margin:16px 0}
+.meta{font-size:9pt;color:#64748b}
+.component-header{background:#f1f5f9;padding:8px 12px;margin:16px 0 8px;font-weight:bold;font-size:11pt;border-left:3px solid #4361ee}</style></head>
+<body>
+<h1>${esc(title)}</h1>
+<p class="meta">${dateInfo ? esc(dateInfo) + '<br/>' : ''}Exported from Co-Cher &middot; ${new Date().toLocaleDateString('en-SG')}</p>
+${md(planText)}
+${compKeys.length > 0 ? '<hr/><h2>Lesson Components</h2>' + compKeys.map(key => {
+    const m = COMPONENT_META[key] || { label: key };
+    return `<div class="component-header">${m.label}</div>${md(lessonComponents[key].content)}`;
+  }).join('') : ''}
+</body></html>`;
+
+  const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Word document downloaded!', 'success');
+}
+
 function showShareModal(container) {
   const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
   const planText = aiMsgs.map(m => m.content).join('\n\n');
@@ -1691,24 +1936,47 @@ function showShareModal(container) {
   modalRef = openModal({
     title: 'Share Lesson',
     body: `
-      <div style="margin-bottom:var(--sp-4);">
-        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-2);">Export (send to colleague)</h4>
-        <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-2);">Copy the JSON below and share it. Your colleague can import it into their Co-Cher.</p>
-        <textarea id="share-export-json" readonly style="width:100%;height:120px;font-family:monospace;font-size:0.6875rem;resize:vertical;">${JSON.stringify(exportData, null, 2)}</textarea>
-        <button class="btn btn-secondary btn-sm" id="copy-share-json" style="margin-top:var(--sp-2);">Copy to Clipboard</button>
-        <button class="btn btn-secondary btn-sm" id="download-share-json" style="margin-top:var(--sp-2);">Download .json</button>
-      </div>
-      <hr style="border:none;border-top:1px solid var(--border-light);margin:var(--sp-4) 0;">
-      <div>
-        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-2);">Import (from colleague)</h4>
-        <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-2);">Paste a shared lesson JSON or upload a .json file to load it.</p>
-        <textarea id="share-import-json" placeholder="Paste shared lesson JSON here..." style="width:100%;height:80px;font-family:monospace;font-size:0.6875rem;resize:vertical;"></textarea>
-        <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-2);">
-          <button class="btn btn-primary btn-sm" id="import-share-json">Import</button>
-          <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
-            Upload .json
-            <input type="file" id="import-share-file" accept=".json" style="display:none;" />
-          </label>
+      <div style="display:flex;flex-direction:column;gap:var(--sp-4);">
+        <!-- Export Section -->
+        <div style="padding:var(--sp-4);background:var(--bg-subtle);border-radius:var(--radius-lg);">
+          <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span style="font-weight:600;font-size:0.875rem;">Send to Colleague</span>
+          </div>
+          <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="copy-share-json">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy to Clipboard
+            </button>
+            <button class="btn btn-secondary btn-sm" id="download-share-json">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download .json
+            </button>
+          </div>
+          <details style="margin-top:var(--sp-2);">
+            <summary style="font-size:0.6875rem;color:var(--ink-faint);cursor:pointer;">View raw JSON</summary>
+            <textarea id="share-export-json" readonly style="width:100%;height:80px;font-family:monospace;font-size:0.6875rem;resize:vertical;margin-top:4px;border-radius:var(--radius-md);">${JSON.stringify(exportData, null, 2)}</textarea>
+          </details>
+        </div>
+
+        <!-- Import Section -->
+        <div style="padding:var(--sp-4);background:var(--bg-subtle);border-radius:var(--radius-lg);">
+          <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span style="font-weight:600;font-size:0.875rem;">Import from Colleague</span>
+          </div>
+          <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-2);">
+            <label class="btn btn-primary btn-sm" style="cursor:pointer;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Upload .json File
+              <input type="file" id="import-share-file" accept=".json" style="display:none;" />
+            </label>
+          </div>
+          <details>
+            <summary style="font-size:0.6875rem;color:var(--ink-faint);cursor:pointer;">Or paste JSON manually</summary>
+            <textarea id="share-import-json" placeholder="Paste shared lesson JSON here..." style="width:100%;height:60px;font-family:monospace;font-size:0.6875rem;resize:vertical;margin-top:4px;border-radius:var(--radius-md);"></textarea>
+            <button class="btn btn-secondary btn-sm" id="import-share-json" style="margin-top:4px;">Import</button>
+          </details>
         </div>
       </div>
     `,

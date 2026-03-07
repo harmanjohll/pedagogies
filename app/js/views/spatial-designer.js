@@ -398,6 +398,10 @@ export function render(container) {
           <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" id="clear-canvas">Clear All</button>
             <button class="btn btn-ghost btn-sm" id="save-layout">Save Layout</button>
+            <button class="btn btn-ghost btn-sm" id="use-in-lesson-btn" title="Use this layout in the Lesson Planner">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              Use in Lesson
+            </button>
           </div>
           <p class="text-caption" style="color:var(--ink-faint);line-height:1.5;margin-top:var(--sp-1);">
             <strong>R</strong> rotate &middot; <strong>Del</strong> delete &middot; <strong>Ctrl+D</strong> dup &middot; <strong>Ctrl+Z/Y</strong> undo/redo<br/>
@@ -2251,6 +2255,25 @@ export function render(container) {
       updateMetrics();
       renderInsights(null, null, [0, 0, 0, 0, 0, 0]);
     }
+  });
+
+  /* ── Use in Lesson Planner ── */
+  container.querySelector('#use-in-lesson-btn')?.addEventListener('click', () => {
+    const items = serializeLayout();
+    if (items.length === 0) { showToast('Add items to the canvas first.', 'danger'); return; }
+    // Save layout first if not already saved
+    const layoutName = 'Spatial for lesson ' + new Date().toLocaleDateString('en-SG');
+    const saved = Store.saveLayout({
+      name: layoutName, items,
+      preset: currentPreset || null,
+      venue: currentVenue || 'classroom',
+      wallState: panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed',
+      studentCount: parseInt(studentCountInput.value) || 32
+    });
+    // Store the layout ID for the lesson planner to pick up
+    sessionStorage.setItem('cocher_link_spatial_layout', saved.id);
+    showToast('Layout saved — opening Lesson Planner...', 'success');
+    navigate('/lesson-planner');
   });
 
   function serializeLayout() {
