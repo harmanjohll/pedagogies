@@ -432,49 +432,50 @@ export async function suggestYouTubeVideos(planText, subject, level) {
   }];
 
   return sendChat(messages, {
-    systemPrompt: `You are Co-Cher's resource specialist for Singapore educators. Recommend YouTube videos that teachers can use to support their lessons — either to show in class, assign for flipped learning, or use for their own preparation.
+    systemPrompt: `You are Co-Cher's YouTube specialist for Singapore educators. You have deep knowledge of educational YouTube content. Recommend specific, real YouTube videos that teachers can use.
+
+IMPORTANT: You MUST suggest exactly 6–8 videos. YouTube has millions of educational videos — there are always enough relevant ones to find.
 
 Guidelines:
-- Suggest 4–6 YouTube videos that are directly relevant to the lesson topic
-- For each video, provide a YouTube search link in this EXACT format:
-  [Search on YouTube](https://www.youtube.com/results?search_query=ENCODED+QUERY+HERE)
-  Replace spaces with + in the query. This will be auto-linked.
-- Also state the search query as text so the teacher can copy it
-- Categorise each video by purpose: "Show in Class", "Flipped Learning / Homework", or "Teacher Prep"
-- Prefer well-known educational channels (e.g., CrashCourse, Veritasium, 3Blue1Brown, TED-Ed, Khan Academy, Professor Dave, Organic Chemistry Tutor, Mr Thong for SG-specific content, etc.)
-- Consider Singapore curriculum alignment where possible
-- Include estimated video duration if known
+- Suggest 6–8 specific YouTube videos that are directly relevant
+- For EACH video, you MUST provide a YouTube search link in this EXACT markdown format:
+  [Video Title - Channel Name](https://www.youtube.com/results?search_query=ENCODED+QUERY)
+  Replace spaces with + signs in the search query.
+- Use highly specific search queries that will find the exact video (include channel name in query)
+- Categorise videos into: "Show in Class" (3-4), "Flipped Learning" (2-3), "Teacher Prep" (1-2)
+- Prefer well-known educational channels: CrashCourse, Veritasium, 3Blue1Brown, TED-Ed, Khan Academy, Professor Dave Explains, Organic Chemistry Tutor, Kurzgesagt, MinutePhysics, SmarterEveryDay, Mathologer, Numberphile, Tyler DeWitt, Bozeman Science, Amoeba Sisters, Stated Clearly, Science ABC, Physics Girl, Mr Thong (SG), SLS resources
+- Consider Singapore curriculum alignment (O-Level, N-Level, IP) where relevant
+- Include estimated duration if known
 
-Format:
+Format EXACTLY like this:
 
 ## Recommended YouTube Videos
 
 ### Show in Class
-1. **[Video title / description]**
-   Channel: [Channel name] | Duration: ~[X] min
-   [Search on YouTube](https://www.youtube.com/results?search_query=exact+search+query+here)
-   Why: [1 sentence on how it fits the lesson]
+1. **Video title here**
+   Channel: Channel Name | Duration: ~X min
+   [Search: Video title Channel Name](https://www.youtube.com/results?search_query=video+title+channel+name)
+   Why: Brief explanation of how it fits the lesson
 
-2. ...
+2. **Next video title**
+   Channel: Channel Name | Duration: ~X min
+   [Search: Next video title Channel Name](https://www.youtube.com/results?search_query=next+video+title+channel+name)
+   Why: Brief explanation
+
+(continue with 3-4 videos in this section)
 
 ### Flipped Learning / Homework
-1. **[Video title / description]**
-   Channel: [Channel name] | Duration: ~[X] min
-   [Search on YouTube](https://www.youtube.com/results?search_query=exact+search+query+here)
-   Why: [1 sentence]
+(2-3 videos in same format)
 
 ### Teacher Preparation
-1. **[Video title / description]**
-   Channel: [Channel name] | Duration: ~[X] min
-   [Search on YouTube](https://www.youtube.com/results?search_query=exact+search+query+here)
-   Why: [1 sentence]
+(1-2 videos in same format)
 
 ## Tips for Using Videos
-- 2-3 quick tips on integrating video into the lesson (e.g., pause-and-discuss, note-taking strategy)
+- 2-3 quick tips (pause-and-discuss, note-taking, predict-then-watch)
 
-Be specific with video suggestions — name actual video titles and channels you are confident exist. ALWAYS include the YouTube search link in markdown format.`,
-    temperature: 0.6,
-    maxTokens: 2048
+You MUST include at least 6 videos total with YouTube search links. Be specific — name actual titles and channels you are confident exist.`,
+    temperature: 0.7,
+    maxTokens: 3072
   });
 }
 
@@ -511,69 +512,68 @@ export async function suggestSimulations(planText, subject, level) {
     content: `Suggest simulation models that would support this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
   }];
 
-  // Build a lookup for direct links
+  // Build a lookup for post-processing built-in sim links
   const simLookup = {};
   BUILT_IN_SIMS.forEach(s => { simLookup[s.id] = s; });
 
-  return sendChat(messages, {
-    systemPrompt: `You are Co-Cher's simulation specialist for Singapore educators. Recommend interactive simulations that teachers can use to support their lessons — either as in-class demonstrations, student-driven exploration, or pre/post-lab activities.
+  const raw = await sendChat(messages, {
+    systemPrompt: `You are Co-Cher's simulation specialist for Singapore educators. Recommend interactive simulations for lessons.
 
-## Available Built-In Simulations (Co-Cher Platform)
-These simulations are already available in the app and can be launched directly:
-${simList}
+## Built-In Simulations (Co-Cher)
+These are ALREADY in the app. Use the EXACT ID in square brackets when recommending:
+${BUILT_IN_SIMS.map(s => `- [SIM:${s.id}] ${s.title} (${s.subject})`).join('\n')}
 
-## External Simulation Platforms — use DIRECT LINKS
-When suggesting external simulations, provide actual clickable URLs. Here are the key platforms:
-- **PhET**: https://phet.colorado.edu/en/simulations/filter?subjects=... (browse by subject)
-  Common direct links: https://phet.colorado.edu/en/simulations/[sim-name]
+## External Platforms (use DIRECT URLs)
+- **PhET**: https://phet.colorado.edu/en/simulations/[sim-name]
 - **GeoGebra**: https://www.geogebra.org/search/[topic]
-- **Desmos**: https://www.desmos.com/calculator (graphing) or https://teacher.desmos.com (activities)
-- **Falstad**: https://www.falstad.com/circuit/ (circuits), https://www.falstad.com/mathphysics.html (physics)
+- **Desmos**: https://www.desmos.com/calculator or https://teacher.desmos.com
+- **Falstad**: https://www.falstad.com/circuit/ (circuits)
 - **ChemCollective**: https://chemcollective.org/vlabs
 - **LabXchange**: https://www.labxchange.org/library
 
-## Your Task
-1. **Match built-in simulations first.** If any of the above simulations are relevant, recommend them.
-2. **Suggest external simulations** with DIRECT URLs to the actual simulation page (not just the homepage). Use the platform URL patterns above to construct accurate links.
-3. **If no suitable simulation exists anywhere**, be honest about it. Then provide a "Build Your Own" section with:
-   - A concrete starter prompt the teacher can copy-paste into Co-Cher's Lesson Planner chat to get AI help building a custom simulation
-   - What the simulation should do
-   - Key variables / interactions
+## CRITICAL RULES
+- ONLY include sections that apply. Do NOT include both "Built-In" and "No Match" for the same topic.
+- If a built-in sim matches → include "Co-Cher Simulations" section
+- If external sims match → include "External Simulations" section
+- ONLY if NO simulations match at all → include "Build Your Own" section
+- Never say "we couldn't find" if you listed simulations above
 
-Format:
+## Format
 
-## Recommended Simulations
-
-### Available in Co-Cher
-(Only include this section if there IS a matching built-in simulation)
-1. **[Simulation Title]** ✅ Available in Co-Cher
-   How to use: [1-2 sentences on how it fits the lesson — demo, exploration, pre-lab, etc.]
+### Co-Cher Simulations
+(ONLY if a built-in simulation matches the lesson topic)
+1. **[Simulation Title]** [SIM:simulation-id]
+   How to use: [1-2 sentences — demo, exploration, pre-lab, etc.]
 
 ### External Simulations
-(Only include if you can provide a DIRECT URL to an actual simulation)
+(ONLY if you can provide a direct URL)
 1. **[Simulation Title]**
-   Platform: [Platform name]
-   [Open Simulation](https://actual-direct-url-to-the-simulation)
+   Platform: [name]
+   [Open Simulation](https://direct-url-here)
    How to use: [1-2 sentences]
 
-### No Exact Match Found
-(Include this section if no built-in or external simulation closely matches the topic)
-We couldn't find a ready-made simulation for this specific topic. Here are your options:
+### Build Your Own
+(ONLY if no built-in or external simulation matches)
+No ready-made simulation matches this specific topic. You can build one:
+> "Help me build an interactive HTML5 simulation for [topic]. It should let students [interactions]. Include sliders for [variables] and a visual output showing [display]."
 
-**Option 1: Build a custom simulation**
-Copy this prompt into the Co-Cher chat to get started:
-> "Help me build an interactive HTML5 simulation for [topic]. It should let students [key interactions]. Include sliders for [variables] and a visual output showing [what to display]."
-
-**Option 2: Adapt a related simulation**
-[Suggest a related simulation from the platforms above that could be partially used, with guidance on how to adapt it]
-
-## Integration Tips
-- 2-3 tips on using simulations in the lesson (predict-observe-explain, guided inquiry, compare sim vs real experiment)
-
-Be honest when there is no good match. Teachers appreciate transparency over irrelevant suggestions.`,
-    temperature: 0.6,
+### Integration Tips
+- 2-3 practical tips (predict-observe-explain, guided inquiry, etc.)`,
+    temperature: 0.5,
     maxTokens: 2048
   });
+
+  // Post-process: replace [SIM:id] tags with clickable launch links
+  let result = raw;
+  result = result.replace(/\[SIM:([a-z0-9-]+)\]/gi, (match, simId) => {
+    const sim = simLookup[simId.toLowerCase()];
+    if (sim) {
+      return `[▶ Launch in Co-Cher](${sim.path})`;
+    }
+    return match;
+  });
+
+  return result;
 }
 
 /* ── Worksheet / Handout Generator ── */
