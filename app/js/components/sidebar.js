@@ -6,6 +6,7 @@
 
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
+import { EEE_REGISTRY, getEEESelections } from '../views/lesson-planner.js';
 
 /* ── SVG Icons (Feather-style) ── */
 const ICONS = {
@@ -24,33 +25,89 @@ const ICONS = {
   aol: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>`,
   settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`,
   moon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
-  sun: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
+  sun: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
+  // EEE tool icons
+  youtube: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  worksheet: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+  externalLinks: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
+  stimulus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/></svg>`,
+  vocabulary: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
+  modelResponse: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>`,
+  sourceAnalysis: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`,
+  seatPlan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>`,
 };
 
-const NAV_ITEMS = [
-  { id: '/', icon: 'dashboard', label: 'Dashboard' },
-  { id: '/classes', icon: 'classes', label: 'Classes', section: 'Culture' },
-  { id: '/lesson-planner', icon: 'lessonPlanner', label: 'Lesson Planner', section: 'Design' },
-  { id: '/spatial', icon: 'spatial', label: 'Spatial Designer' },
-  { id: '/lessons', icon: 'lessons', label: 'Lessons' },
-  { id: '/simulations', icon: 'simulations', label: 'Simulations', section: 'Enactment' },
-  { id: '/lesson-rehearsal', icon: 'rehearsal', label: 'Lesson Rehearsal' },
-  { id: '/assessment/aal', icon: 'aal', label: 'AaL', section: 'Assessment' },
-  { id: '/assessment/afl', icon: 'afl', label: 'AfL' },
-  { id: '/assessment/aol', icon: 'aol', label: 'AoL' },
-  { id: '/knowledge', icon: 'knowledge', label: 'Knowledge Bases', section: 'Growth' },
-  { id: '/my-growth', icon: 'myGrowth', label: 'My Learning' },
-  { id: '/admin', icon: 'admin', label: 'Admin One-Stop', section: 'Operations' }
-];
+/* ── EEE-to-sidebar mapping: which EEE keys get sidebar nav items ── */
+const EEE_NAV_MAP = {
+  simulations:    { route: '/simulations',      icon: 'simulations',    label: 'Simulations' },
+  youtubeVideos:  { route: '/lesson-planner',   icon: 'youtube',        label: 'YouTube Curation' },
+  worksheet:      { route: '/lesson-planner',   icon: 'worksheet',      label: 'Worksheet' },
+  externalLinks:  { route: '/lesson-planner',   icon: 'externalLinks',  label: 'External Resources' },
+  stimulus:       { route: '/lesson-planner',   icon: 'stimulus',       label: 'Stimulus Material' },
+  vocabulary:     { route: '/lesson-planner',   icon: 'vocabulary',     label: 'Vocabulary Builder' },
+  modelResponse:  { route: '/lesson-planner',   icon: 'modelResponse',  label: 'Model Response' },
+  sourceAnalysis: { route: '/lesson-planner',   icon: 'sourceAnalysis', label: 'Source Analysis' },
+  seatPlan:       { route: '/lesson-planner',   icon: 'seatPlan',       label: 'Seating Plan' },
+};
+
+function buildNavItems() {
+  const staticBefore = [
+    { id: '/', icon: 'dashboard', label: 'Dashboard' },
+    { id: '/classes', icon: 'classes', label: 'Classes', section: 'Culture' },
+    { id: '/lesson-planner', icon: 'lessonPlanner', label: 'Lesson Planner', section: 'Design' },
+    { id: '/spatial', icon: 'spatial', label: 'Spatial Designer' },
+    { id: '/lessons', icon: 'lessons', label: 'Lessons' },
+  ];
+
+  // Build dynamic enactment items from EEE selections
+  const selections = getEEESelections();
+  const enactmentItems = [];
+  let first = true;
+  for (const key of Object.keys(EEE_NAV_MAP)) {
+    if (selections.includes(key) || EEE_REGISTRY[key]?.cat === 'core') {
+      // Only show enactment (non-core) items that are selected
+      if (EEE_REGISTRY[key]?.cat !== 'enactment') continue;
+      if (!selections.includes(key)) continue;
+      const nav = EEE_NAV_MAP[key];
+      enactmentItems.push({
+        id: nav.route,
+        icon: nav.icon,
+        label: nav.label,
+        ...(first ? { section: 'Enactment' } : {}),
+        eeeKey: key,
+      });
+      first = false;
+    }
+  }
+  // Always include Lesson Rehearsal under Enactment
+  enactmentItems.push({
+    id: '/lesson-rehearsal',
+    icon: 'rehearsal',
+    label: 'Lesson Rehearsal',
+    ...(enactmentItems.length === 0 ? { section: 'Enactment' } : {}),
+  });
+
+  const staticAfter = [
+    { id: '/assessment/aal', icon: 'aal', label: 'AaL', section: 'Assessment' },
+    { id: '/assessment/afl', icon: 'afl', label: 'AfL' },
+    { id: '/assessment/aol', icon: 'aol', label: 'AoL' },
+    { id: '/knowledge', icon: 'knowledge', label: 'Knowledge Bases', section: 'Growth' },
+    { id: '/my-growth', icon: 'myGrowth', label: 'My Learning' },
+    { id: '/admin', icon: 'admin', label: 'Admin One-Stop', section: 'Operations' }
+  ];
+
+  return [...staticBefore, ...enactmentItems, ...staticAfter];
+}
 
 export function renderSidebar(container) {
   const classCount = Store.getClasses().length;
   const lessonCount = Store.getLessons().length;
+  const navItems = buildNavItems();
 
   let currentSection = null;
   let navHTML = '';
 
-  NAV_ITEMS.forEach(item => {
+  navItems.forEach(item => {
     if (item.section && item.section !== currentSection) {
       currentSection = item.section;
       navHTML += `<div class="sidebar-section-label">${item.section}</div>`;

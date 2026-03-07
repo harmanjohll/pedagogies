@@ -500,6 +500,8 @@ export function render(container) {
   const saveEEE = () => {
     const checked = [...container.querySelectorAll('.eee-toggle:checked')].map(cb => cb.dataset.eee);
     saveEEESelections(checked);
+    // Trigger Store subscribers (sidebar re-render) via a harmless touch
+    Store.set('_eeeUpdated', Date.now());
     return checked;
   };
   container.querySelector('#eee-save-btn')?.addEventListener('click', () => {
