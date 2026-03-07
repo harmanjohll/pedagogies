@@ -35,6 +35,7 @@ function saveLPPrefs(p) {
 
 /* ── EEE: Enactment Enhancements for Engagement ── */
 const EEE_KEY = 'cocher_eee_selections';
+const EEE_SIDEBAR_KEY = 'cocher_eee_sidebar';
 
 // All available EEEs: core tools (always visible) and optional enhancements
 export const EEE_REGISTRY = {
@@ -59,17 +60,36 @@ export const EEE_REGISTRY = {
   seatPlan:       { label: 'Seating Plan',        cat: 'enactment', desc: 'AI seat assignments with visual classroom map', subjects: ['all'] },
 };
 
+const DEFAULT_PLANNER = ['youtubeVideos', 'worksheet', 'externalLinks', 'seatPlan', 'simulations', 'stimulus', 'vocabulary', 'modelResponse', 'sourceAnalysis'];
+const DEFAULT_SIDEBAR = ['simulations'];
+
 export function getEEESelections() {
   try {
     const stored = localStorage.getItem(EEE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Backward compat: old format was a flat array
+      if (Array.isArray(parsed)) return parsed;
+      return parsed;
+    }
+  } catch {}
+  return [...DEFAULT_PLANNER];
+}
+
+export function getEEESidebarSelections() {
+  try {
+    const stored = localStorage.getItem(EEE_SIDEBAR_KEY);
     if (stored) return JSON.parse(stored);
   } catch {}
-  // Default: enable YouTube, Worksheet, External for all; subject-specific ones off until chosen
-  return ['youtubeVideos', 'worksheet', 'externalLinks', 'seatPlan'];
+  return [...DEFAULT_SIDEBAR];
 }
 
 export function saveEEESelections(selections) {
   try { localStorage.setItem(EEE_KEY, JSON.stringify(selections)); } catch {}
+}
+
+export function saveEEESidebarSelections(selections) {
+  try { localStorage.setItem(EEE_SIDEBAR_KEY, JSON.stringify(selections)); } catch {}
 }
 
 function isEEEEnabled(toolKey) {
