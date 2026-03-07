@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -36,17 +36,18 @@ function saveLPPrefs(p) {
 let activeComponentTab = null;  // null = show all (auto-select first)
 
 const COMPONENT_META = {
+  lisc:            { label: 'LI / SC',                 color: 'var(--brand-navy, #000c53)', icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>', order: 0 },
   timeline:        { label: 'Timeline / Pacing',       color: 'var(--accent)',      icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', order: 1 },
   grouping:        { label: 'Student Groups',          color: 'var(--e21cc-cci)',   icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', order: 2 },
   seatPlan:        { label: 'Seating Plan',            color: 'var(--e21cc-cgc)',   icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', order: 3 },
   differentiation: { label: 'Differentiation',         color: 'var(--e21cc-cait)',  icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>', order: 4 },
   rubric:          { label: 'Assessment Rubric',       color: 'var(--success)',     icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>', order: 5 },
   exitTicket:      { label: 'Exit Ticket',             color: 'var(--e21cc-cait)',  icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', order: 6 },
-  review:          { label: 'Lesson Review',           color: 'var(--accent)',      icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>', order: 7 },
+  review:          { label: 'Lesson Review',           color: 'var(--accent)',      icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M8 11l2 2 4-4"/>', order: 7 },
   youtubeVideos:   { label: 'YouTube Videos',          color: '#ff0000',            icon: '<polygon points="5 3 19 12 5 21 5 3"/>', order: 8 },
-  simulations:     { label: 'Simulation Models',        color: '#8b5cf6',            icon: '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5"/><circle cx="12" cy="12" r="10"/>', order: 9 },
-  worksheet:       { label: 'Worksheet / Handout',      color: 'var(--info, #3b82f6)',icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>', order: 10 },
-  discussionPrompts: { label: 'Discussion Prompts',     color: 'var(--warning, #f59e0b)', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', order: 11 },
+  simulations:     { label: 'Simulation Models',        color: '#8b5cf6',            icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>', order: 9 },
+  worksheet:       { label: 'Worksheet / Handout',      color: 'var(--info, #3b82f6)',icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/><path d="M7 13h0.01"/>', order: 10 },
+  discussionPrompts: { label: 'Discussion Prompts',     color: 'var(--warning, #f59e0b)', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>', order: 11 },
   externalLinks:   { label: 'External Resources',       color: 'var(--success, #22c55e)', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>', order: 12 },
 };
 
@@ -154,6 +155,7 @@ function renderComponents(container) {
       const key = btn.dataset.key;
       // Trigger the corresponding tool
       const toolBtnMap = {
+        lisc: '#ai-lisc-btn',
         review: '#ai-review-btn',
         rubric: '#ai-rubric-btn',
         grouping: '#ai-group-btn',
@@ -265,7 +267,7 @@ function buildSeatPlanVisual(text) {
   return `
     <div style="padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-bottom:1px solid var(--border-light);">
       <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);margin-bottom:var(--sp-2);">Classroom View</div>
-      <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;background:#fff;border-radius:8px;border:1px solid var(--border-light);">
+      <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;background:var(--bg,#fff);border-radius:8px;border:1px solid var(--border-light);">
         ${teacherArea}
         ${desks}
       </svg>
@@ -299,7 +301,7 @@ function md(text) {
   let result = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     // Code blocks
-    .replace(/```([\s\S]*?)```/g, '<pre style="background:rgba(0,0,0,0.06);padding:8px 12px;border-radius:8px;font-size:0.8rem;overflow-x:auto;margin:6px 0;font-family:var(--font-mono);"><code>$1</code></pre>')
+    .replace(/```([\s\S]*?)```/g, '<pre style="background:var(--bg-subtle,rgba(0,0,0,0.06));padding:8px 12px;border-radius:8px;font-size:0.8rem;overflow-x:auto;margin:6px 0;font-family:var(--font-mono);"><code>$1</code></pre>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     // Bold, italic
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -321,7 +323,7 @@ function md(text) {
         return 'left';
       });
       const rows = bodyRows.trim().split('\n').map(r => r.split('|').filter(c => c.trim()));
-      return `<div style="overflow-x:auto;margin:8px 0;"><table style="width:100%;border-collapse:collapse;font-size:0.8125rem;">
+      return `<div style="overflow-x:auto;margin:8px 0;"><table style="width:100%;border-collapse:collapse;font-size:0.8125rem;color:var(--ink-secondary);">
         <thead><tr>${headers.map((h, i) => `<th style="text-align:${alignments[i] || 'left'};padding:6px 10px;border-bottom:2px solid var(--border);font-weight:600;color:var(--ink);background:var(--bg-subtle);">${h.trim()}</th>`).join('')}</tr></thead>
         <tbody>${rows.map(row => `<tr>${row.map((cell, i) => `<td style="text-align:${alignments[i] || 'left'};padding:5px 10px;border-bottom:1px solid var(--border-light);">${cell.trim()}</td>`).join('')}</tr>`).join('')}</tbody>
       </table></div>`;
@@ -352,7 +354,7 @@ function md(text) {
     if (ytWatch) {
       return `<div style="margin:8px 0;">
         <a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0000" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="#fff"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0000" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="white"/></svg>
           ${label}
         </a>
         <div style="margin-top:6px;border-radius:8px;overflow:hidden;max-width:480px;aspect-ratio:16/9;background:#000;">
@@ -363,19 +365,19 @@ function md(text) {
     // YouTube search URL → thumbnail preview tile
     if (url.includes('youtube.com/results?search_query=')) {
       const query = decodeURIComponent(url.split('search_query=')[1] || '').replace(/\+/g, ' ');
-      return `<a href="${url}" target="_blank" rel="noopener" class="yt-tile" style="display:inline-flex;align-items:center;gap:10px;padding:8px 12px;background:#fafafa;border:1px solid #e5e5e5;border-radius:10px;text-decoration:none;margin:4px 0;max-width:400px;transition:box-shadow 0.15s,border-color 0.15s;" onmouseenter="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.1)';this.style.borderColor='#ff0000';" onmouseleave="this.style.boxShadow='none';this.style.borderColor='#e5e5e5';">
-        <div style="width:80px;height:45px;flex-shrink:0;background:#1a1a1a;border-radius:6px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff0000" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="#fff"/></svg>
+      return `<a href="${url}" target="_blank" rel="noopener" class="yt-tile" style="display:inline-flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-subtle,#fafafa);border:1px solid var(--border-light,#e5e5e5);border-radius:10px;text-decoration:none;margin:4px 0;max-width:400px;transition:box-shadow 0.15s,border-color 0.15s;" onmouseenter="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.15)';this.style.borderColor='#ff0000';" onmouseleave="this.style.boxShadow='none';this.style.borderColor='';">
+        <div style="width:80px;height:45px;flex-shrink:0;background:var(--surface,#1a1a1a);border-radius:6px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff0000" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="white"/></svg>
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:0.8125rem;font-weight:600;color:#1a1a1a;line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${label}</div>
+          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink,#1a1a1a);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${label}</div>
           <div style="font-size:0.6875rem;color:#ff0000;font-weight:500;margin-top:2px;">Search on YouTube →</div>
         </div>
       </a>`;
     }
     // Simulation platform links → styled accent button
     if (/phet\.colorado\.edu|geogebra\.org|desmos\.com|falstad\.com|labxchange\.org|chemcollective\.org/.test(url)) {
-      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--accent,#4361ee);color:#fff;border-radius:6px;font-size:0.75rem;font-weight:500;text-decoration:none;margin:2px 0;">
+      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--accent,#4361ee);color:var(--bg,#fff);border-radius:6px;font-size:0.75rem;font-weight:500;text-decoration:none;margin:2px 0;">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         ${label}
       </a>`;
@@ -396,12 +398,12 @@ function md(text) {
     const url = bareUrlPlaceholders[parseInt(idx)];
     if (url.includes('youtube.com/results?search_query=')) {
       const q = decodeURIComponent(url.split('search_query=')[1] || '').replace(/\+/g, ' ');
-      return `<a href="${url}" target="_blank" rel="noopener" class="yt-tile" style="display:inline-flex;align-items:center;gap:10px;padding:8px 12px;background:#fafafa;border:1px solid #e5e5e5;border-radius:10px;text-decoration:none;margin:4px 0;max-width:400px;" onmouseenter="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.1)';this.style.borderColor='#ff0000';" onmouseleave="this.style.boxShadow='none';this.style.borderColor='#e5e5e5';">
-        <div style="width:60px;height:34px;flex-shrink:0;background:#1a1a1a;border-radius:5px;display:flex;align-items:center;justify-content:center;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff0000" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="#fff"/></svg>
+      return `<a href="${url}" target="_blank" rel="noopener" class="yt-tile" style="display:inline-flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-subtle,#fafafa);border:1px solid var(--border-light,#e5e5e5);border-radius:10px;text-decoration:none;margin:4px 0;max-width:400px;" onmouseenter="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.15)';this.style.borderColor='#ff0000';" onmouseleave="this.style.boxShadow='none';this.style.borderColor='';">
+        <div style="width:60px;height:34px;flex-shrink:0;background:var(--surface,#1a1a1a);border-radius:5px;display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff0000" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="white"/></svg>
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:0.75rem;font-weight:600;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(q.slice(0, 50))}</div>
+          <div style="font-size:0.75rem;font-weight:600;color:var(--ink,#1a1a1a);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(q.slice(0, 50))}</div>
           <div style="font-size:0.625rem;color:#ff0000;font-weight:500;">Search on YouTube →</div>
         </div>
       </a>`;
@@ -475,16 +477,17 @@ export function renderForLesson(container, { id }) {
 
 /* ── AI Tool definitions for compact toolbar ── */
 const AI_TOOLS = [
-  { id: 'ai-review-btn', label: 'Review', icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>', color: '', cat: 'planning' },
+  { id: 'ai-lisc-btn', label: 'LI / SC', icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>', color: 'var(--brand-navy, #000c53)', cat: 'planning' },
+  { id: 'ai-review-btn', label: 'Review', icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M8 11l2 2 4-4"/>', color: '', cat: 'planning' },
   { id: 'ai-rubric-btn', label: 'Rubric', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>', color: '', cat: 'assess' },
   { id: 'ai-group-btn', label: 'Grouping', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', color: '', cat: 'planning' },
   { id: 'ai-timeline-btn', label: 'Timeline', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', color: '', cat: 'planning' },
   { id: 'ai-exit-ticket-btn', label: 'Exit Ticket', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', color: '', cat: 'assess' },
   { id: 'ai-differentiation-btn', label: 'Differentiate', icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>', color: '', cat: 'planning' },
   { id: 'ai-youtube-btn', label: 'YouTube', icon: '<polygon points="5 3 19 12 5 21 5 3"/>', color: '#ff0000', cat: 'resources' },
-  { id: 'ai-simulations-btn', label: 'Simulations', icon: '<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5"/><circle cx="12" cy="12" r="10"/>', color: '#8b5cf6', cat: 'resources' },
-  { id: 'ai-worksheet-btn', label: 'Worksheet', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', color: '', cat: 'resources' },
-  { id: 'ai-discussion-btn', label: 'Discussion', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', color: '', cat: 'planning' },
+  { id: 'ai-simulations-btn', label: 'Simulations', icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>', color: '#8b5cf6', cat: 'resources' },
+  { id: 'ai-worksheet-btn', label: 'Worksheet', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>', color: '', cat: 'resources' },
+  { id: 'ai-discussion-btn', label: 'Discussion', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>', color: '', cat: 'planning' },
   { id: 'ai-external-btn', label: 'Resources', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>', color: '', cat: 'resources' },
   { id: 'spatial-layout-btn', label: 'Spatial Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', color: '', cat: 'planning' }
 ];
@@ -650,6 +653,10 @@ export function render(container) {
                 <button class="btn btn-ghost btn-sm" id="export-word-btn" title="Export as Word document (.doc)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                   Word
+                </button>
+                <button class="btn btn-ghost btn-sm" id="snapshot-btn" title="Lesson snapshot — compact printable summary card">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="8" y1="8" x2="8" y2="21"/></svg>
+                  Snapshot
                 </button>
                 <button class="btn btn-ghost btn-sm" id="share-lesson-btn" title="Share lesson with a colleague (export/import JSON)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -911,6 +918,122 @@ export function render(container) {
       <body><h1>Lesson Plan</h1><p style="color:#64748b;font-size:12px;">Exported from Co-Cher · ${new Date().toLocaleDateString('en-SG')}</p>${planHtml}${componentsHtml}</body></html>`);
     printWin.document.close();
     printWin.print();
+  });
+
+  // Lesson Snapshot — compact printable summary card
+  container.querySelector('#snapshot-btn')?.addEventListener('click', () => {
+    const compKeys = Object.keys(lessonComponents)
+      .filter(k => lessonComponents[k]?.content)
+      .sort((a, b) => (COMPONENT_META[a]?.order || 99) - (COMPONENT_META[b]?.order || 99));
+
+    if (compKeys.length === 0 && chatMessages.filter(m => m.role === 'assistant').length === 0) {
+      showToast('No lesson content to snapshot yet.', 'danger'); return;
+    }
+
+    const printWin = window.open('', '_blank');
+    const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+    const title = currentLesson?.title || 'Lesson Plan';
+    const dateStr = new Date().toLocaleDateString('en-SG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+    const cls = planClassContext || {};
+    const contextLine = [cls.name, cls.subject, cls.level].filter(Boolean).join(' · ') || '';
+
+    // Build compact sections from components
+    const sections = [];
+
+    // LI/SC first (most important)
+    if (lessonComponents.lisc?.content) {
+      sections.push(`<div class="snap-section snap-lisc"><h3>Learning Intentions & Success Criteria</h3>${md(lessonComponents.lisc.content)}</div>`);
+    }
+
+    // Timeline
+    if (lessonComponents.timeline?.content) {
+      sections.push(`<div class="snap-section"><h3>Timeline / Pacing</h3>${md(lessonComponents.timeline.content)}</div>`);
+    }
+
+    // Groups
+    if (lessonComponents.grouping?.content) {
+      sections.push(`<div class="snap-section"><h3>Student Groups</h3>${md(lessonComponents.grouping.content)}</div>`);
+    }
+
+    // Seat Plan
+    if (lessonComponents.seatPlan?.content) {
+      sections.push(`<div class="snap-section"><h3>Seating Plan</h3>${md(lessonComponents.seatPlan.content)}</div>`);
+    }
+
+    // Exit Ticket
+    if (lessonComponents.exitTicket?.content) {
+      sections.push(`<div class="snap-section"><h3>Exit Ticket</h3>${md(lessonComponents.exitTicket.content)}</div>`);
+    }
+
+    // Resources (YouTube + Simulations + External — compact)
+    const resourceKeys = ['youtubeVideos', 'simulations', 'externalLinks'].filter(k => lessonComponents[k]?.content);
+    if (resourceKeys.length > 0) {
+      sections.push(`<div class="snap-section"><h3>Resources</h3>${resourceKeys.map(k => md(lessonComponents[k].content)).join('<br>')}</div>`);
+    }
+
+    // Differentiation
+    if (lessonComponents.differentiation?.content) {
+      sections.push(`<div class="snap-section"><h3>Differentiation</h3>${md(lessonComponents.differentiation.content)}</div>`);
+    }
+
+    // Key points from chat (first assistant message only, as overview)
+    const firstAiMsg = chatMessages.find(m => m.role === 'assistant');
+    if (firstAiMsg && !lessonComponents.lisc?.content && !lessonComponents.timeline?.content) {
+      const preview = firstAiMsg.content.length > 800 ? firstAiMsg.content.slice(0, 800) + '...' : firstAiMsg.content;
+      sections.push(`<div class="snap-section"><h3>Lesson Overview</h3>${md(preview)}</div>`);
+    }
+
+    printWin.document.write(`<!DOCTYPE html><html><head><title>Lesson Snapshot — ${esc(title)}</title>
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:system-ui,-apple-system,sans-serif;max-width:750px;margin:0 auto;padding:20px 24px;color:#1e293b;line-height:1.6;font-size:13px}
+        .snap-header{border-bottom:3px solid #000c53;padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end}
+        .snap-header h1{font-size:17px;color:#000c53;margin:0}
+        .snap-header .meta{font-size:11px;color:#64748b;text-align:right}
+        .snap-section{margin-bottom:14px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:6px;break-inside:avoid}
+        .snap-section h3{font-size:12px;text-transform:uppercase;letter-spacing:0.03em;color:#000c53;margin:0 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}
+        .snap-lisc{background:#f0f4ff;border-color:#000c53}
+        table{width:100%;border-collapse:collapse;margin:6px 0;font-size:12px}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #e2e8f0}th{font-weight:600;background:#f8fafc}
+        strong{font-weight:600}ul,ol{padding-left:18px;margin:4px 0}li{margin:2px 0}
+        a{color:#4361ee;text-decoration:none}
+        blockquote{border-left:3px solid #4361ee;padding:6px 10px;margin:6px 0;background:#f0f4ff;font-size:12px}
+        pre{background:#f1f5f9;padding:8px;border-radius:4px;font-size:11px;overflow-x:auto}
+        .snap-footer{margin-top:16px;text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:8px}
+        @media print{body{margin:0;padding:12px}.snap-section{page-break-inside:avoid}}
+      </style></head>
+      <body>
+        <div class="snap-header">
+          <div><h1>${esc(title)}</h1>${contextLine ? `<div style="font-size:12px;color:#475569;margin-top:2px;">${esc(contextLine)}</div>` : ''}</div>
+          <div class="meta">${dateStr}<br>Co-Cher Snapshot</div>
+        </div>
+        ${sections.join('')}
+        <div class="snap-footer">Generated by Co-Cher · Teacher-reviewed and approved</div>
+      </body></html>`);
+    printWin.document.close();
+    printWin.print();
+  });
+
+  // LI / SC Generator
+  container.querySelector('#ai-lisc-btn').addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Generating Learning Intentions & Success Criteria...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+      const result = await generateLISC(planText, cls.subject, cls.level);
+      setComponent('lisc', result, cls.subject || 'LI/SC');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Learning Intentions & Success Criteria generated!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
   });
 
   // AI Review
