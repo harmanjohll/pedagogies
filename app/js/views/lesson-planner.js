@@ -178,9 +178,25 @@ function renderComponents(container) {
   });
 }
 
-/* ── Markdown renderer (improved — supports tables and ordered lists) ── */
+/* ── Markdown renderer (improved — supports tables, links, YouTube embeds) ── */
 function md(text) {
-  return text
+  // Preserve markdown links before HTML-escaping by extracting them first
+  const linkPlaceholders = [];
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, label, url) => {
+    const idx = linkPlaceholders.length;
+    linkPlaceholders.push({ label, url });
+    return `%%MDLINK_${idx}%%`;
+  });
+
+  // Preserve bare URLs before escaping
+  const bareUrlPlaceholders = [];
+  text = text.replace(/(?<!["\(=\[])(https?:\/\/[^\s<)"]+)/g, (url) => {
+    const idx = bareUrlPlaceholders.length;
+    bareUrlPlaceholders.push(url);
+    return `%%BAREURL_${idx}%%`;
+  });
+
+  let result = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     // Code blocks
     .replace(/```([\s\S]*?)```/g, '<pre style="background:rgba(0,0,0,0.06);padding:8px 12px;border-radius:8px;font-size:0.8rem;overflow-x:auto;margin:6px 0;font-family:var(--font-mono);"><code>$1</code></pre>')
@@ -222,9 +238,66 @@ function md(text) {
       if (m.includes('<ul') || m.includes('<ol')) return m;
       return `<ol style="padding-left:1.25rem;margin:4px 0;">${m}</ol>`;
     })
+    // Blockquotes (for "copy this prompt" sections)
+    .replace(/&gt; (.+)/g, '<blockquote style="border-left:3px solid var(--accent);padding:8px 12px;margin:6px 0;background:var(--accent-light,rgba(67,97,238,0.06));border-radius:0 6px 6px 0;font-size:0.8125rem;color:var(--ink-secondary);">$1</blockquote>')
     // Paragraphs
     .replace(/\n{2,}/g, '</p><p style="margin:4px 0;">')
     .replace(/\n/g, '<br>');
+
+  // Restore markdown links with rich rendering
+  result = result.replace(/%%MDLINK_(\d+)%%/g, (_, idx) => {
+    const { label, url } = linkPlaceholders[parseInt(idx)];
+    // YouTube video URL → inline embed preview
+    const ytWatch = url.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/);
+    if (ytWatch) {
+      return `<div style="margin:8px 0;">
+        <a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0000" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="#fff"/></svg>
+          ${label}
+        </a>
+        <div style="margin-top:6px;border-radius:8px;overflow:hidden;max-width:480px;aspect-ratio:16/9;background:#000;">
+          <iframe src="https://www.youtube-nocookie.com/embed/${ytWatch[1]}" style="width:100%;height:100%;border:none;" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>`;
+    }
+    // YouTube search URL → styled red search button
+    if (url.includes('youtube.com/results?search_query=')) {
+      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#ff0000;color:#fff;border-radius:6px;font-size:0.75rem;font-weight:500;text-decoration:none;margin:2px 0;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="#fff"/></svg>
+        ${label}
+      </a>`;
+    }
+    // Simulation platform links → styled accent button
+    if (/phet\.colorado\.edu|geogebra\.org|desmos\.com|falstad\.com|labxchange\.org|chemcollective\.org/.test(url)) {
+      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--accent,#4361ee);color:#fff;border-radius:6px;font-size:0.75rem;font-weight:500;text-decoration:none;margin:2px 0;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        ${label}
+      </a>`;
+    }
+    // General link
+    return `<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">${label}</a>`;
+  });
+
+  // Restore bare URLs
+  result = result.replace(/%%BAREURL_(\d+)%%/g, (_, idx) => {
+    const url = bareUrlPlaceholders[parseInt(idx)];
+    if (url.includes('youtube.com/results?search_query=')) {
+      const q = decodeURIComponent(url.split('search_query=')[1] || '').replace(/\+/g, ' ');
+      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#ff0000;color:#fff;border-radius:6px;font-size:0.75rem;font-weight:500;text-decoration:none;margin:2px 0;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12c0 2 .2 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.3-1.9.5-3.8.5-5.8s-.2-3.9-.5-5.8z"/><polygon points="9.75 15 15.5 12 9.75 9" fill="#fff"/></svg>
+        Search: ${esc(q.slice(0, 50))}
+      </a>`;
+    }
+    if (/phet\.colorado\.edu|geogebra\.org|desmos\.com|falstad\.com/.test(url)) {
+      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--accent,#4361ee);color:#fff;border-radius:6px;font-size:0.75rem;font-weight:500;text-decoration:none;margin:2px 0;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Open: ${url.split('/').pop() || url}
+      </a>`;
+    }
+    return `<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">${url}</a>`;
+  });
+
+  return result;
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 

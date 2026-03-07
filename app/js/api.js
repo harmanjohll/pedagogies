@@ -436,7 +436,10 @@ export async function suggestYouTubeVideos(planText, subject, level) {
 
 Guidelines:
 - Suggest 4–6 YouTube videos that are directly relevant to the lesson topic
-- For each video, provide the actual YouTube search query that will find it (since you cannot verify exact URLs)
+- For each video, provide a YouTube search link in this EXACT format:
+  [Search on YouTube](https://www.youtube.com/results?search_query=ENCODED+QUERY+HERE)
+  Replace spaces with + in the query. This will be auto-linked.
+- Also state the search query as text so the teacher can copy it
 - Categorise each video by purpose: "Show in Class", "Flipped Learning / Homework", or "Teacher Prep"
 - Prefer well-known educational channels (e.g., CrashCourse, Veritasium, 3Blue1Brown, TED-Ed, Khan Academy, Professor Dave, Organic Chemistry Tutor, Mr Thong for SG-specific content, etc.)
 - Consider Singapore curriculum alignment where possible
@@ -449,7 +452,7 @@ Format:
 ### Show in Class
 1. **[Video title / description]**
    Channel: [Channel name] | Duration: ~[X] min
-   Search: \`[exact YouTube search query]\`
+   [Search on YouTube](https://www.youtube.com/results?search_query=exact+search+query+here)
    Why: [1 sentence on how it fits the lesson]
 
 2. ...
@@ -457,19 +460,19 @@ Format:
 ### Flipped Learning / Homework
 1. **[Video title / description]**
    Channel: [Channel name] | Duration: ~[X] min
-   Search: \`[exact YouTube search query]\`
+   [Search on YouTube](https://www.youtube.com/results?search_query=exact+search+query+here)
    Why: [1 sentence]
 
 ### Teacher Preparation
 1. **[Video title / description]**
    Channel: [Channel name] | Duration: ~[X] min
-   Search: \`[exact YouTube search query]\`
+   [Search on YouTube](https://www.youtube.com/results?search_query=exact+search+query+here)
    Why: [1 sentence]
 
 ## Tips for Using Videos
 - 2-3 quick tips on integrating video into the lesson (e.g., pause-and-discuss, note-taking strategy)
 
-Be specific with video suggestions — name actual video titles and channels you are confident exist.`,
+Be specific with video suggestions — name actual video titles and channels you are confident exist. ALWAYS include the YouTube search link in markdown format.`,
     temperature: 0.6,
     maxTokens: 2048
   });
@@ -508,6 +511,10 @@ export async function suggestSimulations(planText, subject, level) {
     content: `Suggest simulation models that would support this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
   }];
 
+  // Build a lookup for direct links
+  const simLookup = {};
+  BUILT_IN_SIMS.forEach(s => { simLookup[s.id] = s; });
+
   return sendChat(messages, {
     systemPrompt: `You are Co-Cher's simulation specialist for Singapore educators. Recommend interactive simulations that teachers can use to support their lessons — either as in-class demonstrations, student-driven exploration, or pre/post-lab activities.
 
@@ -515,42 +522,55 @@ export async function suggestSimulations(planText, subject, level) {
 These simulations are already available in the app and can be launched directly:
 ${simList}
 
+## External Simulation Platforms — use DIRECT LINKS
+When suggesting external simulations, provide actual clickable URLs. Here are the key platforms:
+- **PhET**: https://phet.colorado.edu/en/simulations/filter?subjects=... (browse by subject)
+  Common direct links: https://phet.colorado.edu/en/simulations/[sim-name]
+- **GeoGebra**: https://www.geogebra.org/search/[topic]
+- **Desmos**: https://www.desmos.com/calculator (graphing) or https://teacher.desmos.com (activities)
+- **Falstad**: https://www.falstad.com/circuit/ (circuits), https://www.falstad.com/mathphysics.html (physics)
+- **ChemCollective**: https://chemcollective.org/vlabs
+- **LabXchange**: https://www.labxchange.org/library
+
 ## Your Task
-1. **Match built-in simulations first.** If any of the above simulations are relevant to the lesson, recommend them with the tag [AVAILABLE IN CO-CHER].
-2. **Suggest external simulations** from well-known platforms: PhET (phet.colorado.edu), GeoGebra, Desmos, ChemCollective, Falstad, LabXchange, or other reputable educational simulation sites.
-3. **If no suitable simulation exists,** provide a "Build Your Own" suggestion describing:
+1. **Match built-in simulations first.** If any of the above simulations are relevant, recommend them.
+2. **Suggest external simulations** with DIRECT URLs to the actual simulation page (not just the homepage). Use the platform URL patterns above to construct accurate links.
+3. **If no suitable simulation exists anywhere**, be honest about it. Then provide a "Build Your Own" section with:
+   - A concrete starter prompt the teacher can copy-paste into Co-Cher's Lesson Planner chat to get AI help building a custom simulation
    - What the simulation should do
-   - Key variables / interactions students should control
-   - Suggested technology stack (HTML5 Canvas, p5.js, Three.js, or simple spreadsheet model)
-   - Approximate complexity (beginner / intermediate project)
+   - Key variables / interactions
 
 Format:
 
 ## Recommended Simulations
 
 ### Available in Co-Cher
-1. **[Simulation Title]** [AVAILABLE IN CO-CHER]
-   Subject: [Subject] | Difficulty: [Level]
+(Only include this section if there IS a matching built-in simulation)
+1. **[Simulation Title]** ✅ Available in Co-Cher
    How to use: [1-2 sentences on how it fits the lesson — demo, exploration, pre-lab, etc.]
 
 ### External Simulations
+(Only include if you can provide a DIRECT URL to an actual simulation)
 1. **[Simulation Title]**
    Platform: [Platform name]
-   Search: \`[search query to find it]\`
+   [Open Simulation](https://actual-direct-url-to-the-simulation)
    How to use: [1-2 sentences]
 
-### Build Your Own (if no match)
-1. **[Proposed Simulation Title]**
-   What it does: [Description of the simulation]
-   Key variables: [What students can control/observe]
-   Tech suggestion: [HTML5 Canvas / p5.js / spreadsheet / etc.]
-   Complexity: [Beginner / Intermediate / Advanced]
-   Design notes: [2-3 sentences on how to build it]
+### No Exact Match Found
+(Include this section if no built-in or external simulation closely matches the topic)
+We couldn't find a ready-made simulation for this specific topic. Here are your options:
+
+**Option 1: Build a custom simulation**
+Copy this prompt into the Co-Cher chat to get started:
+> "Help me build an interactive HTML5 simulation for [topic]. It should let students [key interactions]. Include sliders for [variables] and a visual output showing [what to display]."
+
+**Option 2: Adapt a related simulation**
+[Suggest a related simulation from the platforms above that could be partially used, with guidance on how to adapt it]
 
 ## Integration Tips
-- 2-3 tips on how to integrate simulations into the lesson flow (e.g., predict-observe-explain, guided inquiry worksheet, compare sim vs real experiment)
+- 2-3 tips on using simulations in the lesson (predict-observe-explain, guided inquiry, compare sim vs real experiment)
 
-Be practical and specific. Prioritise simulations that align with the Singapore O/N-Level or IP curriculum.`,
+Be honest when there is no good match. Teachers appreciate transparency over irrelevant suggestions.`,
     temperature: 0.6,
     maxTokens: 2048
   });
