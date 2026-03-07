@@ -1047,7 +1047,7 @@ select.input {
   background: var(--accent-light);
   color: var(--accent);
 }
-/* Tooltip on hover */
+/* Tooltip on hover — fixed dark chip, works in both light and dark themes */
 .lp-tool-icon:hover::after {
   content: attr(title);
   position: absolute;
@@ -1055,15 +1055,15 @@ select.input {
   left: 50%;
   transform: translateX(-50%);
   padding: 3px 8px;
-  background: var(--ink, #1e293b);
-  color: #fff;
+  background: #1e293b;
+  color: #f8fafc;
   font-size: 0.6875rem;
   font-weight: 500;
   white-space: nowrap;
   border-radius: 4px;
   pointer-events: none;
   z-index: 10;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 
 /* Component tab hover */

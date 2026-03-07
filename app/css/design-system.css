@@ -15,6 +15,7 @@
   /* Surfaces */
   --bg: #f7f8fc;
   --bg-subtle: #eef1f8;
+  --bg-card: #ffffff;
   --surface: #ffffff;
   --surface-hover: rgba(0, 0, 0, 0.015);
   --surface-raised: #ffffff;
@@ -98,6 +99,7 @@
 .dark {
   --bg: #0a0f1e;
   --bg-subtle: #0f1629;
+  --bg-card: #141b2d;
   --surface: #141b2d;
   --surface-hover: rgba(255, 255, 255, 0.025);
   --surface-raised: #1a2238;
