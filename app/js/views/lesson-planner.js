@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -32,6 +32,52 @@ function saveLPPrefs(p) {
   try { localStorage.setItem(LP_PREFS_KEY, JSON.stringify(p)); } catch {}
 }
 
+/* ── EEE: Enactment Enhancements for Engagement ── */
+const EEE_KEY = 'cocher_eee_selections';
+
+// All available EEEs: core tools (always visible) and optional enhancements
+export const EEE_REGISTRY = {
+  // === CORE (always enabled, not toggleable) ===
+  lisc:           { label: 'LI / SC',           cat: 'core', desc: 'Learning Intentions & Success Criteria with E21CC alignment' },
+  review:         { label: 'Lesson Review',      cat: 'core', desc: 'AI analysis of your lesson plan against STP & E21CC' },
+  timeline:       { label: 'Timeline',           cat: 'core', desc: 'Lesson pacing with phase-by-phase suggestions' },
+  grouping:       { label: 'Student Groups',     cat: 'core', desc: 'Group formation using class roster & E21CC profiles' },
+  differentiation:{ label: 'Differentiation',    cat: 'core', desc: 'Scaffolding & extension strategies for diverse learners' },
+  exitTicket:     { label: 'Exit Ticket',        cat: 'core', desc: 'Formative check questions for lesson closure' },
+  discussionPrompts:{ label: 'Discussion Prompts', cat: 'core', desc: 'Structured questions for classroom discourse' },
+  rubric:         { label: 'Rubric',             cat: 'core', desc: 'Assessment rubrics with criteria & levels' },
+  // === ENACTMENT ENHANCEMENTS (teacher chooses) ===
+  youtubeVideos:  { label: 'YouTube Curation',   cat: 'enactment', desc: 'Curated video recommendations with preview tiles', subjects: ['all'] },
+  simulations:    { label: 'Simulations & Models', cat: 'enactment', desc: 'Interactive sims: PhET, GeoGebra, built-in practicals', subjects: ['Science', 'Chemistry', 'Physics', 'Biology', 'Mathematics', 'Geography'] },
+  worksheet:      { label: 'Worksheet / Handout', cat: 'enactment', desc: 'Print-ready student worksheets with mixed question types', subjects: ['all'] },
+  externalLinks:  { label: 'External Resources', cat: 'enactment', desc: 'Curated links to SLS, MOE resources, and open platforms', subjects: ['all'] },
+  stimulus:       { label: 'Stimulus Material',  cat: 'enactment', desc: 'Comprehension passages, source texts, scenario briefs', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'History', 'Social Studies', 'Geography', 'General Paper'] },
+  vocabulary:     { label: 'Vocabulary Builder', cat: 'enactment', desc: 'Word walls, sentence frames, cloze passages, academic language', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'all'] },
+  modelResponse:  { label: 'Model Response',     cat: 'enactment', desc: 'Annotated model answers showing structure & techniques', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'History', 'Social Studies', 'General Paper', 'Geography'] },
+  sourceAnalysis: { label: 'Source Analysis',     cat: 'enactment', desc: 'Structured SBQ/SEQ-style source-based questions', subjects: ['History', 'Social Studies', 'General Paper', 'Geography'] },
+  seatPlan:       { label: 'Seating Plan',        cat: 'enactment', desc: 'AI seat assignments with visual classroom map', subjects: ['all'] },
+};
+
+export function getEEESelections() {
+  try {
+    const stored = localStorage.getItem(EEE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  // Default: enable YouTube, Worksheet, External for all; subject-specific ones off until chosen
+  return ['youtubeVideos', 'worksheet', 'externalLinks', 'seatPlan'];
+}
+
+export function saveEEESelections(selections) {
+  try { localStorage.setItem(EEE_KEY, JSON.stringify(selections)); } catch {}
+}
+
+function isEEEEnabled(toolKey) {
+  const entry = EEE_REGISTRY[toolKey];
+  if (!entry) return false;
+  if (entry.cat === 'core') return true;
+  return getEEESelections().includes(toolKey);
+}
+
 /* ── Active component tab ── */
 let activeComponentTab = null;  // null = show all (auto-select first)
 
@@ -49,6 +95,10 @@ const COMPONENT_META = {
   worksheet:       { label: 'Worksheet / Handout',      color: 'var(--info, #3b82f6)',icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/><path d="M7 13h0.01"/>', order: 10 },
   discussionPrompts: { label: 'Discussion Prompts',     color: 'var(--warning, #f59e0b)', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>', order: 11 },
   externalLinks:   { label: 'External Resources',       color: 'var(--success, #22c55e)', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>', order: 12 },
+  stimulus:        { label: 'Stimulus Material',        color: '#0ea5e9',              icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/>', order: 13 },
+  vocabulary:      { label: 'Vocabulary Builder',        color: '#06b6d4',              icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', order: 14 },
+  modelResponse:   { label: 'Model Response',            color: '#d946ef',              icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>', order: 15 },
+  sourceAnalysis:  { label: 'Source Analysis',           color: '#f97316',              icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>', order: 16 },
 };
 
 function setComponent(key, content, meta = '') {
@@ -167,6 +217,11 @@ function renderComponents(container) {
         worksheet: '#ai-worksheet-btn',
         discussionPrompts: '#ai-discussion-btn',
         externalLinks: '#ai-external-btn',
+        stimulus: '#ai-stimulus-btn',
+        vocabulary: '#ai-vocabulary-btn',
+        modelResponse: '#ai-model-response-btn',
+        sourceAnalysis: '#ai-source-analysis-btn',
+        seatPlan: '#spatial-layout-btn',
       };
       if (toolBtnMap[key]) container.querySelector(toolBtnMap[key])?.click();
     });
@@ -433,37 +488,85 @@ function buildQuickPrompts(classes) {
     ? [planClassContext.level]
     : [...new Set(classes.map(c => c.level).filter(Boolean))];
 
-  if (subjects.length > 0) {
-    const subj = subjects[0];
-    const level = levels[0] || '';
-    const subjectPrompts = {
-      'Mathematics': `Help me plan an engaging ${level} Mathematics lesson with hands-on activities`,
-      'Science': `Design a ${level} Science lesson with inquiry-based learning and experiments`,
-      'Chemistry': `Plan a ${level} Chemistry lesson connecting concepts to real-world applications`,
-      'Physics': `Create a ${level} Physics lesson with demonstrations and problem-solving`,
-      'Biology': `Design a ${level} Biology lesson with collaborative investigation activities`,
-      'English': `Plan a ${level} English lesson focused on creative writing and peer feedback`,
-      'History': `Create a ${level} History lesson using source analysis and discussion`,
-      'Geography': `Design a ${level} Geography lesson with data analysis and fieldwork skills`,
-    };
-    // Match by partial subject name
-    for (const [key, prompt] of Object.entries(subjectPrompts)) {
+  const subj = subjects[0] || '[subject]';
+  const level = levels[0] || '[level e.g. Sec 3]';
+  const hasSub = subjects.length > 0;
+
+  // Subject-specific prompts
+  const subjectBank = {
+    'Mathematics': [
+      { label: 'Plan a Maths lesson', prompt: `Plan a ${level} Mathematics lesson on [topic e.g. Quadratic Equations]. Include hands-on activities, real-world applications, and opportunities for collaborative problem-solving.` },
+      { label: 'Maths with E21CC', prompt: `Design a ${level} Mathematics lesson on [topic] that intentionally develops CAIT through [open-ended problem solving / pattern recognition]. Include a formative check and an EdTech-enhanced activity.` },
+    ],
+    'Science': [
+      { label: 'Plan a Science lesson', prompt: `Plan a ${level} Science lesson on [topic e.g. Chemical Bonding]. Use inquiry-based learning with a hands-on investigation and a clear link to real-world phenomena.` },
+      { label: 'Science practical', prompt: `Design a ${level} Science practical lesson on [topic]. Include pre-lab discussion, safety briefing, guided investigation with prediction-observation-explanation, and a debrief.` },
+    ],
+    'Chemistry': [
+      { label: 'Plan a Chemistry lesson', prompt: `Plan a ${level} Chemistry lesson on [topic e.g. Organic Chemistry]. Connect concepts to real-world applications and include opportunities for molecular visualisation.` },
+      { label: 'Chemistry with simulations', prompt: `Design a ${level} Chemistry lesson on [topic] incorporating interactive simulations (PhET/virtual labs). Include scaffolded inquiry questions and an E21CC focus on CAIT.` },
+    ],
+    'Physics': [
+      { label: 'Plan a Physics lesson', prompt: `Plan a ${level} Physics lesson on [topic e.g. Forces & Motion]. Include demonstrations, collaborative problem-solving, and data analysis activities.` },
+    ],
+    'Biology': [
+      { label: 'Plan a Biology lesson', prompt: `Plan a ${level} Biology lesson on [topic e.g. Cell Division]. Include visual models, collaborative investigation, and real-world applications in health or ecology.` },
+    ],
+    'English': [
+      { label: 'Plan an English lesson', prompt: `Plan a ${level} English Language lesson on [topic e.g. Persuasive Writing / Comprehension]. Include model texts, collaborative peer feedback, and differentiated scaffolding.` },
+      { label: 'English with discussion', prompt: `Design a ${level} English lesson on [text/theme] that develops CCI through structured academic discussion (e.g. Socratic seminar, think-pair-share). Include sentence frames for different ability levels.` },
+    ],
+    'History': [
+      { label: 'Plan a History lesson', prompt: `Plan a ${level} History lesson on [topic e.g. Fall of Singapore]. Use source-based inquiry, structured discussion, and multiple perspectives. Include an SBQ-style activity.` },
+    ],
+    'Geography': [
+      { label: 'Plan a Geography lesson', prompt: `Plan a ${level} Geography lesson on [topic e.g. Plate Tectonics / Tourism]. Include data analysis, fieldwork skills, and connections to sustainability (CGC).` },
+    ],
+    'Social Studies': [
+      { label: 'Plan a Social Studies lesson', prompt: `Plan a ${level} Social Studies lesson on [issue e.g. Governance / Diversity]. Use structured inquiry, source analysis, and develop CGC through perspective-taking activities.` },
+    ],
+    'Chinese': [
+      { label: 'Plan a Chinese lesson', prompt: `Plan a ${level} Chinese Language lesson on [topic e.g. 口语交际 / 阅读理解]. Include vocabulary building, model texts, and peer interaction activities.` },
+    ],
+    'Malay': [
+      { label: 'Plan a Malay lesson', prompt: `Plan a ${level} Malay Language lesson on [topic e.g. Karangan / Kefahaman]. Include vocabulary enrichment, collaborative writing, and cultural connections.` },
+    ],
+    'Tamil': [
+      { label: 'Plan a Tamil lesson', prompt: `Plan a ${level} Tamil Language lesson on [topic e.g. கட்டுரை / படிப்புணர்வு]. Include vocabulary strategies, model responses, and peer review activities.` },
+    ],
+  };
+
+  // Match subject-specific prompts
+  if (hasSub) {
+    for (const [key, bank] of Object.entries(subjectBank)) {
       if (subj.toLowerCase().includes(key.toLowerCase())) {
-        prompts.push({ label: `Plan a ${key} lesson`, prompt: prompt });
+        prompts.push(...bank);
         break;
       }
     }
   }
 
-  // Default prompts
+  // Default subject prompt if no match
   if (prompts.length === 0) {
-    prompts.push({ label: 'Plan an engaging lesson', prompt: 'Help me plan an engaging lesson with hands-on activities and collaborative work' });
+    prompts.push({ label: 'Plan a lesson', prompt: `Plan a ${level} ${subj} lesson on [topic]. Include engaging activities, clear learning outcomes, and opportunities for student collaboration and E21CC development.` });
   }
-  prompts.push({ label: 'Best layouts for group work', prompt: 'What spatial arrangement works best for collaborative group work?' });
-  prompts.push({ label: 'Develop CAIT in a lesson', prompt: 'How can I develop Critical and Inventive Thinking (CAIT) in my lesson?' });
-  prompts.push({ label: 'E21CC activity ideas', prompt: 'Suggest activities that build all three E21CC domains: CAIT, CCI, and CGC' });
 
-  return prompts.slice(0, 4);
+  // Universal prompts (always available)
+  prompts.push({ label: 'Develop CAIT in my lesson', prompt: `How can I intentionally develop Critical, Adaptive & Inventive Thinking (CAIT) in a ${level} ${subj} lesson on [topic]? Suggest 2-3 concrete activities with EdTech integration.` });
+  prompts.push({ label: 'Differentiate for my class', prompt: `Suggest differentiation strategies for a ${level} ${subj} lesson on [topic]. I have students who [need more scaffolding / are advanced / have specific learning needs]. Include both support and extension options.` });
+  prompts.push({ label: 'E21CC activity ideas', prompt: `Suggest classroom activities for ${level} ${subj} that build all three E21CC domains: CAIT, CCI, and CGC. The topic is [topic]. Make activities practical for a [40/60]-minute lesson.` });
+  prompts.push({ label: 'Engagement hooks', prompt: `Suggest 3 lesson starter hooks for ${level} ${subj} on [topic] that are motivating and connect to students' lives. Include at least one EdTech-enhanced option.` });
+
+  // EEE-aware prompts
+  const eeeSelections = getEEESelections();
+  if (eeeSelections.includes('stimulus')) {
+    prompts.push({ label: 'Create stimulus material', prompt: `Create a comprehension passage or source text for ${level} ${subj} on [topic]. The passage should be [200-400] words, suitable for [ability level], and include 3-4 guided questions.` });
+  }
+  if (eeeSelections.includes('vocabulary')) {
+    prompts.push({ label: 'Build a word wall', prompt: `Create a vocabulary word wall for ${level} ${subj} on [topic]. Include key terms with definitions, sentence frames, and one cloze passage for practice.` });
+  }
+
+  return prompts.slice(0, 6);
 }
 
 /* ══════════ Load existing lesson ══════════ */
@@ -477,26 +580,36 @@ export function renderForLesson(container, { id }) {
 
 /* ── AI Tool definitions for compact toolbar ── */
 const AI_TOOLS = [
-  { id: 'ai-lisc-btn', label: 'LI / SC', icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>', color: 'var(--brand-navy, #000c53)', cat: 'planning' },
-  { id: 'ai-review-btn', label: 'Review', icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M8 11l2 2 4-4"/>', color: '', cat: 'planning' },
-  { id: 'ai-rubric-btn', label: 'Rubric', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>', color: '', cat: 'assess' },
-  { id: 'ai-group-btn', label: 'Grouping', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', color: '', cat: 'planning' },
-  { id: 'ai-timeline-btn', label: 'Timeline', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', color: '', cat: 'planning' },
-  { id: 'ai-exit-ticket-btn', label: 'Exit Ticket', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', color: '', cat: 'assess' },
-  { id: 'ai-differentiation-btn', label: 'Differentiate', icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>', color: '', cat: 'planning' },
-  { id: 'ai-youtube-btn', label: 'YouTube', icon: '<polygon points="5 3 19 12 5 21 5 3"/>', color: '#ff0000', cat: 'resources' },
-  { id: 'ai-simulations-btn', label: 'Simulations', icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>', color: '#8b5cf6', cat: 'resources' },
-  { id: 'ai-worksheet-btn', label: 'Worksheet', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>', color: '', cat: 'resources' },
-  { id: 'ai-discussion-btn', label: 'Discussion', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>', color: '', cat: 'planning' },
-  { id: 'ai-external-btn', label: 'Resources', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>', color: '', cat: 'resources' },
-  { id: 'spatial-layout-btn', label: 'Spatial Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', color: '', cat: 'planning' }
+  // Core tools (always visible)
+  { id: 'ai-lisc-btn', label: 'LI / SC', icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>', color: 'var(--brand-navy, #000c53)', cat: 'planning', eee: 'lisc' },
+  { id: 'ai-review-btn', label: 'Review', icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M8 11l2 2 4-4"/>', color: '', cat: 'planning', eee: 'review' },
+  { id: 'ai-rubric-btn', label: 'Rubric', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>', color: '', cat: 'assess', eee: 'rubric' },
+  { id: 'ai-group-btn', label: 'Grouping', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', color: '', cat: 'planning', eee: 'grouping' },
+  { id: 'ai-timeline-btn', label: 'Timeline', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', color: '', cat: 'planning', eee: 'timeline' },
+  { id: 'ai-exit-ticket-btn', label: 'Exit Ticket', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', color: '', cat: 'assess', eee: 'exitTicket' },
+  { id: 'ai-differentiation-btn', label: 'Differentiate', icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>', color: '', cat: 'planning', eee: 'differentiation' },
+  { id: 'ai-discussion-btn', label: 'Discussion', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>', color: '', cat: 'planning', eee: 'discussionPrompts' },
+  // Enactment Enhancements (filtered by EEE selection)
+  { id: 'ai-youtube-btn', label: 'YouTube', icon: '<polygon points="5 3 19 12 5 21 5 3"/>', color: '#ff0000', cat: 'enactment', eee: 'youtubeVideos' },
+  { id: 'ai-simulations-btn', label: 'Simulations', icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>', color: '#8b5cf6', cat: 'enactment', eee: 'simulations' },
+  { id: 'ai-worksheet-btn', label: 'Worksheet', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>', color: '', cat: 'enactment', eee: 'worksheet' },
+  { id: 'ai-external-btn', label: 'Resources', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>', color: '', cat: 'enactment', eee: 'externalLinks' },
+  { id: 'ai-stimulus-btn', label: 'Stimulus', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/>', color: '#0ea5e9', cat: 'enactment', eee: 'stimulus' },
+  { id: 'ai-vocabulary-btn', label: 'Vocabulary', icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', color: '#06b6d4', cat: 'enactment', eee: 'vocabulary' },
+  { id: 'ai-model-response-btn', label: 'Model Resp.', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>', color: '#d946ef', cat: 'enactment', eee: 'modelResponse' },
+  { id: 'ai-source-analysis-btn', label: 'Source Analysis', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>', color: '#f97316', cat: 'enactment', eee: 'sourceAnalysis' },
+  { id: 'spatial-layout-btn', label: 'Spatial Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', color: '', cat: 'planning', eee: 'seatPlan' }
 ];
 
 function buildToolbarHTML(mode) {
+  // Filter tools based on EEE selections
+  const visibleTools = AI_TOOLS.filter(t => isEEEEnabled(t.eee));
+
   if (mode === 'dropdown') {
-    const cats = { planning: 'Planning', assess: 'Assessment', resources: 'Resources' };
+    const cats = { planning: 'Planning', assess: 'Assessment', enactment: 'Enactment' };
     return Object.entries(cats).map(([cat, label]) => {
-      const tools = AI_TOOLS.filter(t => t.cat === cat);
+      const tools = visibleTools.filter(t => t.cat === cat);
+      if (tools.length === 0) return '';
       return `<div style="margin-bottom:var(--sp-2);">
         <div style="font-size:0.625rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);margin-bottom:2px;">${label}</div>
         ${tools.map(t => `<button class="btn btn-ghost btn-sm" id="${t.id}" title="${t.label}" style="width:100%;text-align:left;justify-content:flex-start;gap:var(--sp-2);${t.color ? 'color:' + t.color + ';' : ''}">
@@ -506,8 +619,8 @@ function buildToolbarHTML(mode) {
       </div>`;
     }).join('');
   }
-  // Icon mode — compact buttons with tooltip on hover
-  return AI_TOOLS.map(t =>
+  // Icon mode — compact buttons with tooltip on hover, filtered by EEE
+  return visibleTools.map(t =>
     `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
     </button>`
@@ -880,7 +993,16 @@ export function render(container) {
   // Quick prompts
   messagesEl.addEventListener('click', e => {
     const btn = e.target.closest('.quick-prompt');
-    if (btn) { chatInput.value = btn.dataset.prompt; sendMessage(); }
+    if (btn) {
+      chatInput.value = btn.dataset.prompt;
+      chatInput.focus();
+      // Select the first [placeholder] for easy editing
+      const match = btn.dataset.prompt.match(/\[([^\]]+)\]/);
+      if (match) {
+        const idx = btn.dataset.prompt.indexOf(match[0]);
+        chatInput.setSelectionRange(idx, idx + match[0].length);
+      }
+    }
   });
 
   // Save lesson
@@ -1014,7 +1136,7 @@ export function render(container) {
   });
 
   // LI / SC Generator
-  container.querySelector('#ai-lisc-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-lisc-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
@@ -1037,7 +1159,7 @@ export function render(container) {
   });
 
   // AI Review
-  container.querySelector('#ai-review-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-review-btn')?.addEventListener('click', async () => {
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
@@ -1059,7 +1181,7 @@ export function render(container) {
   });
 
   // AI Rubric
-  container.querySelector('#ai-rubric-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-rubric-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const topic = chatMessages.find(m => m.role === 'user')?.content || 'General lesson';
     const statusEl = container.querySelector('#ai-result');
@@ -1078,7 +1200,7 @@ export function render(container) {
   });
 
   // AI Grouping
-  container.querySelector('#ai-group-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-group-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const allClasses = Store.getClasses();
     if (allClasses.length === 0 || allClasses.every(c => !c.students?.length)) {
@@ -1089,7 +1211,7 @@ export function render(container) {
   });
 
   // AI Timeline
-  container.querySelector('#ai-timeline-btn').addEventListener('click', () => {
+  container.querySelector('#ai-timeline-btn')?.addEventListener('click', () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
@@ -1097,7 +1219,7 @@ export function render(container) {
   });
 
   // AI Exit Ticket
-  container.querySelector('#ai-exit-ticket-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-exit-ticket-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
@@ -1121,7 +1243,7 @@ export function render(container) {
   });
 
   // AI Differentiation
-  container.querySelector('#ai-differentiation-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-differentiation-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
@@ -1134,7 +1256,7 @@ export function render(container) {
   });
 
   // YouTube recommendations
-  container.querySelector('#ai-youtube-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-youtube-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
@@ -1157,7 +1279,7 @@ export function render(container) {
   });
 
   // Simulation Models
-  container.querySelector('#ai-simulations-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-simulations-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
@@ -1180,7 +1302,7 @@ export function render(container) {
   });
 
   // Worksheet Generator
-  container.querySelector('#ai-worksheet-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-worksheet-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
@@ -1201,7 +1323,7 @@ export function render(container) {
   });
 
   // Discussion Prompts
-  container.querySelector('#ai-discussion-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-discussion-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
@@ -1222,7 +1344,7 @@ export function render(container) {
   });
 
   // External Resources
-  container.querySelector('#ai-external-btn').addEventListener('click', async () => {
+  container.querySelector('#ai-external-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
@@ -1242,11 +1364,95 @@ export function render(container) {
     }
   });
 
+  // EEE: Stimulus Material
+  container.querySelector('#ai-stimulus-btn')?.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Generating stimulus material...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+    try {
+      const result = await generateStimulusMaterial(planText, cls.subject, cls.level);
+      setComponent('stimulus', result, cls.subject || 'Stimulus');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Stimulus material generated!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
+  });
+
+  // EEE: Vocabulary Builder
+  container.querySelector('#ai-vocabulary-btn')?.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Building vocabulary materials...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+    try {
+      const result = await generateVocabulary(planText, cls.subject, cls.level);
+      setComponent('vocabulary', result, cls.subject || 'Vocabulary');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Vocabulary materials generated!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
+  });
+
+  // EEE: Model Response
+  container.querySelector('#ai-model-response-btn')?.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Creating model response...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+    try {
+      const result = await generateModelResponse(planText, cls.subject, cls.level);
+      setComponent('modelResponse', result, cls.subject || 'Model Response');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Model response generated!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
+  });
+
+  // EEE: Source Analysis
+  container.querySelector('#ai-source-analysis-btn')?.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Generating source-based questions...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+    try {
+      const result = await generateSourceAnalysis(planText, cls.subject, cls.level);
+      setComponent('sourceAnalysis', result, cls.subject || 'Source Analysis');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Source analysis generated!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
+  });
+
   // Share Lesson (export/import JSON)
   // Word export
   container.querySelector('#export-word-btn')?.addEventListener('click', exportToWord);
 
-  container.querySelector('#share-lesson-btn').addEventListener('click', () => {
+  container.querySelector('#share-lesson-btn')?.addEventListener('click', () => {
     const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
     if (aiMsgs.length === 0 && Object.keys(lessonComponents).length === 0) {
       showToast('No lesson content to share yet.', 'danger'); return;
@@ -1255,14 +1461,14 @@ export function render(container) {
   });
 
   // Lesson Templates
-  container.querySelector('#templates-btn').addEventListener('click', () => {
+  container.querySelector('#templates-btn')?.addEventListener('click', () => {
     showTemplateModal(container);
   });
 
   // Spatial Layout
   renderSpatialSection(container);
   renderSpatialContextBar(container);
-  container.querySelector('#spatial-layout-btn').addEventListener('click', () => {
+  container.querySelector('#spatial-layout-btn')?.addEventListener('click', () => {
     const spatialSection = container.querySelector('#spatial-section');
     spatialSection.scrollIntoView({ behavior: 'smooth' });
     renderSpatialSection(container, true);
@@ -1300,11 +1506,14 @@ function renderMessages(el, classes) {
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
           <h3 style="font-size:1.125rem;font-weight:600;margin-bottom:var(--sp-2);color:var(--ink);">Chat with Co-Cher</h3>
-          <p style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-5);">
+          <p style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-3);">
             Design engaging lesson experiences, spatial arrangements, and E21CC-aligned activities.
           </p>
+          <p style="font-size:0.6875rem;color:var(--ink-faint);margin-bottom:var(--sp-4);line-height:1.4;">
+            Click a prompt below to load it into the chat box. Edit the [placeholders] before sending.
+          </p>
           <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
-            ${prompts.map(p => `<button class="chat-option quick-prompt" data-prompt="${esc(p.prompt)}">${p.label}</button>`).join('')}
+            ${prompts.map(p => `<button class="chat-option quick-prompt" data-prompt="${esc(p.prompt)}" style="text-align:left;">${p.label}</button>`).join('')}
           </div>
         </div>
       </div>`;

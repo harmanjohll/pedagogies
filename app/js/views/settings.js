@@ -9,6 +9,7 @@ import { validateApiKey, AVAILABLE_MODELS } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser } from '../components/login.js';
+import { EEE_REGISTRY, getEEESelections, saveEEESelections } from './lesson-planner.js';
 
 /* ── Dashboard Layout Prefs ── */
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
@@ -101,6 +102,73 @@ function buildWidgetListHTML(prefs) {
   }).join('');
 }
 
+/* ── Subject detection from class name / CSV ── */
+const SUBJECT_KEYWORDS = {
+  'Chemistry': ['chemistry', 'chem'],
+  'Physics': ['physics', 'phy'],
+  'Biology': ['biology', 'bio'],
+  'Science': ['science', 'sci'],
+  'Mathematics': ['mathematics', 'math', 'maths', 'a math', 'e math', 'a-math', 'e-math'],
+  'English': ['english', 'eng lang', 'english language', 'el'],
+  'Chinese': ['chinese', 'cl', 'hcl', 'higher chinese'],
+  'Malay': ['malay', 'ml', 'hml'],
+  'Tamil': ['tamil', 'tl', 'htl'],
+  'History': ['history', 'hist'],
+  'Geography': ['geography', 'geog'],
+  'Social Studies': ['social studies', 'ss'],
+  'General Paper': ['general paper', 'gp'],
+};
+
+function detectSubjectsFromName(name) {
+  const lower = name.toLowerCase();
+  const found = [];
+  for (const [subject, keywords] of Object.entries(SUBJECT_KEYWORDS)) {
+    if (keywords.some(kw => lower.includes(kw))) {
+      found.push(subject);
+    }
+  }
+  return found;
+}
+
+function suggestEEEsForSubjects(subjects) {
+  const suggested = new Set();
+  for (const [key, entry] of Object.entries(EEE_REGISTRY)) {
+    if (entry.cat !== 'enactment') continue;
+    if (!entry.subjects) continue;
+    if (entry.subjects.includes('all')) { suggested.add(key); continue; }
+    for (const subj of subjects) {
+      if (entry.subjects.includes(subj)) { suggested.add(key); break; }
+    }
+  }
+  return [...suggested];
+}
+
+function buildEEEListHTML() {
+  const selections = getEEESelections();
+  return Object.entries(EEE_REGISTRY)
+    .filter(([, v]) => v.cat === 'enactment')
+    .map(([key, v]) => {
+      const enabled = selections.includes(key);
+      const subjectTags = (v.subjects || [])
+        .filter(s => s !== 'all')
+        .map(s => `<span style="font-size:0.625rem;padding:1px 6px;border-radius:10px;background:var(--bg-subtle);color:var(--ink-faint);">${s}</span>`)
+        .join('');
+      const allTag = (v.subjects || []).includes('all')
+        ? '<span style="font-size:0.625rem;padding:1px 6px;border-radius:10px;background:var(--accent-light);color:var(--accent);">All subjects</span>'
+        : '';
+      return `<div style="display:flex;align-items:flex-start;gap:var(--sp-3);padding:var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-card);">
+        <label style="display:flex;align-items:center;flex-shrink:0;margin-top:2px;">
+          <input type="checkbox" class="eee-toggle" data-eee="${key}" ${enabled ? 'checked' : ''} />
+        </label>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:2px;">${v.label}</div>
+          <div style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;margin-bottom:4px;">${v.desc}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">${allTag}${subjectTags}</div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
 export function render(container) {
   const apiKey = Store.get('apiKey') || '';
   const model = Store.get('model') || 'gemini-2.5-flash';
@@ -165,6 +233,36 @@ export function render(container) {
             <span class="toggle-track"></span>
             <span class="toggle-label">Dark Mode</span>
           </label>
+        </div>
+
+        <!-- EEE: Enactment Enhancements for Engagement -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Enactment Enhancements</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            Choose which tools appear in your Lesson Planner toolbar. Core tools are always available. Toggle enactment tools to match your teaching needs.
+          </p>
+
+          <!-- Core tools (always on, shown for reference) -->
+          <div style="margin-bottom: var(--sp-4);">
+            <div style="font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--sp-2);">Core Tools (always on)</div>
+            <div style="display: flex; flex-wrap: wrap; gap: var(--sp-2);">
+              ${Object.entries(EEE_REGISTRY).filter(([,v]) => v.cat === 'core').map(([, v]) =>
+                `<span class="badge badge-blue" style="font-size: 0.75rem; padding: 4px 10px;">${v.label}</span>`
+              ).join('')}
+            </div>
+          </div>
+
+          <!-- Enactment tools (toggleable) -->
+          <div style="margin-bottom: var(--sp-3);">
+            <div style="font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--sp-2);">Enactment Tools</div>
+            <p style="font-size: 0.6875rem; color: var(--ink-faint); margin-bottom: var(--sp-3); line-height: 1.4;">
+              Enable tools relevant to your subjects. Subject suggestions shown as tags — any teacher can enable any tool.
+            </p>
+          </div>
+          <div id="eee-tool-list" style="display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-4);">
+            ${buildEEEListHTML()}
+          </div>
+          <button class="btn btn-primary btn-sm" id="eee-save-btn">Save Enactment Tools</button>
         </div>
 
         <!-- Dashboard Layout -->
@@ -236,7 +334,7 @@ export function render(container) {
             <button class="btn btn-primary btn-sm" id="csv-confirm-btn">Confirm Import</button>
           </div>
           <p style="font-size: 0.75rem; color: var(--ink-faint); margin-top: var(--sp-2);">
-            Tip: Export from Excel as CSV (UTF-8). One student per row.
+            Tip: Export from Excel as CSV (UTF-8). One student per row. Include the subject in the class name (e.g. "4A Pure Chemistry") — Co-Cher will detect it and suggest relevant tools.
           </p>
         </div>
 
@@ -320,6 +418,13 @@ export function render(container) {
     const dark = e.target.checked;
     Store.set('darkMode', dark);
     document.documentElement.classList.toggle('dark', dark);
+  });
+
+  // EEE save
+  container.querySelector('#eee-save-btn')?.addEventListener('click', () => {
+    const checked = [...container.querySelectorAll('.eee-toggle:checked')].map(cb => cb.dataset.eee);
+    saveEEESelections(checked);
+    showToast(`Enactment tools updated! ${checked.length} tool${checked.length !== 1 ? 's' : ''} enabled.`, 'success');
   });
 
   // Save
@@ -446,6 +551,27 @@ export function render(container) {
     container.querySelector('#csv-preview').style.display = 'none';
     container.querySelector('#csv-class-name').value = '';
     csvFileInput.value = '';
+
+    // Subject detection from class name → suggest relevant EEEs
+    const detectedSubjects = detectSubjectsFromName(className);
+    if (detectedSubjects.length > 0) {
+      const suggested = suggestEEEsForSubjects(detectedSubjects);
+      if (suggested.length > 0) {
+        const current = getEEESelections();
+        const newSelections = [...new Set([...current, ...suggested])];
+        saveEEESelections(newSelections);
+        const addedLabels = suggested
+          .filter(s => !current.includes(s))
+          .map(s => EEE_REGISTRY[s]?.label)
+          .filter(Boolean);
+        if (addedLabels.length > 0) {
+          showToast(`Detected ${detectedSubjects.join(', ')}. Enabled: ${addedLabels.join(', ')}.`, 'success');
+          // Re-render EEE list if it exists
+          const eeeList = container.querySelector('#eee-tool-list');
+          if (eeeList) eeeList.innerHTML = buildEEEListHTML();
+        }
+      }
+    }
   });
 
   // ── Clear Sample Data ──
