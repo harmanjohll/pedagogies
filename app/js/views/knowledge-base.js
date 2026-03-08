@@ -323,18 +323,18 @@ export function render(container) {
           <div id="dept-schemes-list"></div>
         </div>
 
-        <!-- MOE Resource Gateway (Placeholder) -->
+        <!-- MOE Curriculum Resources (Placeholder) -->
         <div style="margin-bottom:var(--sp-6);">
           <div class="section-header">
-            <span class="section-title">MOE Resources</span>
+            <span class="section-title">MOE Curriculum Resources</span>
             <span class="badge badge-gray">Requires Setup</span>
           </div>
           <div class="card" style="border:1px dashed var(--border);background:transparent;padding:var(--sp-6);text-align:center;opacity:0.7;">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" style="margin:0 auto var(--sp-2);display:block;">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
-            <p style="font-size:0.875rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-1);">MOE Resource Gateway</p>
-            <p style="font-size:0.75rem;color:var(--ink-faint);line-height:1.5;max-width:400px;margin:0 auto;">Connect to your school's resource portal to browse curriculum documents, past papers, and approved materials. Requires school administrator setup.</p>
+            <p style="font-size:0.875rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-1);">MOE Curriculum Resources</p>
+            <p style="font-size:0.75rem;color:var(--ink-faint);line-height:1.5;max-width:440px;margin:0 auto;">Connect to your school's resource portal to browse syllabus documents, past-year papers, model answers, and approved teaching materials. Requires school administrator setup.</p>
           </div>
         </div>
 
