@@ -10,6 +10,7 @@ import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTi
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
+import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow } from './dashboard.js';
 
@@ -808,7 +809,10 @@ export function render(container) {
   })() : '';
 
   container.innerHTML = `
-    <div class="lp-layout" id="lp-layout" style="height:100%;overflow:hidden;">
+    <div style="padding:var(--sp-2) var(--sp-3) 0;">
+      ${renderWorkflowBreadcrumb('plan')}
+    </div>
+    <div class="lp-layout" id="lp-layout" style="height:calc(100% - 44px);overflow:hidden;">
       <!-- Chat Column -->
       <div class="lp-chat-col" style="display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;">
         <div class="chat-header" style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
@@ -1026,6 +1030,9 @@ export function render(container) {
     container.querySelector('.lp-plan-col'),
     layoutEl
   );
+
+  // Workflow breadcrumb clicks
+  bindWorkflowClicks(container);
 
   // New chat
   container.querySelector('#new-chat-btn').addEventListener('click', () => {
