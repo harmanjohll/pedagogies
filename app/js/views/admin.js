@@ -158,6 +158,21 @@ export function render(container) {
           <div class="grid-3 stagger" id="admin-tools"></div>
         </div>
 
+        <!-- MOE Circulars & Directives (Placeholder) -->
+        <div style="margin-bottom:var(--sp-8);">
+          <div class="section-header">
+            <span class="section-title">MOE Circulars & Directives</span>
+            <span class="badge badge-gray">Requires Setup</span>
+          </div>
+          <div class="card" style="border:1px dashed var(--border);background:transparent;padding:var(--sp-6);text-align:center;opacity:0.7;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" style="margin:0 auto var(--sp-2);display:block;">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <p style="font-size:0.875rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-1);">MOE Circulars & Directives</p>
+            <p style="font-size:0.75rem;color:var(--ink-faint);line-height:1.5;max-width:440px;margin:0 auto;">Access MOE circulars, admin directives, report templates, and operational protocols. Connect to your school's administrative portal to surface official documents here. Requires school administrator setup.</p>
+          </div>
+        </div>
+
         <!-- Active Events -->
         <div style="margin-bottom:var(--sp-8);">
           <div class="section-header">
