@@ -5,16 +5,20 @@
  * for History, Social Studies, Geography, and General Paper.
  */
 
-import { Store } from '../state.js';
+import { Store, generateId } from '../state.js';
 import { sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { createFileUploadZone } from '../components/pdf-upload.js';
+import { printSourceAnalysis } from '../components/print-export.js';
+import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 
 /* ── Storage helpers ── */
 const STORAGE_KEY = 'cocher_source_library';
 
 function getLibrary() {
+  const storeLib = Store.get('sourceLibrary');
+  if (storeLib && storeLib.length) return storeLib;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -22,11 +26,8 @@ function getLibrary() {
 }
 
 function saveLibrary(lib) {
+  Store.set('sourceLibrary', lib);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(lib));
-}
-
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
 /* ── Colour helpers ── */
@@ -66,6 +67,83 @@ function esc(str) {
   const el = document.createElement('span');
   el.textContent = str || '';
   return el.innerHTML;
+}
+
+/* ── Related Reflections helper ── */
+function findRelatedReflections(keywords) {
+  if (!keywords || !keywords.trim()) return [];
+  const lessons = Store.getLessons();
+  const tokens = keywords.toLowerCase().split(/[\s,;]+/).filter(w => w.length > 2);
+  if (!tokens.length) return [];
+  const results = [];
+  for (const lesson of lessons) {
+    if (!lesson.reflection) continue;
+    const refLower = lesson.reflection.toLowerCase();
+    const matched = tokens.filter(t => refLower.includes(t));
+    if (matched.length > 0) {
+      results.push({
+        lessonTitle: lesson.title || 'Untitled Lesson',
+        subject: lesson.subject || '',
+        reflection: lesson.reflection,
+        matchCount: matched.length,
+        matchedTerms: matched,
+      });
+    }
+  }
+  results.sort((a, b) => b.matchCount - a.matchCount);
+  return results.slice(0, 5);
+}
+
+function renderRelatedReflections(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const keywords = el.dataset.keywords || '';
+  const matches = findRelatedReflections(keywords);
+  if (!matches.length) {
+    el.innerHTML = '';
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="padding:14px;border:1px solid rgba(139,92,246,0.25);border-radius:10px;background:rgba(139,92,246,0.04);margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <span style="font-size:0.8125rem;font-weight:700;color:#7c3aed;">Related Past Reflections</span>
+        <span style="font-size:0.6875rem;color:var(--ink-muted);">(${matches.length} found)</span>
+      </div>
+      ${matches.map((m, i) => `
+        <div class="sa-reflection-card" data-ref-idx="${i}" style="padding:10px 12px;background:var(--bg-card,#fff);border:1px solid var(--border,#e2e5ea);border-radius:8px;margin-bottom:6px;position:relative;">
+          <button class="sa-dismiss-ref" data-dismiss-ref="${i}" style="position:absolute;top:6px;right:8px;background:none;border:none;cursor:pointer;color:var(--ink-muted);font-size:0.875rem;line-height:1;" title="Dismiss">&times;</button>
+          <div style="font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:3px;">${esc(m.lessonTitle)}${m.subject ? ` <span style="font-size:0.625rem;color:var(--ink-muted);">(${esc(m.subject)})</span>` : ''}</div>
+          <div style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;font-style:italic;">"${esc(m.reflection.length > 200 ? m.reflection.slice(0, 200) + '...' : m.reflection)}"</div>
+          <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">
+            ${m.matchedTerms.map(t => `<span style="font-size:0.5625rem;padding:1px 6px;border-radius:8px;background:rgba(139,92,246,0.12);color:#7c3aed;font-weight:600;">${esc(t)}</span>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  // Wire dismiss buttons
+  el.querySelectorAll('.sa-dismiss-ref').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const card = btn.closest('.sa-reflection-card');
+      if (card) card.remove();
+      // Hide container if no cards left
+      if (!el.querySelectorAll('.sa-reflection-card').length) {
+        el.style.display = 'none';
+      }
+    });
+  });
+}
+
+function triggerReflectionSearch(containerId, ...inputValues) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const combined = inputValues.filter(Boolean).join(' ');
+  el.dataset.keywords = combined;
+  renderRelatedReflections(containerId);
 }
 
 /* ── Main render ── */
@@ -348,6 +426,8 @@ export function render(container) {
       <div class="main-scroll">
         <div class="page-container">
 
+          ${renderWorkflowBreadcrumb('resources')}
+
           <div class="page-header" style="margin-bottom: 20px;">
             <div>
               <h1 class="page-title" style="font-size:1.625rem;font-weight:700;color:var(--ink, #1a1a2e);margin:0 0 4px;">Source Analysis Library</h1>
@@ -495,6 +575,21 @@ export function render(container) {
           </div>
           <div class="sa-notes">${esc(item.teacherNotes)}</div>
         ` : ''}
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--border-light,#f0f0f4);">
+          <button class="sa-secondary-btn" data-print="student">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print Student Copy
+          </button>
+          <button class="sa-secondary-btn" data-print="teacher">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print Teacher Copy
+          </button>
+          <button class="sa-secondary-btn" data-action="share-placeholder" style="opacity:0.5;cursor:default;" title="Coming soon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share with Department
+          </button>
+        </div>
       </div>
     `;
   }
@@ -555,6 +650,8 @@ export function render(container) {
           <label class="sa-label">Topic / Theme</label>
           <input type="text" class="sa-input" id="sa-topic" placeholder="e.g. Fall of Singapore, Globalisation, Climate Change" />
         </div>
+
+        <div id="sa-ai-reflections" style="display:none;"></div>
 
         <div class="sa-field" style="margin-bottom:14px;">
           <label class="sa-label">Source Types to Include</label>
@@ -743,6 +840,8 @@ export function render(container) {
           </div>
         </div>
 
+        <div id="sa-manual-reflections" style="display:none;"></div>
+
         <hr class="sa-divider" />
 
         <div class="sa-field" style="margin-bottom:16px;">
@@ -881,6 +980,9 @@ export function render(container) {
 
   /* ── Bind all events ── */
   function bindEvents() {
+    // Workflow breadcrumb clicks
+    bindWorkflowClicks(container);
+
     // Tab switching
     container.querySelectorAll('.sa-tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -924,6 +1026,19 @@ export function render(container) {
       });
     }
 
+    // Print buttons
+    container.querySelectorAll('[data-print]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = getLibrary().find(i => i.id === expandedId);
+        if (item) printSourceAnalysis(item, btn.dataset.print);
+      });
+    });
+
+    // Share placeholder
+    container.querySelector('[data-action="share-placeholder"]')?.addEventListener('click', () => {
+      showToast('Sharing requires a connected Co-Cher workspace. Contact your school administrator to set up department sharing.', 'info');
+    });
+
     // Card expand
     container.querySelectorAll('[data-expand]').forEach(card => {
       card.addEventListener('click', (e) => {
@@ -955,6 +1070,35 @@ export function render(container) {
     const generateBtn = container.querySelector('#sa-generate-btn');
     if (generateBtn) {
       generateBtn.addEventListener('click', () => handleGenerate());
+    }
+
+    // Related Reflections — AI form
+    const saTopicInput = container.querySelector('#sa-topic');
+    const saSubjectSelect = container.querySelector('#sa-subject');
+    if (saTopicInput) {
+      const debounceRef = (() => { let t; return (fn, d) => { clearTimeout(t); t = setTimeout(fn, d); }; })();
+      saTopicInput.addEventListener('input', () => {
+        debounceRef(() => triggerReflectionSearch('sa-ai-reflections', saTopicInput.value, saSubjectSelect?.value), 400);
+      });
+      if (saSubjectSelect) {
+        saSubjectSelect.addEventListener('change', () => {
+          triggerReflectionSearch('sa-ai-reflections', saTopicInput.value, saSubjectSelect.value);
+        });
+      }
+    }
+
+    // Related Reflections — Manual form
+    const saManualTitle = container.querySelector('#sa-manual-title');
+    const saManualTopic = container.querySelector('#sa-manual-topic');
+    const saManualSubject = container.querySelector('#sa-manual-subject');
+    if (saManualTitle || saManualTopic) {
+      const debounceRef2 = (() => { let t; return (fn, d) => { clearTimeout(t); t = setTimeout(fn, d); }; })();
+      const triggerManual = () => {
+        debounceRef2(() => triggerReflectionSearch('sa-manual-reflections', saManualTitle?.value, saManualTopic?.value, saManualSubject?.value), 400);
+      };
+      if (saManualTitle) saManualTitle.addEventListener('input', triggerManual);
+      if (saManualTopic) saManualTopic.addEventListener('input', triggerManual);
+      if (saManualSubject) saManualSubject.addEventListener('change', triggerManual);
     }
 
     // Regenerate

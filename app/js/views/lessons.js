@@ -10,6 +10,7 @@ import { confirmDialog } from '../components/modals.js';
 import { showToast } from '../components/toast.js';
 import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
+import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 
 const STATUS_MAP = {
   draft: { label: 'Draft', badge: 'badge-gray' },
@@ -119,6 +120,22 @@ export function renderList(container) {
           </div>
         </div>
 
+        <!-- Workflow Breadcrumb -->
+        ${renderWorkflowBreadcrumb('reflect')}
+
+        <!-- Term Filter -->
+        ${lessons.length > 0 ? `
+        <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-4);">
+          <label style="font-size:0.75rem;font-weight:600;color:var(--ink-muted);white-space:nowrap;">Filter by Term:</label>
+          <select id="term-filter" class="input" style="width:auto;padding:4px 10px;font-size:0.8125rem;">
+            <option value="all">All Terms</option>
+            <option value="1">Term 1 (Jan–Mar)</option>
+            <option value="2">Term 2 (Mar–May)</option>
+            <option value="3">Term 3 (Jun–Sep)</option>
+            <option value="4">Term 4 (Sep–Nov)</option>
+          </select>
+        </div>` : ''}
+
         <!-- My Timetable (populated async) -->
         <div id="lessons-tt-timetable"></div>
 
@@ -144,8 +161,41 @@ export function renderList(container) {
     </div>
   `;
 
+  // Bind workflow breadcrumb navigation
+  bindWorkflowClicks(container);
+
   const grid = container.querySelector('#lessons-grid');
   if (grid) renderCards(grid, lessons, classMap);
+
+  // Term filter
+  const termFilter = container.querySelector('#term-filter');
+  if (termFilter) {
+    // Auto-select current term
+    const now = new Date();
+    const month = now.getMonth(); // 0-indexed
+    const autoTerm = month <= 2 ? '1' : month <= 4 ? '2' : month <= 7 ? '3' : month <= 10 ? '4' : '1';
+    termFilter.value = 'all';
+
+    termFilter.addEventListener('change', () => {
+      const term = termFilter.value;
+      if (term === 'all') {
+        renderCards(grid, lessons, classMap);
+        return;
+      }
+      const termRanges = {
+        '1': [0, 2],   // Jan-Mar
+        '2': [2, 4],   // Mar-May
+        '3': [5, 8],   // Jun-Sep
+        '4': [8, 10]   // Sep-Nov
+      };
+      const [startMonth, endMonth] = termRanges[term];
+      const filtered = lessons.filter(l => {
+        const d = new Date(l.createdAt || 0);
+        return d.getMonth() >= startMonth && d.getMonth() <= endMonth;
+      });
+      renderCards(grid, filtered, classMap);
+    });
+  }
 
   container.querySelectorAll('[data-filter]').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -472,6 +522,24 @@ export function renderDetail(container, { id }) {
             </div>`;
         })()}
 
+        ${(() => {
+          const resources = lesson.attachedResources || [];
+          if (resources.length === 0) return '';
+          return `
+            <div class="card" style="margin-bottom:var(--sp-6);">
+              <h3 style="font-size:1rem;font-weight:600;margin-bottom:var(--sp-3);color:var(--ink);">Linked Resources</h3>
+              <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+                ${resources.map(r => `
+                  <button class="btn btn-ghost btn-sm linked-resource-chip" data-type="${r.type}" style="display:inline-flex;align-items:center;gap:var(--sp-1);padding:var(--sp-1) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-lg);font-size:0.8125rem;border:1px solid var(--border-light);cursor:pointer;">
+                    <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : 'badge-amber'}" style="font-size:0.625rem;">${r.type === 'stimulus' ? 'Stimulus' : 'Source'}</span>
+                    <span style="color:var(--ink);">${esc(r.title)}</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2" style="margin-left:2px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  </button>
+                `).join('')}
+              </div>
+            </div>`;
+        })()}
+
         <div class="card">
           <h3 style="font-size:1rem;font-weight:600;margin-bottom:var(--sp-3);color:var(--ink);">Post-Lesson Reflection</h3>
           <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">After teaching, capture what went well, what you'd change, and student responses.</p>
@@ -520,6 +588,15 @@ export function renderDetail(container, { id }) {
 
   container.querySelector('#back-btn').addEventListener('click', () => navigate('/lessons'));
   container.querySelector('#edit-btn').addEventListener('click', () => navigate(`/lesson-planner/${id}`));
+
+  // Linked resource chip navigation
+  container.querySelectorAll('.linked-resource-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const type = chip.dataset.type;
+      navigate(type === 'stimulus' ? '/stimulus-material' : '/source-analysis');
+    });
+  });
+
   container.querySelector('#status-btn').addEventListener('click', () => {
     const order = ['draft', 'ready', 'completed'];
     const next = order[(order.indexOf(lesson.status) + 1) % order.length];

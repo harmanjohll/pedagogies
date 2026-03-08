@@ -15,24 +15,27 @@ import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelecti
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
 
 const DEFAULT_WIDGET_ORDER = [
-  'schedule', 'notifications', 'weeklyOverview', 'suggestions',
-  'quickActions', 'stats', 'prepChecklist', 'insights',
-  'reflections', 'recentGrid', 'timetable', 'classes'
+  'schedule', 'activityFeed', 'notifications', 'weeklyOverview', 'suggestions',
+  'quickActions', 'stats', 'studentSpotlight', 'prepChecklist', 'insights',
+  'reflections', 'recentGrid', 'timetable', 'classes', 'studentData'
 ];
 
 const DEFAULT_WIDGET_LABELS = {
   schedule:       "Today's Schedule",
+  activityFeed:   'Recent Work',
   notifications:  'Notifications & Reminders',
   weeklyOverview: 'Weekly Overview',
   suggestions:    'Suggested for You',
   quickActions:   'Quick Actions',
   stats:          'Stats',
+  studentSpotlight: 'Student Spotlight',
   prepChecklist:  'Lesson Prep Checklist',
   insights:       'Teaching Insights',
   reflections:    'Reflection Analytics',
   recentGrid:     'Recent Lessons / Events / Activity',
   timetable:      'My Timetable',
-  classes:        'Your Classes'
+  classes:        'Your Classes',
+  studentData:    'Student Learning Data'
 };
 
 const ROLE_PRESETS = {
