@@ -9,7 +9,7 @@ import { validateApiKey, AVAILABLE_MODELS } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser } from '../components/login.js';
-import { EEE_REGISTRY, getEEESelections, saveEEESelections } from './lesson-planner.js';
+import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections } from './lesson-planner.js';
 
 /* ── Dashboard Layout Prefs ── */
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
@@ -144,29 +144,50 @@ function suggestEEEsForSubjects(subjects) {
 }
 
 function buildEEEListHTML() {
-  const selections = getEEESelections();
-  return Object.entries(EEE_REGISTRY)
-    .filter(([, v]) => v.cat === 'enactment')
-    .map(([key, v]) => {
-      const enabled = selections.includes(key);
-      const subjectTags = (v.subjects || [])
-        .filter(s => s !== 'all')
-        .map(s => `<span style="font-size:0.625rem;padding:1px 6px;border-radius:10px;background:var(--bg-subtle);color:var(--ink-faint);">${s}</span>`)
-        .join('');
-      const allTag = (v.subjects || []).includes('all')
-        ? '<span style="font-size:0.625rem;padding:1px 6px;border-radius:10px;background:var(--accent-light);color:var(--accent);">All subjects</span>'
-        : '';
-      return `<div style="display:flex;align-items:flex-start;gap:var(--sp-3);padding:var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-card);">
-        <label style="display:flex;align-items:center;flex-shrink:0;margin-top:2px;">
-          <input type="checkbox" class="eee-toggle" data-eee="${key}" ${enabled ? 'checked' : ''} />
-        </label>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:2px;">${v.label}</div>
-          <div style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;margin-bottom:4px;">${v.desc}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px;">${allTag}${subjectTags}</div>
-        </div>
-      </div>`;
-    }).join('');
+  const plannerSel = getEEESelections();
+  const sidebarSel = getEEESidebarSelections();
+  const entries = Object.entries(EEE_REGISTRY).filter(([, v]) => v.cat === 'enactment');
+
+  // Header row
+  let html = `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:var(--sp-2);align-items:center;padding:0 var(--sp-3);margin-bottom:var(--sp-1);">
+    <div style="font-size:0.6875rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.04em;">Tool</div>
+    <div style="font-size:0.6875rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.04em;text-align:center;">Sidebar</div>
+    <div style="font-size:0.6875rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.04em;text-align:center;">Planner</div>
+  </div>`;
+
+  // Select/deselect all row
+  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:var(--sp-2);align-items:center;padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-subtle);margin-bottom:var(--sp-2);">
+    <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);">Select / Deselect All</div>
+    <div style="text-align:center;"><input type="checkbox" id="eee-sidebar-all" ${sidebarSel.length === entries.length ? 'checked' : ''} /></div>
+    <div style="text-align:center;"><input type="checkbox" id="eee-planner-all" ${plannerSel.length >= entries.length ? 'checked' : ''} /></div>
+  </div>`;
+
+  // Tool rows
+  entries.forEach(([key, v]) => {
+    const inPlanner = plannerSel.includes(key);
+    const inSidebar = sidebarSel.includes(key);
+    const subjectTags = (v.subjects || [])
+      .filter(s => s !== 'all')
+      .slice(0, 4)
+      .map(s => `<span style="font-size:0.5625rem;padding:0 5px;border-radius:8px;background:var(--bg-subtle);color:var(--ink-faint);">${s}</span>`)
+      .join('');
+    const allTag = (v.subjects || []).includes('all')
+      ? '<span style="font-size:0.5625rem;padding:0 5px;border-radius:8px;background:var(--accent-light);color:var(--accent);">All</span>'
+      : '';
+    const moreCount = (v.subjects || []).filter(s => s !== 'all').length - 4;
+
+    html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:var(--sp-2);align-items:center;padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-card);">
+      <div style="min-width:0;">
+        <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:1px;">${v.label}</div>
+        <div style="font-size:0.6875rem;color:var(--ink-muted);line-height:1.4;margin-bottom:2px;">${v.desc}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;">${allTag}${subjectTags}${moreCount > 0 ? `<span style="font-size:0.5625rem;color:var(--ink-faint);">+${moreCount}</span>` : ''}</div>
+      </div>
+      <div style="text-align:center;"><input type="checkbox" class="eee-sidebar-toggle" data-eee="${key}" ${inSidebar ? 'checked' : ''} /></div>
+      <div style="text-align:center;"><input type="checkbox" class="eee-planner-toggle" data-eee="${key}" ${inPlanner ? 'checked' : ''} /></div>
+    </div>`;
+  });
+
+  return html;
 }
 
 export function render(container) {
@@ -315,12 +336,12 @@ export function render(container) {
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Enactment Enhancements</h3>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
-            Choose which tools appear in your Lesson Planner toolbar. Core tools are always available. Toggle enactment tools to match your teaching needs — changes take effect immediately in the Lesson Planner.
+            Control where each tool appears. <strong>Sidebar</strong> adds it to the left navigation panel. <strong>Planner</strong> adds it to the Lesson Planner toolbar. You can enable both, either, or neither.
           </p>
 
           <!-- Core tools (always on, shown for reference) -->
           <div style="margin-bottom: var(--sp-4);">
-            <div style="font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--sp-2);">Core Tools (always on)</div>
+            <div style="font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--sp-2);">Core Tools (always in Planner)</div>
             <div style="display: flex; flex-wrap: wrap; gap: var(--sp-2);">
               ${Object.entries(EEE_REGISTRY).filter(([,v]) => v.cat === 'core').map(([, v]) =>
                 `<span class="badge badge-blue" style="font-size: 0.75rem; padding: 4px 10px;">${v.label}</span>`
@@ -328,13 +349,7 @@ export function render(container) {
             </div>
           </div>
 
-          <!-- Enactment tools (toggleable) -->
-          <div style="margin-bottom: var(--sp-3);">
-            <div style="font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--sp-2);">Enactment Tools</div>
-            <p style="font-size: 0.6875rem; color: var(--ink-faint); margin-bottom: var(--sp-3); line-height: 1.4;">
-              Enable tools relevant to your subjects. Subject suggestions shown as tags — any teacher can enable any tool.
-            </p>
-          </div>
+          <!-- Enactment tools (dual toggles) -->
           <div id="eee-tool-list" style="display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-4);">
             ${buildEEEListHTML()}
           </div>
@@ -496,20 +511,36 @@ export function render(container) {
     document.documentElement.classList.toggle('dark', dark);
   });
 
-  // EEE save — both on button click and auto-save on toggle
+  // EEE save — auto-save on every toggle change
   const saveEEE = () => {
-    const checked = [...container.querySelectorAll('.eee-toggle:checked')].map(cb => cb.dataset.eee);
-    saveEEESelections(checked);
-    // Trigger Store subscribers (sidebar re-render) via a harmless touch
+    const plannerChecked = [...container.querySelectorAll('.eee-planner-toggle:checked')].map(cb => cb.dataset.eee);
+    const sidebarChecked = [...container.querySelectorAll('.eee-sidebar-toggle:checked')].map(cb => cb.dataset.eee);
+    saveEEESelections(plannerChecked);
+    saveEEESidebarSelections(sidebarChecked);
+    // Trigger Store subscribers (sidebar re-render)
     Store.set('_eeeUpdated', Date.now());
-    return checked;
+    return { planner: plannerChecked, sidebar: sidebarChecked };
   };
+
   container.querySelector('#eee-save-btn')?.addEventListener('click', () => {
-    const checked = saveEEE();
-    showToast(`Enactment tools updated! ${checked.length} tool${checked.length !== 1 ? 's' : ''} enabled.`, 'success');
+    const { planner, sidebar } = saveEEE();
+    showToast(`Tools updated — ${planner.length} in Planner, ${sidebar.length} in Sidebar.`, 'success');
   });
-  container.querySelectorAll('.eee-toggle').forEach(cb => {
+
+  // Auto-save on individual toggle
+  container.querySelectorAll('.eee-planner-toggle, .eee-sidebar-toggle').forEach(cb => {
     cb.addEventListener('change', () => saveEEE());
+  });
+
+  // Select/deselect all
+  const allEnactmentKeys = Object.entries(EEE_REGISTRY).filter(([,v]) => v.cat === 'enactment').map(([k]) => k);
+  container.querySelector('#eee-sidebar-all')?.addEventListener('change', (e) => {
+    container.querySelectorAll('.eee-sidebar-toggle').forEach(cb => { cb.checked = e.target.checked; });
+    saveEEE();
+  });
+  container.querySelector('#eee-planner-all')?.addEventListener('change', (e) => {
+    container.querySelectorAll('.eee-planner-toggle').forEach(cb => { cb.checked = e.target.checked; });
+    saveEEE();
   });
 
   // Save

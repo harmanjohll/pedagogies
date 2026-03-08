@@ -6,7 +6,7 @@
 
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
-import { EEE_REGISTRY, getEEESelections } from '../views/lesson-planner.js';
+import { EEE_REGISTRY, getEEESidebarSelections } from '../views/lesson-planner.js';
 
 /* ── SVG Icons (Feather-style) ── */
 const ICONS = {
@@ -59,8 +59,8 @@ function buildNavItems() {
     { id: '/lessons', icon: 'lessons', label: 'Lessons' },
   ];
 
-  // Build dynamic enactment items from EEE selections
-  const selections = getEEESelections();
+  // Build dynamic enactment items from sidebar-specific selections
+  const selections = getEEESidebarSelections();
   const enactmentItems = [];
   let first = true;
   for (const key of Object.keys(EEE_NAV_MAP)) {
@@ -167,8 +167,17 @@ export function renderSidebar(container) {
     });
   }
 
-  // Subscribe to state changes to update badges
+  // Subscribe to state changes to update badges & re-render on EEE changes
+  let lastEEEUpdate = Store.get('_eeeUpdated') || 0;
   return Store.subscribe(() => {
+    // Re-render entire sidebar when EEE sidebar selections change
+    const curEEEUpdate = Store.get('_eeeUpdated') || 0;
+    if (curEEEUpdate !== lastEEEUpdate) {
+      lastEEEUpdate = curEEEUpdate;
+      renderSidebar(container);
+      return;
+    }
+
     const newClassCount = Store.getClasses().length;
     const classBadge = container.querySelector('[data-route="/classes"] .sidebar-item-badge');
     if (classBadge) classBadge.textContent = newClassCount;
