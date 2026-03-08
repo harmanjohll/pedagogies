@@ -7,6 +7,7 @@
 import { showToast } from '../components/toast.js';
 import { Store } from '../state.js';
 import { sendChat } from '../api.js';
+import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 
 /* ── Simulation catalogue ── */
 const SIMULATIONS = [
@@ -884,6 +885,8 @@ export function render(container) {
       <div class="main-scroll">
         <div class="page-container">
 
+          ${renderWorkflowBreadcrumb('enactment')}
+
           <!-- Header -->
           <div class="page-header" style="margin-bottom: 20px;">
             <div>
@@ -1169,6 +1172,9 @@ export function render(container) {
     }
 
     /* ── Event listeners ── */
+
+    // Workflow breadcrumb clicks
+    bindWorkflowClicks(container);
 
     // Subject filter tabs
     container.querySelectorAll('.sim-filter-tab').forEach(tab => {
