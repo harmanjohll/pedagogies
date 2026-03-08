@@ -36,6 +36,7 @@ const ICONS = {
   sourceAnalysis: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`,
   seatPlan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>`,
   cceDiscussion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
+  myCca: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>`,
 };
 
 /* ── EEE-to-sidebar mapping: which EEE keys get sidebar nav items ── */
@@ -55,7 +56,8 @@ const EEE_NAV_MAP = {
 function buildNavItems() {
   const staticBefore = [
     { id: '/', icon: 'dashboard', label: 'Dashboard' },
-    { id: '/classes', icon: 'classes', label: 'Classes', section: 'Culture' },
+    { id: '/classes', icon: 'classes', label: 'My Classes', section: 'Culture' },
+    { id: '/my-cca', icon: 'myCca', label: 'My CCA' },
     { id: '/lesson-planner', icon: 'lessonPlanner', label: 'Lesson Planner', section: 'Design' },
     { id: '/spatial', icon: 'spatial', label: 'Spatial Designer' },
     { id: '/cce', icon: 'cceDiscussion', label: 'CCE2021' },
@@ -103,18 +105,38 @@ function buildNavItems() {
   return [...staticBefore, ...enactmentItems, ...staticAfter];
 }
 
+/* ── Collapsed sections persistence ── */
+function getCollapsedSections() {
+  try { return JSON.parse(localStorage.getItem('cocher_sidebar_collapsed') || '[]'); } catch { return []; }
+}
+function setCollapsedSections(arr) {
+  localStorage.setItem('cocher_sidebar_collapsed', JSON.stringify(arr));
+}
+
 export function renderSidebar(container) {
   const classCount = Store.getClasses().length;
   const lessonCount = Store.getLessons().length;
   const navItems = buildNavItems();
+  const collapsedSections = getCollapsedSections();
 
+  // Group items by section
   let currentSection = null;
   let navHTML = '';
 
-  navItems.forEach(item => {
+  navItems.forEach((item, idx) => {
     if (item.section && item.section !== currentSection) {
+      // Close previous group if open
+      if (currentSection !== null) {
+        navHTML += `</div>`; // close .sidebar-section-items
+      }
       currentSection = item.section;
-      navHTML += `<div class="sidebar-section-label">${item.section}</div>`;
+      const isCollapsed = collapsedSections.includes(currentSection);
+      navHTML += `
+        <div class="sidebar-section-label" data-section="${currentSection}" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;">
+          <span class="sidebar-section-tri${isCollapsed ? '' : ' open'}" style="display:inline-block;width:0;height:0;border-left:5px solid var(--ink-faint);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform 0.2s ease;${isCollapsed ? '' : 'transform:rotate(90deg);'}"></span>
+          ${currentSection}
+        </div>
+        <div class="sidebar-section-items" data-section-items="${currentSection}" style="${isCollapsed ? 'display:none;' : ''}">`;
     }
 
     let badge = '';
@@ -128,6 +150,11 @@ export function renderSidebar(container) {
         ${badge}
       </button>`;
   });
+
+  // Close last group
+  if (currentSection !== null) {
+    navHTML += `</div>`;
+  }
 
   container.innerHTML = `
     <a class="sidebar-brand" href="#/" style="text-decoration:none;cursor:pointer;">
@@ -157,6 +184,30 @@ export function renderSidebar(container) {
   // Navigation click handlers
   container.querySelectorAll('.sidebar-item[data-route]').forEach(btn => {
     btn.addEventListener('click', () => navigate(btn.dataset.route));
+  });
+
+  // Section collapse/expand toggles
+  container.querySelectorAll('.sidebar-section-label[data-section]').forEach(label => {
+    label.addEventListener('click', () => {
+      const section = label.dataset.section;
+      const items = container.querySelector(`[data-section-items="${section}"]`);
+      const tri = label.querySelector('.sidebar-section-tri');
+      const collapsed = getCollapsedSections();
+
+      if (collapsed.includes(section)) {
+        // Expand
+        const idx = collapsed.indexOf(section);
+        collapsed.splice(idx, 1);
+        if (items) items.style.display = '';
+        if (tri) { tri.classList.add('open'); tri.style.transform = 'rotate(90deg)'; }
+      } else {
+        // Collapse
+        collapsed.push(section);
+        if (items) items.style.display = 'none';
+        if (tri) { tri.classList.remove('open'); tri.style.transform = ''; }
+      }
+      setCollapsedSections(collapsed);
+    });
   });
 
   // Theme toggle

@@ -27,6 +27,7 @@ import { render as renderSettings } from './views/settings.js';
 import { render as renderStimulusMaterial } from './views/stimulus-material.js';
 import { render as renderSourceAnalysis } from './views/source-analysis.js';
 import { render as renderCCE } from './views/cce.js';
+import { render as renderMyCCA } from './views/my-cca.js';
 
 function init() {
   const app = document.getElementById('app');
@@ -103,6 +104,7 @@ function init() {
   registerRoute('/stimulus-material', renderStimulusMaterial);
   registerRoute('/source-analysis', renderSourceAnalysis);
   registerRoute('/cce', renderCCE);
+  registerRoute('/my-cca', renderMyCCA);
   registerRoute('/settings', renderSettings);
 
   // Start router

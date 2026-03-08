@@ -175,6 +175,13 @@ const ASSESS_STYLES = `
   .mai-sub-label { font-weight: 600; font-size: 0.875rem; color: var(--ink); }
   .mai-sub-desc { font-size: 0.8125rem; color: var(--ink-muted); margin-top: 2px; line-height: 1.5; }
 
+  .collapsible-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; border: none; background: none; padding: 0; width: 100%; text-align: left; }
+  .collapsible-toggle .tri { display: inline-block; width: 0; height: 0; border-left: 6px solid var(--ink-muted); border-top: 5px solid transparent; border-bottom: 5px solid transparent; transition: transform 0.2s ease; flex-shrink: 0; }
+  .collapsible-toggle.open .tri { transform: rotate(90deg); }
+  .collapsible-body { overflow: hidden; transition: max-height 0.3s ease, opacity 0.2s ease; }
+  .collapsible-body.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
+  .collapsible-body.expanded { opacity: 1; pointer-events: auto; }
+
   .hattie-bar { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-light, #f0f0f4); }
   .dark .hattie-bar { border-bottom-color: var(--border, #2e2e3e); }
   .hattie-label { flex: 0 0 200px; font-size: 0.8125rem; font-weight: 600; color: var(--ink); }
@@ -1115,31 +1122,320 @@ export function renderAaL(container) {
           </div>
         </div>
 
-        <!-- MAI Framework -->
-        <div class="assess-card">
-          <div class="assess-section-title">Metacognitive Awareness Inventory (MAI)</div>
+        <!-- GROW by Reflecting (Beatty, 2015) -->
+        <div class="assess-card" id="aal-grow-card">
+          <div class="assess-section-title" style="cursor:pointer;" data-jump="aal-grow-card" title="Click to see this framework in action">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              GROW by Reflecting
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </span>
+          </div>
           <div class="assess-section-desc">
-            Based on Schraw &amp; Dennison (1994), the MAI measures two broad domains of metacognition.
-            Use these as a framework for teaching students to become more self-aware, strategic learners.
+            Beatty\u2019s GROW framework empowers students to become proactive, self-reflective learners.
+            Each letter guides a stage of personal reflection \u2014 celebrating success, planning improvement, owning knowledge, and looking ahead.
           </div>
 
-          ${Object.entries(MAI_DOMAINS).map(([key, domain]) => `
-            <div class="mai-domain">
-              <div class="mai-domain-header">${domain.label}</div>
-              <div class="mai-domain-desc">${domain.desc}</div>
-              ${domain.subs.map(sub => `
-                <div class="mai-sub">
-                  <div class="mai-sub-label">${sub.label}</div>
-                  <div class="mai-sub-desc">${sub.desc}</div>
-                </div>
-              `).join('')}
+          <!-- Circular GROW Diagram (matched to reference: G top-right, R right, O bottom, W left) -->
+          <div style="display:flex;justify-content:center;margin-bottom:20px;">
+            <svg viewBox="0 0 380 380" width="320" height="320" style="max-width:100%;">
+              <defs>
+                <marker id="arwG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#f59e0b"/></marker>
+                <marker id="arwR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#f59e0b"/></marker>
+                <marker id="arwO" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#10b981"/></marker>
+                <marker id="arwW" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#8b5cf6"/></marker>
+              </defs>
+
+              <!-- Outer circle border -->
+              <circle cx="190" cy="190" r="150" fill="none" stroke="#10b981" stroke-width="2.5"/>
+
+              <!-- Quadrant dividing lines -->
+              <line x1="190" y1="40" x2="190" y2="340" stroke="var(--border,#d1d5db)" stroke-width="1.5"/>
+              <line x1="40" y1="190" x2="340" y2="190" stroke="var(--border,#d1d5db)" stroke-width="1.5"/>
+
+              <!-- Quadrant fills -->
+              <!-- G (top-right): light orange/amber -->
+              <path d="M190,40 A150,150 0 0,1 340,190 L190,190 Z" fill="rgba(245,158,11,0.08)"/>
+              <!-- R (bottom-right): light amber/yellow -->
+              <path d="M340,190 A150,150 0 0,1 190,340 L190,190 Z" fill="rgba(245,158,11,0.06)"/>
+              <!-- O (bottom-left): light green -->
+              <path d="M190,340 A150,150 0 0,1 40,190 L190,190 Z" fill="rgba(16,185,129,0.08)"/>
+              <!-- W (top-left): light blue/purple -->
+              <path d="M40,190 A150,150 0 0,1 190,40 L190,190 Z" fill="rgba(139,92,246,0.06)"/>
+
+              <!-- Centre circle -->
+              <circle cx="190" cy="190" r="50" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
+              <text x="190" y="184" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink,#374151)">Believe</text>
+              <text x="190" y="200" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink,#374151)">you can</text>
+
+              <!-- Clockwise arrows along the outer edge -->
+              <path d="M215,44 Q265,28 310,60" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#arwG)"/>
+              <path d="M344,215 Q352,265 325,310" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#arwR)"/>
+              <path d="M165,344 Q115,352 65,325" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#arwO)"/>
+              <path d="M36,165 Q28,115 55,65" fill="none" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arwW)"/>
+
+              <!-- G label (top-right quadrant) -->
+              <text x="270" y="100" text-anchor="middle" font-size="22" font-weight="800" fill="#f59e0b">G</text>
+              <text x="270" y="116" text-anchor="middle" font-size="8" font-weight="600" fill="#f59e0b" font-style="italic">Gift yourself</text>
+              <text x="270" y="127" text-anchor="middle" font-size="8" font-weight="600" fill="#f59e0b" font-style="italic">success</text>
+
+              <!-- R label (bottom-right quadrant) -->
+              <text x="270" y="265" text-anchor="middle" font-size="22" font-weight="800" fill="#f59e0b">R</text>
+              <text x="270" y="281" text-anchor="middle" font-size="8" font-weight="600" fill="#f59e0b" font-style="italic">Rise above</text>
+              <text x="270" y="292" text-anchor="middle" font-size="8" font-weight="600" fill="#f59e0b" font-style="italic">with small steps</text>
+
+              <!-- O label (bottom-left quadrant) -->
+              <text x="110" y="265" text-anchor="middle" font-size="22" font-weight="800" fill="#10b981">O</text>
+              <text x="110" y="281" text-anchor="middle" font-size="8" font-weight="600" fill="#10b981" font-style="italic">Own your</text>
+              <text x="110" y="292" text-anchor="middle" font-size="8" font-weight="600" fill="#10b981" font-style="italic">knowledge</text>
+
+              <!-- W label (top-left quadrant) -->
+              <text x="110" y="100" text-anchor="middle" font-size="22" font-weight="800" fill="#8b5cf6">W</text>
+              <text x="110" y="116" text-anchor="middle" font-size="8" font-weight="600" fill="#8b5cf6" font-style="italic">Watch for what</text>
+              <text x="110" y="127" text-anchor="middle" font-size="8" font-weight="600" fill="#8b5cf6" font-style="italic">comes next</text>
+            </svg>
+          </div>
+
+          <!-- GROW detail cards -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #f59e0b;background:rgba(245,158,11,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-g" title="Click to see what G looks like when enacted">
+              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">G \u2014 Gift yourself success</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Celebrate what you <em>do</em> understand. Recognise your strengths before focusing on gaps.</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
+                <strong>Ask yourself:</strong> \u201cWhat is one thing I understand?\u201d<br/>
+                <strong>Go deeper:</strong> \u201cHow would I teach this to a friend?\u201d
+              </div>
             </div>
-          `).join('')}
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #f59e0b;background:rgba(245,158,11,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-r" title="Click to see what R looks like when enacted">
+              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">R \u2014 Rise above with small steps</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Identify what you don\u2019t yet understand and plan a small, achievable step to improve.</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
+                <strong>Ask yourself:</strong> \u201cWhat do I not yet understand?\u201d<br/>
+                <strong>Go deeper:</strong> \u201cWhat will I do to improve?\u201d
+              </div>
+            </div>
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #10b981;background:rgba(16,185,129,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-o" title="Click to see what O looks like when enacted">
+              <div style="font-weight:700;font-size:0.9375rem;color:#10b981;margin-bottom:4px;">O \u2014 Own your knowledge</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Make learning yours by connecting it to real life and sharing it with others.</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
+                <strong>Ask yourself:</strong> \u201cWhat is one real-life example?\u201d<br/>
+                <strong>Go deeper:</strong> \u201cHow have I shared this with someone?\u201d
+              </div>
+            </div>
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #8b5cf6;background:rgba(139,92,246,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-w" title="Click to see what W looks like when enacted">
+              <div style="font-weight:700;font-size:0.9375rem;color:#8b5cf6;margin-bottom:4px;">W \u2014 Watch for what comes next</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Look ahead. Activate prior knowledge about the next topic so you arrive prepared.</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
+                <strong>Ask yourself:</strong> \u201cWhat do I already know about the next topic?\u201d<br/>
+                <strong>Go deeper:</strong> \u201cWhat is coming up and how can I prepare?\u201d
+              </div>
+            </div>
+          </div>
+
+          <!-- Enacted example popup area -->
+          <div id="aal-enacted-example" style="display:none;margin-bottom:16px;padding:16px;border-radius:10px;border:2px solid var(--accent,#4361ee);background:rgba(67,97,238,0.04);animation:fadeIn 0.2s ease;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <div style="font-weight:700;font-size:0.875rem;color:var(--accent,#4361ee);" id="enacted-title"></div>
+              <button class="btn btn-secondary btn-sm" id="close-enacted" style="padding:2px 8px;font-size:0.75rem;">Close</button>
+            </div>
+            <div id="enacted-content" style="font-size:0.8125rem;color:var(--ink);line-height:1.7;"></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class (optional)</label>
+              <select id="grow-class" class="input" style="width:100%;">
+                ${classDropdownOptions()}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic / context</label>
+              <input type="text" id="grow-topic" class="input" placeholder="e.g. Chemical bonding revision" style="width:100%;" />
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-sm" id="grow-generate-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Generate GROW Reflection Prompts
+          </button>
+          <div id="grow-output" style="margin-top:12px;"></div>
+        </div>
+
+        <!-- ACT on Feedback Framework -->
+        <div class="assess-card" id="aal-act-card">
+          <div class="assess-section-title" style="cursor:pointer;" data-jump="aal-act-card" title="Click to see this framework in action">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              ACT on Feedback
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </span>
+          </div>
+          <div class="assess-section-desc">
+            A learner-centred framework for acting on feedback received. ACT teaches students to treat feedback as a growth tool
+            rather than a judgement \u2014 moving from passive receipt to active response.
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #ef4444;background:rgba(239,68,68,0.03);cursor:pointer;" class="aal-panel-link" data-panel="act-a" title="Click to see what A looks like when enacted">
+              <div style="font-weight:700;font-size:0.9375rem;color:#ef4444;margin-bottom:4px;">A \u2014 Acknowledge</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Receive the feedback with an open mind. Notice your emotional response and look past it to the learning message.</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
+                <strong>Ask yourself:</strong> \u201cHow do I feel about this feedback?\u201d<br/>
+                <strong>Go deeper:</strong> \u201cHow might it help me learn better?\u201d
+              </div>
+            </div>
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #f59e0b;background:rgba(245,158,11,0.03);cursor:pointer;" class="aal-panel-link" data-panel="act-c" title="Click to see what C looks like when enacted">
+              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">C \u2014 Connect</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Link the feedback to your success criteria, your goals, and any previous feedback you\u2019ve received.</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
+                <strong>Ask yourself:</strong> \u201cHow does this connect with the success criteria or my goals?\u201d<br/>
+                <strong>Go deeper:</strong> \u201cHow does this connect with previous feedback?\u201d
+              </div>
+            </div>
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #3b82f6;background:rgba(59,130,246,0.03);cursor:pointer;" class="aal-panel-link" data-panel="act-t" title="Click to see what T looks like when enacted">
+              <div style="font-weight:700;font-size:0.9375rem;color:#3b82f6;margin-bottom:4px;">T \u2014 Test</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Put the feedback into action. Identify a specific habit to adjust and plan how to check your progress.</div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
+                <strong>Ask yourself:</strong> \u201cWhat habit do I need to adjust?\u201d<br/>
+                <strong>Go deeper:</strong> \u201cHow will I know I am improving?\u201d
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:12px 16px;border-radius:8px;background:var(--bg-subtle,#f8f9fa);border:1px solid var(--border,#e2e5ea);margin-bottom:12px;">
+            <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:6px;">The Proactive Learner Cycle</div>
+            <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
+              GROW and ACT are part of a continuous learning cycle: <span style="color:#3b82f6;font-weight:600;">GROW</span> \u2192 <span style="color:#ef4444;font-weight:600;">ACT</span> \u2192 MAP \u2192 ASK.<br/>
+              Students cycle through these both <em>in</em> and <em>out</em> of lessons, supported by three learner behaviours: <strong>Prepare</strong> \u2192 <strong>Participate</strong> \u2192 <strong>Process</strong>.<br/>
+              See the full Proactive Learner visual below.
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class (optional)</label>
+              <select id="act-class" class="input" style="width:100%;">
+                ${classDropdownOptions()}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic / activity</label>
+              <input type="text" id="act-topic" class="input" placeholder="e.g. Essay feedback on argumentative writing" style="width:100%;" />
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-sm" id="act-generate-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Generate ACT Feedback Prompts
+          </button>
+          <div id="act-output" style="margin-top:12px;"></div>
+        </div>
+
+        <!-- Proactive Learner Cycle -->
+        <div class="assess-card" id="aal-proactive-card">
+          <div class="assess-section-title" style="cursor:pointer;" data-jump="aal-proactive-card" title="Click to see this framework in action">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              The Proactive Learner Cycle
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </span>
+          </div>
+          <div class="assess-section-desc">
+            Beatty\u2019s Proactive Learner model shows how GROW, ACT, MAP, and ASK work together in a continuous cycle
+            \u2014 both in and out of lessons. The inner ring represents the learner behaviours that drive the cycle: Prepare, Participate, and Process.
+          </div>
+
+          <div style="display:flex;justify-content:center;margin-bottom:20px;">
+            <svg viewBox="0 0 440 440" width="380" height="380" style="max-width:100%;">
+              <defs>
+                <marker id="plArw1" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#3b82f6"/></marker>
+                <marker id="plArw2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#ef4444"/></marker>
+                <marker id="plArw3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#10b981"/></marker>
+                <marker id="plArw4" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#f59e0b"/></marker>
+              </defs>
+
+              <!-- Outer circle border -->
+              <circle cx="220" cy="220" r="185" fill="none" stroke="#10b981" stroke-width="2.5"/>
+
+              <!-- Outer quadrant dividers -->
+              <line x1="220" y1="35" x2="220" y2="405" stroke="var(--border,#d1d5db)" stroke-width="1.5"/>
+              <line x1="35" y1="220" x2="405" y2="220" stroke="var(--border,#d1d5db)" stroke-width="1.5"/>
+
+              <!-- Outer quadrant fills -->
+              <!-- GROW (top-right): blue -->
+              <path d="M220,35 A185,185 0 0,1 405,220 L220,220 Z" fill="rgba(59,130,246,0.08)"/>
+              <!-- ACT (bottom-right): red/pink -->
+              <path d="M405,220 A185,185 0 0,1 220,405 L220,220 Z" fill="rgba(239,68,68,0.08)"/>
+              <!-- MAP (bottom-left): green -->
+              <path d="M220,405 A185,185 0 0,1 35,220 L220,220 Z" fill="rgba(16,185,129,0.08)"/>
+              <!-- ASK (top-left): orange -->
+              <path d="M35,220 A185,185 0 0,1 220,35 L220,220 Z" fill="rgba(245,158,11,0.08)"/>
+
+              <!-- Inner ring border -->
+              <circle cx="220" cy="220" r="95" fill="none" stroke="var(--border,#d1d5db)" stroke-width="1.5"/>
+
+              <!-- Inner ring thirds: Prepare (top-right), Participate (bottom), Process (top-left) -->
+              <!-- Prepare: from 12 o'clock CW to 4 o'clock (0° to 120°) -->
+              <path d="M220,125 A95,95 0 0,1 302,268 L220,220 Z" fill="rgba(99,102,241,0.08)" stroke="#6366f1" stroke-width="1"/>
+              <!-- Participate: from 4 o'clock CW to 8 o'clock (120° to 240°) -->
+              <path d="M302,268 A95,95 0 0,1 138,268 L220,220 Z" fill="rgba(236,72,153,0.08)" stroke="#ec4899" stroke-width="1"/>
+              <!-- Process: from 8 o'clock CW to 12 o'clock (240° to 360°) -->
+              <path d="M138,268 A95,95 0 0,1 220,125 L220,220 Z" fill="rgba(20,184,166,0.08)" stroke="#14b8a6" stroke-width="1"/>
+
+              <!-- Centre circle -->
+              <circle cx="220" cy="220" r="42" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
+              <text x="220" y="214" text-anchor="middle" font-size="10" font-weight="700" fill="var(--ink,#374151)">Proactive</text>
+              <text x="220" y="228" text-anchor="middle" font-size="10" font-weight="700" fill="var(--ink,#374151)">Learner</text>
+
+              <!-- Outer clockwise arrows -->
+              <path d="M250,40 Q320,28 378,75" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#plArw1)"/>
+              <path d="M410,250 Q418,320 378,370" fill="none" stroke="#ef4444" stroke-width="2" marker-end="url(#plArw2)"/>
+              <path d="M190,410 Q118,418 68,378" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#plArw3)"/>
+              <path d="M32,190 Q24,118 62,68" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#plArw4)"/>
+
+              <!-- Outer labels -->
+              <text x="330" y="110" text-anchor="middle" font-size="18" font-weight="800" fill="#3b82f6">GROW</text>
+              <text x="330" y="127" text-anchor="middle" font-size="8" fill="#3b82f6" font-weight="500" font-style="italic">Reflect on learning</text>
+              <text x="330" y="330" text-anchor="middle" font-size="18" font-weight="800" fill="#ef4444">ACT</text>
+              <text x="330" y="347" text-anchor="middle" font-size="8" fill="#ef4444" font-weight="500" font-style="italic">Act on feedback</text>
+              <text x="110" y="330" text-anchor="middle" font-size="18" font-weight="800" fill="#10b981">MAP</text>
+              <text x="110" y="347" text-anchor="middle" font-size="8" fill="#10b981" font-weight="500" font-style="italic">Map your progress</text>
+              <text x="110" y="110" text-anchor="middle" font-size="18" font-weight="800" fill="#f59e0b">ASK</text>
+              <text x="110" y="127" text-anchor="middle" font-size="8" fill="#f59e0b" font-weight="500" font-style="italic">Ask for help</text>
+
+              <!-- Inner labels -->
+              <text x="268" y="170" text-anchor="middle" font-size="10" font-weight="700" fill="#6366f1">Prepare</text>
+              <text x="220" y="295" text-anchor="middle" font-size="10" font-weight="700" fill="#ec4899">Participate</text>
+              <text x="172" y="170" text-anchor="middle" font-size="10" font-weight="700" fill="#14b8a6">Process</text>
+            </svg>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Outer Ring \u2014 Learning Practices</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
+                <span style="color:#3b82f6;font-weight:600;">GROW</span> \u2192 Reflect on what you know and don\u2019t know<br/>
+                <span style="color:#ef4444;font-weight:600;">ACT</span> \u2192 Process and act on feedback received<br/>
+                <span style="color:#10b981;font-weight:600;">MAP</span> \u2192 Track your progress against goals<br/>
+                <span style="color:#f59e0b;font-weight:600;">ASK</span> \u2192 Seek help and clarify understanding
+              </div>
+            </div>
+            <div>
+              <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Inner Ring \u2014 Learner Behaviours</div>
+              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
+                <span style="color:#6366f1;font-weight:600;">Prepare</span> \u2192 Get ready for learning before class<br/>
+                <span style="color:#ec4899;font-weight:600;">Participate</span> \u2192 Engage actively during lessons<br/>
+                <span style="color:#14b8a6;font-weight:600;">Process</span> \u2192 Make sense of learning after class
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Reflection Prompt Generator -->
-        <div class="assess-card">
-          <div class="assess-section-title">Metacognitive Reflection Prompt Generator</div>
+        <div class="assess-card" id="aal-reflection-card">
+          <div class="assess-section-title" style="cursor:pointer;" data-jump="aal-reflection-card" title="Click to see this tool in action">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              Metacognitive Reflection Prompt Generator
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </span>
+          </div>
           <div class="assess-section-desc">
             Generate reflection prompts for students to develop metacognitive awareness.
             Select a domain focus and the AI will create age-appropriate prompts aligned to Singapore\u2019s curriculum context.
@@ -1183,260 +1479,14 @@ export function renderAaL(container) {
           <div id="aal-output" style="margin-top:12px;"></div>
         </div>
 
-        <!-- GROW by Reflecting (Beatty, 2015) -->
-        <div class="assess-card">
-          <div class="assess-section-title">GROW by Reflecting</div>
-          <div class="assess-section-desc">
-            Beatty\u2019s GROW framework empowers students to become proactive, self-reflective learners.
-            Each letter guides a stage of personal reflection \u2014 celebrating success, planning improvement, owning knowledge, and looking ahead.
-          </div>
-
-          <!-- Circular GROW Diagram -->
-          <div style="display:flex;justify-content:center;margin-bottom:20px;">
-            <svg viewBox="0 0 340 340" width="300" height="300" style="max-width:100%;">
-              <!-- Quadrant segments -->
-              <path d="M170,24 A146,146 0 0,1 296,104 L170,170 Z" fill="rgba(59,130,246,0.12)" stroke="#3b82f6" stroke-width="2"/>
-              <path d="M296,104 A146,146 0 0,1 296,246 L170,170 Z" fill="rgba(245,158,11,0.12)" stroke="#f59e0b" stroke-width="2"/>
-              <path d="M296,246 A146,146 0 0,1 44,246 L170,170 Z" fill="rgba(16,185,129,0.12)" stroke="#10b981" stroke-width="2"/>
-              <path d="M44,246 A146,146 0 0,1 170,24 L170,170 Z" fill="rgba(139,92,246,0.12)" stroke="#8b5cf6" stroke-width="2"/>
-              <!-- Centre -->
-              <circle cx="170" cy="170" r="46" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
-              <text x="170" y="164" text-anchor="middle" font-size="10" font-weight="700" fill="var(--ink,#1e1e2e)">Believe</text>
-              <text x="170" y="178" text-anchor="middle" font-size="10" font-weight="700" fill="var(--ink,#1e1e2e)">you can</text>
-              <!-- Clockwise arrows -->
-              <path d="M200,42 Q230,32 255,58" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arwG)"/>
-              <path d="M306,178 Q312,210 298,238" fill="none" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arwR)"/>
-              <path d="M210,302 Q170,312 130,302" fill="none" stroke="#10b981" stroke-width="1.5" marker-end="url(#arwO)"/>
-              <path d="M38,190 Q28,150 48,112" fill="none" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#arwW)"/>
-              <defs>
-                <marker id="arwG" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#3b82f6"/></marker>
-                <marker id="arwR" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#f59e0b"/></marker>
-                <marker id="arwO" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#10b981"/></marker>
-                <marker id="arwW" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#8b5cf6"/></marker>
-              </defs>
-              <!-- Labels -->
-              <text x="212" y="66" text-anchor="middle" font-size="15" font-weight="800" fill="#3b82f6">G</text>
-              <text x="212" y="80" text-anchor="middle" font-size="7.5" font-weight="600" fill="#3b82f6">Gift yourself</text>
-              <text x="212" y="90" text-anchor="middle" font-size="7.5" font-weight="600" fill="#3b82f6">success</text>
-              <text x="272" y="170" text-anchor="middle" font-size="15" font-weight="800" fill="#f59e0b">R</text>
-              <text x="272" y="184" text-anchor="middle" font-size="7.5" font-weight="600" fill="#f59e0b">Rise above</text>
-              <text x="272" y="194" text-anchor="middle" font-size="7.5" font-weight="600" fill="#f59e0b">with small steps</text>
-              <text x="170" y="268" text-anchor="middle" font-size="15" font-weight="800" fill="#10b981">O</text>
-              <text x="170" y="282" text-anchor="middle" font-size="7.5" font-weight="600" fill="#10b981">Own your</text>
-              <text x="170" y="292" text-anchor="middle" font-size="7.5" font-weight="600" fill="#10b981">knowledge</text>
-              <text x="68" y="170" text-anchor="middle" font-size="15" font-weight="800" fill="#8b5cf6">W</text>
-              <text x="68" y="184" text-anchor="middle" font-size="7.5" font-weight="600" fill="#8b5cf6">Watch for what</text>
-              <text x="68" y="194" text-anchor="middle" font-size="7.5" font-weight="600" fill="#8b5cf6">comes next</text>
-            </svg>
-          </div>
-
-          <!-- GROW detail cards -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #3b82f6;background:rgba(59,130,246,0.04);">
-              <div style="font-weight:700;font-size:0.9375rem;color:#3b82f6;margin-bottom:4px;">G \u2014 Gift yourself success</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Celebrate what you <em>do</em> understand. Recognise your strengths before focusing on gaps.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cWhat is one thing I understand?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cHow would I teach this to a friend?\u201d
-              </div>
-            </div>
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #f59e0b;background:rgba(245,158,11,0.04);">
-              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">R \u2014 Rise above with small steps</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Identify what you don\u2019t yet understand and plan a small, achievable step to improve.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cWhat do I not yet understand?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cWhat will I do to improve?\u201d
-              </div>
-            </div>
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #10b981;background:rgba(16,185,129,0.04);">
-              <div style="font-weight:700;font-size:0.9375rem;color:#10b981;margin-bottom:4px;">O \u2014 Own your knowledge</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Make learning yours by connecting it to real life and sharing it with others.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cWhat is one real-life example?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cHow have I shared this with someone?\u201d
-              </div>
-            </div>
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #8b5cf6;background:rgba(139,92,246,0.04);">
-              <div style="font-weight:700;font-size:0.9375rem;color:#8b5cf6;margin-bottom:4px;">W \u2014 Watch for what comes next</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Look ahead. Activate prior knowledge about the next topic so you arrive prepared.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cWhat do I already know about the next topic?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cWhat is coming up and how can I prepare?\u201d
-              </div>
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-            <div>
-              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class (optional)</label>
-              <select id="grow-class" class="input" style="width:100%;">
-                ${classDropdownOptions()}
-              </select>
-            </div>
-            <div>
-              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic / context</label>
-              <input type="text" id="grow-topic" class="input" placeholder="e.g. Chemical bonding revision" style="width:100%;" />
-            </div>
-          </div>
-
-          <button class="btn btn-primary btn-sm" id="grow-generate-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            Generate GROW Reflection Prompts
-          </button>
-          <div id="grow-output" style="margin-top:12px;"></div>
-        </div>
-
-        <!-- ACT on Feedback Framework -->
-        <div class="assess-card">
-          <div class="assess-section-title">ACT on Feedback</div>
-          <div class="assess-section-desc">
-            A learner-centred framework for acting on feedback received. ACT teaches students to treat feedback as a growth tool
-            rather than a judgement \u2014 moving from passive receipt to active response.
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #ef4444;background:rgba(239,68,68,0.03);">
-              <div style="font-weight:700;font-size:0.9375rem;color:#ef4444;margin-bottom:4px;">A \u2014 Acknowledge</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Receive the feedback with an open mind. Notice your emotional response and look past it to the learning message.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cHow do I feel about this feedback?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cHow might it help me learn better?\u201d
-              </div>
-            </div>
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #f59e0b;background:rgba(245,158,11,0.03);">
-              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">C \u2014 Connect</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Link the feedback to your success criteria, your goals, and any previous feedback you\u2019ve received.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cHow does this connect with the success criteria or my goals?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cHow does this connect with previous feedback?\u201d
-              </div>
-            </div>
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #3b82f6;background:rgba(59,130,246,0.03);">
-              <div style="font-weight:700;font-size:0.9375rem;color:#3b82f6;margin-bottom:4px;">T \u2014 Test</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Put the feedback into action. Identify a specific habit to adjust and plan how to check your progress.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cWhat habit do I need to adjust?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cHow will I know I am improving?\u201d
-              </div>
-            </div>
-          </div>
-
-          <div style="padding:12px 16px;border-radius:8px;background:var(--bg-subtle,#f8f9fa);border:1px solid var(--border,#e2e5ea);margin-bottom:12px;">
-            <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:6px;">The Proactive Learner Cycle</div>
-            <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
-              GROW and ACT are part of a continuous learning cycle: <span style="color:#3b82f6;font-weight:600;">GROW</span> \u2192 <span style="color:#ef4444;font-weight:600;">ACT</span> \u2192 MAP \u2192 ASK.<br/>
-              Students cycle through these both <em>in</em> and <em>out</em> of lessons, supported by three learner behaviours: <strong>Prepare</strong> \u2192 <strong>Participate</strong> \u2192 <strong>Process</strong>.<br/>
-              See the full Proactive Learner visual below.
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-            <div>
-              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class (optional)</label>
-              <select id="act-class" class="input" style="width:100%;">
-                ${classDropdownOptions()}
-              </select>
-            </div>
-            <div>
-              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic / activity</label>
-              <input type="text" id="act-topic" class="input" placeholder="e.g. Essay feedback on argumentative writing" style="width:100%;" />
-            </div>
-          </div>
-
-          <button class="btn btn-primary btn-sm" id="act-generate-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            Generate ACT Feedback Prompts
-          </button>
-          <div id="act-output" style="margin-top:12px;"></div>
-        </div>
-
-        <!-- Proactive Learner Cycle -->
-        <div class="assess-card">
-          <div class="assess-section-title">The Proactive Learner Cycle</div>
-          <div class="assess-section-desc">
-            Beatty\u2019s Proactive Learner model shows how GROW, ACT, MAP, and ASK work together in a continuous cycle
-            \u2014 both in and out of lessons. The inner ring represents the learner behaviours that drive the cycle: Prepare, Participate, and Process.
-          </div>
-
-          <div style="display:flex;justify-content:center;margin-bottom:20px;">
-            <svg viewBox="0 0 400 400" width="360" height="360" style="max-width:100%;">
-              <!-- Outer ring: GROW / ACT / MAP / ASK -->
-              <!-- Top-right: GROW -->
-              <path d="M200,30 A170,170 0 0,1 370,200 L200,200 Z" fill="rgba(59,130,246,0.10)" stroke="#3b82f6" stroke-width="2.5"/>
-              <!-- Bottom-right: ACT -->
-              <path d="M370,200 A170,170 0 0,1 200,370 L200,200 Z" fill="rgba(239,68,68,0.10)" stroke="#ef4444" stroke-width="2.5"/>
-              <!-- Bottom-left: MAP -->
-              <path d="M200,370 A170,170 0 0,1 30,200 L200,200 Z" fill="rgba(16,185,129,0.10)" stroke="#10b981" stroke-width="2.5"/>
-              <!-- Top-left: ASK -->
-              <path d="M30,200 A170,170 0 0,1 200,30 L200,200 Z" fill="rgba(245,158,11,0.10)" stroke="#f59e0b" stroke-width="2.5"/>
-
-              <!-- Inner ring: Prepare / Participate / Process -->
-              <circle cx="200" cy="200" r="90" fill="none" stroke="var(--border,#d1d5db)" stroke-width="1" stroke-dasharray="4,3"/>
-              <!-- Prepare (top) -->
-              <path d="M200,110 A90,90 0 0,1 278,245 L200,200 Z" fill="rgba(99,102,241,0.08)" stroke="#6366f1" stroke-width="1.5"/>
-              <!-- Participate (bottom-right) -->
-              <path d="M278,245 A90,90 0 0,1 122,245 L200,200 Z" fill="rgba(236,72,153,0.08)" stroke="#ec4899" stroke-width="1.5"/>
-              <!-- Process (bottom-left) -->
-              <path d="M122,245 A90,90 0 0,1 200,110 L200,200 Z" fill="rgba(20,184,166,0.08)" stroke="#14b8a6" stroke-width="1.5"/>
-
-              <!-- Centre -->
-              <circle cx="200" cy="200" r="36" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
-              <text x="200" y="195" text-anchor="middle" font-size="9" font-weight="700" fill="var(--ink,#1e1e2e)">Proactive</text>
-              <text x="200" y="208" text-anchor="middle" font-size="9" font-weight="700" fill="var(--ink,#1e1e2e)">Learner</text>
-
-              <!-- Outer clockwise arrows -->
-              <path d="M260,48 Q310,40 345,80" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#plArw1)"/>
-              <path d="M378,260 Q380,310 345,340" fill="none" stroke="#ef4444" stroke-width="1.5" marker-end="url(#plArw2)"/>
-              <path d="M140,370 Q90,365 58,335" fill="none" stroke="#10b981" stroke-width="1.5" marker-end="url(#plArw3)"/>
-              <path d="M35,140 Q32,90 55,60" fill="none" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#plArw4)"/>
-              <defs>
-                <marker id="plArw1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#3b82f6"/></marker>
-                <marker id="plArw2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#ef4444"/></marker>
-                <marker id="plArw3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#10b981"/></marker>
-                <marker id="plArw4" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#f59e0b"/></marker>
-              </defs>
-
-              <!-- Outer labels -->
-              <text x="305" y="105" text-anchor="middle" font-size="16" font-weight="800" fill="#3b82f6">GROW</text>
-              <text x="305" y="120" text-anchor="middle" font-size="7.5" fill="#3b82f6" font-weight="500">Reflect on learning</text>
-              <text x="315" y="310" text-anchor="middle" font-size="16" font-weight="800" fill="#ef4444">ACT</text>
-              <text x="315" y="325" text-anchor="middle" font-size="7.5" fill="#ef4444" font-weight="500">Act on feedback</text>
-              <text x="90" y="310" text-anchor="middle" font-size="16" font-weight="800" fill="#10b981">MAP</text>
-              <text x="90" y="325" text-anchor="middle" font-size="7.5" fill="#10b981" font-weight="500">Map your progress</text>
-              <text x="95" y="105" text-anchor="middle" font-size="16" font-weight="800" fill="#f59e0b">ASK</text>
-              <text x="95" y="120" text-anchor="middle" font-size="7.5" fill="#f59e0b" font-weight="500">Ask for help</text>
-
-              <!-- Inner labels -->
-              <text x="245" y="157" text-anchor="middle" font-size="10" font-weight="700" fill="#6366f1">Prepare</text>
-              <text x="240" y="268" text-anchor="middle" font-size="10" font-weight="700" fill="#ec4899">Participate</text>
-              <text x="155" y="165" text-anchor="middle" font-size="10" font-weight="700" fill="#14b8a6">Process</text>
-            </svg>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div>
-              <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Outer Ring \u2014 Learning Practices</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
-                <span style="color:#3b82f6;font-weight:600;">GROW</span> \u2192 Reflect on what you know and don\u2019t know<br/>
-                <span style="color:#ef4444;font-weight:600;">ACT</span> \u2192 Process and act on feedback received<br/>
-                <span style="color:#10b981;font-weight:600;">MAP</span> \u2192 Track your progress against goals<br/>
-                <span style="color:#f59e0b;font-weight:600;">ASK</span> \u2192 Seek help and clarify understanding
-              </div>
-            </div>
-            <div>
-              <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Inner Ring \u2014 Learner Behaviours</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
-                <span style="color:#6366f1;font-weight:600;">Prepare</span> \u2192 Get ready for learning before class<br/>
-                <span style="color:#ec4899;font-weight:600;">Participate</span> \u2192 Engage actively during lessons<br/>
-                <span style="color:#14b8a6;font-weight:600;">Process</span> \u2192 Make sense of learning after class
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- SRL Strategies -->
-        <div class="assess-card">
-          <div class="assess-section-title">Self-Regulated Learning (SRL) Strategies</div>
+        <div class="assess-card" id="aal-srl-card">
+          <div class="assess-section-title" style="cursor:pointer;" data-jump="aal-srl-card" title="Click to see subject-specific applications">
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              Self-Regulated Learning (SRL) Strategies
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </span>
+          </div>
           <div class="assess-section-desc">Key strategies teachers can model and scaffold for students. Click a strategy to see subject-specific applications.</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;" id="srl-grid">
             ${SRL_STRATEGIES.map((s, i) => `
@@ -1448,6 +1498,34 @@ export function renderAaL(container) {
           </div>
           <div id="srl-detail"></div>
         </div>
+
+        <!-- MAI Framework (Say More — collapsible) -->
+        <div class="assess-card" id="aal-mai-card">
+          <button class="collapsible-toggle" id="mai-toggle">
+            <span class="tri"></span>
+            <span class="assess-section-title" style="margin-bottom:0;">Metacognitive Awareness Inventory (MAI) \u2014 Theoretical Reference</span>
+          </button>
+          <div class="assess-section-desc" style="margin-top:4px;">
+            Based on Schraw &amp; Dennison (1994). Click <em>Say More</em> to expand the full MAI taxonomy.
+          </div>
+
+          <div class="collapsible-body collapsed" id="mai-body" style="max-height:0;">
+            <div style="padding-top:12px;">
+              ${Object.entries(MAI_DOMAINS).map(([key, domain]) => `
+                <div class="mai-domain">
+                  <div class="mai-domain-header">${domain.label}</div>
+                  <div class="mai-domain-desc">${domain.desc}</div>
+                  ${domain.subs.map(sub => `
+                    <div class="mai-sub">
+                      <div class="mai-sub-label">${sub.label}</div>
+                      <div class="mai-sub-desc">${sub.desc}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -1455,7 +1533,80 @@ export function renderAaL(container) {
   wireAaLEvents(container);
 }
 
+/* ── Enacted examples data for panel links ── */
+const ENACTED_EXAMPLES = {
+  'grow-g': {
+    title: 'G — Gift yourself success (Enacted)',
+    content: `<strong>In the classroom:</strong> After a quiz on Chemical Bonding, the teacher asks students to write down one concept they understood well.\n\n<strong>Student example:</strong> "I understood that ionic bonds form when electrons are transferred from a metal to a non-metal. I could draw the dot-and-cross diagram for NaCl."\n\n<strong>Teacher prompt:</strong> "Now, how would you explain this to someone who missed today's lesson?"\n\n<strong>Outcome:</strong> Students feel empowered because they start from a position of success rather than focusing on gaps first.`
+  },
+  'grow-r': {
+    title: 'R — Rise above with small steps (Enacted)',
+    content: `<strong>In the classroom:</strong> Students identify one thing they found challenging in the lesson.\n\n<strong>Student example:</strong> "I'm not sure why some atoms form covalent bonds instead of ionic bonds. My small step: I'll re-read the textbook section on electronegativity tonight and try the practice questions."\n\n<strong>Teacher prompt:</strong> "What is the smallest thing you can do today to move forward?"\n\n<strong>Outcome:</strong> Breaks down overwhelming gaps into manageable actions.`
+  },
+  'grow-o': {
+    title: 'O — Own your knowledge (Enacted)',
+    content: `<strong>In the classroom:</strong> Students connect learning to real life or share it with someone.\n\n<strong>Student example:</strong> "Ionic compounds are in table salt (NaCl) which we use every day. I explained to my younger sister why salt dissolves in water — the ions separate."\n\n<strong>Teacher prompt:</strong> "Where have you seen this concept in real life? Who could you teach this to?"\n\n<strong>Outcome:</strong> Deepens understanding through application and teaching others.`
+  },
+  'grow-w': {
+    title: 'W — Watch for what comes next (Enacted)',
+    content: `<strong>In the classroom:</strong> Before the end of the lesson, students preview the next topic.\n\n<strong>Student example:</strong> "Next lesson is on metallic bonding. I already know metals conduct electricity, so maybe metallic bonds have something to do with free-moving electrons."\n\n<strong>Teacher prompt:</strong> "What do you already know about next lesson's topic? How can you prepare?"\n\n<strong>Outcome:</strong> Students arrive ready to learn, with prior knowledge activated.`
+  },
+  'act-a': {
+    title: 'A — Acknowledge (Enacted)',
+    content: `<strong>In the classroom:</strong> Students receive feedback on an essay and first identify their emotional response.\n\n<strong>Student example:</strong> "I feel a bit disappointed because I thought my argument was strong. But reading the feedback again, I see the teacher is pointing out that I need more evidence from the text."\n\n<strong>Teacher prompt:</strong> "How do you feel about this feedback? Now read it again — what is the learning message?"\n\n<strong>Outcome:</strong> Students learn to separate emotion from content, making feedback actionable.`
+  },
+  'act-c': {
+    title: 'C — Connect (Enacted)',
+    content: `<strong>In the classroom:</strong> Students link feedback to their goals and previous feedback.\n\n<strong>Student example:</strong> "My teacher said I need more textual evidence — that's the same feedback I got last time. The success criteria says I need at least 2 quotes per paragraph. I only used 1."\n\n<strong>Teacher prompt:</strong> "How does this feedback connect to the success criteria? Have you received similar feedback before?"\n\n<strong>Outcome:</strong> Students see patterns in their learning and connect feedback to clear standards.`
+  },
+  'act-t': {
+    title: 'T — Test (Enacted)',
+    content: `<strong>In the classroom:</strong> Students create an action plan and a way to check improvement.\n\n<strong>Student example:</strong> "My new habit: for every point I make, I'll highlight 2 quotes before I start writing. I'll check by counting my quotes before submitting."\n\n<strong>Teacher prompt:</strong> "What specific habit will you change? How will you know you're improving?"\n\n<strong>Outcome:</strong> Feedback leads to concrete, measurable behaviour change.`
+  }
+};
+
 function wireAaLEvents(container) {
+  // MAI collapsible toggle
+  const maiToggle = container.querySelector('#mai-toggle');
+  const maiBody = container.querySelector('#mai-body');
+  if (maiToggle && maiBody) {
+    maiToggle.addEventListener('click', () => {
+      const isOpen = maiToggle.classList.toggle('open');
+      if (isOpen) {
+        maiBody.classList.remove('collapsed');
+        maiBody.classList.add('expanded');
+        maiBody.style.maxHeight = maiBody.scrollHeight + 'px';
+      } else {
+        maiBody.style.maxHeight = '0';
+        maiBody.classList.remove('expanded');
+        maiBody.classList.add('collapsed');
+      }
+    });
+  }
+
+  // Panel link click → show enacted example
+  container.querySelectorAll('.aal-panel-link').forEach(panel => {
+    panel.addEventListener('click', () => {
+      const key = panel.dataset.panel;
+      const data = ENACTED_EXAMPLES[key];
+      if (!data) return;
+      const box = container.querySelector('#aal-enacted-example');
+      const title = container.querySelector('#enacted-title');
+      const content = container.querySelector('#enacted-content');
+      if (!box || !title || !content) return;
+      title.textContent = data.title;
+      content.innerHTML = data.content.replace(/\n\n/g, '<br/><br/>');
+      box.style.display = 'block';
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  });
+
+  // Close enacted example
+  container.querySelector('#close-enacted')?.addEventListener('click', () => {
+    const box = container.querySelector('#aal-enacted-example');
+    if (box) box.style.display = 'none';
+  });
+
   // Class -> Topic cascade
   const classSel = container.querySelector('#aal-class');
   const topicSel = container.querySelector('#aal-topic');
