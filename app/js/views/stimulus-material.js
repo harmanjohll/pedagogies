@@ -430,7 +430,7 @@ export function render(container) {
         <div class="page-container">
 
           <!-- Workflow Breadcrumb -->
-          ${renderWorkflowBreadcrumb('resources')}
+          ${renderWorkflowBreadcrumb('enactment')}
 
           <!-- Header -->
           <div class="page-header" style="margin-bottom: 20px;">
