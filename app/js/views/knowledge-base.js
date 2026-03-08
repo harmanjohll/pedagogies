@@ -8,6 +8,7 @@
 import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { openModal } from '../components/modals.js';
+import { createFileUploadZone } from '../components/pdf-upload.js';
 
 const FRAMEWORKS = [
   {
@@ -283,7 +284,7 @@ export function render(container) {
             ? `<div class="card" style="border:2px dashed var(--accent);background:var(--accent-light);padding:var(--sp-6);text-align:center;cursor:pointer;" id="sow-upload-card">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" style="margin:0 auto var(--sp-2);display:block;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3-3 3 3"/></svg>
                 <p style="font-size:0.875rem;font-weight:600;color:var(--accent);margin-bottom:var(--sp-1);">Upload your Scheme of Work</p>
-                <p style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Your SoW helps Co-Cher suggest lesson ideas, pacing, and content aligned to your teaching plan. Upload as .txt, .md, or .csv.</p>
+                <p style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Your SoW helps Co-Cher suggest lesson ideas, pacing, and content aligned to your teaching plan. Upload as .txt, .md, .csv, or .pdf.</p>
               </div>`
             : `<div style="display:flex;flex-direction:column;gap:var(--sp-2);">
                 ${uploads.filter(u => u.category === 'Scheme of Work').map(u => `
@@ -454,6 +455,9 @@ function renderUploadDetail(el, upload) {
         </button>
       </div>
 
+      ${upload.sourceRef ? `<div style="background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-4);font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;">
+        <strong style="color:var(--accent);">Source:</strong> ${esc(upload.sourceRef.filename)}${upload.sourceRef.isPdf && upload.sourceRef.pageRange ? ` — pp ${upload.sourceRef.pageRange.from}–${upload.sourceRef.pageRange.to} (${upload.sourceRef.extractedPages} of ${upload.sourceRef.totalPages} pages)` : ''}
+      </div>` : ''}
       ${upload.notes ? `<div style="background:var(--bg-subtle);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-md);margin-bottom:var(--sp-4);font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;"><strong>Notes:</strong> ${esc(upload.notes)}</div>` : ''}
 
       <div style="background:var(--bg);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:var(--sp-5);max-height:500px;overflow-y:auto;">
@@ -471,8 +475,11 @@ function renderUploadDetail(el, upload) {
 function showUploadModal(container, defaultCategory = null) {
   const classes = Store.getClasses();
 
+  let fileMeta = null; // Stores PDF metadata (page range, filename, etc.)
+
   const { backdrop, close } = openModal({
     title: 'Upload Resource',
+    width: 560,
     body: `
       <div class="input-group">
         <label class="input-label">Title</label>
@@ -496,19 +503,14 @@ function showUploadModal(container, defaultCategory = null) {
         </select>
       </div>
       <div class="input-group">
-        <label class="input-label">Upload File or Paste Content</label>
-        <p style="font-size:0.6875rem;color:var(--ink-faint);margin-bottom:var(--sp-2);">Supports .txt, .md, .csv files. For PDFs, copy-paste the text content below.</p>
-        <div style="border:2px dashed var(--border);border-radius:var(--radius-lg);padding:var(--sp-6);text-align:center;cursor:pointer;transition:border-color 0.15s;" id="drop-zone">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" style="margin:0 auto var(--sp-2);display:block;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-1);">Drop file here or click to browse</p>
-          <p style="font-size:0.6875rem;color:var(--ink-faint);" id="file-name">No file selected</p>
-          <input type="file" id="file-input" accept=".txt,.md,.csv,.text" style="display:none;" />
-        </div>
+        <label class="input-label">Upload File (.txt, .md, .csv, .pdf)</label>
+        <div id="upload-zone-mount"></div>
       </div>
       <div class="input-group">
         <label class="input-label">Or paste content directly</label>
         <textarea class="input" id="upload-content" rows="6" placeholder="Paste syllabus text, topic outlines, exam rubrics, or any reference material..."></textarea>
       </div>
+      <div id="upload-source-ref" style="display:none;"></div>
       <div class="input-group">
         <label class="input-label">Notes (optional)</label>
         <textarea class="input" id="upload-notes" rows="2" placeholder="Any notes about this resource..."></textarea>
@@ -520,34 +522,38 @@ function showUploadModal(container, defaultCategory = null) {
     `
   });
 
-  const dropZone = backdrop.querySelector('#drop-zone');
-  const fileInput = backdrop.querySelector('#file-input');
-  const fileNameEl = backdrop.querySelector('#file-name');
   const contentArea = backdrop.querySelector('#upload-content');
-  let fileContent = '';
+  const sourceRefEl = backdrop.querySelector('#upload-source-ref');
 
-  dropZone.addEventListener('click', () => fileInput.click());
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; });
-  dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; });
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.style.borderColor = '';
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  // Mount the reusable file upload zone
+  const uploadZone = createFileUploadZone({
+    onContent: (text, meta) => {
+      contentArea.value = text;
+      fileMeta = meta;
+
+      // Auto-fill title from filename if empty
+      const titleInput = backdrop.querySelector('#upload-title');
+      if (!titleInput.value.trim() && meta.filename) {
+        titleInput.value = meta.filename.replace(/\.[^.]+$/, '');
+      }
+
+      // Show source reference for PDFs
+      if (meta.isPdf && meta.pageRange) {
+        sourceRefEl.style.display = 'block';
+        sourceRefEl.innerHTML = `
+          <div style="background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3);">
+            <div style="font-size:0.75rem;font-weight:600;color:var(--accent);margin-bottom:2px;">Source Reference</div>
+            <div style="font-size:0.8125rem;color:var(--ink-secondary);">
+              ${esc(meta.filename)} — pp ${meta.pageRange.from}–${meta.pageRange.to} (${meta.extractedPages} of ${meta.totalPages} pages)
+            </div>
+          </div>
+        `;
+      } else {
+        sourceRefEl.style.display = 'none';
+      }
+    }
   });
-
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files.length) handleFile(fileInput.files[0]);
-  });
-
-  function handleFile(file) {
-    fileNameEl.textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = () => {
-      fileContent = reader.result;
-      contentArea.value = fileContent;
-    };
-    reader.readAsText(file);
-  }
+  backdrop.querySelector('#upload-zone-mount').appendChild(uploadZone.el);
 
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
   backdrop.querySelector('[data-action="upload"]').addEventListener('click', () => {
@@ -568,6 +574,17 @@ function showUploadModal(container, defaultCategory = null) {
       notes: backdrop.querySelector('#upload-notes').value.trim(),
       createdAt: Date.now()
     };
+
+    // Attach source reference metadata if from a file
+    if (fileMeta) {
+      upload.sourceRef = {
+        filename: fileMeta.filename,
+        isPdf: fileMeta.isPdf,
+        totalPages: fileMeta.totalPages,
+        pageRange: fileMeta.pageRange,
+        extractedPages: fileMeta.extractedPages
+      };
+    }
 
     const uploads = [...(Store.get('knowledgeUploads') || []), upload];
     Store.set('knowledgeUploads', uploads);

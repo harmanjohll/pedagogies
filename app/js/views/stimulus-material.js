@@ -9,6 +9,7 @@ import { Store } from '../state.js';
 import { sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
+import { createFileUploadZone } from '../components/pdf-upload.js';
 
 /* ── Constants ── */
 const STORAGE_KEY = 'cocher_stimulus_library';
@@ -116,6 +117,7 @@ export function render(container) {
   let expandedItemId = null;
   let generatedResult = null;
   let isGenerating = false;
+  let manualFileMeta = null;
 
   function renderView() {
     const library = getLibrary();
@@ -520,8 +522,15 @@ export function render(container) {
               </div>
 
               <div class="sm-field" style="margin-bottom:14px;">
+                <label class="sm-label">Upload File (.txt, .md, .csv, .pdf)</label>
+                <div id="sm-manual-upload-mount"></div>
+              </div>
+
+              <div id="sm-manual-source-ref" style="display:none;"></div>
+
+              <div class="sm-field" style="margin-bottom:14px;">
                 <label class="sm-label">Content</label>
-                <textarea id="sm-manual-content" class="sm-textarea" rows="10" placeholder="Paste or type your stimulus material here..."></textarea>
+                <textarea id="sm-manual-content" class="sm-textarea" rows="10" placeholder="Paste or type your stimulus material here, or upload a file above..."></textarea>
               </div>
 
               <div class="sm-field" style="margin-bottom:14px;">
@@ -610,6 +619,40 @@ export function render(container) {
       renderAiResult();
     }
 
+    // Mount file upload zone for manual entry
+    const manualUploadMount = container.querySelector('#sm-manual-upload-mount');
+    if (manualUploadMount) {
+      const uploadZone = createFileUploadZone({
+        compact: true,
+        onContent: (text, meta) => {
+          const contentArea = container.querySelector('#sm-manual-content');
+          if (contentArea) contentArea.value = text;
+          manualFileMeta = meta;
+
+          // Auto-fill title from filename if empty
+          const titleInput = container.querySelector('#sm-manual-title');
+          if (titleInput && !titleInput.value.trim() && meta.filename) {
+            titleInput.value = meta.filename.replace(/\.[^.]+$/, '');
+          }
+
+          // Show source reference for PDFs
+          const sourceRefEl = container.querySelector('#sm-manual-source-ref');
+          if (sourceRefEl && meta.isPdf && meta.pageRange) {
+            sourceRefEl.style.display = 'block';
+            sourceRefEl.innerHTML = `
+              <div style="background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);border-radius:8px;padding:8px 14px;margin-bottom:14px;">
+                <div style="font-size:0.75rem;font-weight:600;color:#4361ee;margin-bottom:2px;">Source Reference</div>
+                <div style="font-size:0.8125rem;color:var(--ink-secondary,#555);">
+                  ${escapeHtml(meta.filename)} — pp ${meta.pageRange.from}–${meta.pageRange.to} (${meta.extractedPages} of ${meta.totalPages} pages)
+                </div>
+              </div>
+            `;
+          }
+        }
+      });
+      manualUploadMount.appendChild(uploadZone.el);
+    }
+
     // Manual save
     const manualSaveBtn = container.querySelector('#sm-manual-save-btn');
     if (manualSaveBtn) {
@@ -639,6 +682,14 @@ export function render(container) {
           </div>
           <button class="sm-close-btn" id="sm-close-expanded">Close</button>
         </div>
+        ${item.sourceRef ? `
+          <div style="background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);border-radius:8px;padding:8px 14px;margin-bottom:12px;">
+            <span style="font-size:0.75rem;font-weight:600;color:#4361ee;">Source:</span>
+            <span style="font-size:0.8125rem;color:var(--ink-secondary,#555);">
+              ${escapeHtml(item.sourceRef.filename)}${item.sourceRef.isPdf && item.sourceRef.pageRange ? ` — pp ${item.sourceRef.pageRange.from}–${item.sourceRef.pageRange.to} (${item.sourceRef.extractedPages} of ${item.sourceRef.totalPages} pages)` : ''}
+            </span>
+          </div>
+        ` : ''}
         <div class="sm-expanded-content">${escapeHtml(item.content)}</div>
         ${item.questions ? `
           <div class="sm-expanded-section">
@@ -926,12 +977,24 @@ Always respond with well-structured content using the exact format requested. Do
       source: 'manual'
     };
 
+    // Attach source reference if uploaded from file
+    if (manualFileMeta) {
+      newItem.sourceRef = {
+        filename: manualFileMeta.filename,
+        isPdf: manualFileMeta.isPdf,
+        totalPages: manualFileMeta.totalPages,
+        pageRange: manualFileMeta.pageRange,
+        extractedPages: manualFileMeta.extractedPages
+      };
+    }
+
     const lib = getLibrary();
     lib.unshift(newItem);
     saveLibrary(lib);
 
     showToast('Stimulus material saved to library!', 'success');
     generatedResult = null;
+    manualFileMeta = null;
     activeTab = 'browse';
     renderView();
   }

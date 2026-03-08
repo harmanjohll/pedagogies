@@ -9,6 +9,7 @@ import { Store } from '../state.js';
 import { sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
+import { createFileUploadZone } from '../components/pdf-upload.js';
 
 /* ── Storage helpers ── */
 const STORAGE_KEY = 'cocher_source_library';
@@ -75,6 +76,7 @@ export function render(container) {
   let generatedPreview = null;
   let manualSources = [{ title: '', type: 'Written', provenance: '', content: '' }];
   let manualQuestions = [{ type: 'Inference', marks: 5, question: '', skill: '' }];
+  let manualFileMeta = null;
 
   function renderView() {
     const library = getLibrary();
@@ -743,6 +745,12 @@ export function render(container) {
 
         <hr class="sa-divider" />
 
+        <div class="sa-field" style="margin-bottom:16px;">
+          <label class="sa-label">Upload Source File (.txt, .md, .csv, .pdf)</label>
+          <div id="sa-manual-upload-mount"></div>
+          <div id="sa-manual-source-ref" style="display:none;"></div>
+        </div>
+
         <div class="sa-section-label">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Sources
@@ -988,6 +996,42 @@ export function render(container) {
       });
     }
 
+    // Mount file upload zone for manual entry
+    const saUploadMount = container.querySelector('#sa-manual-upload-mount');
+    if (saUploadMount) {
+      const uploadZone = createFileUploadZone({
+        compact: true,
+        placeholder: 'Upload a source document — text will populate Source A below',
+        onContent: (text, meta) => {
+          // Populate the first source content textarea
+          const firstContent = container.querySelector('.sa-src-content[data-src-idx="0"]');
+          if (firstContent) firstContent.value = text;
+          manualFileMeta = meta;
+
+          // Auto-fill title from filename if empty
+          const titleInput = container.querySelector('#sa-manual-title');
+          if (titleInput && !titleInput.value.trim() && meta.filename) {
+            titleInput.value = meta.filename.replace(/\.[^.]+$/, '');
+          }
+
+          // Show source reference for PDFs
+          const sourceRefEl = container.querySelector('#sa-manual-source-ref');
+          if (sourceRefEl && meta.isPdf && meta.pageRange) {
+            sourceRefEl.style.display = 'block';
+            sourceRefEl.innerHTML = `
+              <div style="background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);border-radius:8px;padding:8px 14px;margin-top:8px;">
+                <div style="font-size:0.75rem;font-weight:600;color:#4361ee;margin-bottom:2px;">Source Reference</div>
+                <div style="font-size:0.8125rem;color:var(--ink-secondary,#555);">
+                  ${esc(meta.filename)} — pp ${meta.pageRange.from}–${meta.pageRange.to} (${meta.extractedPages} of ${meta.totalPages} pages)
+                </div>
+              </div>
+            `;
+          }
+        }
+      });
+      saUploadMount.appendChild(uploadZone.el);
+    }
+
     // Manual: add source
     const addSourceBtn = container.querySelector('#sa-add-source');
     if (addSourceBtn) {
@@ -1085,6 +1129,17 @@ export function render(container) {
           source: 'manual',
         };
 
+        // Attach source reference if uploaded from file
+        if (manualFileMeta) {
+          item.sourceRef = {
+            filename: manualFileMeta.filename,
+            isPdf: manualFileMeta.isPdf,
+            totalPages: manualFileMeta.totalPages,
+            pageRange: manualFileMeta.pageRange,
+            extractedPages: manualFileMeta.extractedPages
+          };
+        }
+
         const lib = getLibrary();
         lib.unshift(item);
         saveLibrary(lib);
@@ -1092,6 +1147,7 @@ export function render(container) {
 
         manualSources = [{ title: '', type: 'Written', provenance: '', content: '' }];
         manualQuestions = [{ type: 'Inference', marks: 5, question: '', skill: '' }];
+        manualFileMeta = null;
         activeTab = 'browse';
         renderView();
       });
