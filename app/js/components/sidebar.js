@@ -49,7 +49,7 @@ const EEE_NAV_MAP = {
   modelResponse:  { route: '/lesson-planner',   icon: 'modelResponse',  label: 'Model Response' },
   sourceAnalysis: { route: '/source-analysis',   icon: 'sourceAnalysis', label: 'Source Analysis' },
   seatPlan:       { route: '/lesson-planner',   icon: 'seatPlan',       label: 'Seating Plan' },
-  cceDiscussion:  { route: '/lesson-planner',   icon: 'cceDiscussion',  label: 'CCE Discussion' },
+  cceDiscussion:  { route: '/cce',              icon: 'cceDiscussion',  label: 'CCE Discussion' },
 };
 
 function buildNavItems() {
@@ -58,6 +58,7 @@ function buildNavItems() {
     { id: '/classes', icon: 'classes', label: 'Classes', section: 'Culture' },
     { id: '/lesson-planner', icon: 'lessonPlanner', label: 'Lesson Planner', section: 'Design' },
     { id: '/spatial', icon: 'spatial', label: 'Spatial Designer' },
+    { id: '/cce', icon: 'cceDiscussion', label: 'CCE2021' },
     { id: '/lessons', icon: 'lessons', label: 'Lessons' },
   ];
 
@@ -66,6 +67,7 @@ function buildNavItems() {
   const enactmentItems = [];
   let first = true;
   for (const key of Object.keys(EEE_NAV_MAP)) {
+    if (key === 'cceDiscussion') continue; // CCE is a static Design item now
     if (selections.includes(key) || EEE_REGISTRY[key]?.cat === 'core') {
       // Only show enactment (non-core) items that are selected
       if (EEE_REGISTRY[key]?.cat !== 'enactment') continue;
