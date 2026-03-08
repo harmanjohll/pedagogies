@@ -543,7 +543,7 @@ export const Store = {
       updatedAt: Date.now()
     };
     _state.assessmentBlueprints = [...(_state.assessmentBlueprints || []), bp];
-    this._addActivity('blueprint_created', `Created assessment blueprint "${bp.name}"`);
+    this._addActivity('blueprint_created', `Created assessment blueprint "${bp.title}"`);
     this._persist();
     this._notify();
     return bp;

@@ -59,7 +59,8 @@ function getDashPrefs() {
         collapsedWidgets: p.collapsedWidgets || [],
         pinnedLinks: p.pinnedLinks || [],
         defaultView: p.defaultView || 'full',
-        widgetNames: p.widgetNames || {}
+        widgetNames: p.widgetNames || {},
+        widgetSizes: p.widgetSizes || {}
       };
     }
   } catch {}
@@ -69,7 +70,8 @@ function getDashPrefs() {
     collapsedWidgets: [],
     pinnedLinks: [],
     defaultView: 'full',
-    widgetNames: {}
+    widgetNames: {},
+    widgetSizes: {}
   };
 }
 
@@ -1033,6 +1035,37 @@ function showCustomiseModal(container) {
       </div>
 
       <div style="margin-bottom:var(--sp-5);">
+        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-3);color:var(--ink);">Dashboard View Mode</h4>
+        <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">Choose how much to show on your dashboard.</p>
+        <div style="display:flex;gap:var(--sp-2);">
+          ${['full', 'compact', 'minimal'].map(v => {
+            const labels = { full: 'Full', compact: 'Compact', minimal: 'Minimal' };
+            const descs = { full: 'All widgets', compact: 'Key widgets only', minimal: 'Just the essentials' };
+            const active = (prefs.defaultView || 'full') === v;
+            return `<label style="flex:1;display:block;text-align:center;padding:var(--sp-3);border:2px solid ${active ? 'var(--accent)' : 'var(--border-light)'};border-radius:var(--radius);cursor:pointer;background:${active ? 'var(--accent-light, rgba(99,102,241,0.08))' : 'transparent'};">
+              <input type="radio" name="dash-view-mode" value="${v}" ${active ? 'checked' : ''} style="display:none;" />
+              <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);">${labels[v]}</div>
+              <div style="font-size:0.6875rem;color:var(--ink-muted);margin-top:2px;">${descs[v]}</div>
+            </label>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:var(--sp-5);">
+        <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-3);color:var(--ink);">Rename Widgets</h4>
+        <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">Give widgets custom names. Leave blank to use the default.</p>
+        <div id="widget-rename-list" style="display:flex;flex-direction:column;gap:var(--sp-2);max-height:180px;overflow:auto;">
+          ${widgetOrder.map(wId => {
+            const customName = (prefs.widgetNames && prefs.widgetNames[wId]) || '';
+            return `<div style="display:flex;align-items:center;gap:var(--sp-2);">
+              <span style="font-size:0.75rem;color:var(--ink-muted);width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${WIDGET_LABELS[wId] || wId}">${WIDGET_LABELS[wId] || wId}</span>
+              <input type="text" class="widget-name-input input" data-widget="${wId}" value="${customName}" placeholder="${WIDGET_LABELS[wId] || wId}" style="flex:1;font-size:0.75rem;padding:4px 8px;" />
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:var(--sp-5);">
         <h4 style="font-size:0.875rem;font-weight:600;margin-bottom:var(--sp-3);color:var(--ink);">Pinned Quick Links</h4>
         <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">Choose shortcuts to pin at the top of your dashboard.</p>
         <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
@@ -1105,10 +1138,27 @@ function showCustomiseModal(container) {
       collapsedWidgets: [],
       pinnedLinks: [],
       defaultView: 'full',
-      widgetNames: {}
+      widgetNames: {},
+      widgetSizes: {}
     });
     overlay.remove();
     render(container);
+  });
+
+  // View mode radio styling
+  overlay.querySelectorAll('input[name="dash-view-mode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      overlay.querySelectorAll('input[name="dash-view-mode"]').forEach(r => {
+        const lbl = r.closest('label');
+        if (r.checked) {
+          lbl.style.borderColor = 'var(--accent)';
+          lbl.style.background = 'var(--accent-light, rgba(99,102,241,0.08))';
+        } else {
+          lbl.style.borderColor = 'var(--border-light)';
+          lbl.style.background = 'transparent';
+        }
+      });
+    });
   });
 
   // Save
@@ -1122,30 +1172,60 @@ function showCustomiseModal(container) {
     overlay.querySelectorAll('.pin-cb').forEach(cb => {
       if (cb.checked) pins.push(cb.dataset.pin);
     });
+    // Collect view mode
+    const viewRadio = overlay.querySelector('input[name="dash-view-mode"]:checked');
+    const viewMode = viewRadio ? viewRadio.value : 'full';
+    // Collect custom widget names
+    const names = {};
+    overlay.querySelectorAll('.widget-name-input').forEach(inp => {
+      const val = inp.value.trim();
+      if (val) names[inp.dataset.widget] = val;
+    });
     saveDashPrefs({
       widgetOrder: newOrder,
       hiddenWidgets: hidden,
       collapsedWidgets: prefs.collapsedWidgets || [],
       pinnedLinks: pins,
-      defaultView: prefs.defaultView || 'full',
-      widgetNames: prefs.widgetNames || {}
+      defaultView: viewMode,
+      widgetNames: names,
+      widgetSizes: prefs.widgetSizes || {}
     });
     overlay.remove();
     render(container);
   });
 }
 
+/* ── Widget size helpers ── */
+const WIDGET_SIZE_STYLES = {
+  small:  'max-width:400px;',
+  medium: '',
+  large:  ''
+};
+
+function getSizeIcon(size) {
+  if (size === 'small') return '<rect x="6" y="6" width="12" height="12" rx="1" stroke-width="2" fill="none" stroke="currentColor"/>';
+  if (size === 'large') return '<rect x="2" y="2" width="20" height="20" rx="1" stroke-width="2" fill="none" stroke="currentColor"/>';
+  return '<rect x="4" y="4" width="16" height="16" rx="1" stroke-width="2" fill="none" stroke="currentColor"/>';
+}
+
+const SIZE_CYCLE = { small: 'medium', medium: 'large', large: 'small' };
+
 /* ── Collapsible widget wrapper ── */
 function widgetWrap(id, title, content, prefs, extraHeaderHtml = '') {
   if (!content) return '';
   if (prefs.hiddenWidgets.includes(id)) return '';
   const collapsed = prefs.collapsedWidgets.includes(id);
-  return `<div class="dashboard-widget" data-widget-id="${id}" style="margin-bottom:var(--sp-6);">
+  const size = (prefs.widgetSizes && prefs.widgetSizes[id]) || 'medium';
+  const sizeStyle = WIDGET_SIZE_STYLES[size] || '';
+  return `<div class="dashboard-widget" data-widget-id="${id}" draggable="true" style="margin-bottom:var(--sp-6);${sizeStyle}">
     <details ${collapsed ? '' : 'open'}>
       <summary style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:var(--sp-3);" class="widget-summary" data-widget-id="${id}">
         <h2 class="section-title" style="font-size:1.125rem;margin:0;">${title}</h2>
         <div style="display:flex;align-items:center;gap:var(--sp-2);">
           ${extraHeaderHtml}
+          <button class="btn-widget-resize" data-resize-widget="${id}" title="Resize: ${size}" style="background:none;border:none;cursor:pointer;padding:2px;opacity:0.5;transition:opacity 0.15s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.5'">
+            <svg width="14" height="14" viewBox="0 0 24 24">${getSizeIcon(size)}</svg>
+          </button>
           <svg class="widget-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </summary>
@@ -1479,25 +1559,28 @@ export function render(container) {
   // Some widgets are async-populated — for those, use a placeholder div
   const asyncWidgets = new Set(['schedule', 'weeklyOverview', 'prepChecklist', 'timetable']);
 
+  // Apply view mode — filter visible widgets for compact/minimal
+  const appliedView = prefs.defaultView || 'full';
+  const compactKeep = new Set(['schedule', 'activityFeed', 'quickActions', 'notifications', 'suggestions', 'stats']);
+  const minimalKeep = new Set(['schedule', 'quickActions', 'notifications']);
+
   const widgetsHTML = widgetOrder.map(wId => {
     if (prefs.hiddenWidgets.includes(wId)) return '';
+    // View mode filtering
+    if (appliedView === 'compact' && !compactKeep.has(wId)) return '';
+    if (appliedView === 'minimal' && !minimalKeep.has(wId)) return '';
     if (asyncWidgets.has(wId)) {
       // Async widgets get a placeholder that will be filled later
-      return `<div id="widget-${wId}" class="dashboard-widget" data-widget-id="${wId}"></div>`;
+      return `<div id="widget-${wId}" class="dashboard-widget" data-widget-id="${wId}" draggable="true"></div>`;
     }
     // insights and reflections return their own section wrapper
     if (wId === 'insights' || wId === 'reflections') {
-      return prefs.hiddenWidgets.includes(wId) ? '' : (widgetContent[wId] || '');
+      return widgetContent[wId] || '';
     }
     const content = widgetContent[wId];
     if (!content) return '';
     return widgetWrap(wId, getWidgetLabel(wId, prefs), content, prefs);
   }).join('');
-
-  // Apply default view mode — hide extra widgets for compact/minimal
-  const appliedView = prefs.defaultView || 'full';
-  const compactOnly = new Set(['schedule', 'quickActions', 'notifications']);
-  const minimalOnly = new Set(['schedule']);
 
   container.innerHTML = `
     <div class="main-scroll">
@@ -1535,6 +1618,80 @@ export function render(container) {
   // Customise Dashboard button
   container.querySelector('#customise-dashboard-btn')?.addEventListener('click', () => {
     showCustomiseModal(container);
+  });
+
+  // ── Widget resize buttons ──
+  container.querySelectorAll('.btn-widget-resize').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const wId = btn.dataset.resizeWidget;
+      const p = getDashPrefs();
+      const currentSize = (p.widgetSizes && p.widgetSizes[wId]) || 'medium';
+      const nextSize = SIZE_CYCLE[currentSize] || 'medium';
+      p.widgetSizes = { ...(p.widgetSizes || {}), [wId]: nextSize };
+      saveDashPrefs(p);
+      render(container);
+    });
+  });
+
+  // ── Live drag-and-drop reordering ──
+  let dragWidget = null;
+  const pageContainer = container.querySelector('.page-container');
+  container.querySelectorAll('.dashboard-widget[draggable="true"]').forEach(widget => {
+    widget.addEventListener('dragstart', (e) => {
+      dragWidget = widget;
+      widget.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    widget.addEventListener('dragend', () => {
+      widget.style.opacity = '1';
+      dragWidget = null;
+      // Remove all drag-over indicators
+      container.querySelectorAll('.dashboard-widget').forEach(w => {
+        w.style.borderTop = '';
+        w.style.borderBottom = '';
+      });
+    });
+    widget.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (!dragWidget || dragWidget === widget) return;
+      // Visual indicator
+      const rect = widget.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      container.querySelectorAll('.dashboard-widget').forEach(w => {
+        w.style.borderTop = '';
+        w.style.borderBottom = '';
+      });
+      if (e.clientY < midY) {
+        widget.style.borderTop = '3px solid var(--accent, #6366f1)';
+      } else {
+        widget.style.borderBottom = '3px solid var(--accent, #6366f1)';
+      }
+    });
+    widget.addEventListener('dragleave', () => {
+      widget.style.borderTop = '';
+      widget.style.borderBottom = '';
+    });
+    widget.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (!dragWidget || dragWidget === widget) return;
+      const rect = widget.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        widget.parentNode.insertBefore(dragWidget, widget);
+      } else {
+        widget.parentNode.insertBefore(dragWidget, widget.nextSibling);
+      }
+      widget.style.borderTop = '';
+      widget.style.borderBottom = '';
+      // Persist new order
+      const newOrder = [...container.querySelectorAll('.dashboard-widget[data-widget-id]')].map(w => w.dataset.widgetId);
+      const p = getDashPrefs();
+      p.widgetOrder = newOrder;
+      saveDashPrefs(p);
+    });
   });
 
   // Quick action and navigation handlers
@@ -1670,6 +1827,21 @@ export function render(container) {
           timetableEl.innerHTML = widgetWrap('timetable', getWidgetLabel('timetable', prefs), ttContent, prefs);
         }
       }
+
+      // Re-wire resize buttons for async widgets
+      container.querySelectorAll('.btn-widget-resize').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const wId = btn.dataset.resizeWidget;
+          const p = getDashPrefs();
+          const currentSize = (p.widgetSizes && p.widgetSizes[wId]) || 'medium';
+          const nextSize = SIZE_CYCLE[currentSize] || 'medium';
+          p.widgetSizes = { ...(p.widgetSizes || {}), [wId]: nextSize };
+          saveDashPrefs(p);
+          render(container);
+        });
+      });
 
       // Re-wire collapse tracking for async widgets
       container.querySelectorAll('.dashboard-widget details').forEach(det => {
