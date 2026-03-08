@@ -105,7 +105,11 @@ const DISCUSSION_FORMATS = [
   'Structured Academic Controversy',
   'Circle Structure',
   'Forum Theatre',
-  'Think-Pair-Share'
+  'Think-Pair-Share',
+  'Role Play / Perspective-Taking',
+  'Case-Based Deliberation',
+  'Values Clarification Exercise',
+  'Others'
 ];
 
 /* ── localStorage helpers ── */
@@ -214,8 +218,11 @@ Make the lesson feel authentic to Singapore's multicultural context. Use local e
 
 export function render(container) {
   let activeTab = 'NE';
+  let generationId = 0;          // tracks async generation; increments on each renderView
+  let pendingResult = null;       // holds { content, meta } if generation completes across a re-render
 
   function renderView() {
+    generationId++;               // invalidate any in-flight generation from previous render
     const discussions = getSavedDiscussions();
     const area = CONTENT_AREAS.find(a => a.id === activeTab);
 
@@ -470,7 +477,84 @@ export function render(container) {
       <!-- Content -->
       <div class="cce-content">
 
-        <!-- Overview cards -->
+        <!-- Discussion Generator (primary action — at the top) -->
+        <div class="cce-gen-section">
+          <h2>Discussion Generator</h2>
+          <div class="cce-card">
+            <div class="cce-gen-form">
+              <div class="full-width">
+                <label for="cce-topic">Topic / Issue</label>
+                <input id="cce-topic" class="input" type="text" placeholder="e.g. Should National Service be extended to women?" style="width:100%;box-sizing:border-box;">
+              </div>
+              <div>
+                <label for="cce-level">Level</label>
+                <select id="cce-level" class="input" style="width:100%;box-sizing:border-box;">
+                  ${LEVELS.map(l => `<option value="${l}">${l}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label for="cce-format">Discussion Format</label>
+                <select id="cce-format" class="input" style="width:100%;box-sizing:border-box;">
+                  ${DISCUSSION_FORMATS.map(f => `<option value="${f}">${f}</option>`).join('')}
+                </select>
+              </div>
+              <div class="full-width" id="cce-custom-format-wrap" style="display:none;">
+                <label for="cce-custom-format">Your Discussion Format</label>
+                <input id="cce-custom-format" class="input" type="text" placeholder="e.g. Socratic Seminar, Fishbowl, Philosophical Chairs..." style="width:100%;box-sizing:border-box;">
+              </div>
+            </div>
+            <button id="cce-generate-btn" class="btn btn-primary" style="width:100%;">Generate Discussion</button>
+            <div id="cce-loading" class="cce-loading">
+              <div class="cce-spinner"></div>
+              <span>Generating discussion lesson...</span>
+            </div>
+          </div>
+
+          <!-- Result area -->
+          <div id="cce-result" class="cce-result">
+            <div id="cce-result-content" class="cce-result-content"></div>
+            <div class="cce-save-bar">
+              <input id="cce-save-title" class="input" type="text" placeholder="Discussion title..." style="flex:1;">
+              <button id="cce-save-btn" class="btn btn-primary">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saved Discussions Library -->
+        <div class="cce-gen-section">
+          <h2>Saved Discussions</h2>
+          ${(() => {
+            const filtered = discussions.filter(d => d.contentArea === activeTab);
+            if (filtered.length === 0) {
+              return `<div class="cce-empty">No saved discussions for ${area.label} yet. Generate one above!</div>`;
+            }
+            return `<div class="cce-library-grid">
+              ${filtered.map(d => `
+                <div class="cce-lib-card" data-discussion-id="${d.id}">
+                  <h4>${escapeHTML(d.title)}</h4>
+                  <div class="cce-lib-meta">
+                    <span class="cce-badge" style="background:${area.color}22;color:${area.color};">${d.contentArea}</span>
+                    ${d.bigIdea ? `<span class="cce-badge" style="background:#4361ee22;color:#4361ee;">${escapeHTML(d.bigIdea)}</span>` : ''}
+                    ${d.values ? d.values.split(',').slice(0, 3).map(v =>
+                      `<span class="cce-tag" style="font-size:0.625rem;">${escapeHTML(v.trim())}</span>`
+                    ).join('') : ''}
+                  </div>
+                  <div class="cce-lib-footer">
+                    <span>${d.level || ''} ${d.format ? '· ' + d.format : ''}</span>
+                    <span>${new Date(d.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div class="cce-expanded-content" id="cce-exp-${d.id}">${renderMarkdown(d.content || '')}</div>
+                  <div style="display:flex;gap:6px;margin-top:8px;">
+                    <button class="btn btn-ghost cce-view-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;">View</button>
+                    <button class="btn btn-ghost cce-delete-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;color:#dc2626;">Delete</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>`;
+          })()}
+        </div>
+
+        <!-- Content Area Reference (below generator) -->
         <div class="cce-overview">
           <div class="cce-card">
             <h3>
@@ -537,79 +621,6 @@ export function render(container) {
           </div>
         </div>
 
-        <!-- Discussion Generator -->
-        <div class="cce-gen-section">
-          <h2>Discussion Generator</h2>
-          <div class="cce-card">
-            <div class="cce-gen-form">
-              <div class="full-width">
-                <label for="cce-topic">Topic / Issue</label>
-                <input id="cce-topic" class="input" type="text" placeholder="e.g. Should National Service be extended to women?" style="width:100%;box-sizing:border-box;">
-              </div>
-              <div>
-                <label for="cce-level">Level</label>
-                <select id="cce-level" class="input" style="width:100%;box-sizing:border-box;">
-                  ${LEVELS.map(l => `<option value="${l}">${l}</option>`).join('')}
-                </select>
-              </div>
-              <div>
-                <label for="cce-format">Discussion Format</label>
-                <select id="cce-format" class="input" style="width:100%;box-sizing:border-box;">
-                  ${DISCUSSION_FORMATS.map(f => `<option value="${f}">${f}</option>`).join('')}
-                </select>
-              </div>
-            </div>
-            <button id="cce-generate-btn" class="btn btn-primary" style="width:100%;">Generate Discussion</button>
-            <div id="cce-loading" class="cce-loading">
-              <div class="cce-spinner"></div>
-              <span>Generating discussion lesson...</span>
-            </div>
-          </div>
-
-          <!-- Result area -->
-          <div id="cce-result" class="cce-result">
-            <div id="cce-result-content" class="cce-result-content"></div>
-            <div class="cce-save-bar">
-              <input id="cce-save-title" class="input" type="text" placeholder="Discussion title..." style="flex:1;">
-              <button id="cce-save-btn" class="btn btn-primary">Save</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Saved Discussions Library -->
-        <div class="cce-gen-section">
-          <h2>Saved Discussions</h2>
-          ${(() => {
-            const filtered = discussions.filter(d => d.contentArea === activeTab);
-            if (filtered.length === 0) {
-              return `<div class="cce-empty">No saved discussions for ${area.label} yet. Generate one above!</div>`;
-            }
-            return `<div class="cce-library-grid">
-              ${filtered.map(d => `
-                <div class="cce-lib-card" data-discussion-id="${d.id}">
-                  <h4>${escapeHTML(d.title)}</h4>
-                  <div class="cce-lib-meta">
-                    <span class="cce-badge" style="background:${area.color}22;color:${area.color};">${d.contentArea}</span>
-                    ${d.bigIdea ? `<span class="cce-badge" style="background:#4361ee22;color:#4361ee;">${escapeHTML(d.bigIdea)}</span>` : ''}
-                    ${d.values ? d.values.split(',').slice(0, 3).map(v =>
-                      `<span class="cce-tag" style="font-size:0.625rem;">${escapeHTML(v.trim())}</span>`
-                    ).join('') : ''}
-                  </div>
-                  <div class="cce-lib-footer">
-                    <span>${d.level || ''} ${d.format ? '· ' + d.format : ''}</span>
-                    <span>${new Date(d.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <div class="cce-expanded-content" id="cce-exp-${d.id}">${renderMarkdown(d.content || '')}</div>
-                  <div style="display:flex;gap:6px;margin-top:8px;">
-                    <button class="btn btn-ghost cce-view-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;">View</button>
-                    <button class="btn btn-ghost cce-delete-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;color:#dc2626;">Delete</button>
-                  </div>
-                </div>
-              `).join('')}
-            </div>`;
-          })()}
-        </div>
-
       </div>
     `;
 
@@ -623,6 +634,13 @@ export function render(container) {
       });
     });
 
+    // "Others" custom format toggle
+    const formatSelect = container.querySelector('#cce-format');
+    const customFormatWrap = container.querySelector('#cce-custom-format-wrap');
+    formatSelect.addEventListener('change', () => {
+      customFormatWrap.style.display = formatSelect.value === 'Others' ? '' : 'none';
+    });
+
     // Generate discussion
     const generateBtn = container.querySelector('#cce-generate-btn');
     const loadingEl = container.querySelector('#cce-loading');
@@ -632,12 +650,17 @@ export function render(container) {
     generateBtn.addEventListener('click', async () => {
       const topic = container.querySelector('#cce-topic').value.trim();
       const level = container.querySelector('#cce-level').value;
-      const format = container.querySelector('#cce-format').value;
+      const rawFormat = container.querySelector('#cce-format').value;
+      const format = rawFormat === 'Others'
+        ? (container.querySelector('#cce-custom-format').value.trim() || 'Open Discussion')
+        : rawFormat;
 
       if (!topic) {
         showToast('Please enter a topic or issue.', 'warning');
         return;
       }
+
+      const thisGenId = generationId; // snapshot so we can detect stale completions
 
       generateBtn.disabled = true;
       loadingEl.classList.add('visible');
@@ -658,6 +681,14 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
           { systemPrompt, temperature: 0.7, maxTokens: 4096 }
         );
 
+        // If user switched tabs while we were generating, store result
+        // so it can be shown later, and don't touch (now-stale) DOM refs
+        if (thisGenId !== generationId) {
+          pendingResult = { content: text, meta: { contentArea: activeTab, level, format }, title: topic };
+          showToast('Discussion generated! Switch back to see it.', 'success');
+          return;
+        }
+
         resultContent.innerHTML = renderMarkdown(text);
         resultEl.classList.add('visible');
         resultEl._generatedContent = text;
@@ -669,11 +700,14 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
 
         showToast('Discussion generated!', 'success');
       } catch (err) {
+        if (thisGenId !== generationId) return; // stale — silently ignore
         console.error('CCE generation error:', err);
         showToast(`Generation failed: ${err.message}`, 'danger');
       } finally {
-        generateBtn.disabled = false;
-        loadingEl.classList.remove('visible');
+        if (thisGenId === generationId) {
+          generateBtn.disabled = false;
+          loadingEl.classList.remove('visible');
+        }
       }
     });
 
@@ -750,6 +784,20 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
         }
       });
     });
+
+    // If there's a pending result from a generation that completed while on another tab, show it now
+    if (pendingResult) {
+      const pr = pendingResult;
+      pendingResult = null;
+      resultContent.innerHTML = renderMarkdown(pr.content);
+      resultEl.classList.add('visible');
+      resultEl._generatedContent = pr.content;
+      resultEl._meta = pr.meta;
+      const titleInput = container.querySelector('#cce-save-title');
+      if (titleInput) {
+        titleInput.value = pr.title.length > 60 ? pr.title.slice(0, 57) + '...' : pr.title;
+      }
+    }
   }
 
   renderView();
