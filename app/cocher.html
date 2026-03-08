@@ -14,6 +14,14 @@
   <!-- Chart.js for Spatial Effectiveness Radar -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- PDF.js for client-side PDF text extraction -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs" type="module"></script>
+  <script type="module">
+    import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs';
+    window.pdfjsLib = pdfjsLib;
+  </script>
+
   <!-- Styles -->
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/layout.css" />

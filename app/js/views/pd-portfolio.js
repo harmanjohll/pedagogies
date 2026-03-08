@@ -9,6 +9,7 @@ import { Store, generateId } from '../state.js';
 import { navigate } from '../router.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { showToast } from '../components/toast.js';
+import { createFileUploadZone } from '../components/pdf-upload.js';
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function fmtDate(ts) { return new Date(ts).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' }); }
@@ -311,6 +312,7 @@ export function renderDetail(container, { id }) {
                       <span style="font-size:0.6875rem;color:var(--ink-faint);">${fmtDate(m.createdAt)}</span>
                     </div>
                     <h4 style="font-weight:600;font-size:0.9375rem;color:var(--ink);margin-bottom:4px;">${esc(m.title)}</h4>
+                    ${m.sourceRef ? `<div style="font-size:0.6875rem;color:var(--accent);margin-bottom:4px;">Source: ${esc(m.sourceRef.filename)}${m.sourceRef.isPdf && m.sourceRef.pageRange ? ` — pp ${m.sourceRef.pageRange.from}–${m.sourceRef.pageRange.to}` : ''}</div>` : ''}
                     <div style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;max-height:120px;overflow:hidden;white-space:pre-wrap;">${esc((m.content || '').slice(0, 400))}${(m.content || '').length > 400 ? '...' : ''}</div>
                   </div>
                   <div style="display:flex;gap:var(--sp-1);flex-shrink:0;margin-left:var(--sp-3);">
@@ -398,6 +400,8 @@ export function renderDetail(container, { id }) {
 
 function showAddMaterialModal(folderId, defaultType, onDone) {
   const isNote = defaultType === 'note';
+  let fileMeta = null;
+
   const { backdrop, close } = openModal({
     title: isNote ? 'Add Note' : 'Add Material',
     width: 560,
@@ -408,11 +412,10 @@ function showAddMaterialModal(folderId, defaultType, onDone) {
       </div>
       ${!isNote ? `
         <div class="input-group">
-          <label class="input-label">Upload File (.txt, .md, .csv) or Paste Content</label>
-          <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-2);">
-            <button class="btn btn-secondary btn-sm" id="mat-file-btn" style="flex:1;">Choose File</button>
-          </div>
+          <label class="input-label">Upload File (.txt, .md, .csv, .pdf)</label>
+          <div id="mat-upload-mount"></div>
         </div>
+        <div id="mat-source-ref" style="display:none;"></div>
       ` : ''}
       <div class="input-group">
         <label class="input-label">${isNote ? 'Your Notes / Reflections' : 'Content (paste or type)'}</label>
@@ -425,25 +428,35 @@ function showAddMaterialModal(folderId, defaultType, onDone) {
     `
   });
 
-  backdrop.querySelector('#mat-file-btn')?.addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.txt,.md,.csv,.text';
-    input.addEventListener('change', () => {
-      const file = input.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        backdrop.querySelector('#mat-content').value = reader.result;
-        if (!backdrop.querySelector('#mat-title').value.trim()) {
-          backdrop.querySelector('#mat-title').value = file.name.replace(/\.[^.]+$/, '');
+  // Mount the file upload zone for material (non-note) uploads
+  const uploadMount = backdrop.querySelector('#mat-upload-mount');
+  if (uploadMount) {
+    const uploadZone = createFileUploadZone({
+      compact: true,
+      onContent: (text, meta) => {
+        backdrop.querySelector('#mat-content').value = text;
+        fileMeta = meta;
+
+        if (!backdrop.querySelector('#mat-title').value.trim() && meta.filename) {
+          backdrop.querySelector('#mat-title').value = meta.filename.replace(/\.[^.]+$/, '');
         }
-        showToast(`Loaded "${file.name}"`);
-      };
-      reader.readAsText(file);
+
+        const sourceRefEl = backdrop.querySelector('#mat-source-ref');
+        if (sourceRefEl && meta.isPdf && meta.pageRange) {
+          sourceRefEl.style.display = 'block';
+          sourceRefEl.innerHTML = `
+            <div style="background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3);">
+              <div style="font-size:0.75rem;font-weight:600;color:var(--accent);margin-bottom:2px;">Source Reference</div>
+              <div style="font-size:0.8125rem;color:var(--ink-secondary);">
+                ${esc(meta.filename)} — pp ${meta.pageRange.from}–${meta.pageRange.to} (${meta.extractedPages} of ${meta.totalPages} pages)
+              </div>
+            </div>
+          `;
+        }
+      }
     });
-    input.click();
-  });
+    uploadMount.appendChild(uploadZone.el);
+  }
 
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
   backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
@@ -459,6 +472,17 @@ function showAddMaterialModal(folderId, defaultType, onDone) {
       content,
       createdAt: Date.now()
     };
+
+    // Attach source reference if from a file upload
+    if (fileMeta) {
+      material.sourceRef = {
+        filename: fileMeta.filename,
+        isPdf: fileMeta.isPdf,
+        totalPages: fileMeta.totalPages,
+        pageRange: fileMeta.pageRange,
+        extractedPages: fileMeta.extractedPages
+      };
+    }
 
     const folders = (Store.get('pdFolders') || []).map(f => {
       if (f.id !== folderId) return f;
