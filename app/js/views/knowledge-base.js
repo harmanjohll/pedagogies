@@ -9,6 +9,7 @@ import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { openModal } from '../components/modals.js';
 import { createFileUploadZone } from '../components/pdf-upload.js';
+import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 
 const FRAMEWORKS = [
   {
@@ -248,6 +249,8 @@ export function render(container) {
   container.innerHTML = `
     <div class="main-scroll">
       <div class="page-container">
+        ${renderWorkflowBreadcrumb('sow')}
+
         <div class="page-header">
           <div>
             <h1 class="page-title">Knowledge Base</h1>
@@ -311,6 +314,30 @@ export function render(container) {
           <div id="uploads-list"></div>
         </div>
 
+        <!-- Department Schemes -->
+        <div style="margin-bottom:var(--sp-6);" id="dept-schemes-section">
+          <div class="section-header">
+            <span class="section-title">Department / Level Schemes</span>
+            <button class="btn btn-secondary btn-sm" id="add-scheme-btn">+ Add Scheme</button>
+          </div>
+          <div id="dept-schemes-list"></div>
+        </div>
+
+        <!-- MOE Resource Gateway (Placeholder) -->
+        <div style="margin-bottom:var(--sp-6);">
+          <div class="section-header">
+            <span class="section-title">MOE Resources</span>
+            <span class="badge badge-gray">Requires Setup</span>
+          </div>
+          <div class="card" style="border:1px dashed var(--border);background:transparent;padding:var(--sp-6);text-align:center;opacity:0.7;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" style="margin:0 auto var(--sp-2);display:block;">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <p style="font-size:0.875rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-1);">MOE Resource Gateway</p>
+            <p style="font-size:0.75rem;color:var(--ink-faint);line-height:1.5;max-width:400px;margin:0 auto;">Connect to your school's resource portal to browse curriculum documents, past papers, and approved materials. Requires school administrator setup.</p>
+          </div>
+        </div>
+
         <div id="framework-detail" style="margin-top:var(--sp-6);"></div>
       </div>
     </div>
@@ -345,6 +372,9 @@ export function render(container) {
 
   container.querySelector('#upload-btn').addEventListener('click', () => showUploadModal(container));
 
+  // Workflow breadcrumb clicks
+  bindWorkflowClicks(container);
+
   // SoW shortcut upload
   container.querySelector('#sow-upload-card')?.addEventListener('click', () => showUploadModal(container, 'Scheme of Work'));
   container.querySelector('#sow-add-more')?.addEventListener('click', () => showUploadModal(container, 'Scheme of Work'));
@@ -356,6 +386,10 @@ export function render(container) {
       if (u) renderUploadDetail(detailEl, u);
     });
   });
+
+  // Department Schemes
+  renderDepartmentSchemes(container);
+  container.querySelector('#add-scheme-btn')?.addEventListener('click', () => showAddSchemeModal(container));
 }
 
 function renderCards(el) {
@@ -703,3 +737,111 @@ function highlight(text, query) {
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function formatSize(len) { return len > 1024 ? `${(len / 1024).toFixed(1)} KB` : `${len} chars`; }
 function formatDate(ts) { return new Date(ts).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' }); }
+
+/* ── Department Schemes ── */
+function renderDepartmentSchemes(container) {
+  const schemes = Store.get('departmentSchemes') || [];
+  const el = container.querySelector('#dept-schemes-list');
+  if (!el) return;
+
+  if (schemes.length === 0) {
+    el.innerHTML = `
+      <div class="card" style="text-align:center;padding:var(--sp-6);border:1px dashed var(--border);background:transparent;">
+        <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-1);">No schemes defined yet</p>
+        <p style="font-size:0.75rem;color:var(--ink-faint);">Define your department's topic sequence by term (e.g., Sec 3 History: Term 1 = Cold War, Term 2 = Decolonisation).</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--sp-2);">
+    ${schemes.map(s => `
+      <div class="card card-hover" style="padding:var(--sp-4);cursor:pointer;" data-scheme="${s.id}">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:0.875rem;font-weight:600;color:var(--ink);">${esc(s.name)}</div>
+            <div style="font-size:0.6875rem;color:var(--ink-muted);">${esc(s.department || '')} · ${esc(s.level || '')} · ${(s.terms || []).length} terms</div>
+          </div>
+          <button class="btn btn-ghost btn-sm del-scheme" data-del-scheme="${s.id}" style="color:var(--danger);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+        ${(s.terms || []).length > 0 ? `
+          <div style="display:flex;gap:var(--sp-1);flex-wrap:wrap;margin-top:var(--sp-2);">
+            ${s.terms.map(t => `<span class="badge badge-blue">${esc(t.name)}: ${esc((t.topics || []).join(', '))}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `).join('')}
+  </div>`;
+
+  el.querySelectorAll('.del-scheme').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      Store.deleteDepartmentScheme(btn.dataset.delScheme);
+      showToast('Scheme deleted.', 'success');
+      renderDepartmentSchemes(container);
+    });
+  });
+}
+
+function showAddSchemeModal(container) {
+  const { backdrop, close } = openModal({
+    title: 'Add Department / Level Scheme',
+    width: 520,
+    body: `
+      <div class="input-group">
+        <label class="input-label">Scheme Name</label>
+        <input class="input" id="scheme-name" placeholder="e.g. Sec 3 History Topic Sequence" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Department</label>
+        <input class="input" id="scheme-dept" placeholder="e.g. Humanities" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Level</label>
+        <input class="input" id="scheme-level" placeholder="e.g. Sec 3" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Terms</label>
+        <p style="font-size:0.6875rem;color:var(--ink-faint);margin-bottom:var(--sp-2);">Enter topics for each term, separated by commas.</p>
+        <div style="display:flex;flex-direction:column;gap:var(--sp-2);" id="scheme-terms">
+          ${[1,2,3,4].map(i => `
+            <div style="display:flex;gap:var(--sp-2);align-items:center;">
+              <span style="font-size:0.75rem;font-weight:600;color:var(--ink-muted);min-width:50px;">Term ${i}</span>
+              <input class="input" data-term="${i}" placeholder="e.g. Cold War, Berlin Wall, Cuban Missile Crisis" style="flex:1;" />
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save">Save Scheme</button>
+    `
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
+    const name = backdrop.querySelector('#scheme-name').value.trim();
+    if (!name) { showToast('Please enter a scheme name.', 'danger'); return; }
+
+    const terms = [];
+    backdrop.querySelectorAll('[data-term]').forEach(input => {
+      const topics = input.value.split(',').map(t => t.trim()).filter(Boolean);
+      if (topics.length) {
+        terms.push({ name: 'Term ' + input.dataset.term, topics });
+      }
+    });
+
+    Store.addDepartmentScheme({
+      name,
+      department: backdrop.querySelector('#scheme-dept').value.trim(),
+      level: backdrop.querySelector('#scheme-level').value.trim(),
+      terms
+    });
+
+    showToast(`Scheme "${name}" saved!`, 'success');
+    close();
+    renderDepartmentSchemes(container);
+  });
+}

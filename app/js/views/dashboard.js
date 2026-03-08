@@ -25,13 +25,14 @@ export function isAdminUser(email) {
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
 
 const DEFAULT_WIDGET_ORDER = [
-  'schedule', 'notifications', 'weeklyOverview', 'suggestions',
+  'schedule', 'activityFeed', 'notifications', 'weeklyOverview', 'suggestions',
   'quickActions', 'stats', 'studentSpotlight', 'prepChecklist', 'insights',
-  'reflections', 'recentGrid', 'timetable', 'classes'
+  'reflections', 'recentGrid', 'timetable', 'classes', 'studentData'
 ];
 
 const WIDGET_LABELS = {
   schedule:      "Today's Schedule",
+  activityFeed:  'Recent Work',
   notifications: 'Notifications & Reminders',
   weeklyOverview:'Weekly Overview',
   suggestions:   'Suggested for You',
@@ -42,6 +43,7 @@ const WIDGET_LABELS = {
   reflections:   'Reflection Analytics',
   recentGrid:    'Recent Lessons / Events / Activity',
   studentSpotlight: 'Student Spotlight',
+  studentData:   'Student Learning Data',
   timetable:     'My Timetable',
   classes:       'Your Classes'
 };
@@ -1365,9 +1367,95 @@ export function render(container) {
       `).join('')}
     </div>`;
 
+  // ── Activity Feed / Recent Work Resume Widget ──
+  const activityFeedItems = [];
+  // Gather recently updated lessons
+  const sortedLessons = [...lessons].sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+  sortedLessons.slice(0, 3).forEach(l => {
+    const linkedClass = l.classId ? classes.find(c => c.id === l.classId) : null;
+    activityFeedItems.push({
+      label: l.title || 'Untitled Lesson',
+      detail: linkedClass ? linkedClass.name : (l.status === 'draft' ? 'Draft' : l.status || ''),
+      ts: l.updatedAt || l.createdAt || 0,
+      route: '/lesson-planner',
+      routeParam: l.id,
+      type: 'lesson'
+    });
+  });
+  // Add recent activity log entries (non-lesson types)
+  activity.slice(0, 5).forEach(a => {
+    // Determine a sensible route based on activity type
+    let route = '/';
+    if (a.type === 'class_created' || a.type === 'class_deleted' || a.type === 'student_added') route = '/classes';
+    else if (a.type === 'layout_saved') route = '/spatial';
+    else if (a.type === 'routine_created') route = '/assessment/afl';
+    else if (a.type === 'tos_saved' || a.type === 'checklist_created' || a.type === 'blueprint_created') route = '/assessment/afl';
+    else if (a.type === 'stimulus_created' || a.type === 'source_created') route = '/knowledge';
+    else if (a.type === 'scheme_created') route = '/knowledge';
+    else if (a.type === 'lesson_created' || a.type === 'lesson_deleted') route = '/lessons';
+    activityFeedItems.push({
+      label: a.description || a.type,
+      detail: '',
+      ts: a.timestamp || 0,
+      route,
+      type: 'activity'
+    });
+  });
+  // De-duplicate by label+type, sort by recency, take top 5
+  const seenFeedKeys = new Set();
+  const dedupedFeed = activityFeedItems
+    .sort((a, b) => b.ts - a.ts)
+    .filter(item => {
+      const key = item.label + '|' + item.type;
+      if (seenFeedKeys.has(key)) return false;
+      seenFeedKeys.add(key);
+      return true;
+    })
+    .slice(0, 5);
+
+  const activityFeedHTML = dedupedFeed.length === 0
+    ? `<div style="text-align:center;padding:var(--sp-6);color:var(--ink-muted);font-size:0.8125rem;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" style="display:block;margin:0 auto var(--sp-2);">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        No recent activity yet. Start planning a lesson or creating a class!
+      </div>`
+    : `<div style="display:flex;flex-direction:column;gap:2px;">
+        ${dedupedFeed.map((item, i) => `
+          <div class="card-hover card-interactive" data-feed-route="${item.route}" ${item.routeParam ? `data-feed-param="${item.routeParam}"` : ''} style="display:flex;align-items:center;justify-content:space-between;padding:var(--sp-3) var(--sp-4);border-radius:var(--radius);cursor:pointer;${i === 0 ? 'background:var(--accent-light);' : ''}">
+            <div style="min-width:0;flex:1;">
+              <div style="font-weight:${i === 0 ? '600' : '500'};color:var(--ink);font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${i === 0 ? 'You last worked on: ' : ''}${item.label}
+              </div>
+              <div style="font-size:0.75rem;color:var(--ink-muted);margin-top:1px;">
+                ${item.detail ? item.detail + ' &mdash; ' : ''}${item.ts ? timeAgo(item.ts) : ''}
+              </div>
+            </div>
+            <span style="flex-shrink:0;margin-left:var(--sp-3);font-size:0.75rem;font-weight:600;color:var(--accent);white-space:nowrap;">
+              ${i === 0 ? 'Resume &rarr;' : 'Open &rarr;'}
+            </span>
+          </div>
+        `).join('')}
+        <div style="text-align:center;margin-top:var(--sp-3);">
+          <button class="btn btn-ghost btn-sm" data-action="view-all-activity" style="font-size:0.75rem;">View All Activity</button>
+        </div>
+      </div>`;
+
+  // ── Student Platform Data Placeholder Widget ──
+  const studentDataHTML = `
+    <div class="card" style="border:1px dashed var(--border);background:transparent;padding:var(--sp-6);text-align:center;opacity:0.7;position:relative;">
+      <span class="badge badge-gray" style="position:absolute;top:var(--sp-3);right:var(--sp-3);font-size:0.625rem;letter-spacing:0.05em;text-transform:uppercase;">Coming Soon</span>
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" style="margin:0 auto var(--sp-2);display:block;">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <p style="font-size:0.875rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-1);">Student Learning Data</p>
+      <p style="font-size:0.75rem;color:var(--ink-faint);line-height:1.5;max-width:440px;margin:0 auto;">Connect to SLS, Google Classroom, or your school's LMS to surface student progress, quiz results, and assignment completion here.</p>
+    </div>`;
+
   // Widget content map — content for each widget that can be rendered synchronously
   const widgetContent = {
     schedule: '',       // populated async
+    activityFeed: activityFeedHTML,
     notifications: notificationsContent,
     weeklyOverview: '', // populated async
     suggestions: suggestionsHTML,
@@ -1379,7 +1467,8 @@ export function render(container) {
     reflections: renderReflectionAnalytics(lessons),
     recentGrid: recentGridHTML,
     timetable: '',      // populated async
-    classes: classesHTML
+    classes: classesHTML,
+    studentData: studentDataHTML
   };
 
   // Build ordered widgets HTML — insights/reflections already have their own wrapper
@@ -1456,13 +1545,27 @@ export function render(container) {
     'knowledge': () => navigate('/knowledge'),
     'admin': () => navigate('/admin'),
     'lessons': () => navigate('/lessons'),
-    'add-class': () => navigate('/classes')
+    'add-class': () => navigate('/classes'),
+    'view-all-activity': () => navigate('/lessons')
   };
 
   container.querySelectorAll('[data-action]').forEach(el => {
     el.addEventListener('click', () => {
       const action = el.dataset.action;
       if (actions[action]) actions[action]();
+    });
+  });
+
+  // Activity feed item clicks
+  container.querySelectorAll('[data-feed-route]').forEach(el => {
+    el.addEventListener('click', () => {
+      const route = el.dataset.feedRoute;
+      const param = el.dataset.feedParam;
+      if (param) {
+        navigate(`${route}/${param}`);
+      } else {
+        navigate(route);
+      }
     });
   });
 

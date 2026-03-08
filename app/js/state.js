@@ -35,7 +35,14 @@ const DEFAULT_STATE = {
   recentActivity: [],
   assessmentRoutines: [],
   savedTOS: [],
-  assessmentChecklists: []
+  assessmentChecklists: [],
+  knowledgeUploads: [],
+  pdFolders: [],
+  stimulusLibrary: [],
+  sourceLibrary: [],
+  departmentSchemes: [],
+  assessmentBlueprints: [],
+  onboardingComplete: false
 };
 
 const _state = Object.assign({}, DEFAULT_STATE, loadFromStorage());
@@ -45,6 +52,24 @@ const _listeners = new Set();
 if (!_state.apiKey && localStorage.getItem('cocher_api_key')) {
   _state.apiKey = localStorage.getItem('cocher_api_key');
 }
+
+// Migrate legacy localStorage libraries into Store on first load
+(function migrateLegacyLibraries() {
+  let dirty = false;
+  if (!_state.stimulusLibrary?.length) {
+    try {
+      const raw = localStorage.getItem('cocher_stimulus_library');
+      if (raw) { _state.stimulusLibrary = JSON.parse(raw); dirty = true; }
+    } catch {}
+  }
+  if (!_state.sourceLibrary?.length) {
+    try {
+      const raw = localStorage.getItem('cocher_source_library');
+      if (raw) { _state.sourceLibrary = JSON.parse(raw); dirty = true; }
+    } catch {}
+  }
+  if (dirty) saveToStorage({ ..._state });
+})();
 
 export const Store = {
   /* ── Read ── */
@@ -87,6 +112,11 @@ export const Store = {
       assessmentRoutines: _state.assessmentRoutines || [],
       savedTOS: _state.savedTOS || [],
       assessmentChecklists: _state.assessmentChecklists || [],
+      stimulusLibrary: _state.stimulusLibrary || [],
+      sourceLibrary: _state.sourceLibrary || [],
+      departmentSchemes: _state.departmentSchemes || [],
+      assessmentBlueprints: _state.assessmentBlueprints || [],
+      onboardingComplete: _state.onboardingComplete || false,
       recentActivity: _state.recentActivity
     });
     // Also keep legacy keys in sync
@@ -240,6 +270,7 @@ export const Store = {
       spatialLayout: data.spatialLayout || null,
       objectives: data.objectives || '',
       e21ccFocus: data.e21ccFocus || [],
+      attachedResources: data.attachedResources || [],
       reflection: '',
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -403,6 +434,135 @@ export const Store = {
     this._notify();
   },
 
+  /* ══════════ Stimulus Library ══════════ */
+
+  getStimulusLibrary() {
+    return _state.stimulusLibrary || [];
+  },
+
+  addStimulusMaterial(data) {
+    _state.stimulusLibrary = [data, ...(_state.stimulusLibrary || [])];
+    // Sync to legacy key for backwards compat
+    localStorage.setItem('cocher_stimulus_library', JSON.stringify(_state.stimulusLibrary));
+    this._addActivity('stimulus_created', `Added stimulus material "${data.title}"`);
+    this._persist();
+    this._notify();
+  },
+
+  updateStimulusMaterial(id, data) {
+    _state.stimulusLibrary = (_state.stimulusLibrary || []).map(s =>
+      s.id === id ? { ...s, ...data, updatedAt: Date.now() } : s
+    );
+    localStorage.setItem('cocher_stimulus_library', JSON.stringify(_state.stimulusLibrary));
+    this._persist();
+    this._notify();
+  },
+
+  deleteStimulusMaterial(id) {
+    _state.stimulusLibrary = (_state.stimulusLibrary || []).filter(s => s.id !== id);
+    localStorage.setItem('cocher_stimulus_library', JSON.stringify(_state.stimulusLibrary));
+    this._persist();
+    this._notify();
+  },
+
+  /* ══════════ Source Analysis Library ══════════ */
+
+  getSourceLibrary() {
+    return _state.sourceLibrary || [];
+  },
+
+  addSourceAnalysis(data) {
+    _state.sourceLibrary = [data, ...(_state.sourceLibrary || [])];
+    localStorage.setItem('cocher_source_library', JSON.stringify(_state.sourceLibrary));
+    this._addActivity('source_created', `Added source analysis "${data.title}"`);
+    this._persist();
+    this._notify();
+  },
+
+  updateSourceAnalysis(id, data) {
+    _state.sourceLibrary = (_state.sourceLibrary || []).map(s =>
+      s.id === id ? { ...s, ...data } : s
+    );
+    localStorage.setItem('cocher_source_library', JSON.stringify(_state.sourceLibrary));
+    this._persist();
+    this._notify();
+  },
+
+  deleteSourceAnalysis(id) {
+    _state.sourceLibrary = (_state.sourceLibrary || []).filter(s => s.id !== id);
+    localStorage.setItem('cocher_source_library', JSON.stringify(_state.sourceLibrary));
+    this._persist();
+    this._notify();
+  },
+
+  /* ══════════ Department Schemes ══════════ */
+
+  getDepartmentSchemes() {
+    return _state.departmentSchemes || [];
+  },
+
+  addDepartmentScheme(data) {
+    const scheme = {
+      id: generateId(),
+      ...data,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    _state.departmentSchemes = [...(_state.departmentSchemes || []), scheme];
+    this._addActivity('scheme_created', `Created scheme "${scheme.name}"`);
+    this._persist();
+    this._notify();
+    return scheme;
+  },
+
+  updateDepartmentScheme(id, data) {
+    _state.departmentSchemes = (_state.departmentSchemes || []).map(s =>
+      s.id === id ? { ...s, ...data, updatedAt: Date.now() } : s
+    );
+    this._persist();
+    this._notify();
+  },
+
+  deleteDepartmentScheme(id) {
+    _state.departmentSchemes = (_state.departmentSchemes || []).filter(s => s.id !== id);
+    this._persist();
+    this._notify();
+  },
+
+  /* ══════════ Assessment Blueprints ══════════ */
+
+  getAssessmentBlueprints() {
+    return _state.assessmentBlueprints || [];
+  },
+
+  addAssessmentBlueprint(data) {
+    const bp = {
+      id: generateId(),
+      ...data,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    _state.assessmentBlueprints = [...(_state.assessmentBlueprints || []), bp];
+    this._addActivity('blueprint_created', `Created assessment blueprint "${bp.name}"`);
+    this._persist();
+    this._notify();
+    return bp;
+  },
+
+  updateAssessmentBlueprint(id, data) {
+    _state.assessmentBlueprints = (_state.assessmentBlueprints || []).map(b =>
+      b.id === id ? { ...b, ...data, updatedAt: Date.now() } : b
+    );
+    this._persist();
+    this._notify();
+  },
+
+  deleteAssessmentBlueprint(id) {
+    _state.assessmentBlueprints = (_state.assessmentBlueprints || []).filter(b => b.id !== id);
+    this._persist();
+    this._notify();
+  },
+
   /* ══════════ Activity Feed ══════════ */
 
   _addActivity(type, description) {
@@ -417,8 +577,14 @@ export const Store = {
   /* ══════════ Data Export/Import ══════════ */
 
   exportData() {
+    // Migrate any legacy localStorage-only libraries into export
+    const stimLib = _state.stimulusLibrary?.length ? _state.stimulusLibrary
+      : (() => { try { return JSON.parse(localStorage.getItem('cocher_stimulus_library') || '[]'); } catch { return []; } })();
+    const srcLib = _state.sourceLibrary?.length ? _state.sourceLibrary
+      : (() => { try { return JSON.parse(localStorage.getItem('cocher_source_library') || '[]'); } catch { return []; } })();
+
     return JSON.stringify({
-      version: 1,
+      version: 2,
       exportedAt: Date.now(),
       classes: _state.classes,
       lessons: _state.lessons,
@@ -429,6 +595,10 @@ export const Store = {
       assessmentRoutines: _state.assessmentRoutines || [],
       savedTOS: _state.savedTOS || [],
       assessmentChecklists: _state.assessmentChecklists || [],
+      stimulusLibrary: stimLib,
+      sourceLibrary: srcLib,
+      departmentSchemes: _state.departmentSchemes || [],
+      assessmentBlueprints: _state.assessmentBlueprints || [],
       recentActivity: _state.recentActivity
     }, null, 2);
   },
@@ -445,7 +615,14 @@ export const Store = {
       if (data.assessmentRoutines) _state.assessmentRoutines = data.assessmentRoutines;
       if (data.savedTOS) _state.savedTOS = data.savedTOS;
       if (data.assessmentChecklists) _state.assessmentChecklists = data.assessmentChecklists;
+      if (data.stimulusLibrary) _state.stimulusLibrary = data.stimulusLibrary;
+      if (data.sourceLibrary) _state.sourceLibrary = data.sourceLibrary;
+      if (data.departmentSchemes) _state.departmentSchemes = data.departmentSchemes;
+      if (data.assessmentBlueprints) _state.assessmentBlueprints = data.assessmentBlueprints;
       if (data.recentActivity) _state.recentActivity = data.recentActivity;
+      // Also sync to legacy localStorage keys for backwards compat
+      if (data.stimulusLibrary) localStorage.setItem('cocher_stimulus_library', JSON.stringify(data.stimulusLibrary));
+      if (data.sourceLibrary) localStorage.setItem('cocher_source_library', JSON.stringify(data.sourceLibrary));
       this._persist();
       this._notify();
       return true;
@@ -464,8 +641,15 @@ export const Store = {
     _state.assessmentRoutines = [];
     _state.savedTOS = [];
     _state.assessmentChecklists = [];
+    _state.stimulusLibrary = [];
+    _state.sourceLibrary = [];
+    _state.departmentSchemes = [];
+    _state.assessmentBlueprints = [];
     _state.recentActivity = [];
     _state.chatHistory = [];
+    // Clear legacy keys too
+    localStorage.removeItem('cocher_stimulus_library');
+    localStorage.removeItem('cocher_source_library');
     this._persist();
     this._notify();
   }

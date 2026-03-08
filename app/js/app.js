@@ -28,6 +28,9 @@ import { render as renderStimulusMaterial } from './views/stimulus-material.js';
 import { render as renderSourceAnalysis } from './views/source-analysis.js';
 import { render as renderCCE } from './views/cce.js';
 import { render as renderMyCCA } from './views/my-cca.js';
+import { initGlobalSearch, openSearch } from './components/unified-search.js';
+import { initOnboarding } from './components/onboarding.js';
+import { initKeyboardShortcuts } from './components/keyboard-shortcuts.js';
 
 function init() {
   const app = document.getElementById('app');
@@ -109,6 +112,15 @@ function init() {
 
   // Start router
   initRouter();
+
+  // Global search (Ctrl+K)
+  initGlobalSearch();
+
+  // Keyboard shortcuts (Ctrl+N, etc.)
+  initKeyboardShortcuts();
+
+  // Onboarding for first-time users
+  initOnboarding();
 }
 
 /* ── Bootstrap ── */

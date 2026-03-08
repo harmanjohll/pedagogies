@@ -7,9 +7,10 @@
  *   AfL — Assessment for Learning (formative, Hattie's Visible Learning)
  */
 
-import { Store } from '../state.js';
+import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { sendChat } from '../api.js';
+import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 
 /* ── Bloom's Cognitive Process Dimension ── */
 const BLOOMS = [
@@ -263,6 +264,7 @@ export function renderAoL(container) {
     <style>${ASSESS_STYLES}</style>
     <div class="main-scroll">
       <div class="page-container">
+        ${renderWorkflowBreadcrumb('assess')}
         <div class="page-header" style="margin-bottom: 8px;">
           <div>
             <h1 class="page-title" style="font-size:1.625rem;">Assessment of Learning</h1>
@@ -386,6 +388,51 @@ export function renderAoL(container) {
           </div>
           ${tosMode === '2d' ? renderKnowledgeDimRef() : ''}
         </div>
+
+        <!-- Assessment Blueprint Mapping -->
+        <div class="assess-card">
+          <div class="assess-section-title">Assessment Blueprint Mapping</div>
+          <div class="assess-section-desc">
+            Map individual questions to topics, E21CC competencies, and difficulty levels to visualise assessment coverage and identify gaps.
+          </div>
+
+          <!-- Saved Blueprints -->
+          ${renderBlueprintList()}
+
+          <!-- Create / Edit Blueprint -->
+          <details id="bp-create-section" style="margin-top:12px;">
+            <summary style="cursor:pointer;font-weight:600;font-size:0.875rem;color:var(--accent,#4361ee);padding:8px 0;user-select:none;">
+              + Create New Blueprint
+            </summary>
+            <div style="margin-top:12px;padding:16px;border:1px solid var(--border,#e2e5ea);border-radius:10px;background:var(--bg-subtle,#f8f9fa);">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+                <div>
+                  <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Blueprint Title</label>
+                  <input type="text" id="bp-title" class="input" placeholder="e.g. Mid-Year Exam 2026" style="width:100%;" />
+                </div>
+                <div>
+                  <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Subject</label>
+                  <input type="text" id="bp-subject" class="input" placeholder="e.g. History, Science" style="width:100%;" />
+                </div>
+              </div>
+
+              <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Questions</div>
+              <div id="bp-questions-list">
+                ${renderBlueprintQuestionRow(1)}
+              </div>
+              <button class="btn btn-ghost btn-sm" id="bp-add-question" style="margin-top:8px;margin-bottom:14px;font-size:0.75rem;">
+                + Add Question
+              </button>
+
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary btn-sm" id="bp-save-btn">Save Blueprint</button>
+              </div>
+            </div>
+          </details>
+
+          <!-- Coverage Visualisation -->
+          <div id="bp-coverage-viz" style="margin-top:16px;"></div>
+        </div>
       </div>
     </div>
   `;
@@ -399,6 +446,7 @@ export function renderAoL(container) {
   });
 
   wireAoLEvents(container, lessons);
+  wireBlueprintEvents(container);
 }
 
 function render1DInputs(lessons) {
@@ -553,6 +601,7 @@ function build2DTOSTable(totalMarks, objectives) {
 
 /* \u2500\u2500 AoL event wiring \u2500\u2500 */
 function wireAoLEvents(container, lessons) {
+  bindWorkflowClicks(container);
   const objArea = container.querySelector('#tos-objectives');
   const obj2dArea = container.querySelector('#tos-2d-objectives');
   const lessonSel = container.querySelector('#tos-lesson-select');
@@ -1115,6 +1164,7 @@ export function renderAaL(container) {
     <style>${ASSESS_STYLES}</style>
     <div class="main-scroll">
       <div class="page-container">
+        ${renderWorkflowBreadcrumb('assess')}
         <div class="page-header" style="margin-bottom: 8px;">
           <div>
             <h1 class="page-title" style="font-size:1.625rem;">Assessment as Learning</h1>
@@ -1566,6 +1616,7 @@ const ENACTED_EXAMPLES = {
 };
 
 function wireAaLEvents(container) {
+  bindWorkflowClicks(container);
   // MAI collapsible toggle
   const maiToggle = container.querySelector('#mai-toggle');
   const maiBody = container.querySelector('#mai-body');
@@ -1831,6 +1882,7 @@ export function renderAfL(container) {
     <style>${ASSESS_STYLES}</style>
     <div class="main-scroll">
       <div class="page-container">
+        ${renderWorkflowBreadcrumb('assess')}
         <div class="page-header" style="margin-bottom: 8px;">
           <div>
             <h1 class="page-title" style="font-size:1.625rem;">Assessment for Learning</h1>
@@ -1986,6 +2038,7 @@ export function renderAfL(container) {
 }
 
 function wireAfLEvents(container) {
+  bindWorkflowClicks(container);
   // Class -> Topic cascade
   const classSel = container.querySelector('#afl-class');
   const topicSel = container.querySelector('#afl-topic');
@@ -2129,6 +2182,228 @@ function wireAfLEvents(container) {
       btn.disabled = false;
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Generate Exit Ticket';
     }
+  });
+}
+
+/* \u2500\u2500 Blueprint Mapping helpers \u2500\u2500 */
+const E21CC_COMPETENCIES = [
+  { key: 'CAIT', label: 'CAIT', desc: 'Critical, Adaptive & Inventive Thinking' },
+  { key: 'CCI',  label: 'CCI',  desc: 'Communication, Collaboration & Information Skills' },
+  { key: 'CGC',  label: 'CGC',  desc: 'Civic, Global & Cross-cultural Literacy' },
+];
+const DIFFICULTY_LEVELS = ['Easy', 'Medium', 'Hard'];
+
+function renderBlueprintList() {
+  const blueprints = Store.getAssessmentBlueprints();
+  if (!blueprints.length) {
+    return `<p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:8px;">No blueprints saved yet. Create one below.</p>`;
+  }
+  return `
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;">
+      ${blueprints.map(bp => {
+        const qCount = (bp.questions || []).length;
+        const topics = [...new Set((bp.questions || []).map(q => q.topic).filter(Boolean))];
+        const comps = [...new Set((bp.questions || []).map(q => q.competency).filter(Boolean))];
+        const totalMarks = (bp.questions || []).reduce((s, q) => s + (parseInt(q.marks) || 0), 0);
+        return `
+          <div class="assess-card" style="padding:14px 16px;margin-bottom:0;cursor:pointer;" data-bp-expand="${bp.id}">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-weight:700;font-size:0.875rem;color:var(--ink);">${escHtml(bp.title)}</div>
+                <div style="font-size:0.75rem;color:var(--ink-muted);margin-top:2px;">
+                  ${escHtml(bp.subject || '')} &middot; ${qCount} question${qCount !== 1 ? 's' : ''} &middot; ${totalMarks} marks
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <button class="btn btn-ghost btn-sm" data-bp-viz="${bp.id}" style="font-size:0.6875rem;">Coverage</button>
+                <button class="btn btn-ghost btn-sm" data-bp-delete="${bp.id}" style="font-size:0.6875rem;color:var(--danger,#dc3545);">Delete</button>
+              </div>
+            </div>
+            <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">
+              ${topics.map(t => `<span style="display:inline-block;font-size:0.625rem;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(67,97,238,0.1);color:#4361ee;">${escHtml(t)}</span>`).join('')}
+              ${comps.map(c => `<span style="display:inline-block;font-size:0.625rem;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(34,197,94,0.1);color:#16a34a;">${escHtml(c)}</span>`).join('')}
+            </div>
+          </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderBlueprintQuestionRow(num) {
+  return `
+    <div class="bp-question-row" style="display:grid;grid-template-columns:50px 1fr 1fr 1fr 80px 30px;gap:8px;align-items:center;margin-bottom:8px;">
+      <span style="font-size:0.75rem;font-weight:600;color:var(--ink-muted);text-align:center;">Q${num}</span>
+      <input type="text" class="input bp-q-topic" placeholder="Topic" style="font-size:0.75rem;padding:6px 8px;" />
+      <select class="input bp-q-competency" style="font-size:0.75rem;padding:6px 8px;">
+        <option value="">Competency...</option>
+        ${E21CC_COMPETENCIES.map(c => `<option value="${c.key}" title="${c.desc}">${c.label}</option>`).join('')}
+      </select>
+      <select class="input bp-q-difficulty" style="font-size:0.75rem;padding:6px 8px;">
+        ${DIFFICULTY_LEVELS.map(d => `<option value="${d}">${d}</option>`).join('')}
+      </select>
+      <input type="number" class="input bp-q-marks" placeholder="Marks" min="1" value="5" style="font-size:0.75rem;padding:6px 8px;text-align:center;" />
+      <button class="bp-remove-q" style="background:none;border:none;cursor:pointer;color:var(--ink-muted);font-size:1rem;padding:0;" title="Remove">&times;</button>
+    </div>
+  `;
+}
+
+function renderBlueprintCoverage(bp) {
+  const questions = bp.questions || [];
+  if (!questions.length) return '<p style="font-size:0.8125rem;color:var(--ink-muted);">No questions in this blueprint.</p>';
+
+  const topicMap = {};
+  const compMap = { CAIT: 0, CCI: 0, CGC: 0 };
+  const diffMap = { Easy: 0, Medium: 0, Hard: 0 };
+  questions.forEach(q => {
+    if (q.topic) topicMap[q.topic] = (topicMap[q.topic] || 0) + 1;
+    if (q.competency && compMap.hasOwnProperty(q.competency)) compMap[q.competency]++;
+    if (q.difficulty && diffMap.hasOwnProperty(q.difficulty)) diffMap[q.difficulty]++;
+  });
+
+  const totalQ = questions.length;
+  const missingComp = E21CC_COMPETENCIES.filter(c => compMap[c.key] === 0);
+  const missingDiff = DIFFICULTY_LEVELS.filter(d => diffMap[d] === 0);
+  const hasGaps = missingComp.length > 0 || missingDiff.length > 0;
+
+  return `
+    <div style="padding:16px;border:1px solid var(--border,#e2e5ea);border-radius:10px;background:var(--bg-subtle,#f8f9fa);">
+      <div style="font-weight:700;font-size:0.875rem;color:var(--ink);margin-bottom:12px;">Coverage Analysis: ${escHtml(bp.title)}</div>
+
+      ${hasGaps ? `
+        <div style="padding:10px 14px;border-radius:8px;background:#fef3c7;border:1px solid #f59e0b;margin-bottom:14px;">
+          <div style="font-size:0.8125rem;font-weight:600;color:#92400e;margin-bottom:4px;">Coverage Gaps Detected</div>
+          ${missingComp.length ? `<div style="font-size:0.75rem;color:#78350f;">Missing competencies: ${missingComp.map(c => c.label + ' (' + c.desc + ')').join(', ')}</div>` : ''}
+          ${missingDiff.length ? `<div style="font-size:0.75rem;color:#78350f;margin-top:2px;">Missing difficulty levels: ${missingDiff.join(', ')}</div>` : ''}
+        </div>` : `
+        <div style="padding:10px 14px;border-radius:8px;background:#d1fae5;border:1px solid #22c55e;margin-bottom:14px;">
+          <div style="font-size:0.8125rem;font-weight:600;color:#065f46;">Full coverage across competencies and difficulty levels.</div>
+        </div>`}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+        <div>
+          <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;margin-bottom:6px;">Topics</div>
+          ${Object.entries(topicMap).map(([t, count]) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light,#f0f0f4);">
+              <span style="font-size:0.8125rem;color:var(--ink);">${escHtml(t)}</span>
+              <span style="font-size:0.75rem;font-weight:600;color:var(--accent,#4361ee);">${count}/${totalQ}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div>
+          <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;margin-bottom:6px;">Competencies</div>
+          ${E21CC_COMPETENCIES.map(c => {
+            const count = compMap[c.key];
+            const pct = totalQ ? Math.round((count / totalQ) * 100) : 0;
+            const barColor = count === 0 ? '#ef4444' : '#22c55e';
+            return `
+              <div style="margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:2px;">
+                  <span style="color:var(--ink);">${c.label}</span>
+                  <span style="font-weight:600;color:${count === 0 ? '#ef4444' : 'var(--ink)'};">${count} (${pct}%)</span>
+                </div>
+                <div style="height:6px;background:var(--border-light,#e5e7eb);border-radius:3px;overflow:hidden;">
+                  <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;transition:width 0.3s;"></div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+        <div>
+          <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;margin-bottom:6px;">Difficulty</div>
+          ${DIFFICULTY_LEVELS.map(d => {
+            const count = diffMap[d];
+            const pct = totalQ ? Math.round((count / totalQ) * 100) : 0;
+            const barColor = count === 0 ? '#ef4444' : (d === 'Easy' ? '#3b82f6' : d === 'Medium' ? '#f59e0b' : '#ef4444');
+            return `
+              <div style="margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:2px;">
+                  <span style="color:var(--ink);">${d}</span>
+                  <span style="font-weight:600;color:${count === 0 ? '#ef4444' : 'var(--ink)'};">${count} (${pct}%)</span>
+                </div>
+                <div style="height:6px;background:var(--border-light,#e5e7eb);border-radius:3px;overflow:hidden;">
+                  <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;transition:width 0.3s;"></div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function wireBlueprintEvents(container) {
+  container.querySelector('#bp-add-question')?.addEventListener('click', () => {
+    const list = container.querySelector('#bp-questions-list');
+    if (!list) return;
+    const count = list.querySelectorAll('.bp-question-row').length + 1;
+    list.insertAdjacentHTML('beforeend', renderBlueprintQuestionRow(count));
+    wireRemoveQuestionBtns(container);
+  });
+
+  wireRemoveQuestionBtns(container);
+
+  container.querySelector('#bp-save-btn')?.addEventListener('click', () => {
+    const title = container.querySelector('#bp-title')?.value?.trim();
+    const subject = container.querySelector('#bp-subject')?.value?.trim();
+    if (!title) { showToast('Enter a blueprint title.', 'warning'); return; }
+
+    const rows = container.querySelectorAll('.bp-question-row');
+    const questions = [];
+    rows.forEach((row, i) => {
+      const topic = row.querySelector('.bp-q-topic')?.value?.trim() || '';
+      const competency = row.querySelector('.bp-q-competency')?.value || '';
+      const difficulty = row.querySelector('.bp-q-difficulty')?.value || 'Medium';
+      const marks = parseInt(row.querySelector('.bp-q-marks')?.value) || 0;
+      questions.push({ number: i + 1, topic, competency, difficulty, marks });
+    });
+
+    if (!questions.length) { showToast('Add at least one question.', 'warning'); return; }
+
+    Store.addAssessmentBlueprint({ title, subject, questions, createdAt: Date.now() });
+    showToast('Blueprint saved successfully.', 'success');
+    renderAoL(container);
+  });
+
+  container.querySelectorAll('[data-bp-delete]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.bpDelete;
+      const bps = Store.getAssessmentBlueprints().filter(b => b.id !== id);
+      Store.set('assessmentBlueprints', bps);
+      showToast('Blueprint deleted.', 'default');
+      renderAoL(container);
+    });
+  });
+
+  container.querySelectorAll('[data-bp-viz]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.bpViz;
+      const bp = Store.getAssessmentBlueprints().find(b => b.id === id);
+      const vizBox = container.querySelector('#bp-coverage-viz');
+      if (bp && vizBox) {
+        vizBox.innerHTML = renderBlueprintCoverage(bp);
+      }
+    });
+  });
+}
+
+function wireRemoveQuestionBtns(container) {
+  container.querySelectorAll('.bp-remove-q').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('.bp-question-row');
+      if (row) {
+        const list = container.querySelector('#bp-questions-list');
+        if (list && list.querySelectorAll('.bp-question-row').length > 1) {
+          row.remove();
+          list.querySelectorAll('.bp-question-row').forEach((r, i) => {
+            const label = r.querySelector('span');
+            if (label) label.textContent = `Q${i + 1}`;
+          });
+        } else {
+          showToast('At least one question is required.', 'warning');
+        }
+      }
+    });
   });
 }
 

@@ -980,6 +980,9 @@ export function render(container) {
             <!-- Spatial Layout Section -->
             <div id="spatial-section" style="margin-top:var(--sp-4);"></div>
 
+            <!-- Linked Resources Section -->
+            <div id="linked-resources-section" style="margin-top:var(--sp-4);"></div>
+
             <!-- Temporary loading/status area -->
             <div id="ai-result" style="margin-top:var(--sp-4);"></div>
           </div>
@@ -1827,6 +1830,9 @@ export function render(container) {
   // Spatial Layout
   renderSpatialSection(container);
   renderSpatialContextBar(container);
+
+  // Linked Resources
+  renderLinkedResourcesSection(container);
   container.querySelector('#spatial-layout-btn')?.addEventListener('click', () => {
     const spatialSection = container.querySelector('#spatial-section');
     spatialSection.scrollIntoView({ behavior: 'smooth' });
@@ -2673,6 +2679,134 @@ function renderSpatialSection(container, forceShow = false) {
       navigate('/spatial');
     });
   }
+}
+
+/* ══════════ Linked Resources Section ══════════ */
+function renderLinkedResourcesSection(container) {
+  const el = container.querySelector('#linked-resources-section');
+  if (!el) return;
+
+  const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const attachedResources = currentLesson?.attachedResources || [];
+  const stimulusLib = Store.getStimulusLibrary();
+  const sourceLib = Store.getSourceLibrary();
+  const hasLibrary = stimulusLib.length > 0 || sourceLib.length > 0;
+
+  if (attachedResources.length === 0 && !hasLibrary) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="card" style="padding:var(--sp-5);border-top:3px solid #0ea5e9;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3);">
+        <div style="display:flex;align-items:center;gap:var(--sp-2);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span style="font-weight:600;font-size:0.9375rem;color:var(--ink);">Linked Resources</span>
+          ${attachedResources.length > 0 ? `<span class="badge badge-blue" style="font-size:0.6875rem;">${attachedResources.length}</span>` : ''}
+        </div>
+        ${currentLessonId && hasLibrary ? `<button class="btn btn-secondary btn-sm" id="link-resources-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Link Resources
+        </button>` : ''}
+      </div>
+      ${!currentLessonId ? `<p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Save the lesson first, then link Stimulus Material or Source Analysis sets.</p>` : ''}
+      ${currentLessonId && attachedResources.length === 0 && hasLibrary ? `<p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-2);">Attach Stimulus Material or Source Analysis sets to this lesson.</p>` : ''}
+      ${attachedResources.length > 0 ? `
+        <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+          ${attachedResources.map((r, idx) => `
+            <div style="display:flex;align-items:center;gap:var(--sp-1);padding:var(--sp-1) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-lg);font-size:0.8125rem;border:1px solid var(--border-light);">
+              <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : 'badge-amber'}" style="font-size:0.625rem;">${r.type === 'stimulus' ? 'Stimulus' : 'Source'}</span>
+              <span style="color:var(--ink);">${esc(r.title)}</span>
+              <button class="btn btn-ghost btn-sm unlink-resource-btn" data-idx="${idx}" title="Remove" style="padding:1px 3px;color:var(--danger);margin-left:2px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>`;
+
+  // Wire link resources button
+  el.querySelector('#link-resources-btn')?.addEventListener('click', () => {
+    showLinkResourcesModal(container);
+  });
+
+  // Wire unlink buttons
+  el.querySelectorAll('.unlink-resource-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.idx);
+      const updated = [...attachedResources];
+      updated.splice(idx, 1);
+      Store.updateLesson(currentLessonId, { attachedResources: updated });
+      showToast('Resource unlinked', 'success');
+      renderLinkedResourcesSection(container);
+    });
+  });
+}
+
+function showLinkResourcesModal(container) {
+  const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  if (!currentLesson) return;
+
+  const attachedResources = currentLesson.attachedResources || [];
+  const attachedIds = new Set(attachedResources.map(r => r.id));
+  const stimulusLib = Store.getStimulusLibrary();
+  const sourceLib = Store.getSourceLibrary();
+
+  const allResources = [
+    ...stimulusLib.map(s => ({ type: 'stimulus', id: s.id, title: s.title || s.topic || 'Untitled Stimulus' })),
+    ...sourceLib.map(s => ({ type: 'source', id: s.id, title: s.title || s.topic || 'Untitled Source' }))
+  ];
+
+  const available = allResources.filter(r => !attachedIds.has(r.id));
+
+  if (available.length === 0) {
+    showToast('No additional resources available to link.', 'danger');
+    return;
+  }
+
+  const { backdrop, close } = openModal({
+    title: 'Link Resources to Lesson',
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">
+        Select Stimulus Material or Source Analysis sets to attach to this lesson.
+      </p>
+      <div style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp-2);">
+        ${available.map(r => `
+          <label style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius-md);cursor:pointer;transition:background 0.15s;" class="resource-option">
+            <input type="checkbox" class="resource-check" data-type="${r.type}" data-id="${r.id}" data-title="${escAttr(r.title)}" />
+            <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : 'badge-amber'}" style="font-size:0.625rem;flex-shrink:0;">${r.type === 'stimulus' ? 'Stimulus' : 'Source'}</span>
+            <span style="font-size:0.8125rem;color:var(--ink);">${esc(r.title)}</span>
+          </label>
+        `).join('')}
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="link">Link Selected</button>
+    `
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="link"]').addEventListener('click', () => {
+    const checked = [...backdrop.querySelectorAll('.resource-check:checked')];
+    if (checked.length === 0) {
+      showToast('Select at least one resource.', 'danger');
+      return;
+    }
+    const newResources = checked.map(cb => ({
+      type: cb.dataset.type,
+      id: cb.dataset.id,
+      title: cb.dataset.title
+    }));
+    const updated = [...attachedResources, ...newResources];
+    Store.updateLesson(currentLessonId, { attachedResources: updated });
+    showToast(`Linked ${newResources.length} resource${newResources.length > 1 ? 's' : ''}!`, 'success');
+    close();
+    renderLinkedResourcesSection(container);
+  });
 }
 
 /* ══════════ Resizable Panel Handle ══════════ */
