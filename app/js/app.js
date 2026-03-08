@@ -24,6 +24,8 @@ import { render as renderSimulations } from './views/simulations.js';
 import { render as renderLessonRehearsal } from './views/lesson-rehearsal.js';
 import { renderAoL, renderAaL, renderAfL } from './views/assessment.js';
 import { render as renderSettings } from './views/settings.js';
+import { render as renderStimulusMaterial } from './views/stimulus-material.js';
+import { render as renderSourceAnalysis } from './views/source-analysis.js';
 
 function init() {
   const app = document.getElementById('app');
@@ -97,6 +99,8 @@ function init() {
   registerRoute('/assessment/aal', renderAaL);
   registerRoute('/assessment/afl', renderAfL);
   registerRoute('/assessment/aol', renderAoL);
+  registerRoute('/stimulus-material', renderStimulusMaterial);
+  registerRoute('/source-analysis', renderSourceAnalysis);
   registerRoute('/settings', renderSettings);
 
   // Start router

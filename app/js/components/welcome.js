@@ -89,6 +89,37 @@ export function renderWelcome(onComplete) {
           </select>
         </div>
 
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; color: #334155;">
+            What matters most to you this year?
+          </label>
+          <p style="font-size: 0.75rem; color: #94a3b8; margin: 0 0 10px; line-height: 1.4;">
+            Select up to 3. This helps Co-Cher tailor suggestions to your priorities.
+          </p>
+          <div id="ped-priorities" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            ${[
+              { id: 'differentiation', label: 'Differentiation', icon: '&#9879;' },
+              { id: 'assessment', label: 'Assessment Literacy', icon: '&#9733;' },
+              { id: 'engagement', label: 'Student Engagement', icon: '&#9829;' },
+              { id: 'e21cc', label: 'E21CC Development', icon: '&#9883;' },
+              { id: 'edtech', label: 'EdTech Integration', icon: '&#9000;' },
+              { id: 'inquiry', label: 'Inquiry-Based Learning', icon: '?' },
+              { id: 'sel', label: 'SEL & Well-being', icon: '&#9786;' },
+              { id: 'cce', label: 'CCE & Values', icon: '&#9825;' }
+            ].map(p => `
+              <label class="ped-priority-chip" style="
+                display: flex; align-items: center; gap: 6px;
+                padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+                font-size: 0.8125rem; color: #475569; cursor: pointer;
+                transition: all 0.15s; background: #fff;
+              ">
+                <input type="checkbox" class="ped-priority-cb" value="${p.id}" style="accent-color: #4361ee;" />
+                <span>${p.icon}</span> ${p.label}
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
         <p id="welcome-error" style="
           color: #f43f5e; font-size: 0.8125rem; margin-bottom: 12px;
           display: none; text-align: center;
@@ -123,6 +154,30 @@ export function renderWelcome(onComplete) {
     toggleBtn.textContent = isPassword ? 'Hide' : 'Show';
   });
 
+  // Limit pedagogical priorities to 3
+  const priorityCBs = overlay.querySelectorAll('.ped-priority-cb');
+  priorityCBs.forEach(cb => {
+    cb.addEventListener('change', () => {
+      const checked = [...priorityCBs].filter(c => c.checked);
+      if (checked.length > 3) {
+        cb.checked = false;
+      }
+      // Visual feedback
+      priorityCBs.forEach(c => {
+        const label = c.closest('.ped-priority-chip');
+        if (c.checked) {
+          label.style.borderColor = '#4361ee';
+          label.style.background = '#eef2ff';
+          label.style.color = '#1e40af';
+        } else {
+          label.style.borderColor = '#e2e8f0';
+          label.style.background = '#fff';
+          label.style.color = '#475569';
+        }
+      });
+    });
+  });
+
   // Start button
   const startBtn = overlay.querySelector('#welcome-start');
   const errorEl = overlay.querySelector('#welcome-error');
@@ -140,6 +195,12 @@ export function renderWelcome(onComplete) {
 
     Store.set('apiKey', key);
     Store.set('model', modelSelect.value);
+
+    // Save pedagogical priorities
+    const priorities = [...overlay.querySelectorAll('.ped-priority-cb:checked')].map(cb => cb.value);
+    if (priorities.length > 0) {
+      Store.set('pedagogicalPriorities', priorities);
+    }
 
     // Animate out
     const card = overlay.querySelector('#welcome-card');
