@@ -506,7 +506,11 @@ export function renderDetail(container, { id }) {
             <textarea class="input" id="ref-freeform" rows="2" placeholder="Any other observations or reflections...">${esc(normalizeReflection(lesson.reflection).freeform)}</textarea>
           </div>
 
-          <div style="display:flex;justify-content:flex-end;">
+          <div style="display:flex;justify-content:flex-end;gap:var(--sp-2);">
+            <button class="btn btn-ghost btn-sm" id="use-reflection-btn" title="Start a new lesson informed by this reflection" style="color:var(--accent);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              Plan next lesson with insights
+            </button>
             <button class="btn btn-secondary btn-sm" id="save-ref">Save Reflection</button>
           </div>
         </div>
@@ -561,6 +565,40 @@ export function renderDetail(container, { id }) {
       }
     });
     showToast('Reflection saved!', 'success');
+  });
+
+  // Plan next lesson with reflection insights
+  container.querySelector('#use-reflection-btn')?.addEventListener('click', () => {
+    const ref = normalizeReflection(lesson.reflection);
+    const insights = [];
+    if (ref.whatWorked) insights.push(`What worked previously: ${ref.whatWorked}`);
+    if (ref.whatToAdjust) insights.push(`What to adjust: ${ref.whatToAdjust}`);
+    if (ref.e21ccObservations) insights.push(`E21CC observations: ${ref.e21ccObservations}`);
+    if (ref.engagement) {
+      const engLabels = ['', 'Low', 'Below Average', 'Average', 'Good', 'Excellent'];
+      insights.push(`Previous lesson engagement: ${engLabels[ref.engagement]}`);
+    }
+    if (insights.length === 0) {
+      showToast('Save your reflection first before using insights.', 'danger');
+      return;
+    }
+    // Store insights for lesson planner to pick up
+    sessionStorage.setItem('cocher_reflection_insights', JSON.stringify({
+      fromLesson: lesson.title,
+      classId: lesson.classId,
+      insights: insights.join('\n')
+    }));
+    if (lesson.classId) {
+      const cls = Store.getClass(lesson.classId);
+      if (cls) {
+        sessionStorage.setItem('cocher_plan_class_id', cls.id);
+        sessionStorage.setItem('cocher_plan_class_name', cls.name);
+        sessionStorage.setItem('cocher_plan_class_subject', cls.subject || '');
+        sessionStorage.setItem('cocher_plan_class_level', cls.level || '');
+      }
+    }
+    navigate('/lesson-planner');
+    showToast('Reflection insights loaded into Lesson Planner', 'success');
   });
 
   // Spatial layout - open in designer

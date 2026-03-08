@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -58,9 +58,10 @@ export const EEE_REGISTRY = {
   modelResponse:  { label: 'Model Response',     cat: 'enactment', desc: 'Annotated model answers showing structure & techniques', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'History', 'Social Studies', 'General Paper', 'Geography'] },
   sourceAnalysis: { label: 'Source Analysis',     cat: 'enactment', desc: 'Structured SBQ/SEQ-style source-based questions', subjects: ['History', 'Social Studies', 'General Paper', 'Geography'] },
   seatPlan:       { label: 'Seating Plan',        cat: 'enactment', desc: 'AI seat assignments with visual classroom map', subjects: ['all'] },
+  cceDiscussion:  { label: 'CCE Discussion',      cat: 'enactment', desc: 'Structured values-based discussion with CCE2021 framework', subjects: ['CCE', 'Social Studies', 'all'] },
 };
 
-const DEFAULT_PLANNER = ['youtubeVideos', 'worksheet', 'externalLinks', 'seatPlan', 'simulations', 'stimulus', 'vocabulary', 'modelResponse', 'sourceAnalysis'];
+const DEFAULT_PLANNER = ['youtubeVideos', 'worksheet', 'externalLinks', 'seatPlan', 'simulations', 'stimulus', 'vocabulary', 'modelResponse', 'sourceAnalysis', 'cceDiscussion'];
 const DEFAULT_SIDEBAR = ['simulations'];
 
 export function getEEESelections() {
@@ -120,6 +121,7 @@ const COMPONENT_META = {
   vocabulary:      { label: 'Vocabulary Builder',        color: '#06b6d4',              icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', order: 14 },
   modelResponse:   { label: 'Model Response',            color: '#d946ef',              icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>', order: 15 },
   sourceAnalysis:  { label: 'Source Analysis',           color: '#f97316',              icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>', order: 16 },
+  cceDiscussion:   { label: 'CCE Discussion',            color: '#e11d48',              icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>', order: 17 },
 };
 
 function setComponent(key, content, meta = '') {
@@ -192,6 +194,10 @@ function renderComponents(container) {
             ${activeComp.meta ? `<span style="font-size:0.6875rem;color:var(--ink-faint);">${esc(activeComp.meta)}</span>` : ''}
           </div>
           <div style="display:flex;align-items:center;gap:var(--sp-1);">
+            ${['worksheet','stimulus','vocabulary','modelResponse','sourceAnalysis','exitTicket','cceDiscussion'].includes(activeComponentTab) ? `
+            <button class="btn btn-ghost btn-sm component-preview" data-key="${activeComponentTab}" title="Student Preview — see how students will see this" style="padding:2px 4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>` : ''}
             <button class="btn btn-ghost btn-sm component-refresh" data-key="${activeComponentTab}" title="Regenerate" style="padding:2px 4px;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
             </button>
@@ -242,6 +248,7 @@ function renderComponents(container) {
         vocabulary: '#ai-vocabulary-btn',
         modelResponse: '#ai-model-response-btn',
         sourceAnalysis: '#ai-source-analysis-btn',
+        cceDiscussion: '#ai-cce-btn',
         seatPlan: '#spatial-layout-btn',
       };
       if (toolBtnMap[key]) container.querySelector(toolBtnMap[key])?.click();
@@ -253,6 +260,43 @@ function renderComponents(container) {
     tab.addEventListener('click', () => {
       activeComponentTab = tab.dataset.tab;
       renderComponents(container);
+    });
+  });
+
+  // Student preview — opens a clean print-friendly window showing what students would see
+  el.querySelectorAll('.component-preview').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      const comp = lessonComponents[key];
+      if (!comp?.content) return;
+      const meta = COMPONENT_META[key] || { label: key };
+      // Strip teacher notes, mark schemes, teacher-only annotations
+      let studentContent = comp.content
+        .replace(/###?\s*Teacher Notes[\s\S]*?(?=###?\s|$)/gi, '')
+        .replace(/###?\s*Mark Scheme[\s\S]*?(?=###?\s|$)/gi, '')
+        .replace(/###?\s*Facilitation[\s\S]*?(?=###?\s|$)/gi, '')
+        .replace(/###?\s*How to Use[\s\S]*?(?=###?\s|$)/gi, '')
+        .replace(/###?\s*Differentiation[\s\S]*?(?=###?\s|$)/gi, '')
+        .replace(/###?\s*Common Pitfalls[\s\S]*?(?=###?\s|$)/gi, '')
+        .replace(/\*E21CC:.*?\*/g, '')
+        .replace(/— \*[^*]+\*/g, '')
+        .trim();
+      const previewWin = window.open('', '_blank');
+      previewWin.document.write(`<!DOCTYPE html><html><head><title>${esc(meta.label)} — Student View</title>
+        <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.8;font-size:15px}
+        h1{font-size:18px;border-bottom:2px solid #4361ee;padding-bottom:8px;color:#4361ee}
+        h2,h3,h4{margin:16px 0 8px}strong{font-weight:600}ul,ol{padding-left:20px}
+        table{width:100%;border-collapse:collapse;margin:12px 0}th,td{text-align:left;padding:8px 12px;border:1px solid #e2e8f0}th{font-weight:600;background:#f1f5f9}
+        .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid #e2e8f0}
+        .name-line{display:flex;gap:24px;font-size:13px;color:#64748b;margin-bottom:16px}
+        .name-line span{border-bottom:1px solid #94a3b8;min-width:120px;display:inline-block}
+        @media print{body{margin:0;padding:16px}}</style></head>
+        <body>
+          <div class="header"><h1>${esc(meta.label)}</h1><span style="font-size:12px;color:#94a3b8;">Co-Cher</span></div>
+          <div class="name-line">Name: <span>&nbsp;</span> Class: <span>&nbsp;</span> Date: <span>&nbsp;</span></div>
+          ${md(studentContent)}
+        </body></html>`);
+      previewWin.document.close();
     });
   });
 }
@@ -605,6 +649,11 @@ function buildQuickPrompts(classes) {
     'Tamil': [
       { label: 'Plan a Tamil lesson', desc: 'Vocabulary strategies, model responses, peer review', prompt: `Plan a ${level} Tamil Language lesson on [topic e.g. கட்டுரை / படிப்புணர்வு]. Include vocabulary strategies, model responses, and peer review activities. The lesson is [40/60] minutes.` },
     ],
+    'CCE': [
+      { label: 'Plan a CCE lesson', desc: 'Values discussion, contemporary issues, SEL, CCE2021 Big Ideas', prompt: `Plan a ${level} CCE lesson on [topic e.g. Cyber Wellness / Responsible Decision-Making / National Identity]. Use the CCE2021 framework (Big Ideas: Identity, Relationships, Choices). Include a values-based discussion with facilitation strategies and an SEL component. The lesson is [40/60] minutes.` },
+      { label: 'CCE contemporary issues discussion', desc: 'Structured discussion on a real-world issue with multiple perspectives', prompt: `Design a ${level} CCE discussion on [contemporary issue e.g. AI & Ethics / Social Media & Mental Health / Climate Change]. Use Structured Academic Controversy or Four Corners. Connect to R3ICH values and NE dispositions. Include a scenario set in Singapore.` },
+      { label: 'CCE with NE focus', desc: 'National Education — Sense of Belonging, Hope, Reality, Will to Act', prompt: `Plan a ${level} CCE lesson with a National Education focus for [NE Commemorative Day e.g. Total Defence Day / Racial Harmony Day / International Friendship Day / National Day]. Develop NE dispositions: Sense of Belonging, Sense of Hope, Sense of Reality, and The Will to Act. The lesson is [40/60] minutes.` },
+    ],
   };
 
   // Match subject-specific prompts
@@ -635,6 +684,9 @@ function buildQuickPrompts(classes) {
   }
   if (eeeSelections.includes('vocabulary')) {
     prompts.push({ label: 'Build a word wall', desc: 'Key terms, definitions, sentence frames, cloze passage', prompt: `Create a vocabulary word wall for ${level} ${subj} on [topic]. Include key terms with definitions, sentence frames, and one cloze passage for practice.` });
+  }
+  if (eeeSelections.includes('cceDiscussion')) {
+    prompts.push({ label: 'CCE values discussion', desc: 'Structured CCE discussion with R3ICH values and scenario', prompt: `Create a CCE values discussion for ${level} students on [topic/issue]. Include a Singapore-context scenario, guiding questions linked to R3ICH values, and a facilitation strategy (Four Corners / Hot Seat / Circle Structure).` });
   }
 
   return prompts.slice(0, 6);
@@ -669,6 +721,7 @@ const AI_TOOLS = [
   { id: 'ai-vocabulary-btn', label: 'Vocabulary', icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', color: '#06b6d4', cat: 'enactment', eee: 'vocabulary' },
   { id: 'ai-model-response-btn', label: 'Model Resp.', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>', color: '#d946ef', cat: 'enactment', eee: 'modelResponse' },
   { id: 'ai-source-analysis-btn', label: 'Source Analysis', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>', color: '#f97316', cat: 'enactment', eee: 'sourceAnalysis' },
+  { id: 'ai-cce-btn', label: 'CCE Discussion', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>', color: '#e11d48', cat: 'enactment', eee: 'cceDiscussion' },
   { id: 'spatial-layout-btn', label: 'Spatial Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', color: '', cat: 'planning', eee: 'seatPlan' }
 ];
 
@@ -716,6 +769,18 @@ export function render(container) {
     sessionStorage.removeItem('cocher_plan_class_name');
     sessionStorage.removeItem('cocher_plan_class_subject');
     sessionStorage.removeItem('cocher_plan_class_level');
+  }
+
+  // Pick up reflection insights from previous lesson
+  const reflectionInsightsRaw = sessionStorage.getItem('cocher_reflection_insights');
+  let reflectionInsights = null;
+  if (reflectionInsightsRaw && !currentLessonId && chatMessages.length === 0) {
+    try {
+      reflectionInsights = JSON.parse(reflectionInsightsRaw);
+      sessionStorage.removeItem('cocher_reflection_insights');
+    } catch {}
+  } else {
+    sessionStorage.removeItem('cocher_reflection_insights');
   }
 
   // Pick up spatial layout link from Spatial Designer
@@ -774,6 +839,15 @@ export function render(container) {
               <strong>Planning for:</strong> ${planClassContext.name}${planClassContext.subject ? ' · ' + planClassContext.subject : ''}${planClassContext.level ? ' · ' + planClassContext.level : ''}
             </span>
             <button class="btn btn-ghost btn-sm" id="clear-class-context" style="padding:2px 6px;font-size:0.75rem;">Clear</button>
+          </div>
+        ` : ''}
+
+        ${reflectionInsights ? `
+          <div id="reflection-insights-banner" style="flex-shrink:0;padding:var(--sp-2) var(--sp-4);background:linear-gradient(90deg, rgba(99,102,241,0.08), rgba(236,72,153,0.06));border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.4;">
+              <strong style="color:var(--accent);">Reflection insights loaded</strong> from "${esc(reflectionInsights.fromLesson)}" — Co-Cher will use these to inform your next lesson.
+            </span>
+            <button class="btn btn-ghost btn-sm" id="clear-reflection-insights" style="padding:2px 6px;font-size:0.75rem;">Dismiss</button>
           </div>
         ` : ''}
 
@@ -1025,6 +1099,21 @@ export function render(container) {
           contextParts.push(`[Scheme of Work — ${sow.title}]:\n${sow.content.slice(0, 3000)}`);
         }
       });
+      // Inject reflection insights from previous lesson
+      if (reflectionInsights) {
+        contextParts.push(`[Post-Lesson Reflection from "${reflectionInsights.fromLesson}"]:\n${reflectionInsights.insights}\n\nPlease use these insights to inform the lesson plan — build on what worked and address what needs adjustment.`);
+      }
+      // Inject pedagogical priorities
+      const pedPriorities = Store.get('pedagogicalPriorities');
+      if (pedPriorities && pedPriorities.length > 0) {
+        const priorityLabels = {
+          differentiation: 'Differentiation', assessment: 'Assessment Literacy',
+          engagement: 'Student Engagement', e21cc: 'E21CC Development',
+          edtech: 'EdTech Integration', inquiry: 'Inquiry-Based Learning',
+          sel: 'SEL & Well-being', cce: 'CCE & Values'
+        };
+        contextParts.push(`[Teacher's pedagogical priorities this year: ${pedPriorities.map(p => priorityLabels[p] || p).join(', ')}]`);
+      }
     }
     // Ideology lens
     if (selectedIdeology) {
@@ -1078,6 +1167,12 @@ export function render(container) {
     planClassContext = null;
     container.querySelector('#class-context-banner')?.remove();
     chatInput.placeholder = 'Describe your lesson idea, ask about spatial design, or explore frameworks...';
+  });
+
+  // Dismiss reflection insights
+  container.querySelector('#clear-reflection-insights')?.addEventListener('click', () => {
+    reflectionInsights = null;
+    container.querySelector('#reflection-insights-banner')?.remove();
   });
 
   // Ideology lens
@@ -1488,46 +1583,184 @@ export function render(container) {
     }
   });
 
-  // EEE: Vocabulary Builder
-  container.querySelector('#ai-vocabulary-btn')?.addEventListener('click', async () => {
+  // EEE: Vocabulary Builder (structured form modal)
+  container.querySelector('#ai-vocabulary-btn')?.addEventListener('click', () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
-    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
-    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
-    const planText = aiMsgs.map(m => m.content).join('\n\n');
     const cls = planClassContext || {};
-    const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Building vocabulary materials...</div>';
-    resultEl.scrollIntoView({ behavior: 'smooth' });
-    try {
-      const result = await generateVocabulary(planText, cls.subject, cls.level);
-      setComponent('vocabulary', result, cls.subject || 'Vocabulary');
-      resultEl.innerHTML = '';
-      renderComponents(container);
-      showToast('Vocabulary materials generated!', 'success');
-    } catch (err) {
-      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
-    }
+    const { backdrop, close } = openModal({
+      title: 'Vocabulary Builder',
+      body: `
+        <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">Configure your vocabulary materials. Fill in the fields, then generate.</p>
+        <div class="input-group" style="margin-bottom:var(--sp-3);">
+          <label class="input-label">Topic / Theme</label>
+          <input class="input" id="vocab-topic" placeholder="e.g. Persuasive Writing Techniques, Chemical Bonding, Globalisation" value="" />
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-3);">
+          <div class="input-group">
+            <label class="input-label">Subject</label>
+            <select class="input" id="vocab-subject">
+              <option value="${cls.subject || ''}">${cls.subject || 'General'}</option>
+              ${['English','Chinese','Malay','Tamil','History','Social Studies','Geography','Science','Mathematics','CCE','General Paper'].filter(s => s !== cls.subject).map(s => `<option value="${s}">${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Level</label>
+            <select class="input" id="vocab-level">
+              <option value="${cls.level || 'Secondary'}">${cls.level || 'Secondary'}</option>
+              ${['Sec 1','Sec 2','Sec 3','Sec 4','Sec 5','JC 1','JC 2'].filter(l => l !== cls.level).map(l => `<option value="${l}">${l}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="input-group" style="margin-bottom:var(--sp-3);">
+          <label class="input-label">Vocabulary Tier Focus</label>
+          <select class="input" id="vocab-tier">
+            <option value="mixed">Mixed (Tier 2 Academic + Tier 3 Technical)</option>
+            <option value="tier2">Tier 2 — General Academic Vocabulary</option>
+            <option value="tier3">Tier 3 — Subject-Specific Technical Terms</option>
+          </select>
+        </div>
+        <div class="input-group" style="margin-bottom:var(--sp-3);">
+          <label class="input-label">Number of Terms</label>
+          <select class="input" id="vocab-count">
+            <option value="8-10">8-10 terms</option>
+            <option value="10-15" selected>10-15 terms</option>
+            <option value="15-20">15-20 terms</option>
+          </select>
+        </div>
+        <div class="input-group" style="margin-bottom:var(--sp-3);">
+          <label class="input-label">Include (optional)</label>
+          <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+            <label style="font-size:0.8125rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="vocab-include" value="sentence-frames" checked /> Sentence Frames</label>
+            <label style="font-size:0.8125rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="vocab-include" value="cloze" checked /> Cloze Passage</label>
+            <label style="font-size:0.8125rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="vocab-include" value="word-relationships" /> Word Relationships</label>
+            <label style="font-size:0.8125rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="vocab-include" value="frayer-model" /> Frayer Models</label>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Additional Notes (optional)</label>
+          <textarea class="input" id="vocab-notes" rows="2" placeholder="e.g. Focus on words students confuse, include L1 hints for ELL students..."></textarea>
+        </div>
+      `,
+      footer: `
+        <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+        <button class="btn btn-primary" data-action="generate">Generate Vocabulary</button>
+      `
+    });
+    backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+    backdrop.querySelector('[data-action="generate"]').addEventListener('click', async () => {
+      const topic = backdrop.querySelector('#vocab-topic').value.trim();
+      if (!topic) { showToast('Please enter a topic.', 'danger'); return; }
+      const subject = backdrop.querySelector('#vocab-subject').value;
+      const level = backdrop.querySelector('#vocab-level').value;
+      const tier = backdrop.querySelector('#vocab-tier').value;
+      const count = backdrop.querySelector('#vocab-count').value;
+      const includes = [...backdrop.querySelectorAll('.vocab-include:checked')].map(c => c.value);
+      const notes = backdrop.querySelector('#vocab-notes').value.trim();
+      const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+      const planContext = aiMsgs.length > 0 ? `\n\nLesson context:\n${aiMsgs[aiMsgs.length - 1].content.slice(0, 2000)}` : '';
+      close();
+      const resultEl = container.querySelector('#ai-result');
+      resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Building vocabulary materials...</div>';
+      resultEl.scrollIntoView({ behavior: 'smooth' });
+      try {
+        const prompt = `Generate vocabulary materials for: ${topic}\nSubject: ${subject}\nLevel: ${level}\nTier focus: ${tier}\nNumber of terms: ${count}\nInclude: ${includes.join(', ') || 'word wall only'}\n${notes ? `Teacher notes: ${notes}` : ''}${planContext}`;
+        const result = await generateVocabulary(prompt, subject, level);
+        setComponent('vocabulary', result, subject || 'Vocabulary');
+        resultEl.innerHTML = '';
+        renderComponents(container);
+        showToast('Vocabulary materials generated!', 'success');
+      } catch (err) {
+        resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+      }
+    });
   });
 
-  // EEE: Model Response
-  container.querySelector('#ai-model-response-btn')?.addEventListener('click', async () => {
+  // EEE: Model Response (structured form modal)
+  container.querySelector('#ai-model-response-btn')?.addEventListener('click', () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
-    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
-    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
-    const planText = aiMsgs.map(m => m.content).join('\n\n');
     const cls = planClassContext || {};
-    const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Creating model response...</div>';
-    resultEl.scrollIntoView({ behavior: 'smooth' });
-    try {
-      const result = await generateModelResponse(planText, cls.subject, cls.level);
-      setComponent('modelResponse', result, cls.subject || 'Model Response');
-      resultEl.innerHTML = '';
-      renderComponents(container);
-      showToast('Model response generated!', 'success');
-    } catch (err) {
-      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
-    }
+    const { backdrop, close } = openModal({
+      title: 'Model Response Generator',
+      body: `
+        <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">Specify the question and criteria to generate an annotated model answer.</p>
+        <div class="input-group" style="margin-bottom:var(--sp-3);">
+          <label class="input-label">Question / Task</label>
+          <textarea class="input" id="mr-question" rows="3" placeholder="e.g. 'Explain how the author uses imagery to convey...' or 'Describe the effects of urbanisation on...'"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-3);">
+          <div class="input-group">
+            <label class="input-label">Subject</label>
+            <select class="input" id="mr-subject">
+              <option value="${cls.subject || ''}">${cls.subject || 'General'}</option>
+              ${['English','Chinese','Malay','Tamil','History','Social Studies','Geography','Science','Mathematics','CCE','General Paper'].filter(s => s !== cls.subject).map(s => `<option value="${s}">${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Level</label>
+            <select class="input" id="mr-level">
+              <option value="${cls.level || 'Secondary'}">${cls.level || 'Secondary'}</option>
+              ${['Sec 1','Sec 2','Sec 3','Sec 4','Sec 5','JC 1','JC 2'].filter(l => l !== cls.level).map(l => `<option value="${l}">${l}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="input-group" style="margin-bottom:var(--sp-3);">
+          <label class="input-label">Response Type</label>
+          <select class="input" id="mr-type">
+            <option value="essay">Essay / Structured Response</option>
+            <option value="short-answer">Short Answer (1-2 paragraphs)</option>
+            <option value="worked-solution">Worked Solution (Maths/Science)</option>
+            <option value="source-based">Source-Based Response (SBQ/SEQ)</option>
+          </select>
+        </div>
+        <div class="input-group" style="margin-bottom:var(--sp-3);">
+          <label class="input-label">Band / Grade Target</label>
+          <select class="input" id="mr-band">
+            <option value="top-band">Top Band / A grade</option>
+            <option value="mid-band">Mid Band / B-C grade</option>
+            <option value="both">Show both (with comparison)</option>
+          </select>
+        </div>
+        <div class="input-group" style="margin-bottom:var(--sp-3);">
+          <label class="input-label">Rubric / Mark Scheme (optional)</label>
+          <textarea class="input" id="mr-rubric" rows="2" placeholder="Paste band descriptors or success criteria here..."></textarea>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Additional Instructions (optional)</label>
+          <textarea class="input" id="mr-notes" rows="2" placeholder="e.g. Focus on PEEL structure, include counter-argument..."></textarea>
+        </div>
+      `,
+      footer: `
+        <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+        <button class="btn btn-primary" data-action="generate">Generate Model Response</button>
+      `
+    });
+    backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+    backdrop.querySelector('[data-action="generate"]').addEventListener('click', async () => {
+      const question = backdrop.querySelector('#mr-question').value.trim();
+      if (!question) { showToast('Please enter a question or task.', 'danger'); return; }
+      const subject = backdrop.querySelector('#mr-subject').value;
+      const level = backdrop.querySelector('#mr-level').value;
+      const type = backdrop.querySelector('#mr-type').value;
+      const band = backdrop.querySelector('#mr-band').value;
+      const rubric = backdrop.querySelector('#mr-rubric').value.trim();
+      const notes = backdrop.querySelector('#mr-notes').value.trim();
+      const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+      const planContext = aiMsgs.length > 0 ? `\n\nLesson context:\n${aiMsgs[aiMsgs.length - 1].content.slice(0, 2000)}` : '';
+      close();
+      const resultEl = container.querySelector('#ai-result');
+      resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Creating model response...</div>';
+      resultEl.scrollIntoView({ behavior: 'smooth' });
+      try {
+        const prompt = `Generate a model response for:\nQuestion: ${question}\nSubject: ${subject}\nLevel: ${level}\nResponse type: ${type}\nTarget band: ${band}\n${rubric ? `Rubric/Mark scheme:\n${rubric}` : ''}\n${notes ? `Additional: ${notes}` : ''}${planContext}`;
+        const result = await generateModelResponse(prompt, subject, level);
+        setComponent('modelResponse', result, subject || 'Model Response');
+        resultEl.innerHTML = '';
+        renderComponents(container);
+        showToast('Model response generated!', 'success');
+      } catch (err) {
+        resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+      }
+    });
   });
 
   // EEE: Source Analysis
@@ -1546,6 +1779,26 @@ export function render(container) {
       resultEl.innerHTML = '';
       renderComponents(container);
       showToast('Source analysis generated!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
+  });
+
+  // CCE Discussion
+  container.querySelector('#ai-cce-btn')?.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    const planText = aiMsgs.length > 0 ? aiMsgs.map(m => m.content).join('\n\n') : 'General CCE lesson';
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Generating CCE discussion plan...</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+    try {
+      const result = await generateCCEDiscussion(planText, cls.level, cls.subject === 'CCE' ? '' : cls.subject);
+      setComponent('cceDiscussion', result, 'CCE2021');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('CCE discussion generated!', 'success');
     } catch (err) {
       resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
     }
@@ -1649,6 +1902,42 @@ function renderMessages(el, classes) {
 
     // Follow-up prompts after last AI response (only if not currently generating)
     if (!isGenerating && chatMessages.length >= 2 && chatMessages[chatMessages.length - 1].role === 'assistant') {
+      // Pedagogical nudges — subtle coaching indicators
+      const lastAI = chatMessages[chatMessages.length - 1].content.toLowerCase();
+      const nudges = [];
+
+      // Check for teacher-talk heavy plans (3+ consecutive "teacher explains/presents/tells")
+      const teacherTalkCount = (lastAI.match(/teacher (explains|presents|tells|lectures|demonstrates|shows)/gi) || []).length;
+      const studentActivityCount = (lastAI.match(/students? (discuss|explore|investigate|create|collaborate|present|practise)/gi) || []).length;
+      if (teacherTalkCount >= 3 && studentActivityCount < 2) {
+        nudges.push({ icon: '&#9729;', text: 'This plan has several teacher-led segments in a row. Consider adding a student activity to increase engagement.', color: '#f59e0b' });
+      }
+
+      // Check for no assessment checkpoint
+      const hasAssessment = /exit ticket|formative|check for understanding|quiz|assessment|checkpoint/i.test(lastAI);
+      const componentKeys = Object.keys(lessonComponents);
+      if (!hasAssessment && !componentKeys.includes('exitTicket') && chatMessages.length >= 4) {
+        nudges.push({ icon: '&#9998;', text: 'No assessment checkpoint detected. Consider adding a formative check to monitor understanding.', color: '#3b82f6' });
+      }
+
+      // Check for estimated time (if plan mentions minutes)
+      const timeMatches = lastAI.match(/(\d+)\s*min/gi) || [];
+      if (timeMatches.length >= 2) {
+        const totalMin = timeMatches.reduce((sum, m) => sum + parseInt(m), 0);
+        if (totalMin > 0) {
+          nudges.push({ icon: '&#9200;', text: `Estimated lesson time: ~${totalMin} minutes`, color: '#8b5cf6' });
+        }
+      }
+
+      if (nudges.length > 0) {
+        el.insertAdjacentHTML('beforeend', `
+          <div style="padding:var(--sp-1) var(--sp-4) var(--sp-2);">
+            ${nudges.map(n => `<div style="display:flex;align-items:flex-start;gap:6px;padding:4px 10px;font-size:0.6875rem;color:${n.color};line-height:1.4;border-left:2px solid ${n.color};margin-bottom:4px;">
+              <span style="flex-shrink:0;">${n.icon}</span> ${n.text}
+            </div>`).join('')}
+          </div>`);
+      }
+
       const followUps = buildFollowUpPrompts(chatMessages);
       if (followUps.length > 0) {
         el.insertAdjacentHTML('beforeend', `
