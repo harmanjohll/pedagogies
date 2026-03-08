@@ -153,6 +153,80 @@ const FRAMEWORKS = [
         ]
       }
     ]
+  },
+  {
+    id: 'cce2021',
+    title: 'CCE2021 Framework',
+    subtitle: 'Character & Citizenship Education',
+    accent: '#e11d48',
+    accentLight: 'rgba(225,29,72,0.08)',
+    icon: 'CCE',
+    tags: [
+      { label: 'Values', badge: 'badge-blue' },
+      { label: 'SEL', badge: 'badge-green' },
+      { label: 'NE', badge: 'badge-amber' },
+    ],
+    overview: 'The CCE2021 curriculum, refreshed by MOE Singapore, nurtures students\' character and citizenship dispositions through three Big Ideas — Identity, Relationships, and Choices — underpinned by the R3ICH core values (Respect, Responsibility, Resilience, Integrity, Care, Harmony) and Social-Emotional Learning competencies. It is delivered across six content areas: National Education (NE), Sexuality Education (SEd), Mental Health (MH), Education & Career Guidance (ECG), Cyber Wellness (CW), and Family Education (FE).',
+    sections: [
+      {
+        heading: 'Big Ideas',
+        items: [
+          { term: 'Identity', desc: 'Who am I? Understanding one\'s identity, strengths, values, and sense of purpose. Building a positive self-concept grounded in core values.' },
+          { term: 'Relationships', desc: 'How do I relate to others? Developing healthy relationships with family, peers, community, and nation. Navigating diverse social contexts with empathy and respect.' },
+          { term: 'Choices', desc: 'How do I make responsible choices? Exercising moral reasoning, considering consequences, and making decisions aligned with values for personal and common good.' },
+        ]
+      },
+      {
+        heading: 'Core Values (R3ICH)',
+        items: [
+          { term: 'Respect', desc: 'Believe in one\'s own self-worth and the intrinsic worth of all people.' },
+          { term: 'Responsibility', desc: 'Recognise that one has a duty to oneself, family, community, nation, and the world, and fulfil one\'s responsibilities with love and commitment.' },
+          { term: 'Resilience', desc: 'Have the emotional strength to persevere in the face of challenges; manifest courage, optimism, adaptability, and resourcefulness.' },
+          { term: 'Integrity', desc: 'Uphold ethical principles and have the moral courage to stand up for what is right.' },
+          { term: 'Care', desc: 'Act with kindness and compassion; contribute to the betterment of the community and the world.' },
+          { term: 'Harmony', desc: 'Value social cohesion and unity in diversity; build inclusive and caring communities.' },
+        ]
+      },
+      {
+        heading: 'SEL Competencies',
+        items: [
+          { term: 'Self-Awareness', desc: 'Recognise one\'s emotions, values, strengths, and limitations. Possess a well-grounded sense of confidence and optimism.' },
+          { term: 'Self-Management', desc: 'Regulate emotions, thoughts, and behaviours effectively. Set and work towards personal and academic goals.' },
+          { term: 'Social Awareness', desc: 'Take the perspective of and empathise with others from diverse backgrounds and cultures. Understand social norms for behaviour.' },
+          { term: 'Relationship Management', desc: 'Establish and maintain healthy relationships. Communicate clearly, listen actively, cooperate, resist social pressure, negotiate conflict, and seek help when needed.' },
+          { term: 'Responsible Decision-Making', desc: 'Make constructive and respectful choices about personal behaviour and social interactions, considering ethical standards, safety, and social norms.' },
+        ]
+      },
+      {
+        heading: 'NE — National Education',
+        items: [
+          { term: 'Sense of Belonging', desc: 'Develop a deeper understanding of who we are as Singaporeans and our shared values; feel rooted to Singapore.' },
+          { term: 'Sense of Reality', desc: 'Be aware of the contemporary realities — socio-cultural, economic, security — that affect Singapore.' },
+          { term: 'Sense of Hope', desc: 'Have confidence and optimism in Singapore\'s future and the resilience to face challenges.' },
+          { term: 'The Will to Act', desc: 'Be active citizens who have a sense of responsibility to contribute to, and make a difference for, our community and nation.' },
+          { term: 'NE Commemorative Days', desc: 'Total Defence Day (Feb), International Friendship Day (Apr), Racial Harmony Day (Jul), National Day (Aug) — anchor experiences that bring NE to life.' },
+        ]
+      },
+      {
+        heading: 'Content Areas',
+        items: [
+          { term: 'Sexuality Education (SEd)', desc: 'Growing Years Programme (Sec), eTeens Programme — healthy relationships, boundaries, respect for self and others, human development.' },
+          { term: 'Mental Health (MH)', desc: 'Resilience building, peer support, help-seeking behaviour, stress management, emotional regulation, anti-bullying.' },
+          { term: 'Education & Career Guidance (ECG)', desc: 'Self-awareness of strengths and interests, career exploration, MySkillsFuture portal, work values, informed decision-making about education and career pathways.' },
+          { term: 'Cyber Wellness (CW)', desc: 'Balanced ICT use, online safety, digital identity, cyberbullying awareness, responsible digital citizenship, managing screen time and digital footprint.' },
+          { term: 'Family Education (FE)', desc: 'Appreciating family bonds, managing family relationships, filial piety, responsibilities as family members, family as the foundational social unit.' },
+        ]
+      },
+      {
+        heading: 'Pedagogical Approaches',
+        items: [
+          { term: 'Narrative / Storytelling', desc: 'Use stories, case studies, and scenarios to engage students\' moral imagination and empathy.' },
+          { term: 'Structured Discussion', desc: 'Four Corners, Hot Seat, Structured Academic Controversy, Circle Structure — facilitated dialogue that develops perspective-taking.' },
+          { term: 'Values Clarification', desc: 'Activities that help students explore, understand, and articulate their personal values in safe, non-judgemental contexts.' },
+          { term: 'Experiential Learning', desc: 'VIA (Values in Action), community engagement, learning journeys, and reflective practice to translate values into behaviours.' },
+        ]
+      }
+    ]
   }
 ];
 

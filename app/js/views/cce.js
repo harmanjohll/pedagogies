@@ -1,0 +1,760 @@
+/*
+ * Co-Cher CCE2021 — Character & Citizenship Education
+ * =====================================================
+ * Standalone view for Singapore's CCE2021 framework with six content-area
+ * submodules: NE, SEd, MH, ECG, CW, FE.
+ */
+
+import { Store, generateId } from '../state.js';
+import { sendChat } from '../api.js';
+import { showToast } from '../components/toast.js';
+import { confirmDialog } from '../components/modals.js';
+
+/* ── Constants ── */
+
+const STORAGE_KEY = 'cocher_cce_discussions';
+
+const CONTENT_AREAS = [
+  {
+    id: 'NE',
+    label: 'National Education',
+    color: '#dc2626',
+    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>`,
+    themes: ['Sense of Belonging', 'Sense of Hope', 'Sense of Reality', 'The Will to Act'],
+    commemorativeDays: ['Total Defence Day', 'International Friendship Day', 'Racial Harmony Day', 'National Day'],
+    description: 'National Education develops civic consciousness and a sense of belonging to Singapore. Students explore Singapore\'s history, governance, defence, and multiculturalism, building the dispositions of a concerned citizen who is rooted yet globally aware.',
+    topics: ['Singapore\'s history & governance', 'Defence & security', 'Multiculturalism & social cohesion', 'Active citizenship', 'National identity']
+  },
+  {
+    id: 'SEd',
+    label: 'Sexuality Education',
+    color: '#8b5cf6',
+    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>`,
+    themes: ['Growing Years Programme (Sec)', 'eTeens Programme', 'Healthy Relationships', 'Online Safety'],
+    description: 'Sexuality Education helps students develop healthy, respectful relationships. Through age-appropriate discussions, students learn about human development, personal boundaries, and responsible decision-making regarding relationships.',
+    topics: ['Healthy relationships & boundaries', 'Human development', 'Respect for self and others', 'Online safety in relationships', 'Managing emotions in relationships']
+  },
+  {
+    id: 'MH',
+    label: 'Mental Health',
+    color: '#0ea5e9',
+    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 110 20 10 10 0 010-20z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
+    themes: ['Peer Support', 'Help-Seeking Behaviour', 'Stress Management', 'Resilience Building'],
+    description: 'Mental Health education equips students with knowledge and skills to take care of their mental well-being. Students learn to build resilience, manage stress, regulate emotions, and support peers who may be struggling.',
+    topics: ['Peer support & help-seeking', 'Stress management', 'Resilience & mindfulness', 'Emotional regulation', 'Anti-bullying & cyber wellness overlap']
+  },
+  {
+    id: 'ECG',
+    label: 'Education & Career Guidance',
+    color: '#f59e0b',
+    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></svg>`,
+    themes: ['Self-Awareness', 'Career Exploration', 'Industry Awareness', 'Decision-Making'],
+    description: 'Education & Career Guidance helps students develop self-awareness of their strengths, interests, and values. Students explore career pathways, develop work values, and learn to make informed decisions about their education and future.',
+    topics: ['Self-awareness (strengths, interests, values)', 'Career exploration & industry awareness', 'MySkillsFuture portal', 'Work values & decision-making', 'Goal-setting & planning']
+  },
+  {
+    id: 'CW',
+    label: 'Cyber Wellness',
+    color: '#06b6d4',
+    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+    themes: ['Balanced Use of ICT', 'Online Safety', 'Digital Identity', 'Responsible Digital Citizen'],
+    description: 'Cyber Wellness educates students to be responsible digital citizens. Students learn to navigate the cyber world safely, manage screen time, protect their digital identity, and handle cyberbullying and online risks.',
+    topics: ['Balanced use of ICT', 'Online safety & cyberbullying', 'Digital identity & footprint', 'Responsible digital citizenship', 'Screen time management']
+  },
+  {
+    id: 'FE',
+    label: 'Family Education',
+    color: '#ec4899',
+    icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`,
+    themes: ['Family as Foundation', 'Family Bonds', 'Family Relationships', 'Filial Piety'],
+    description: 'Family Education helps students appreciate the family as a foundational social unit. Students learn about managing family relationships, expressing appreciation, fulfilling responsibilities as family members, and practising filial piety.',
+    topics: ['Family as foundational social unit', 'Appreciating family bonds', 'Managing family relationships', 'Filial piety & family responsibilities', 'Family diversity & inclusiveness']
+  }
+];
+
+const BIG_IDEAS = ['Identity', 'Relationships', 'Choices'];
+
+const R3ICH_VALUES = ['Respect', 'Responsibility', 'Resilience', 'Integrity', 'Care', 'Harmony'];
+
+const SEL_COMPETENCIES = [
+  'Self-Awareness',
+  'Self-Management',
+  'Social Awareness',
+  'Relationship Management',
+  'Responsible Decision-Making'
+];
+
+const NE_DISPOSITIONS = [
+  'Sense of Belonging',
+  'Sense of Hope',
+  'Sense of Reality',
+  'The Will to Act'
+];
+
+const LEVELS = ['Sec 1', 'Sec 2', 'Sec 3', 'Sec 4', 'Sec 5', 'JC 1', 'JC 2'];
+
+const DISCUSSION_FORMATS = [
+  'Four Corners',
+  'Hot Seat',
+  'Structured Academic Controversy',
+  'Circle Structure',
+  'Forum Theatre',
+  'Think-Pair-Share'
+];
+
+/* ── localStorage helpers ── */
+
+function getSavedDiscussions() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveDiscussions(discussions) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(discussions));
+}
+
+/* ── System prompt for CCE discussion generation ── */
+
+function buildSystemPrompt(contentArea) {
+  return `You are an expert CCE (Character & Citizenship Education) curriculum specialist in Singapore. You design engaging, age-appropriate CCE discussion lessons aligned to the CCE2021 framework.
+
+## CCE2021 Framework
+
+### Three Big Ideas
+- **Identity**: Who am I? Developing self-awareness, sense of purpose, and moral compass.
+- **Relationships**: How do I relate to others? Building empathy, respect, and positive connections.
+- **Choices**: How do I make responsible choices? Ethical reasoning, consequences, responsible decision-making.
+
+### Core Values (R3ICH)
+Respect, Responsibility, Resilience, Integrity, Care, Harmony
+
+### SEL Competencies
+Self-Awareness, Self-Management, Social Awareness, Relationship Management, Responsible Decision-Making
+
+### NE Citizenship Dispositions
+Sense of Belonging, Sense of Hope, Sense of Reality, The Will to Act
+
+### NE Commemorative Days
+Total Defence Day, International Friendship Day, Racial Harmony Day, National Day
+
+### CCE Content Areas
+1. **National Education (NE)**: Singapore's history, governance, defence, multiculturalism, active citizenship
+2. **Sexuality Education (SEd)**: Growing Years Programme, healthy relationships, boundaries, human development
+3. **Mental Health (MH)**: Peer support, help-seeking, stress management, resilience, emotional regulation
+4. **Education & Career Guidance (ECG)**: Self-awareness, career exploration, MySkillsFuture, work values
+5. **Cyber Wellness (CW)**: Balanced ICT use, online safety, digital identity, cyberbullying, digital footprint
+6. **Family Education (FE)**: Family bonds, relationships, filial piety, responsibilities
+
+The current content area is: **${contentArea.label} (${contentArea.id})**
+
+## Output Format (use markdown)
+
+### Lesson Overview
+- **Topic**: [topic]
+- **Big Idea**: [Identity / Relationships / Choices]
+- **R3ICH Values**: [relevant values]
+- **Content Area**: ${contentArea.id} — ${contentArea.label}
+- **SEL Competency**: [relevant competency]
+- **NE Disposition**: [relevant disposition, if applicable]
+- **Level**: [student level]
+- **Discussion Format**: [format used]
+
+### Opening Activity (5-10 min)
+[Engaging hook — scenario, video prompt, picture, news headline, or story to spark interest]
+
+### Core Discussion (20-25 min)
+**Scenario:**
+[A realistic, age-appropriate scenario grounded in Singaporean context]
+
+**Guiding Questions:**
+1. [Question that explores different perspectives]
+2. [Question that connects to personal experience]
+3. [Question that requires ethical reasoning]
+4. [Question that encourages action/commitment]
+
+**Facilitation Notes:**
+[Tips for using the selected discussion format effectively]
+
+### Reflection & Closure (5-10 min)
+[Reflection activity — journal prompt, exit ticket, or commitment card]
+
+### Teacher Notes
+[Background info, sensitive handling tips, extension activities, useful resources]
+
+Make the lesson feel authentic to Singapore's multicultural context. Use local examples, reference Singaporean values and norms, and ensure age-appropriateness for the specified level.`;
+}
+
+/* ── Render ── */
+
+export function render(container) {
+  let activeTab = 'NE';
+
+  function renderView() {
+    const discussions = getSavedDiscussions();
+    const area = CONTENT_AREAS.find(a => a.id === activeTab);
+
+    container.innerHTML = `
+      <style>
+        .cce-header {
+          text-align: center;
+          padding: var(--sp-6, 24px) var(--sp-4, 16px) var(--sp-4, 16px);
+        }
+        .cce-header h1 {
+          font-size: 2rem;
+          font-weight: 800;
+          margin: 0 0 6px;
+          letter-spacing: -0.02em;
+        }
+        .cce-header p {
+          color: var(--ink-secondary, #666);
+          font-size: 0.9375rem;
+          margin: 0;
+        }
+        .cce-tabs {
+          display: flex;
+          gap: 6px;
+          justify-content: center;
+          flex-wrap: wrap;
+          padding: 0 var(--sp-4, 16px);
+          margin-bottom: var(--sp-5, 20px);
+        }
+        .cce-tab {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 10px 18px;
+          border-radius: var(--radius-md, 10px);
+          border: 2px solid var(--border-light, #e5e7eb);
+          background: var(--bg, #fff);
+          color: var(--ink, #1a1a2e);
+          font-size: 0.8125rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          font-family: inherit;
+        }
+        .cce-tab:hover {
+          border-color: var(--accent, #4361ee);
+          transform: translateY(-1px);
+        }
+        .cce-tab.active {
+          color: #fff;
+          border-color: transparent;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          transform: translateY(-1px);
+        }
+        .cce-tab svg {
+          flex-shrink: 0;
+        }
+        .cce-content {
+          max-width: 960px;
+          margin: 0 auto;
+          padding: 0 var(--sp-4, 16px) var(--sp-6, 24px);
+        }
+        .cce-overview {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: var(--sp-4, 16px);
+          margin-bottom: var(--sp-5, 20px);
+        }
+        @media (max-width: 700px) {
+          .cce-overview { grid-template-columns: 1fr; }
+        }
+        .cce-card {
+          border-radius: var(--radius-md, 10px);
+          border: 1px solid var(--border-light, #e5e7eb);
+          background: var(--bg, #fff);
+          padding: var(--sp-4, 16px) var(--sp-5, 20px);
+        }
+        .cce-card h3 {
+          font-size: 0.9375rem;
+          font-weight: 700;
+          margin: 0 0 10px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .cce-badge {
+          display: inline-block;
+          padding: 3px 10px;
+          border-radius: 20px;
+          font-size: 0.6875rem;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+        }
+        .cce-tag-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 8px;
+        }
+        .cce-tag {
+          display: inline-block;
+          padding: 3px 10px;
+          border-radius: 14px;
+          font-size: 0.6875rem;
+          font-weight: 600;
+          border: 1px solid var(--border-light, #e5e7eb);
+          color: var(--ink-secondary, #666);
+          background: var(--bg, #fff);
+        }
+        .cce-gen-section {
+          margin-bottom: var(--sp-5, 20px);
+        }
+        .cce-gen-section h2 {
+          font-size: 1.125rem;
+          font-weight: 700;
+          margin: 0 0 var(--sp-3, 12px);
+        }
+        .cce-gen-form {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: var(--sp-3, 12px);
+          margin-bottom: var(--sp-3, 12px);
+        }
+        @media (max-width: 600px) {
+          .cce-gen-form { grid-template-columns: 1fr; }
+        }
+        .cce-gen-form .full-width {
+          grid-column: 1 / -1;
+        }
+        .cce-gen-form label {
+          display: block;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: var(--ink-secondary, #666);
+          margin-bottom: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+        .cce-result {
+          margin-top: var(--sp-4, 16px);
+          padding: var(--sp-4, 16px) var(--sp-5, 20px);
+          border-radius: var(--radius-md, 10px);
+          border: 1px solid var(--border-light, #e5e7eb);
+          background: var(--bg, #fff);
+          display: none;
+        }
+        .cce-result.visible { display: block; }
+        .cce-result-content {
+          line-height: 1.7;
+          font-size: 0.9rem;
+        }
+        .cce-result-content h3 { font-size: 1rem; margin-top: 1.2em; }
+        .cce-result-content ul, .cce-result-content ol { padding-left: 1.5em; }
+        .cce-result-content strong { font-weight: 700; }
+        .cce-save-bar {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          margin-top: var(--sp-3, 12px);
+          padding-top: var(--sp-3, 12px);
+          border-top: 1px solid var(--border-light, #e5e7eb);
+        }
+        .cce-library-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: var(--sp-3, 12px);
+        }
+        .cce-lib-card {
+          border-radius: var(--radius-md, 10px);
+          border: 1px solid var(--border-light, #e5e7eb);
+          background: var(--bg, #fff);
+          padding: var(--sp-3, 12px) var(--sp-4, 16px);
+          cursor: pointer;
+          transition: box-shadow 0.15s, transform 0.15s;
+        }
+        .cce-lib-card:hover {
+          box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+          transform: translateY(-2px);
+        }
+        .cce-lib-card h4 {
+          margin: 0 0 8px;
+          font-size: 0.875rem;
+          font-weight: 700;
+        }
+        .cce-lib-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+          margin-bottom: 6px;
+        }
+        .cce-lib-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 8px;
+          font-size: 0.6875rem;
+          color: var(--ink-secondary, #666);
+        }
+        .cce-expanded-content {
+          margin-top: var(--sp-3, 12px);
+          padding-top: var(--sp-3, 12px);
+          border-top: 1px solid var(--border-light, #e5e7eb);
+          font-size: 0.875rem;
+          line-height: 1.7;
+          display: none;
+        }
+        .cce-expanded-content.visible { display: block; }
+        .cce-expanded-content h3 { font-size: 0.9375rem; margin-top: 1em; }
+        .cce-expanded-content ul, .cce-expanded-content ol { padding-left: 1.5em; }
+        .cce-loading {
+          display: none;
+          align-items: center;
+          gap: 8px;
+          padding: var(--sp-3, 12px);
+          color: var(--ink-secondary, #666);
+          font-size: 0.8125rem;
+        }
+        .cce-loading.visible { display: flex; }
+        .cce-spinner {
+          width: 18px; height: 18px;
+          border: 2px solid var(--border-light, #e5e7eb);
+          border-top-color: var(--accent, #4361ee);
+          border-radius: 50%;
+          animation: cceSpin 0.6s linear infinite;
+        }
+        @keyframes cceSpin { to { transform: rotate(360deg); } }
+        .cce-empty {
+          text-align: center;
+          padding: var(--sp-6, 24px);
+          color: var(--ink-secondary, #666);
+          font-size: 0.875rem;
+        }
+      </style>
+
+      <!-- Header -->
+      <div class="cce-header">
+        <h1>CCE2021</h1>
+        <p>Character & Citizenship Education — Singapore Framework</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="cce-tabs">
+        ${CONTENT_AREAS.map(a => `
+          <button class="cce-tab${a.id === activeTab ? ' active' : ''}"
+                  data-tab="${a.id}"
+                  style="${a.id === activeTab ? `background:${a.color};border-color:${a.color};` : ''}">
+            ${a.icon}
+            <span>${a.id}</span>
+          </button>
+        `).join('')}
+      </div>
+
+      <!-- Content -->
+      <div class="cce-content">
+
+        <!-- Overview cards -->
+        <div class="cce-overview">
+          <div class="cce-card">
+            <h3>
+              <span class="cce-badge" style="background:${area.color}22;color:${area.color};">${area.id}</span>
+              ${area.label}
+            </h3>
+            <p style="font-size:0.8125rem;color:var(--ink-secondary,#666);line-height:1.6;margin:0 0 10px;">${area.description}</p>
+            <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin-bottom:4px;">Key Themes</div>
+            <div class="cce-tag-row">
+              ${area.themes.map(t => `<span class="cce-tag">${t}</span>`).join('')}
+            </div>
+            ${area.commemorativeDays ? `
+              <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">NE Commemorative Days</div>
+              <div class="cce-tag-row">
+                ${area.commemorativeDays.map(d => `<span class="cce-tag" style="border-color:${area.color}44;color:${area.color};">${d}</span>`).join('')}
+              </div>
+            ` : ''}
+            <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">Core Values (R3ICH)</div>
+            <div class="cce-tag-row">
+              ${R3ICH_VALUES.map(v => `<span class="cce-tag">${v}</span>`).join('')}
+            </div>
+          </div>
+
+          <div class="cce-card">
+            <h3>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              Big Ideas Connection
+            </h3>
+            <p style="font-size:0.8125rem;color:var(--ink-secondary,#666);line-height:1.6;margin:0 0 12px;">
+              Every CCE lesson connects to one or more of the three Big Ideas that form the backbone of the CCE2021 curriculum.
+            </p>
+            ${BIG_IDEAS.map(idea => {
+              const desc = idea === 'Identity'
+                ? 'Who am I? Developing self-awareness, sense of purpose, and moral compass.'
+                : idea === 'Relationships'
+                ? 'How do I relate to others? Building empathy, respect, and positive connections.'
+                : 'How do I make responsible choices? Ethical reasoning, consequences, responsible decision-making.';
+              return `
+                <div style="margin-bottom:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--border-light,#e5e7eb);">
+                  <div style="font-weight:700;font-size:0.8125rem;margin-bottom:2px;">${idea}</div>
+                  <div style="font-size:0.75rem;color:var(--ink-secondary,#666);line-height:1.5;">${desc}</div>
+                </div>`;
+            }).join('')}
+            <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">SEL Competencies</div>
+            <div class="cce-tag-row">
+              ${SEL_COMPETENCIES.map(c => `<span class="cce-tag">${c}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <!-- Discussion Generator -->
+        <div class="cce-gen-section">
+          <h2>Discussion Generator</h2>
+          <div class="cce-card">
+            <div class="cce-gen-form">
+              <div class="full-width">
+                <label for="cce-topic">Topic / Issue</label>
+                <input id="cce-topic" class="input" type="text" placeholder="e.g. Should National Service be extended to women?" style="width:100%;box-sizing:border-box;">
+              </div>
+              <div>
+                <label for="cce-level">Level</label>
+                <select id="cce-level" class="input" style="width:100%;box-sizing:border-box;">
+                  ${LEVELS.map(l => `<option value="${l}">${l}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label for="cce-format">Discussion Format</label>
+                <select id="cce-format" class="input" style="width:100%;box-sizing:border-box;">
+                  ${DISCUSSION_FORMATS.map(f => `<option value="${f}">${f}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <button id="cce-generate-btn" class="btn btn-primary" style="width:100%;">Generate Discussion</button>
+            <div id="cce-loading" class="cce-loading">
+              <div class="cce-spinner"></div>
+              <span>Generating discussion lesson...</span>
+            </div>
+          </div>
+
+          <!-- Result area -->
+          <div id="cce-result" class="cce-result">
+            <div id="cce-result-content" class="cce-result-content"></div>
+            <div class="cce-save-bar">
+              <input id="cce-save-title" class="input" type="text" placeholder="Discussion title..." style="flex:1;">
+              <button id="cce-save-btn" class="btn btn-primary">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saved Discussions Library -->
+        <div class="cce-gen-section">
+          <h2>Saved Discussions</h2>
+          ${(() => {
+            const filtered = discussions.filter(d => d.contentArea === activeTab);
+            if (filtered.length === 0) {
+              return `<div class="cce-empty">No saved discussions for ${area.label} yet. Generate one above!</div>`;
+            }
+            return `<div class="cce-library-grid">
+              ${filtered.map(d => `
+                <div class="cce-lib-card" data-discussion-id="${d.id}">
+                  <h4>${escapeHTML(d.title)}</h4>
+                  <div class="cce-lib-meta">
+                    <span class="cce-badge" style="background:${area.color}22;color:${area.color};">${d.contentArea}</span>
+                    ${d.bigIdea ? `<span class="cce-badge" style="background:#4361ee22;color:#4361ee;">${escapeHTML(d.bigIdea)}</span>` : ''}
+                    ${d.values ? d.values.split(',').slice(0, 3).map(v =>
+                      `<span class="cce-tag" style="font-size:0.625rem;">${escapeHTML(v.trim())}</span>`
+                    ).join('') : ''}
+                  </div>
+                  <div class="cce-lib-footer">
+                    <span>${d.level || ''} ${d.format ? '· ' + d.format : ''}</span>
+                    <span>${new Date(d.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div class="cce-expanded-content" id="cce-exp-${d.id}">${renderMarkdown(d.content || '')}</div>
+                  <div style="display:flex;gap:6px;margin-top:8px;">
+                    <button class="btn btn-ghost cce-view-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;">View</button>
+                    <button class="btn btn-ghost cce-delete-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;color:#dc2626;">Delete</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>`;
+          })()}
+        </div>
+
+      </div>
+    `;
+
+    /* ── Wire up event listeners ── */
+
+    // Tab switching
+    container.querySelectorAll('.cce-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeTab = btn.dataset.tab;
+        renderView();
+      });
+    });
+
+    // Generate discussion
+    const generateBtn = container.querySelector('#cce-generate-btn');
+    const loadingEl = container.querySelector('#cce-loading');
+    const resultEl = container.querySelector('#cce-result');
+    const resultContent = container.querySelector('#cce-result-content');
+
+    generateBtn.addEventListener('click', async () => {
+      const topic = container.querySelector('#cce-topic').value.trim();
+      const level = container.querySelector('#cce-level').value;
+      const format = container.querySelector('#cce-format').value;
+
+      if (!topic) {
+        showToast('Please enter a topic or issue.', 'warning');
+        return;
+      }
+
+      generateBtn.disabled = true;
+      loadingEl.classList.add('visible');
+      resultEl.classList.remove('visible');
+
+      try {
+        const systemPrompt = buildSystemPrompt(area);
+        const userMessage = `Create a CCE discussion lesson for the following:
+- **Content Area**: ${area.id} — ${area.label}
+- **Topic/Issue**: ${topic}
+- **Level**: ${level}
+- **Discussion Format**: ${format}
+
+Design an engaging, age-appropriate lesson that connects to the CCE2021 framework. Use the ${format} facilitation strategy.`;
+
+        const text = await sendChat(
+          [{ role: 'user', content: userMessage }],
+          { systemPrompt, temperature: 0.7, maxTokens: 4096 }
+        );
+
+        resultContent.innerHTML = renderMarkdown(text);
+        resultEl.classList.add('visible');
+        resultEl._generatedContent = text;
+        resultEl._meta = { contentArea: activeTab, level, format };
+
+        // Pre-fill title
+        const titleInput = container.querySelector('#cce-save-title');
+        titleInput.value = topic.length > 60 ? topic.slice(0, 57) + '...' : topic;
+
+        showToast('Discussion generated!', 'success');
+      } catch (err) {
+        console.error('CCE generation error:', err);
+        showToast(`Generation failed: ${err.message}`, 'danger');
+      } finally {
+        generateBtn.disabled = false;
+        loadingEl.classList.remove('visible');
+      }
+    });
+
+    // Save discussion
+    const saveBtn = container.querySelector('#cce-save-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        const titleInput = container.querySelector('#cce-save-title');
+        const title = titleInput.value.trim();
+        if (!title) {
+          showToast('Please enter a title.', 'warning');
+          return;
+        }
+        if (!resultEl._generatedContent) {
+          showToast('No discussion to save.', 'warning');
+          return;
+        }
+
+        // Extract Big Idea and values from the generated content
+        const content = resultEl._generatedContent;
+        const bigIdeaMatch = content.match(/\*\*Big Idea\*\*:\s*(.+)/i);
+        const valuesMatch = content.match(/\*\*R3ICH Values?\*\*:\s*(.+)/i);
+
+        const discussion = {
+          id: generateId(),
+          title,
+          contentArea: resultEl._meta.contentArea,
+          bigIdea: bigIdeaMatch ? bigIdeaMatch[1].trim() : '',
+          values: valuesMatch ? valuesMatch[1].trim() : '',
+          level: resultEl._meta.level,
+          format: resultEl._meta.format,
+          content,
+          createdAt: Date.now()
+        };
+
+        const discussions = getSavedDiscussions();
+        discussions.unshift(discussion);
+        saveDiscussions(discussions);
+
+        showToast('Discussion saved!', 'success');
+        renderView();
+      });
+    }
+
+    // View / expand discussion cards
+    container.querySelectorAll('.cce-view-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const expEl = container.querySelector(`#cce-exp-${id}`);
+        if (expEl) {
+          const isVisible = expEl.classList.toggle('visible');
+          btn.textContent = isVisible ? 'Collapse' : 'View';
+        }
+      });
+    });
+
+    // Delete discussion
+    container.querySelectorAll('.cce-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const confirmed = await confirmDialog({
+          title: 'Delete Discussion',
+          message: 'Are you sure you want to delete this saved discussion? This cannot be undone.',
+          confirmLabel: 'Delete',
+          confirmClass: 'btn btn-danger'
+        });
+        if (confirmed) {
+          const discussions = getSavedDiscussions().filter(d => d.id !== id);
+          saveDiscussions(discussions);
+          showToast('Discussion deleted.', 'success');
+          renderView();
+        }
+      });
+    });
+  }
+
+  renderView();
+}
+
+/* ── Utility: escape HTML ── */
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ── Utility: simple markdown to HTML ── */
+function renderMarkdown(md) {
+  if (!md) return '';
+  let html = escapeHTML(md);
+
+  // Headers
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:1.05rem;margin-top:1.2em;">$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+  // Bold and italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // Unordered lists
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+
+  // Ordered lists
+  html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+
+  // Paragraphs — convert double newlines
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  html = '<p>' + html + '</p>';
+
+  // Clean up empty paragraphs
+  html = html.replace(/<p>\s*<\/p>/g, '');
+  html = html.replace(/<p>\s*(<h[1-3]>)/g, '$1');
+  html = html.replace(/(<\/h[1-3]>)\s*<\/p>/g, '$1');
+  html = html.replace(/<p>\s*(<ul>)/g, '$1');
+  html = html.replace(/(<\/ul>)\s*<\/p>/g, '$1');
+
+  return html;
+}

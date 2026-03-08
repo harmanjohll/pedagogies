@@ -26,6 +26,7 @@ import { renderAoL, renderAaL, renderAfL } from './views/assessment.js';
 import { render as renderSettings } from './views/settings.js';
 import { render as renderStimulusMaterial } from './views/stimulus-material.js';
 import { render as renderSourceAnalysis } from './views/source-analysis.js';
+import { render as renderCCE } from './views/cce.js';
 
 function init() {
   const app = document.getElementById('app');
@@ -101,6 +102,7 @@ function init() {
   registerRoute('/assessment/aol', renderAoL);
   registerRoute('/stimulus-material', renderStimulusMaterial);
   registerRoute('/source-analysis', renderSourceAnalysis);
+  registerRoute('/cce', renderCCE);
   registerRoute('/settings', renderSettings);
 
   // Start router
