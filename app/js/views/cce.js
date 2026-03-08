@@ -21,45 +21,51 @@ const CONTENT_AREAS = [
     color: '#dc2626',
     icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>`,
     themes: ['Sense of Belonging', 'Sense of Hope', 'Sense of Reality', 'The Will to Act'],
-    commemorativeDays: ['Total Defence Day', 'International Friendship Day', 'Racial Harmony Day', 'National Day'],
-    description: 'National Education develops civic consciousness and a sense of belonging to Singapore. Students explore Singapore\'s history, governance, defence, and multiculturalism, building the dispositions of a concerned citizen who is rooted yet globally aware.',
-    topics: ['Singapore\'s history & governance', 'Defence & security', 'Multiculturalism & social cohesion', 'Active citizenship', 'National identity']
+    commemorativeDays: ['Total Defence Day (Feb)', 'International Friendship Day (Apr)', 'Racial Harmony Day (Jul)', 'National Day (Aug)'],
+    framework: 'Head-Heart-Hands: engage intellectually (Head), connect emotionally (Heart), and act with commitment (Hands).',
+    description: 'National Education develops civic consciousness and a sense of belonging to Singapore. Students explore Singapore\'s history, governance, defence, and multiculturalism, building the dispositions of a concerned citizen who is rooted yet globally aware. Uses the Head-Heart-Hands framework to engage intellectually, connect emotionally, and act with commitment.',
+    topics: ['Singapore\'s history & governance', 'Defence & security (Total Defence)', 'Multiculturalism & social cohesion', 'Active citizenship & volunteerism', 'National identity & sovereignty']
   },
   {
     id: 'SEd',
     label: 'Sexuality Education',
     color: '#8b5cf6',
     icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>`,
-    themes: ['Growing Years Programme (Sec)', 'eTeens Programme', 'Healthy Relationships', 'Online Safety'],
-    description: 'Sexuality Education helps students develop healthy, respectful relationships. Through age-appropriate discussions, students learn about human development, personal boundaries, and responsible decision-making regarding relationships.',
-    topics: ['Healthy relationships & boundaries', 'Human development', 'Respect for self and others', 'Online safety in relationships', 'Managing emotions in relationships']
+    themes: ['Human Development', 'Interpersonal Relationships', 'Sexual Health', 'Sexual Behaviour', 'Culture, Society & Law'],
+    programmes: ['Growing Years Series (Sec)', 'eTeens Programme (Sec 3, with HPB)'],
+    description: 'Sexuality Education enables students to understand physiological, social, and emotional changes, develop healthy relationships, and make wise, informed, responsible decisions. Covers five themes: Human Development, Interpersonal Relationships, Sexual Health, Sexual Behaviour, and Culture/Society/Law. Premised on the family as the basic unit of society.',
+    topics: ['Human development & puberty', 'Healthy relationships & boundaries', 'Respect for self and others', 'Online safety in relationships', 'Informed decision-making']
   },
   {
     id: 'MH',
     label: 'Mental Health',
     color: '#0ea5e9',
     icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 110 20 10 10 0 010-20z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
-    themes: ['Peer Support', 'Help-Seeking Behaviour', 'Stress Management', 'Resilience Building'],
-    description: 'Mental Health education equips students with knowledge and skills to take care of their mental well-being. Students learn to build resilience, manage stress, regulate emotions, and support peers who may be struggling.',
-    topics: ['Peer support & help-seeking', 'Stress management', 'Resilience & mindfulness', 'Emotional regulation', 'Anti-bullying & cyber wellness overlap']
+    themes: ['Peer Support & PSLs', 'Help-Seeking Behaviour', 'Stress Management', 'Resilience Building'],
+    framework: '"I am, I have, I can" resilience framework. Peer Support Leaders (PSLs) — schools train up to 5% of students to anchor supportive networks.',
+    description: 'Mental Health education equips students to manage thoughts, feelings, and behaviours to cope with life\'s stresses, relate well to others, and develop a sense of meaning and purpose. Uses the "I am, I have, I can" resilience framework. Help-seeking is "not a sign of weakness but an act of strength."',
+    topics: ['Emotional literacy & regulation', 'Peer support & help-seeking', 'Stress vs distress management', 'Resilience & growth mindset', 'Anti-bullying']
   },
   {
     id: 'ECG',
     label: 'Education & Career Guidance',
     color: '#f59e0b',
     icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></svg>`,
-    themes: ['Self-Awareness', 'Career Exploration', 'Industry Awareness', 'Decision-Making'],
-    description: 'Education & Career Guidance helps students develop self-awareness of their strengths, interests, and values. Students explore career pathways, develop work values, and learn to make informed decisions about their education and future.',
-    topics: ['Self-awareness (strengths, interests, values)', 'Career exploration & industry awareness', 'MySkillsFuture portal', 'Work values & decision-making', 'Goal-setting & planning']
+    themes: ['Who am I? (Discovering Purpose)', 'Where do I want to go? (Exploring Opportunities)', 'How do I get there? (Staying Relevant)'],
+    framework: 'Three guiding questions: "Who am I?", "Where do I want to go?", "How do I get there?" — tied to Big Idea of Identity.',
+    description: 'Education & Career Guidance helps students develop a sense of purpose in life, navigate education and career pathways purposefully, and embrace lifelong learning. Built around three guiding questions: "Who am I?" (self-awareness), "Where do I want to go?" (exploration), and "How do I get there?" (adaptability). Develops growth mindset, self-directedness, and appreciation for all occupations.',
+    topics: ['Self-awareness (strengths, interests, values)', 'Career exploration & industry awareness', 'MySkillsFuture portal', 'Post-secondary pathways', 'Sense of purpose & lifelong learning']
   },
   {
     id: 'CW',
     label: 'Cyber Wellness',
     color: '#06b6d4',
     icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
-    themes: ['Balanced Use of ICT', 'Online Safety', 'Digital Identity', 'Responsible Digital Citizen'],
-    description: 'Cyber Wellness educates students to be responsible digital citizens. Students learn to navigate the cyber world safely, manage screen time, protect their digital identity, and handle cyberbullying and online risks.',
-    topics: ['Balanced use of ICT', 'Online safety & cyberbullying', 'Digital identity & footprint', 'Responsible digital citizenship', 'Screen time management']
+    themes: ['Cyber Identity', 'Cyber Use', 'Cyber Relationships', 'Cyber Citizenship'],
+    principles: ['Respect for Self & Others', 'Safe & Responsible Use', 'Positive Peer Influence'],
+    framework: 'Sense-Think-Act: Sense (identify online risks), Think (analyse & reflect on CW principles), Act (take safe actions & be positive influence).',
+    description: 'Cyber Wellness develops responsible digital learners who can harness ICT for positive purposes and maintain a safe presence in cyberspace. Built on three principles: Respect for Self & Others, Safe & Responsible Use, and Positive Peer Influence. Uses the Sense-Think-Act framework across four themes: Cyber Identity, Cyber Use, Cyber Relationships, and Cyber Citizenship.',
+    topics: ['Balanced use of ICT & screen time', 'Online safety & cyberbullying', 'Digital identity & footprint', 'Online scams & misinformation', 'Social media & mental health']
   },
   {
     id: 'FE',
@@ -147,7 +153,25 @@ Total Defence Day, International Friendship Day, Racial Harmony Day, National Da
 5. **Cyber Wellness (CW)**: Balanced ICT use, online safety, digital identity, cyberbullying, digital footprint
 6. **Family Education (FE)**: Family bonds, relationships, filial piety, responsibilities
 
+### Four CCE2021 Goals
+1. Good Character — sound moral compass, ethical thinking
+2. Resilience and Social-Emotional Well-Being — mental well-being, coping skills
+3. Future Readiness — sense of purpose, adaptability, lifelong learning
+4. Active Citizenship — national identity, sense of belonging, will to act
+
+### Six Expanding Domains
+Self → Family → School → Community → Nation → The World
+
+### Content-Area Specific Frameworks
+- **NE**: Head-Heart-Hands (engage intellectually, connect emotionally, act with commitment)
+- **SEd**: 5 themes — Human Development, Interpersonal Relationships, Sexual Health, Sexual Behaviour, Culture/Society/Law
+- **MH**: "I am, I have, I can" resilience framework; Peer Support Leaders (PSLs)
+- **ECG**: 3 guiding questions — "Who am I?", "Where do I want to go?", "How do I get there?"
+- **CW**: Sense-Think-Act framework; 3 principles — Respect for Self & Others, Safe & Responsible Use, Positive Peer Influence
+- **FE**: Family as basic unit of society; roles, resilience, conflict resolution, gratitude
+
 The current content area is: **${contentArea.label} (${contentArea.id})**
+${contentArea.framework ? `\nContent-area framework: ${contentArea.framework}` : ''}
 
 ## Output Format (use markdown)
 
@@ -458,10 +482,26 @@ export function render(container) {
             <div class="cce-tag-row">
               ${area.themes.map(t => `<span class="cce-tag">${t}</span>`).join('')}
             </div>
+            ${area.framework ? `
+              <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">Framework</div>
+              <p style="font-size:0.8rem;color:var(--ink-secondary,#666);line-height:1.5;margin:0 0 6px;padding:8px 12px;background:${area.color}08;border-left:3px solid ${area.color};border-radius:0 6px 6px 0;">${area.framework}</p>
+            ` : ''}
             ${area.commemorativeDays ? `
               <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">NE Commemorative Days</div>
               <div class="cce-tag-row">
                 ${area.commemorativeDays.map(d => `<span class="cce-tag" style="border-color:${area.color}44;color:${area.color};">${d}</span>`).join('')}
+              </div>
+            ` : ''}
+            ${area.principles ? `
+              <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">Guiding Principles</div>
+              <div class="cce-tag-row">
+                ${area.principles.map(p => `<span class="cce-tag" style="border-color:${area.color}44;color:${area.color};">${p}</span>`).join('')}
+              </div>
+            ` : ''}
+            ${area.programmes ? `
+              <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">Key Programmes</div>
+              <div class="cce-tag-row">
+                ${area.programmes.map(p => `<span class="cce-tag" style="border-color:${area.color}44;color:${area.color};">${p}</span>`).join('')}
               </div>
             ` : ''}
             <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">Core Values (R3ICH)</div>
