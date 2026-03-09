@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Johll">
+  <title>Particle Dynamics – SciSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="particles.css?v=1">
+</head>
+<body>
+
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand" style="text-decoration:none;">Sci<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../index.html">Interactives</a> &rsaquo; Particle Dynamics
+    </span>
+    <div class="topbar-actions">
+      <span id="dark-mode-toggle"></span>
+    </div>
+  </nav>
+
+  <main class="sim-layout">
+
+    <!-- Controls Panel -->
+    <aside class="controls" id="controls">
+      <h2 class="ctrl-title">Controls</h2>
+
+      <div class="ctrl-group">
+        <label class="ctrl-label">Temperature: <span id="temp-value">300</span> K</label>
+        <input type="range" id="slider-temp" min="10" max="1000" value="300" step="10" class="slider">
+        <div class="slider-labels"><span>10 K</span><span>1000 K</span></div>
+      </div>
+
+      <div class="ctrl-group">
+        <label class="ctrl-label">Particles: <span id="count-value">80</span></label>
+        <input type="range" id="slider-count" min="10" max="300" value="80" step="10" class="slider">
+        <div class="slider-labels"><span>10</span><span>300</span></div>
+      </div>
+
+      <div class="ctrl-group">
+        <label class="ctrl-label">Container Size: <span id="size-value">100</span>%</label>
+        <input type="range" id="slider-size" min="30" max="100" value="100" step="5" class="slider">
+        <div class="slider-labels"><span>30%</span><span>100%</span></div>
+      </div>
+
+      <div class="ctrl-group">
+        <label class="ctrl-label">Particle Mass</label>
+        <div class="radio-group">
+          <label class="radio-label"><input type="radio" name="mass" value="light" checked> Light (H₂)</label>
+          <label class="radio-label"><input type="radio" name="mass" value="medium"> Medium (O₂)</label>
+          <label class="radio-label"><input type="radio" name="mass" value="heavy"> Heavy (Xe)</label>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <label class="ctrl-label">Gravity</label>
+        <label class="toggle-label">
+          <input type="checkbox" id="toggle-gravity"> Enable gravity
+        </label>
+      </div>
+
+      <div class="ctrl-group">
+        <label class="ctrl-label">Colour Mode</label>
+        <div class="radio-group">
+          <label class="radio-label"><input type="radio" name="colour" value="speed" checked> Speed</label>
+          <label class="radio-label"><input type="radio" name="colour" value="energy"> Kinetic energy</label>
+          <label class="radio-label"><input type="radio" name="colour" value="uniform"> Uniform</label>
+        </div>
+      </div>
+
+      <div class="ctrl-buttons">
+        <button class="btn btn-primary" id="btn-play">Pause</button>
+        <button class="btn btn-outline" id="btn-reset">Reset</button>
+      </div>
+    </aside>
+
+    <!-- Simulation Canvas -->
+    <div class="sim-area">
+      <canvas id="sim-canvas"></canvas>
+
+      <!-- Live readouts -->
+      <div class="readouts" id="readouts">
+        <div class="readout">
+          <span class="readout-label">Pressure</span>
+          <span class="readout-value" id="read-pressure">—</span>
+        </div>
+        <div class="readout">
+          <span class="readout-label">Avg Speed</span>
+          <span class="readout-value" id="read-speed">—</span>
+        </div>
+        <div class="readout">
+          <span class="readout-label">Avg KE</span>
+          <span class="readout-value" id="read-ke">—</span>
+        </div>
+        <div class="readout">
+          <span class="readout-label">Phase</span>
+          <span class="readout-value" id="read-phase">Gas</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Distribution Panel -->
+    <aside class="dist-panel" id="dist-panel">
+      <h2 class="ctrl-title">Speed Distribution</h2>
+      <canvas id="dist-canvas" width="220" height="160"></canvas>
+      <p class="dist-note">Maxwell-Boltzmann distribution shown as dashed line</p>
+
+      <h2 class="ctrl-title" style="margin-top:var(--sp-4);">Legend</h2>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-swatch" style="background:#3b82f6;"></span> Slow</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#06d6a0;"></span> Medium</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#f59e0b;"></span> Fast</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#ef476f;"></span> Very fast</div>
+      </div>
+
+      <h2 class="ctrl-title" style="margin-top:var(--sp-4);">Key Concepts</h2>
+      <ul class="concepts">
+        <li>Higher temperature = faster particles</li>
+        <li>Smaller container = more collisions = higher pressure</li>
+        <li>Lighter particles move faster at same temperature</li>
+        <li>KE = &frac12;mv&sup2;</li>
+      </ul>
+    </aside>
+
+  </main>
+
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="particles.js?v=1"></script>
+
+</body>
+</html>
