@@ -8,6 +8,7 @@ import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { confirmDialog } from '../components/modals.js';
 import { showToast } from '../components/toast.js';
+import { processLatex } from '../utils/latex.js';
 import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
@@ -585,6 +586,9 @@ export function renderDetail(container, { id }) {
       </div>
     </div>
   `;
+
+  // Render LaTeX in lesson plan content
+  processLatex(container);
 
   container.querySelector('#back-btn').addEventListener('click', () => navigate('/lessons'));
   container.querySelector('#edit-btn').addEventListener('click', () => navigate(`/lesson-planner/${id}`));

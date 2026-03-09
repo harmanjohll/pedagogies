@@ -29,6 +29,7 @@ import { render as renderSourceAnalysis } from './views/source-analysis.js';
 import { render as renderCCE } from './views/cce.js';
 import { render as renderMyCCA } from './views/my-cca.js';
 import { render as renderAutopilot } from './views/autopilot.js';
+import { render as renderMathSandbox } from './views/math-sandbox.js';
 import { initGlobalSearch, openSearch } from './components/unified-search.js';
 import { initOnboarding } from './components/onboarding.js';
 import { initKeyboardShortcuts } from './components/keyboard-shortcuts.js';
@@ -110,6 +111,7 @@ function init() {
   registerRoute('/cce', renderCCE);
   registerRoute('/my-cca', renderMyCCA);
   registerRoute('/autopilot', renderAutopilot);
+  registerRoute('/math-sandbox', renderMathSandbox);
   registerRoute('/settings', renderSettings);
 
   // Start router

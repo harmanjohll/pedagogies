@@ -14,6 +14,7 @@ import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/work
 import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, ensureCalendar } from './dashboard.js';
 import { getWeekType } from '../utils/calendar.js';
+import { processLatex } from '../utils/latex.js';
 
 let chatMessages = [];
 let isGenerating = false;
@@ -396,12 +397,38 @@ function buildSeatPlanVisual(text) {
     </div>`;
 }
 
-/* ── Markdown renderer (improved — supports tables, links, YouTube embeds) ── */
+/* ── Markdown renderer (improved — supports tables, links, YouTube embeds, LaTeX) ── */
 function md(text) {
   // Normalize: collapse line breaks inside markdown link syntax [label](url)
   // The AI often wraps long links across lines, breaking the regex
   text = text.replace(/\]\s*\n\s*\(/g, '](');  // fix ]\n(
   text = text.replace(/\[([^\]]*)\n([^\]]*)\]/g, '[$1 $2]');  // fix newline inside [label]
+
+  // Protect LaTeX delimiters from HTML escaping
+  const latexPlaceholders = [];
+  // Display math $$...$$ and \[...\]
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => {
+    const idx = latexPlaceholders.length;
+    latexPlaceholders.push(`<div class="katex-display-wrap">$$${inner}$$</div>`);
+    return `%%LATEX_${idx}%%`;
+  });
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, inner) => {
+    const idx = latexPlaceholders.length;
+    latexPlaceholders.push(`<div class="katex-display-wrap">\\[${inner}\\]</div>`);
+    return `%%LATEX_${idx}%%`;
+  });
+  // Inline math $...$ and \(...\) — skip currency like $10
+  text = text.replace(/\$([^\s$](?:[^$]*?[^\s$])?)\$/g, (match, inner) => {
+    if (/^\d+([.,]\d+)?$/.test(inner.trim())) return match;
+    const idx = latexPlaceholders.length;
+    latexPlaceholders.push(`<span class="katex-inline-wrap">$${inner}$</span>`);
+    return `%%LATEX_${idx}%%`;
+  });
+  text = text.replace(/\\\(([\s\S]*?)\\\)/g, (_, inner) => {
+    const idx = latexPlaceholders.length;
+    latexPlaceholders.push(`<span class="katex-inline-wrap">\\(${inner}\\)</span>`);
+    return `%%LATEX_${idx}%%`;
+  });
 
   // Preserve markdown links before HTML-escaping by extracting them first
   // Matches both http(s) URLs and local paths like simulations/...
@@ -538,6 +565,9 @@ function md(text) {
     }
     return `<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">${url}</a>`;
   });
+
+  // Restore LaTeX placeholders (must be last, after all other placeholder restoration)
+  result = result.replace(/%%LATEX_(\d+)%%/g, (_, idx) => latexPlaceholders[parseInt(idx)]);
 
   return result;
 }
@@ -1968,6 +1998,8 @@ function renderMessages(el, classes) {
     }
   }
   if (isGenerating) el.insertAdjacentHTML('beforeend', `<div class="chat-typing">Co-Cher is thinking...</div>`);
+  // Render LaTeX in all message content
+  processLatex(el);
   el.scrollTop = el.scrollHeight;
 }
 
@@ -2013,6 +2045,8 @@ function renderPlanContent(el) {
       </details>
     ` : ''}
   `;
+  // Render LaTeX in plan content
+  processLatex(el);
 }
 
 /* ── Save lesson modal ── */

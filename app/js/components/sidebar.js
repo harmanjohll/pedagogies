@@ -38,6 +38,7 @@ const ICONS = {
   cceDiscussion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
   myCca: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>`,
   autopilot: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`,
+  mathSandbox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/><circle cx="19" cy="19" r="2"/></svg>`,
 };
 
 /* ── EEE-to-sidebar mapping: which EEE keys get sidebar nav items ── */
@@ -101,6 +102,7 @@ function buildNavItems() {
     { id: '/knowledge', icon: 'knowledge', label: 'Knowledge Bases', section: 'Growth' },
     { id: '/my-growth', icon: 'myGrowth', label: 'My Learning' },
     { id: '/autopilot', icon: 'autopilot', label: 'Co-Cher+ (beta)', section: 'Co-Cher+' },
+    { id: '/math-sandbox', icon: 'mathSandbox', label: 'Math Sandbox' },
     { id: '/admin', icon: 'admin', label: 'Admin One-Stop', section: 'Operations' }
   ];
 
