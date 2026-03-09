@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Johll">
+  <title>3D Molecular Viewer – SciSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="viewer.css?v=1">
+</head>
+<body>
+
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand" style="text-decoration:none;">Sci<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../index.html">Interactives</a> &rsaquo; 3D Molecular Viewer
+    </span>
+    <div class="topbar-actions">
+      <span id="dark-mode-toggle"></span>
+    </div>
+  </nav>
+
+  <main class="viewer-layout">
+
+    <!-- Molecule Selector Panel -->
+    <aside class="selector-panel" id="selector-panel">
+      <h2 class="panel-title">Molecules</h2>
+
+      <div class="search-wrap">
+        <input type="text" id="mol-search" class="mol-search" placeholder="Search molecules...">
+      </div>
+
+      <div class="category-tabs" id="category-tabs">
+        <button class="cat-tab active" data-cat="all">All</button>
+        <button class="cat-tab" data-cat="simple">Simple</button>
+        <button class="cat-tab" data-cat="organic">Organic</button>
+        <button class="cat-tab" data-cat="inorganic">Inorganic</button>
+        <button class="cat-tab" data-cat="vsepr">VSEPR</button>
+      </div>
+
+      <div class="mol-list" id="mol-list"></div>
+    </aside>
+
+    <!-- 3D Canvas -->
+    <div class="canvas-wrap">
+      <canvas id="viewer-canvas"></canvas>
+      <div class="canvas-controls" id="canvas-controls">
+        <button class="canvas-btn" id="btn-rotate" title="Toggle auto-rotation">&#x21bb; Rotate</button>
+        <button class="canvas-btn" id="btn-labels" title="Toggle atom labels">Aa Labels</button>
+        <button class="canvas-btn" id="btn-bonds" title="Toggle bond display">&#9552; Bonds</button>
+        <button class="canvas-btn" id="btn-reset-view" title="Reset camera angle">&#8634; Reset</button>
+      </div>
+      <div class="canvas-hint" id="canvas-hint">Click &amp; drag to rotate &bull; Scroll to zoom</div>
+    </div>
+
+    <!-- Info Panel -->
+    <aside class="info-panel" id="info-panel">
+      <h2 class="panel-title">Molecule Info</h2>
+
+      <div class="info-section">
+        <label class="info-label">Name</label>
+        <div class="info-value" id="info-name">Select a molecule</div>
+      </div>
+
+      <div class="info-section">
+        <label class="info-label">Formula</label>
+        <div class="info-value" id="info-formula">&mdash;</div>
+      </div>
+
+      <div class="info-section">
+        <label class="info-label">Molecular Mass</label>
+        <div class="info-value" id="info-mass">&mdash;</div>
+      </div>
+
+      <div class="info-section">
+        <label class="info-label">Shape (VSEPR)</label>
+        <div class="info-value" id="info-shape">&mdash;</div>
+      </div>
+
+      <div class="info-section">
+        <label class="info-label">Bond Angle</label>
+        <div class="info-value" id="info-angle">&mdash;</div>
+      </div>
+
+      <div class="info-section">
+        <label class="info-label">Polarity</label>
+        <div class="info-value" id="info-polarity">&mdash;</div>
+      </div>
+
+      <h2 class="panel-title" style="margin-top:var(--sp-5);">Display</h2>
+
+      <div class="display-options">
+        <label class="ctrl-label">Style</label>
+        <div class="radio-group">
+          <label class="radio-label"><input type="radio" name="style" value="ball-stick" checked> Ball &amp; Stick</label>
+          <label class="radio-label"><input type="radio" name="style" value="space-fill"> Space-filling</label>
+          <label class="radio-label"><input type="radio" name="style" value="wireframe"> Wireframe</label>
+        </div>
+      </div>
+
+      <div class="display-options" style="margin-top:var(--sp-3);">
+        <label class="ctrl-label">Background</label>
+        <div class="radio-group">
+          <label class="radio-label"><input type="radio" name="bg" value="dark" checked> Dark</label>
+          <label class="radio-label"><input type="radio" name="bg" value="light"> Light</label>
+          <label class="radio-label"><input type="radio" name="bg" value="gradient"> Gradient</label>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="viewer.js?v=1"></script>
+
+</body>
+</html>
