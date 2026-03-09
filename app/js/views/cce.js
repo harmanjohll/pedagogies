@@ -9,6 +9,7 @@ import { Store, generateId } from '../state.js';
 import { sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
+import { processLatex } from '../utils/latex.js';
 
 /* ── Constants ── */
 
@@ -690,6 +691,7 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
         }
 
         resultContent.innerHTML = renderMarkdown(text);
+        processLatex(resultContent);
         resultEl.classList.add('visible');
         resultEl._generatedContent = text;
         resultEl._meta = { contentArea: activeTab, level, format };
@@ -790,6 +792,7 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
       const pr = pendingResult;
       pendingResult = null;
       resultContent.innerHTML = renderMarkdown(pr.content);
+      processLatex(resultContent);
       resultEl.classList.add('visible');
       resultEl._generatedContent = pr.content;
       resultEl._meta = pr.meta;
