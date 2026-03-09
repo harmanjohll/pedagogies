@@ -12,7 +12,8 @@ import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { getCurrentUser } from '../components/login.js';
-import { loadTT, findTeacherRow } from './dashboard.js';
+import { loadTT, findTeacherRow, ensureCalendar } from './dashboard.js';
+import { getWeekType } from '../utils/calendar.js';
 
 let chatMessages = [];
 let isGenerating = false;
@@ -2881,7 +2882,7 @@ async function setupTimetableHints(container) {
   try {
     const user = getCurrentUser();
     if (!user?.email) return;
-    const ttData = await loadTT();
+    const [ttData, calData] = await Promise.all([loadTT(), ensureCalendar()]);
     const teacherRow = findTeacherRow(ttData, user.email);
     if (!teacherRow) return;
 
@@ -2896,10 +2897,15 @@ async function setupTimetableHints(container) {
       if (dayIdx === 0 || dayIdx === 6) { hintEl.innerHTML = '<em>Weekend</em>'; return; }
       const dayStr = dayNames[dayIdx];
 
-      // Determine week type (Odd/Even) — simple: week number modulo 2
-      const startOfYear = new Date(d.getFullYear(), 0, 1);
-      const weekNum = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
-      const weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
+      // Use CalendarReference for authoritative week type
+      let weekType = calData ? getWeekType(calData, d) : null;
+      if (weekType === 'N.A.') { hintEl.innerHTML = '<em>Non-teaching week</em>'; return; }
+      // Fallback: math-based
+      if (!weekType) {
+        const startOfYear = new Date(d.getFullYear(), 0, 1);
+        const weekNum = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+        weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
+      }
 
       // Gather the day's lessons
       const lessons = [];

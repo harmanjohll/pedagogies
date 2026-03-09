@@ -16,6 +16,7 @@ import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { sendChat } from '../api.js';
 import { navigate } from '../router.js';
+import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
 import { getCurrentUser } from '../components/login.js';
 
 /* ═══════════ Timetable (TT) Awareness ═══════════ */
@@ -24,7 +25,11 @@ let _ttData = null;
 async function loadTimetable() {
   if (_ttData) return _ttData;
   try {
-    const res = await fetch('./btyrelief/BTYTT_2026Sem1_v1.csv');
+    const [res] = await Promise.all([
+      fetch('./btyrelief/BTYTT_2026Sem1_v1.csv'),
+      // Load calendar reference alongside timetable
+      (async () => { if (!_sdCalRef) _sdCalRef = await loadCalendarReference(); })()
+    ]);
     const text = await res.text();
     _ttData = parseTTCSV(text);
   } catch { _ttData = []; }
@@ -43,6 +48,8 @@ function parseTTCSV(csv) {
   });
 }
 
+let _sdCalRef = null;
+
 function getCurrentPeriodKey() {
   const now = new Date();
   const day = now.getDay(); // 0=Sun
@@ -50,15 +57,20 @@ function getCurrentPeriodKey() {
   if (day < 1 || day > 5) return null;
   const dayStr = dayNames[day];
 
-  // Determine week parity (Odd/Even) — use ISO week number
-  const start = new Date(now.getFullYear(), 0, 1);
-  const weekNum = Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
-  const weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
+  // Use CalendarReference for authoritative week type
+  let weekType = _sdCalRef ? getWeekType(_sdCalRef, now) : null;
+  if (weekType === 'N.A.') return null; // non-teaching week
+
+  // Fallback: math-based (only if calendar data unavailable)
+  if (!weekType) {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
+    weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
+  }
 
   // Approximate period from time (BTYSS bell schedule)
   const h = now.getHours(), m = now.getMinutes();
   const mins = h * 60 + m;
-  // Rough period mapping: P1 starts ~7:30, each ~35-40 min
   const periods = [
     { p: 1, start: 450 }, { p: 2, start: 490 }, { p: 3, start: 530 },
     { p: 4, start: 570 }, { p: 5, start: 620 }, { p: 6, start: 660 },

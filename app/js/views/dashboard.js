@@ -9,6 +9,7 @@
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { getCurrentUser } from '../components/login.js';
+import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
 
 /*
  * Admin / tester accounts — present in the CSV (so they can log in and see
@@ -196,15 +197,41 @@ export async function loadTT() {
   return _ttCache;
 }
 
+let _calRef = null;
+
+export async function ensureCalendar() {
+  if (!_calRef) {
+    _calRef = await loadCalendarReference();
+  }
+  return _calRef;
+}
+
+/**
+ * Get week type for a given date using CalendarReference.csv.
+ * Exported so other views can reuse without re-loading the CSV.
+ */
+export function getWeekTypeForDate(date) {
+  return _calRef ? getWeekType(_calRef, date) : null;
+}
+
 export function getTTPeriodKey() {
   const now = new Date();
   const day = now.getDay();
   const dayNames = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   if (day < 1 || day > 5) return null;
   const dayStr = dayNames[day];
-  const start = new Date(now.getFullYear(), 0, 1);
-  const weekNum = Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
-  const weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
+
+  // Use CalendarReference for authoritative week type
+  let weekType = _calRef ? getWeekType(_calRef, now) : null;
+  if (weekType === 'N.A.') return null; // non-teaching week — no timetable
+
+  // Fallback: math-based (only if calendar data unavailable)
+  if (!weekType) {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
+    weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
+  }
+
   const h = now.getHours(), m = now.getMinutes(), mins = h * 60 + m;
   const periods = [
     { p: 1, start: 450 }, { p: 2, start: 490 }, { p: 3, start: 530 },
@@ -1783,7 +1810,7 @@ export function render(container) {
     try {
       const user = getCurrentUser();
       if (!user?.email) return;
-      const ttData = await loadTT();
+      const [ttData] = await Promise.all([loadTT(), ensureCalendar()]);
       const teacherRow = findTeacherRow(ttData, user.email);
       if (!teacherRow) return;
 

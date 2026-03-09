@@ -1,16 +1,36 @@
 /*
  * Co-Cher+ (Beta) — Autopilot Workflow Agent
  * ============================================
- * Runs the full teaching workflow from start to finish:
- *   Scheme of Work → Lesson Plan → Enactment Resources → Assessment → Reflection Prompts
- *
- * Each step feeds its output as context into the next, and displays a "vision"
- * of the corresponding page's output within this single sub-page.
+ * Compact, icon-driven output with clickable deep-dive elements.
+ * Each step's output is parsed into structured sections that teachers
+ * can click to expand, refine, or navigate to the relevant Co-Cher page.
  */
 
 import { sendChat } from '../api.js';
 import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
+import { navigate } from '../router.js';
+
+/* ── SVG icon library (inline, small) ── */
+const I = {
+  book:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+  target:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+  calendar: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  check:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  clock:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  users:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  zap:      `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  file:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+  msg:      `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+  edit:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
+  grid:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`,
+  award:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>`,
+  bulb:     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>`,
+  heart:    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
+  arrow:    `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+  ext:      `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
+  layers:   `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`,
+};
 
 /* ── Pipeline step definitions ── */
 
@@ -18,340 +38,610 @@ const STEPS = [
   {
     id: 'sow',
     label: 'Scheme of Work',
-    icon: '1',
-    description: 'Generating a scheme of work overview — topics, sequencing, and E21CC alignment.',
+    icon: I.calendar,
+    color: '#8b5cf6',
+    brief: 'Unit overview, topic sequence, and assessment strategy',
+    route: '/knowledge',
+    routeLabel: 'Knowledge Base',
     buildPrompt: (params, _prev) => ({
-      system: `You are Co-Cher+, an expert Singapore MOE curriculum designer. Generate a concise Scheme of Work overview.
+      system: `You are Co-Cher+, an expert Singapore MOE curriculum designer. Generate a concise Scheme of Work.
 
-Include:
-## Scheme of Work: [Topic]
-### Unit Overview
-- Subject, Level, Duration, E21CC Focus
+IMPORTANT: Output in this EXACT structure using these section markers:
 
-### Learning Outcomes
-(3-5 measurable outcomes aligned to E21CC — CAIT, CCI, CGC)
+[UNIT_OVERVIEW]
+Subject: ${params.subject}
+Level: ${params.level}
+Duration: ${params.duration || '4-6 weeks'}
+E21CC Focus: (identify 1-2 primary domains)
 
-### Topic Sequence
-| Week | Topic | Key Concepts | E21CC Domain | Suggested Pedagogy |
-(4-6 week plan)
+[LEARNING_OUTCOMES]
+- (outcome 1, measurable, E21CC-aligned)
+- (outcome 2)
+- (outcome 3)
+- (outcome 4 — optional)
 
-### Assessment Strategy
-(Formative + summative approaches)
+[TOPIC_SEQUENCE]
+Week 1: (topic) | (key concepts) | (E21CC domain) | (pedagogy)
+Week 2: (topic) | (key concepts) | (E21CC domain) | (pedagogy)
+Week 3: (topic) | (key concepts) | (E21CC domain) | (pedagogy)
+Week 4: (topic) | (key concepts) | (E21CC domain) | (pedagogy)
 
-### Resources & References
-(Key resources, textbook chapters, digital tools)
+[ASSESSMENT_STRATEGY]
+Formative: (brief — 1-2 lines)
+Summative: (brief — 1-2 lines)
 
-Be specific to Singapore's ${params.subject} syllabus at ${params.level} level. Use markdown.`,
+[RESOURCES]
+- (resource 1)
+- (resource 2)
+- (resource 3)
+
+Be specific to Singapore's ${params.subject} syllabus. Keep each section terse — bullet points, not paragraphs.`,
       user: `Create a Scheme of Work for:
-- **Subject**: ${params.subject}
-- **Topic/Unit**: ${params.topic}
-- **Level**: ${params.level}
-- **Duration**: ${params.duration || '4-6 weeks'}
-${params.notes ? `- **Additional notes**: ${params.notes}` : ''}`
+- Subject: ${params.subject}
+- Topic/Unit: ${params.topic}
+- Level: ${params.level}
+- Duration: ${params.duration || '4-6 weeks'}
+${params.notes ? `- Notes: ${params.notes}` : ''}`
     })
   },
   {
     id: 'lesson',
     label: 'Lesson Plan',
-    icon: '2',
-    description: 'Designing a detailed lesson plan for one lesson within the scheme.',
+    icon: I.book,
+    color: '#4361ee',
+    brief: 'Learning intentions, lesson flow, differentiation',
+    route: '/lesson-planner',
+    routeLabel: 'Lesson Planner',
     buildPrompt: (params, prev) => ({
-      system: `You are Co-Cher+, an expert Singapore lesson designer. Using the Scheme of Work context below, generate a detailed lesson plan for ONE lesson.
+      system: `You are Co-Cher+, a Singapore lesson designer. Using the SoW context below, generate a lesson plan.
 
-## Context — Scheme of Work (generated earlier):
+Context — SoW:
 ${prev.sow}
 
----
+IMPORTANT: Output in this EXACT structure:
 
-Format the lesson plan as:
+[LESSON_TITLE]
+(title of the lesson)
 
-## Lesson Plan: [Lesson Title]
+[OVERVIEW]
+Duration: (e.g. 60 min)
+E21CC Focus: (domain)
+STP Area: (area)
 
-### Lesson Overview
-| Field | Detail |
-|-------|--------|
-| Subject | ... |
-| Level | ... |
-| Duration | ... |
-| E21CC Focus | ... |
-| STP Area | ... |
+[LEARNING_INTENTIONS]
+- (intention 1)
+- (intention 2)
 
-### Learning Intentions
-(What students will understand/be able to do)
+[SUCCESS_CRITERIA]
+- (criterion 1)
+- (criterion 2)
+- (criterion 3)
 
-### Success Criteria
-(How students demonstrate understanding — observable, measurable)
+[LESSON_FLOW]
+Opening (__ min): (1-2 sentences — hook, activation)
+Development (__ min): (2-3 sentences — core activity, grouping, strategies)
+Consolidation (__ min): (1-2 sentences — closure, exit ticket)
 
-### Lesson Flow
+[DIFFERENTIATION]
+Support: (1 sentence)
+Stretch: (1 sentence)
 
-#### Opening / Engagement (__ min)
-(Hook, prior knowledge activation)
+[TEACHER_NOTES]
+- (note 1 — key consideration or misconception)
+- (note 2)
 
-#### Development / Exploration (__ min)
-(Core activity, key teaching strategies, student grouping)
-
-#### Consolidation / Closure (__ min)
-(Summary, exit ticket, reflection)
-
-### Differentiation
-(How to support struggling and stretch advanced learners)
-
-### Teacher Notes
-(Key considerations, potential misconceptions, links to STP)
-
-Be practical and classroom-ready. Use markdown.`,
-      user: `Design a detailed lesson plan for the first core lesson in this unit.
-Subject: ${params.subject}, Level: ${params.level}, Topic: ${params.topic}.`
+Keep it practical and classroom-ready. Terse bullet points.`,
+      user: `Design a lesson plan for the first core lesson. Subject: ${params.subject}, Level: ${params.level}, Topic: ${params.topic}.`
     })
   },
   {
     id: 'enactment',
-    label: 'Enactment Resources',
-    icon: '3',
-    description: 'Creating classroom resources — stimulus material, discussion prompts, and a worksheet.',
+    label: 'Enactment',
+    icon: I.zap,
+    color: '#10b981',
+    brief: 'Stimulus material, discussion prompts, worksheet',
+    route: '/stimulus-material',
+    routeLabel: 'Stimulus Material',
     buildPrompt: (params, prev) => ({
-      system: `You are Co-Cher+, a Singapore classroom resources specialist. Using the lesson plan below, generate three enactment resources in one response.
+      system: `You are Co-Cher+, a Singapore classroom resources specialist. Using the lesson plan below, generate three resources.
 
-## Context — Lesson Plan (generated earlier):
+Context — Lesson Plan:
 ${prev.lesson}
 
----
+IMPORTANT: Output in this EXACT structure:
 
-Generate ALL THREE of these in a single response:
+[STIMULUS_TITLE]
+(title of the stimulus text)
 
-## 1. Stimulus Material
-A rich, engaging text (150-250 words) — passage, scenario, case study, or data extract — that serves as the lesson's anchor resource. Include 3 suggested questions.
+[STIMULUS_CONTENT]
+(150-200 word passage, scenario, or case study — engaging, age-appropriate)
 
-## 2. Discussion Prompts
-- **Opening prompt** (spark interest)
-- **Deepening prompts** (2-3 questions that push critical thinking — CAIT)
-- **Closing prompt** (reflection, personal connection)
-Include facilitation tips.
+[STIMULUS_QUESTIONS]
+- (question 1)
+- (question 2)
+- (question 3)
 
-## 3. Worksheet
-A student-facing worksheet with:
-- Title and learning intention
-- 4-6 scaffolded tasks (from recall → application → analysis)
-- Space indicators [Write your answer here]
-- A reflection box at the end
+[DISCUSSION_OPENING]
+(one opening prompt — spark interest)
 
-Make all resources specific to ${params.subject} at ${params.level} level. Use Singapore context where appropriate. Use markdown.`,
-      user: `Generate enactment resources (stimulus material, discussion prompts, and worksheet) for this lesson on "${params.topic}".`
+[DISCUSSION_DEEPENING]
+- (deepening question 1 — push critical thinking)
+- (deepening question 2)
+
+[DISCUSSION_CLOSING]
+(one closing prompt — reflection, personal connection)
+
+[DISCUSSION_TIPS]
+- (facilitation tip 1)
+- (facilitation tip 2)
+
+[WORKSHEET_TITLE]
+(worksheet title)
+
+[WORKSHEET_TASKS]
+1. (Recall task)
+2. (Comprehension task)
+3. (Application task)
+4. (Analysis task)
+5. (Reflection prompt)
+
+Specific to ${params.subject} at ${params.level}. Singapore context. Terse.`,
+      user: `Generate resources for the lesson on "${params.topic}".`
     })
   },
   {
     id: 'assessment',
     label: 'Assessment',
-    icon: '4',
-    description: 'Building assessment items — rubric, exit ticket, and draft questions.',
+    icon: I.award,
+    color: '#f59e0b',
+    brief: 'Rubric, exit ticket, draft questions',
+    route: '/assessment/afl',
+    routeLabel: 'AfL',
     buildPrompt: (params, prev) => ({
-      system: `You are Co-Cher+, a Singapore assessment specialist. Using the lesson plan and resources below, generate assessment materials.
+      system: `You are Co-Cher+, a Singapore assessment specialist. Generate assessment materials.
 
-## Context — Lesson Plan:
+Context — Lesson Plan:
 ${prev.lesson}
 
-## Context — Enactment Resources:
-${prev.enactment}
+IMPORTANT: Output in this EXACT structure:
 
----
+[RUBRIC]
+Criterion 1: Exemplary — (desc) | Proficient — (desc) | Developing — (desc) | Beginning — (desc)
+Criterion 2: Exemplary — (desc) | Proficient — (desc) | Developing — (desc) | Beginning — (desc)
+Criterion 3: Exemplary — (desc) | Proficient — (desc) | Developing — (desc) | Beginning — (desc)
 
-Generate ALL of these in a single response:
+[EXIT_TICKET]
+1. Recall: (question)
+2. Apply: (question)
+3. Think Deeper: (question)
 
-## 1. Assessment Rubric
-A markdown table with 3-4 criteria × 4 levels (Exemplary | Proficient | Developing | Beginning). Align to lesson outcomes and E21CC.
+[DRAFT_QUESTIONS]
+Q1 (Remember, 2m): (question) → (model answer)
+Q2 (Understand, 3m): (question) → (model answer)
+Q3 (Apply, 4m): (question) → (model answer)
+Q4 (Analyse, 5m): (question) → (model answer)
+Q5 (Evaluate, 6m): (question) → (model answer)
 
-## 2. Exit Ticket
-3 quick-check questions:
-1. Recall (remembering key content)
-2. Apply (using the concept in a new scenario)
-3. Think Deeper (analysis or evaluation)
-
-## 3. Draft Assessment Questions
-5 questions spanning Bloom's levels:
-| Q# | Question | Bloom's Level | Marks | Model Answer |
-Include a mix of MCQ, short answer, and structured response.
-
-Make questions specific to ${params.subject} at ${params.level}. Use markdown.`,
-      user: `Create assessment materials (rubric, exit ticket, and draft questions) for the lesson on "${params.topic}".`
+Specific to ${params.subject} at ${params.level}. Terse.`,
+      user: `Create assessment materials for the lesson on "${params.topic}".`
     })
   },
   {
     id: 'reflection',
-    label: 'Reflection Prompts',
-    icon: '5',
-    description: 'Generating post-lesson reflection prompts and improvement suggestions.',
+    label: 'Reflection',
+    icon: I.heart,
+    color: '#06b6d4',
+    brief: 'Post-lesson reflection prompts and forward planning',
+    route: '/lessons',
+    routeLabel: 'Lessons',
     buildPrompt: (params, prev) => ({
-      system: `You are Co-Cher+, a reflective practice coach for Singapore educators. Using the full lesson context below, generate post-lesson reflection prompts.
+      system: `You are Co-Cher+, a reflective practice coach. Generate post-lesson reflection prompts.
 
-## Context — Lesson Plan:
+Context — Lesson Plan:
 ${prev.lesson}
 
-## Context — Assessment:
-${prev.assessment}
+IMPORTANT: Output in this EXACT structure:
 
----
+[PULSE_CHECK]
+Engagement indicators: (what to look for, 1-2 sentences)
+Understanding indicators: (what to look for, 1-2 sentences)
 
-Generate:
+[REFLECTION_PROMPTS]
+- What worked well? (focus area hint)
+- What would I adjust? (focus area hint)
+- E21CC observations? (what to look for)
+- Student voice? (what surprised me)
 
-## Post-Lesson Reflection Guide
+[FORWARD_PLANNING]
+- (suggestion 1 for next lesson)
+- (suggestion 2 for next lesson)
+- (what to revisit if needed)
 
-### Quick Pulse Check
-- Rate engagement (1-5): what to look for at each level
-- Rate understanding (1-5): what to look for at each level
+[GROWTH_CONNECTION]
+STP area strengthened: (area)
+Try next time: (one concrete strategy)
 
-### Reflection Questions
-1. **What worked well?** (prompts to consider: student responses, timing, grouping effectiveness)
-2. **What would I adjust?** (prompts: pacing, scaffolding, differentiation, resources)
-3. **E21CC observations** (Which competencies did I see students developing? Evidence?)
-4. **Student voice** (What surprised me? What questions did students ask that I hadn't anticipated?)
-
-### Forward Planning
-- 2-3 specific suggestions for the NEXT lesson based on likely outcomes
-- How to build on this lesson's momentum
-- What to revisit or reteach if needed
-
-### Professional Growth Connection
-- Which STP area did this lesson strengthen?
-- One thing to try differently next time (with a concrete strategy)
-
-Be warm and encouraging. Frame growth areas as opportunities, not deficiencies. Use markdown.`,
-      user: `Generate post-lesson reflection prompts for the lesson on "${params.topic}" (${params.subject}, ${params.level}).`
+Warm, encouraging. Terse.`,
+      user: `Generate reflection prompts for the lesson on "${params.topic}" (${params.subject}, ${params.level}).`
     })
   }
 ];
 
-/* ── Simple markdown renderer (mirrors cce.js) ── */
-
-function renderMarkdown(md) {
-  if (!md) return '';
-  let html = md
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:1.05rem;margin-top:1.2em;">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
-  html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
-
-  // Tables
-  html = html.replace(/^\|(.+)\|$/gm, (match) => {
-    const cells = match.split('|').filter(c => c.trim() !== '');
-    if (cells.every(c => /^[\s-:]+$/.test(c))) return ''; // separator row
-    const tag = match.includes('---') ? 'td' : 'td';
-    return '<tr>' + cells.map(c => `<${tag} style="padding:6px 10px;border:1px solid var(--border-light,#e5e7eb);">${c.trim()}</${tag}>`).join('') + '</tr>';
-  });
-  html = html.replace(/((?:<tr>.*<\/tr>\n?)+)/g, '<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:0.8125rem;">$1</table>');
-
-  html = html.replace(/\n\n/g, '</p><p>');
-  html = html.replace(/\n/g, '<br>');
-  html = '<p>' + html + '</p>';
-  html = html.replace(/<p>\s*<\/p>/g, '');
-  html = html.replace(/<p>\s*(<h[1-3]>)/g, '$1');
-  html = html.replace(/(<\/h[1-3]>)\s*<\/p>/g, '$1');
-  html = html.replace(/<p>\s*(<ul>)/g, '$1');
-  html = html.replace(/(<\/ul>)\s*<\/p>/g, '$1');
-  html = html.replace(/<p>\s*(<table)/g, '$1');
-  html = html.replace(/(<\/table>)\s*<\/p>/g, '$1');
-
-  return html;
+/* ── Section parser — extracts [MARKER] sections from raw text ── */
+function parseSections(raw) {
+  const sections = {};
+  const regex = /\[([A-Z_]+)\]\s*\n([\s\S]*?)(?=\n\[|$)/g;
+  let m;
+  while ((m = regex.exec(raw)) !== null) {
+    sections[m[1]] = m[2].trim();
+  }
+  return sections;
 }
+
+/* ── Escape HTML ── */
+function esc(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ── Parse bullet lines from a section ── */
+function bullets(text) {
+  if (!text) return [];
+  return text.split('\n').map(l => l.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
+}
+
+/* ── Render a single step's structured output ── */
+function renderStepOutput(stepId, raw, params) {
+  const s = parseSections(raw);
+  // If structured parsing fails, fall back to compact markdown
+  if (Object.keys(s).length === 0) return renderFallback(raw);
+
+  switch (stepId) {
+    case 'sow': return renderSoW(s, params);
+    case 'lesson': return renderLesson(s);
+    case 'enactment': return renderEnactment(s);
+    case 'assessment': return renderAssessment(s);
+    case 'reflection': return renderReflection(s);
+    default: return renderFallback(raw);
+  }
+}
+
+function renderSoW(s, params) {
+  const outcomes = bullets(s.LEARNING_OUTCOMES);
+  const weeks = bullets(s.TOPIC_SEQUENCE).map(w => {
+    const parts = w.split('|').map(p => p.trim());
+    return { week: parts[0] || w, concepts: parts[1] || '', domain: parts[2] || '', pedagogy: parts[3] || '' };
+  });
+  const resources = bullets(s.RESOURCES);
+
+  return `
+    <div class="ap-section">
+      <div class="ap-section-head">${I.target}<span>Learning Outcomes</span></div>
+      <div class="ap-pills">
+        ${outcomes.map(o => `<div class="ap-pill ap-clickable" data-dive="outcome" data-text="${esc(o)}">${I.arrow}<span>${esc(o)}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="ap-section">
+      <div class="ap-section-head">${I.calendar}<span>Topic Sequence</span></div>
+      <div class="ap-timeline">
+        ${weeks.map((w, i) => `
+          <div class="ap-tl-row ap-clickable" data-dive="week" data-text="${esc(w.week + ' — ' + w.concepts)}">
+            <div class="ap-tl-dot">${i + 1}</div>
+            <div class="ap-tl-body">
+              <strong>${esc(w.week)}</strong>
+              ${w.concepts ? `<span class="ap-subtle">${esc(w.concepts)}</span>` : ''}
+              ${w.domain ? `<span class="ap-tag">${esc(w.domain)}</span>` : ''}
+              ${w.pedagogy ? `<span class="ap-tag ap-tag-alt">${esc(w.pedagogy)}</span>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ${s.ASSESSMENT_STRATEGY ? `
+    <div class="ap-section">
+      <div class="ap-section-head">${I.check}<span>Assessment Strategy</span></div>
+      <div class="ap-compact-text">${esc(s.ASSESSMENT_STRATEGY).replace(/\n/g, '<br>')}</div>
+    </div>` : ''}
+    ${resources.length ? `
+    <div class="ap-section">
+      <div class="ap-section-head">${I.file}<span>Resources</span></div>
+      <div class="ap-pills">${resources.map(r => `<div class="ap-pill">${I.file}<span>${esc(r)}</span></div>`).join('')}</div>
+    </div>` : ''}`;
+}
+
+function renderLesson(s) {
+  const intentions = bullets(s.LEARNING_INTENTIONS);
+  const criteria = bullets(s.SUCCESS_CRITERIA);
+  const notes = bullets(s.TEACHER_NOTES);
+
+  return `
+    ${s.LESSON_TITLE ? `<div class="ap-lesson-title">${esc(s.LESSON_TITLE)}</div>` : ''}
+    ${s.OVERVIEW ? `<div class="ap-meta-row">${esc(s.OVERVIEW).split('\n').map(l => `<span class="ap-tag">${esc(l.trim())}</span>`).join('')}</div>` : ''}
+    <div class="ap-two-col">
+      <div class="ap-section">
+        <div class="ap-section-head">${I.target}<span>Learning Intentions</span></div>
+        ${intentions.map(li => `<div class="ap-pill ap-clickable" data-dive="intention" data-text="${esc(li)}">${I.arrow}<span>${esc(li)}</span></div>`).join('')}
+      </div>
+      <div class="ap-section">
+        <div class="ap-section-head">${I.check}<span>Success Criteria</span></div>
+        ${criteria.map(c => `<div class="ap-pill">${I.check}<span>${esc(c)}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="ap-section">
+      <div class="ap-section-head">${I.clock}<span>Lesson Flow</span></div>
+      <div class="ap-flow-strip">
+        ${(s.LESSON_FLOW || '').split('\n').filter(l => l.trim()).map(phase => {
+          const [label, ...rest] = phase.split(':');
+          return `<div class="ap-flow-block ap-clickable" data-dive="phase" data-text="${esc(phase)}">
+            <div class="ap-flow-label">${esc(label.trim())}</div>
+            <div class="ap-flow-desc">${esc(rest.join(':').trim())}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    ${s.DIFFERENTIATION ? `
+    <div class="ap-section">
+      <div class="ap-section-head">${I.users}<span>Differentiation</span></div>
+      <div class="ap-compact-text">${esc(s.DIFFERENTIATION).replace(/\n/g, '<br>')}</div>
+    </div>` : ''}
+    ${notes.length ? `
+    <div class="ap-section">
+      <div class="ap-section-head">${I.bulb}<span>Teacher Notes</span></div>
+      <div class="ap-pills">${notes.map(n => `<div class="ap-pill">${I.bulb}<span>${esc(n)}</span></div>`).join('')}</div>
+    </div>` : ''}`;
+}
+
+function renderEnactment(s) {
+  const stimQ = bullets(s.STIMULUS_QUESTIONS);
+  const deepening = bullets(s.DISCUSSION_DEEPENING);
+  const tips = bullets(s.DISCUSSION_TIPS);
+  const tasks = bullets(s.WORKSHEET_TASKS);
+
+  return `
+    <div class="ap-sub-card">
+      <div class="ap-sub-head">${I.file}<span>Stimulus Material</span><span class="ap-sub-action ap-clickable" data-dive="stimulus-full">${I.ext} Expand</span></div>
+      ${s.STIMULUS_TITLE ? `<div class="ap-sub-title">${esc(s.STIMULUS_TITLE)}</div>` : ''}
+      <div class="ap-stimulus-preview">${esc(s.STIMULUS_CONTENT || '').slice(0, 200)}${(s.STIMULUS_CONTENT || '').length > 200 ? '...' : ''}</div>
+      <div class="ap-stimulus-full" style="display:none;">${esc(s.STIMULUS_CONTENT || '').replace(/\n/g, '<br>')}</div>
+      ${stimQ.length ? `<div class="ap-pills">${stimQ.map(q => `<div class="ap-pill ap-clickable" data-dive="question" data-text="${esc(q)}">${I.msg}<span>${esc(q)}</span></div>`).join('')}</div>` : ''}
+    </div>
+
+    <div class="ap-sub-card">
+      <div class="ap-sub-head">${I.msg}<span>Discussion Prompts</span></div>
+      ${s.DISCUSSION_OPENING ? `<div class="ap-disc-prompt"><span class="ap-tag ap-tag-alt">Opening</span>${esc(s.DISCUSSION_OPENING)}</div>` : ''}
+      ${deepening.map(d => `<div class="ap-disc-prompt ap-clickable" data-dive="discussion" data-text="${esc(d)}"><span class="ap-tag">Deepening</span>${esc(d)}</div>`).join('')}
+      ${s.DISCUSSION_CLOSING ? `<div class="ap-disc-prompt"><span class="ap-tag ap-tag-alt">Closing</span>${esc(s.DISCUSSION_CLOSING)}</div>` : ''}
+      ${tips.length ? `<div class="ap-tips">${tips.map(t => `<span>${I.bulb} ${esc(t)}</span>`).join('')}</div>` : ''}
+    </div>
+
+    <div class="ap-sub-card">
+      <div class="ap-sub-head">${I.edit}<span>Worksheet</span>${s.WORKSHEET_TITLE ? ` — ${esc(s.WORKSHEET_TITLE)}` : ''}</div>
+      <div class="ap-task-list">
+        ${tasks.map((t, i) => `<div class="ap-task-item ap-clickable" data-dive="task" data-text="${esc(t)}"><span class="ap-task-num">${i + 1}</span><span>${esc(t)}</span></div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderAssessment(s) {
+  const rubricRows = bullets(s.RUBRIC);
+  const exitQ = bullets(s.EXIT_TICKET);
+  const draftQ = bullets(s.DRAFT_QUESTIONS);
+
+  return `
+    <div class="ap-sub-card">
+      <div class="ap-sub-head">${I.grid}<span>Rubric</span></div>
+      ${rubricRows.map(r => {
+        const [criterion, ...levels] = r.split('|').map(p => p.replace(/^Criterion\s*\d+:\s*/i, '').trim());
+        return `<div class="ap-rubric-row ap-clickable" data-dive="rubric" data-text="${esc(r)}">
+          <div class="ap-rubric-criterion">${esc(criterion)}</div>
+          <div class="ap-rubric-levels">${levels.map(l => `<span class="ap-rubric-level">${esc(l)}</span>`).join('')}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="ap-sub-card">
+      <div class="ap-sub-head">${I.zap}<span>Exit Ticket</span></div>
+      ${exitQ.map(q => {
+        const [label, ...rest] = q.split(':');
+        return `<div class="ap-exit-q ap-clickable" data-dive="exit-ticket" data-text="${esc(q)}">
+          <span class="ap-tag">${esc(label.trim())}</span>
+          <span>${esc(rest.join(':').trim())}</span>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="ap-sub-card">
+      <div class="ap-sub-head">${I.file}<span>Draft Questions</span></div>
+      ${draftQ.map(q => {
+        const match = q.match(/^Q\d+\s*\(([^)]+)\):\s*(.*?)(?:\s*→\s*(.*))?$/);
+        if (match) {
+          return `<div class="ap-draft-q ap-clickable" data-dive="draft-question" data-text="${esc(q)}">
+            <span class="ap-tag">${esc(match[1])}</span>
+            <span class="ap-draft-q-text">${esc(match[2])}</span>
+            ${match[3] ? `<div class="ap-draft-q-answer">${I.check} ${esc(match[3])}</div>` : ''}
+          </div>`;
+        }
+        return `<div class="ap-draft-q ap-clickable" data-dive="draft-question" data-text="${esc(q)}">${esc(q)}</div>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderReflection(s) {
+  const prompts = bullets(s.REFLECTION_PROMPTS);
+  const forward = bullets(s.FORWARD_PLANNING);
+
+  return `
+    ${s.PULSE_CHECK ? `
+    <div class="ap-section">
+      <div class="ap-section-head">${I.heart}<span>Pulse Check</span></div>
+      <div class="ap-compact-text">${esc(s.PULSE_CHECK).replace(/\n/g, '<br>')}</div>
+    </div>` : ''}
+    <div class="ap-section">
+      <div class="ap-section-head">${I.msg}<span>Reflection Prompts</span></div>
+      ${prompts.map(p => {
+        const [q, ...hints] = p.split('(');
+        const hint = hints.join('(').replace(/\)$/, '');
+        return `<div class="ap-reflection-item ap-clickable" data-dive="reflection" data-text="${esc(p)}">
+          <span class="ap-refl-q">${esc(q.trim())}</span>
+          ${hint ? `<span class="ap-refl-hint">${esc(hint.trim())}</span>` : ''}
+        </div>`;
+      }).join('')}
+    </div>
+    ${forward.length ? `
+    <div class="ap-section">
+      <div class="ap-section-head">${I.zap}<span>Forward Planning</span></div>
+      <div class="ap-pills">${forward.map(f => `<div class="ap-pill">${I.arrow}<span>${esc(f)}</span></div>`).join('')}</div>
+    </div>` : ''}
+    ${s.GROWTH_CONNECTION ? `
+    <div class="ap-section">
+      <div class="ap-section-head">${I.award}<span>Growth Connection</span></div>
+      <div class="ap-compact-text">${esc(s.GROWTH_CONNECTION).replace(/\n/g, '<br>')}</div>
+    </div>` : ''}`;
+}
+
+function renderFallback(raw) {
+  // Simple markdown fallback for unparseable output
+  let html = esc(raw);
+  html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:0.875rem;margin:12px 0 4px;">$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:0.95rem;margin:14px 0 4px;">$1</h2>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/^- (.+)$/gm, '<div class="ap-pill">' + I.arrow + '<span>$1</span></div>');
+  html = html.replace(/\n\n/g, '<br>');
+  return `<div class="ap-compact-text">${html}</div>`;
+}
+
 
 /* ── Render ── */
 
 export function render(container) {
   let running = false;
   let aborted = false;
-  let currentStep = -1;          // -1 = not started
-  const outputs = {};            // step id → generated text
+  let currentStep = -1;
+  const outputs = {};     // step id → raw text
+  let expandedDive = null; // { stepId, type, text } for deep-dive panel
+  let params = {};
 
   function renderView() {
     container.innerHTML = `
       <style>
         .ap-scroll { overflow-y: auto; height: 100%; }
-        .ap-container { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
-        .ap-header { margin-bottom: 24px; }
-        .ap-header h1 { font-size: 1.625rem; font-weight: 800; margin: 0 0 4px; letter-spacing: -0.02em; }
-        .ap-header p { font-size: 0.9375rem; color: var(--ink-muted, #777); margin: 0; }
-        .ap-beta { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.625rem; font-weight: 700; background: #f59e0b22; color: #f59e0b; margin-left: 8px; vertical-align: middle; letter-spacing: 0.04em; }
-        .ap-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .ap-container { max-width: 920px; margin: 0 auto; padding: 24px 16px 48px; }
+        .ap-header { margin-bottom: 20px; }
+        .ap-header h1 { font-size: 1.5rem; font-weight: 800; margin: 0 0 2px; letter-spacing: -0.02em; }
+        .ap-header p { font-size: 0.8125rem; color: var(--ink-muted, #777); margin: 0; }
+        .ap-beta { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.5625rem; font-weight: 700; background: #f59e0b22; color: #f59e0b; margin-left: 6px; vertical-align: middle; letter-spacing: 0.04em; }
+
+        .ap-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
         @media (max-width: 600px) { .ap-form { grid-template-columns: 1fr; } }
         .ap-form .full { grid-column: 1 / -1; }
-        .ap-form label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary, #666); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
-        .ap-actions { display: flex; gap: 10px; margin-bottom: 28px; }
+        .ap-form label { display: block; font-size: 0.6875rem; font-weight: 600; color: var(--ink-secondary, #666); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.03em; }
+        .ap-actions { display: flex; gap: 8px; margin-bottom: 24px; }
 
-        /* Pipeline progress */
-        .ap-pipeline { display: flex; gap: 0; align-items: flex-start; margin-bottom: 28px; position: relative; }
+        /* Pipeline dots */
+        .ap-pipeline { display: flex; gap: 0; align-items: flex-start; margin-bottom: 20px; }
         .ap-step { flex: 1; text-align: center; position: relative; }
-        .ap-step-dot {
-          width: 36px; height: 36px; border-radius: 50%; margin: 0 auto 6px;
-          display: flex; align-items: center; justify-content: center;
-          font-weight: 700; font-size: 0.8125rem;
-          border: 2px solid var(--border-light, #e5e7eb);
-          background: var(--bg, #fff); color: var(--ink-faint, #aaa);
-          transition: all 0.3s ease;
-        }
-        .ap-step.active .ap-step-dot { border-color: #4361ee; color: #4361ee; box-shadow: 0 0 0 4px #4361ee22; }
+        .ap-step-dot { width: 32px; height: 32px; border-radius: 50%; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-light, #e5e7eb); background: var(--bg, #fff); color: var(--ink-faint, #aaa); transition: all 0.3s ease; }
+        .ap-step.active .ap-step-dot { border-color: #4361ee; color: #4361ee; box-shadow: 0 0 0 3px #4361ee22; }
         .ap-step.done .ap-step-dot { border-color: #10b981; background: #10b981; color: #fff; }
-        .ap-step.error .ap-step-dot { border-color: #ef4444; background: #ef4444; color: #fff; }
-        .ap-step-label { font-size: 0.6875rem; font-weight: 600; color: var(--ink-faint, #aaa); }
+        .ap-step-label { font-size: 0.625rem; font-weight: 600; color: var(--ink-faint, #aaa); }
         .ap-step.active .ap-step-label { color: #4361ee; }
         .ap-step.done .ap-step-label { color: #10b981; }
-        .ap-step-line {
-          position: absolute; top: 18px; left: 50%; width: 100%; height: 2px;
-          background: var(--border-light, #e5e7eb); z-index: 0;
-        }
+        .ap-step-line { position: absolute; top: 16px; left: 50%; width: 100%; height: 2px; background: var(--border-light, #e5e7eb); z-index: 0; }
         .ap-step:last-child .ap-step-line { display: none; }
         .ap-step.done .ap-step-line { background: #10b981; }
 
         /* Output cards */
-        .ap-output-card {
-          border-radius: 10px; border: 1px solid var(--border-light, #e5e7eb);
-          background: var(--bg, #fff); margin-bottom: 16px; overflow: hidden;
-        }
-        .ap-output-header {
-          display: flex; align-items: center; gap: 10px; padding: 12px 16px;
-          cursor: pointer; user-select: none;
-          border-bottom: 1px solid var(--border-light, #e5e7eb);
-        }
-        .ap-output-header:hover { background: var(--bg-hover, #f9fafb); }
-        .ap-output-icon {
-          width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-          font-weight: 700; font-size: 0.75rem; flex-shrink: 0;
-        }
-        .ap-output-title { font-weight: 700; font-size: 0.875rem; flex: 1; }
-        .ap-output-chevron { transition: transform 0.2s ease; color: var(--ink-faint, #aaa); }
-        .ap-output-chevron.open { transform: rotate(180deg); }
-        .ap-output-body {
-          padding: 16px 20px; font-size: 0.875rem; line-height: 1.7;
-          display: none;
-        }
-        .ap-output-body.visible { display: block; }
-        .ap-output-body h2 { font-size: 1rem; margin-top: 1em; }
-        .ap-output-body h3 { font-size: 0.9375rem; margin-top: 0.8em; }
-        .ap-output-body ul, .ap-output-body ol { padding-left: 1.5em; }
-        .ap-output-body table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.8125rem; }
+        .ap-card { border-radius: 10px; border: 1px solid var(--border-light, #e5e7eb); background: var(--bg, #fff); margin-bottom: 12px; overflow: hidden; }
+        .ap-card-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; cursor: pointer; user-select: none; }
+        .ap-card-head:hover { background: var(--bg-hover, #f9fafb); }
+        .ap-card-icon { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ap-card-title { font-weight: 700; font-size: 0.8125rem; flex: 1; }
+        .ap-card-brief { font-size: 0.6875rem; color: var(--ink-faint, #aaa); }
+        .ap-card-nav { font-size: 0.625rem; color: var(--ink-faint, #aaa); padding: 2px 8px; border: 1px solid var(--border-light,#e5e7eb); border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+        .ap-card-nav:hover { color: var(--accent); border-color: var(--accent); }
+        .ap-chevron { transition: transform 0.2s ease; color: var(--ink-faint, #aaa); }
+        .ap-chevron.open { transform: rotate(180deg); }
+        .ap-card-body { padding: 4px 16px 16px; display: none; }
+        .ap-card-body.visible { display: block; }
 
-        .ap-generating {
-          display: flex; align-items: center; gap: 8px; padding: 16px;
-          color: var(--ink-secondary, #666); font-size: 0.8125rem;
-        }
-        .ap-spinner {
-          width: 16px; height: 16px; border: 2px solid var(--border-light, #e5e7eb);
-          border-top-color: #4361ee; border-radius: 50%; animation: apSpin 0.6s linear infinite;
-        }
+        /* Structured sections */
+        .ap-section { margin-bottom: 12px; }
+        .ap-section-head { display: flex; align-items: center; gap: 6px; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-secondary, #666); margin-bottom: 6px; }
+        .ap-section-head svg { opacity: 0.6; }
+        .ap-pills { display: flex; flex-direction: column; gap: 4px; }
+        .ap-pill { display: flex; align-items: flex-start; gap: 6px; padding: 6px 10px; border-radius: 8px; background: var(--bg-hover, #f9fafb); font-size: 0.8125rem; line-height: 1.45; border: 1px solid transparent; }
+        .ap-pill svg { flex-shrink: 0; margin-top: 2px; opacity: 0.4; }
+        .ap-clickable { cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+        .ap-clickable:hover { border-color: var(--accent, #4361ee); box-shadow: 0 0 0 2px var(--accent-light, #4361ee18); }
+
+        .ap-tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 0.625rem; font-weight: 600; background: var(--accent-light, #4361ee14); color: var(--accent, #4361ee); white-space: nowrap; }
+        .ap-tag-alt { background: #10b98114; color: #10b981; }
+        .ap-subtle { font-size: 0.75rem; color: var(--ink-secondary, #666); }
+        .ap-compact-text { font-size: 0.8125rem; color: var(--ink-secondary, #666); line-height: 1.6; }
+
+        /* Timeline */
+        .ap-timeline { display: flex; flex-direction: column; gap: 0; }
+        .ap-tl-row { display: flex; align-items: flex-start; gap: 10px; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; }
+        .ap-tl-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-light, #4361ee14); color: var(--accent, #4361ee); display: flex; align-items: center; justify-content: center; font-size: 0.625rem; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+        .ap-tl-body { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.8125rem; }
+
+        /* Lesson-specific */
+        .ap-lesson-title { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+        .ap-meta-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+        .ap-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+        @media (max-width: 600px) { .ap-two-col { grid-template-columns: 1fr; } }
+        .ap-flow-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+        .ap-flow-block { flex: 1; min-width: 140px; padding: 8px 10px; border-radius: 8px; background: var(--bg-hover, #f9fafb); border: 1px solid transparent; }
+        .ap-flow-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; color: var(--accent, #4361ee); margin-bottom: 2px; }
+        .ap-flow-desc { font-size: 0.75rem; color: var(--ink-secondary, #666); line-height: 1.4; }
+
+        /* Enactment sub-cards */
+        .ap-sub-card { border: 1px solid var(--border-light, #e5e7eb); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+        .ap-sub-head { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 700; margin-bottom: 6px; }
+        .ap-sub-head svg { opacity: 0.5; }
+        .ap-sub-action { margin-left: auto; font-size: 0.625rem; font-weight: 600; color: var(--accent); display: flex; align-items: center; gap: 3px; cursor: pointer; }
+        .ap-sub-title { font-size: 0.8125rem; font-weight: 600; margin-bottom: 4px; }
+        .ap-stimulus-preview { font-size: 0.8125rem; color: var(--ink-secondary, #666); line-height: 1.5; margin-bottom: 8px; font-style: italic; }
+        .ap-stimulus-full { font-size: 0.8125rem; color: var(--ink, #333); line-height: 1.6; margin-bottom: 8px; padding: 8px; background: var(--bg-hover, #f9fafb); border-radius: 6px; }
+        .ap-disc-prompt { font-size: 0.8125rem; padding: 5px 8px; border-radius: 6px; border: 1px solid transparent; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+        .ap-tips { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; font-size: 0.75rem; color: var(--ink-secondary, #666); }
+        .ap-tips span { display: flex; align-items: center; gap: 4px; }
+        .ap-task-list { display: flex; flex-direction: column; gap: 3px; }
+        .ap-task-item { display: flex; align-items: flex-start; gap: 8px; padding: 5px 8px; border-radius: 6px; font-size: 0.8125rem; border: 1px solid transparent; }
+        .ap-task-num { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 0.625rem; font-weight: 700; flex-shrink: 0; }
+
+        /* Assessment */
+        .ap-rubric-row { padding: 6px 8px; border-radius: 6px; border: 1px solid transparent; margin-bottom: 3px; }
+        .ap-rubric-criterion { font-size: 0.8125rem; font-weight: 600; margin-bottom: 3px; }
+        .ap-rubric-levels { display: flex; gap: 4px; flex-wrap: wrap; }
+        .ap-rubric-level { font-size: 0.6875rem; padding: 2px 6px; background: var(--bg-hover); border-radius: 4px; color: var(--ink-secondary); }
+        .ap-exit-q { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px; font-size: 0.8125rem; border: 1px solid transparent; margin-bottom: 3px; }
+        .ap-draft-q { padding: 6px 8px; border-radius: 6px; border: 1px solid transparent; margin-bottom: 3px; font-size: 0.8125rem; }
+        .ap-draft-q-text { font-weight: 500; }
+        .ap-draft-q-answer { font-size: 0.75rem; color: #10b981; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+
+        /* Reflection */
+        .ap-reflection-item { padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; margin-bottom: 4px; }
+        .ap-refl-q { font-size: 0.8125rem; font-weight: 600; display: block; }
+        .ap-refl-hint { font-size: 0.75rem; color: var(--ink-secondary); }
+
+        /* Deep-dive panel */
+        .ap-dive-panel { position: fixed; right: 0; top: 0; width: 380px; height: 100vh; background: var(--bg, #fff); border-left: 1px solid var(--border-light); box-shadow: -4px 0 24px rgba(0,0,0,0.08); z-index: 1000; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.25s ease; }
+        .ap-dive-panel.visible { transform: translateX(0); }
+        .ap-dive-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border-light); }
+        .ap-dive-head h3 { font-size: 0.875rem; margin: 0; }
+        .ap-dive-close { background: none; border: none; cursor: pointer; color: var(--ink-faint); padding: 4px; }
+        .ap-dive-body { flex: 1; overflow-y: auto; padding: 16px; }
+        .ap-dive-text { font-size: 0.875rem; line-height: 1.7; margin-bottom: 16px; }
+        .ap-dive-actions { display: flex; flex-direction: column; gap: 6px; }
+        .ap-dive-action { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-light); cursor: pointer; font-size: 0.8125rem; font-weight: 500; background: none; color: var(--ink); text-align: left; }
+        .ap-dive-action:hover { border-color: var(--accent); background: var(--accent-light, #4361ee08); }
+        .ap-dive-action svg { opacity: 0.5; flex-shrink: 0; }
+
+        .ap-spinner { width: 16px; height: 16px; border: 2px solid var(--border-light); border-top-color: #4361ee; border-radius: 50%; animation: apSpin 0.6s linear infinite; }
         @keyframes apSpin { to { transform: rotate(360deg); } }
-
-        .ap-empty-state {
-          text-align: center; padding: 40px 20px; color: var(--ink-secondary, #666);
-          border: 2px dashed var(--border-light, #e5e7eb); border-radius: 12px;
-        }
-        .ap-empty-state p { margin: 8px 0 0; font-size: 0.875rem; }
+        .ap-generating { display: flex; align-items: center; gap: 8px; padding: 14px; color: var(--ink-secondary); font-size: 0.8125rem; }
+        .ap-empty-state { text-align: center; padding: 36px 20px; color: var(--ink-secondary); border: 2px dashed var(--border-light); border-radius: 12px; }
+        .ap-empty-state p { margin: 6px 0 0; font-size: 0.8125rem; }
       </style>
 
       <div class="ap-scroll">
@@ -359,46 +649,30 @@ export function render(container) {
 
           <div class="ap-header">
             <h1>Co-Cher+<span class="ap-beta">BETA</span></h1>
-            <p>Full-workflow autopilot — from Scheme of Work to Reflection, in one go.</p>
+            <p>Full-workflow autopilot — SoW to Reflection in one pass.</p>
           </div>
 
-          <!-- Input form -->
           <div class="ap-form" id="ap-form">
             <div>
               <label for="ap-subject">Subject</label>
               <select id="ap-subject" class="input" style="width:100%;box-sizing:border-box;">
                 <option value="">Select...</option>
-                <option>English Language</option>
-                <option>Mother Tongue</option>
-                <option>Mathematics</option>
-                <option>Additional Mathematics</option>
-                <option>Science</option>
-                <option>Physics</option>
-                <option>Chemistry</option>
-                <option>Biology</option>
-                <option>History</option>
-                <option>Geography</option>
-                <option>Social Studies</option>
-                <option>Literature</option>
-                <option>Art</option>
-                <option>Music</option>
-                <option>Physical Education</option>
-                <option>Character & Citizenship Education</option>
-                <option>General Paper</option>
-                <option>Computing</option>
+                <option>English Language</option><option>Mother Tongue</option>
+                <option>Mathematics</option><option>Additional Mathematics</option>
+                <option>Science</option><option>Physics</option><option>Chemistry</option><option>Biology</option>
+                <option>History</option><option>Geography</option><option>Social Studies</option>
+                <option>Literature</option><option>Art</option><option>Music</option>
+                <option>Physical Education</option><option>Character &amp; Citizenship Education</option>
+                <option>General Paper</option><option>Computing</option>
               </select>
             </div>
             <div>
               <label for="ap-level">Level</label>
               <select id="ap-level" class="input" style="width:100%;box-sizing:border-box;">
                 <option value="">Select...</option>
-                <option>Sec 1</option>
-                <option>Sec 2</option>
-                <option>Sec 3</option>
-                <option>Sec 4</option>
-                <option>Sec 5</option>
-                <option>JC 1</option>
-                <option>JC 2</option>
+                <option>Sec 1</option><option>Sec 2</option><option>Sec 3</option>
+                <option>Sec 4</option><option>Sec 5</option>
+                <option>JC 1</option><option>JC 2</option>
               </select>
             </div>
             <div class="full">
@@ -408,29 +682,25 @@ export function render(container) {
             <div>
               <label for="ap-duration">Duration</label>
               <select id="ap-duration" class="input" style="width:100%;box-sizing:border-box;">
-                <option>2 weeks</option>
-                <option>3 weeks</option>
-                <option selected>4-6 weeks</option>
-                <option>One term</option>
+                <option>2 weeks</option><option>3 weeks</option>
+                <option selected>4-6 weeks</option><option>One term</option>
               </select>
             </div>
             <div>
               <label for="ap-notes">Additional Notes (optional)</label>
-              <input id="ap-notes" class="input" type="text" placeholder="e.g. mixed-ability class, focus on inquiry..." style="width:100%;box-sizing:border-box;">
+              <input id="ap-notes" class="input" type="text" placeholder="e.g. mixed-ability, focus on inquiry..." style="width:100%;box-sizing:border-box;">
             </div>
           </div>
 
-          <!-- Action buttons -->
           <div class="ap-actions">
-            <button id="ap-run-btn" class="btn btn-primary" style="flex:1;max-width:280px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              Run Full Workflow
+            <button id="ap-run-btn" class="btn btn-primary" style="flex:1;max-width:260px;">
+              ${I.layers} Run Full Workflow
             </button>
             <button id="ap-stop-btn" class="btn btn-ghost" style="display:none;color:#ef4444;">Stop</button>
           </div>
 
-          <!-- Pipeline progress indicator -->
-          <div class="ap-pipeline" id="ap-pipeline" style="${currentStep < 0 ? 'display:none;' : ''}">
+          <!-- Pipeline -->
+          <div class="ap-pipeline" style="${currentStep < 0 ? 'display:none;' : ''}">
             ${STEPS.map((s, i) => {
               let cls = '';
               if (i < currentStep || (i <= currentStep && outputs[s.id])) cls = 'done';
@@ -438,7 +708,7 @@ export function render(container) {
               return `
                 <div class="ap-step ${cls}">
                   <div class="ap-step-line"></div>
-                  <div class="ap-step-dot">${outputs[s.id] ? '&#10003;' : s.icon}</div>
+                  <div class="ap-step-dot">${outputs[s.id] ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>` : s.icon}</div>
                   <div class="ap-step-label">${s.label}</div>
                 </div>`;
             }).join('')}
@@ -448,80 +718,145 @@ export function render(container) {
           <div id="ap-outputs">
             ${currentStep < 0 && Object.keys(outputs).length === 0 ? `
               <div class="ap-empty-state">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint, #ccc)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                <p>Configure your lesson parameters above, then hit <strong>Run Full Workflow</strong>.<br>
-                Co-Cher+ will generate everything from Scheme of Work to Reflection prompts.</p>
+                ${I.layers}
+                <p>Configure your lesson above, then <strong>Run Full Workflow</strong>.</p>
               </div>
             ` : ''}
 
             ${STEPS.map((s, i) => {
               if (!outputs[s.id] && i !== currentStep) return '';
               const isGenerating = i === currentStep && running && !outputs[s.id];
-              const colors = {
-                sow: '#8b5cf6', lesson: '#4361ee', enactment: '#10b981',
-                assessment: '#f59e0b', reflection: '#06b6d4'
-              };
-              const color = colors[s.id] || '#4361ee';
               return `
-                <div class="ap-output-card">
-                  <div class="ap-output-header" data-toggle="${s.id}">
-                    <div class="ap-output-icon" style="background:${color}18;color:${color};">${s.icon}</div>
-                    <div class="ap-output-title">${s.label}</div>
+                <div class="ap-card">
+                  <div class="ap-card-head" data-toggle="${s.id}">
+                    <div class="ap-card-icon" style="background:${s.color}14;color:${s.color};">${s.icon}</div>
+                    <div class="ap-card-title">${s.label}</div>
+                    ${!isGenerating && outputs[s.id] ? `
+                      <div class="ap-card-brief">${s.brief}</div>
+                      <div class="ap-card-nav" data-goto="${s.route}">${s.routeLabel} ${I.ext}</div>
+                    ` : ''}
                     ${isGenerating ? '<div class="ap-spinner"></div>' : `
-                      <svg class="ap-output-chevron${outputs[s.id] ? ' open' : ''}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                      <svg class="ap-chevron${outputs[s.id] ? ' open' : ''}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                     `}
                   </div>
                   ${isGenerating ? `
-                    <div class="ap-generating">
-                      <div class="ap-spinner"></div>
-                      <span>${s.description}</span>
-                    </div>
+                    <div class="ap-generating"><div class="ap-spinner"></div><span>${s.brief}...</span></div>
                   ` : outputs[s.id] ? `
-                    <div class="ap-output-body visible" id="ap-body-${s.id}">
-                      ${renderMarkdown(outputs[s.id])}
+                    <div class="ap-card-body visible" id="ap-body-${s.id}">
+                      ${renderStepOutput(s.id, outputs[s.id], params)}
                     </div>
                   ` : ''}
                 </div>`;
             }).join('')}
           </div>
-
         </div>
+      </div>
+
+      <!-- Deep-dive slide-over panel -->
+      <div class="ap-dive-panel${expandedDive ? ' visible' : ''}" id="ap-dive-panel">
+        ${expandedDive ? `
+          <div class="ap-dive-head">
+            <h3>${esc(expandedDive.type.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))}</h3>
+            <button class="ap-dive-close" id="ap-dive-close">&times;</button>
+          </div>
+          <div class="ap-dive-body">
+            <div class="ap-dive-text">${esc(expandedDive.text)}</div>
+            <div class="ap-dive-actions">
+              <button class="ap-dive-action" data-action="planner">${I.book} <span>Open in Lesson Planner</span></button>
+              <button class="ap-dive-action" data-action="refine">${I.edit} <span>Ask Co-Cher to refine this</span></button>
+              <button class="ap-dive-action" data-action="copy">${I.file} <span>Copy to clipboard</span></button>
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
 
     /* ── Wire events ── */
 
-    // Toggle output card bodies
-    container.querySelectorAll('.ap-output-header[data-toggle]').forEach(header => {
-      header.addEventListener('click', () => {
-        const id = header.dataset.toggle;
-        const body = container.querySelector(`#ap-body-${id}`);
-        const chevron = header.querySelector('.ap-output-chevron');
-        if (body) {
-          body.classList.toggle('visible');
-          if (chevron) chevron.classList.toggle('open');
+    // Toggle card bodies
+    container.querySelectorAll('.ap-card-head[data-toggle]').forEach(h => {
+      h.addEventListener('click', (e) => {
+        if (e.target.closest('.ap-card-nav')) return;
+        const body = container.querySelector(`#ap-body-${h.dataset.toggle}`);
+        const chev = h.querySelector('.ap-chevron');
+        if (body) { body.classList.toggle('visible'); if (chev) chev.classList.toggle('open'); }
+      });
+    });
+
+    // Navigate-to-page buttons
+    container.querySelectorAll('.ap-card-nav[data-goto]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        navigate(btn.dataset.goto);
+      });
+    });
+
+    // Stimulus expand toggle
+    container.querySelectorAll('.ap-sub-action[data-dive="stimulus-full"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.ap-sub-card');
+        const preview = card.querySelector('.ap-stimulus-preview');
+        const full = card.querySelector('.ap-stimulus-full');
+        if (preview && full) {
+          const showing = full.style.display !== 'none';
+          full.style.display = showing ? 'none' : 'block';
+          preview.style.display = showing ? 'block' : 'none';
+          btn.innerHTML = `${I.ext} ${showing ? 'Expand' : 'Collapse'}`;
         }
       });
     });
 
-    // Run button
+    // Clickable elements → deep-dive panel
+    container.querySelectorAll('.ap-clickable[data-dive]').forEach(el => {
+      if (el.dataset.dive === 'stimulus-full') return; // handled above
+      el.addEventListener('click', () => {
+        expandedDive = { type: el.dataset.dive, text: el.dataset.text || el.textContent.trim() };
+        renderView();
+      });
+    });
+
+    // Deep-dive close
+    const closeBtn = container.querySelector('#ap-dive-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => { expandedDive = null; renderView(); });
+
+    // Deep-dive actions
+    container.querySelectorAll('.ap-dive-action[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        if (action === 'planner') {
+          expandedDive = null;
+          navigate('/lesson-planner');
+        } else if (action === 'copy') {
+          navigator.clipboard.writeText(expandedDive?.text || '').then(() => showToast('Copied!', 'success'));
+        } else if (action === 'refine') {
+          // Store the text and navigate to lesson planner with pre-filled context
+          if (expandedDive?.text) {
+            sessionStorage.setItem('cocher_plus_refinement', JSON.stringify({
+              text: expandedDive.text,
+              type: expandedDive.type,
+              subject: params.subject,
+              level: params.level,
+              topic: params.topic
+            }));
+          }
+          expandedDive = null;
+          navigate('/lesson-planner');
+        }
+      });
+    });
+
+    // Run/stop buttons
     const runBtn = container.querySelector('#ap-run-btn');
     const stopBtn = container.querySelector('#ap-stop-btn');
-
-    runBtn.addEventListener('click', () => runPipeline());
-
-    stopBtn.addEventListener('click', () => {
-      aborted = true;
-      running = false;
-      stopBtn.style.display = 'none';
-      runBtn.disabled = false;
+    if (runBtn) runBtn.addEventListener('click', () => runPipeline());
+    if (stopBtn) stopBtn.addEventListener('click', () => {
+      aborted = true; running = false;
       showToast('Workflow stopped.', 'warning');
       renderView();
     });
   }
 
   /* ── Pipeline runner ── */
-
   async function runPipeline() {
     const subject = container.querySelector('#ap-subject').value;
     const level = container.querySelector('#ap-level').value;
@@ -534,30 +869,23 @@ export function render(container) {
       return;
     }
 
-    const params = { subject, level, topic, duration, notes };
-
-    // Reset state
-    running = true;
-    aborted = false;
-    currentStep = 0;
+    params = { subject, level, topic, duration, notes };
+    running = true; aborted = false; currentStep = 0;
     for (const key of Object.keys(outputs)) delete outputs[key];
 
     renderView();
-    const runBtn = container.querySelector('#ap-run-btn');
-    const stopBtn = container.querySelector('#ap-stop-btn');
-    if (runBtn) runBtn.disabled = true;
-    if (stopBtn) stopBtn.style.display = '';
-
-    for (let i = 0; i < STEPS.length; i++) {
-      if (aborted) break;
-
-      currentStep = i;
-      renderView();
-      // Re-grab buttons after re-render
+    const setButtons = () => {
       const rb = container.querySelector('#ap-run-btn');
       const sb = container.querySelector('#ap-stop-btn');
       if (rb) rb.disabled = true;
       if (sb) sb.style.display = '';
+    };
+    setButtons();
+
+    for (let i = 0; i < STEPS.length; i++) {
+      if (aborted) break;
+      currentStep = i;
+      renderView(); setButtons();
 
       const step = STEPS[i];
       const { system, user } = step.buildPrompt(params, outputs);
@@ -565,11 +893,9 @@ export function render(container) {
       try {
         const text = await sendChat(
           [{ role: 'user', content: user }],
-          { systemPrompt: system, temperature: 0.7, maxTokens: 4096 }
+          { systemPrompt: system, temperature: 0.6, maxTokens: 3072 }
         );
-
         if (aborted) break;
-
         outputs[step.id] = text;
         currentStep = i + 1;
         renderView();
@@ -577,16 +903,12 @@ export function render(container) {
         if (aborted) break;
         console.error(`Co-Cher+ step "${step.id}" failed:`, err);
         showToast(`Step "${step.label}" failed: ${err.message}`, 'danger');
-        running = false;
-        renderView();
-        return;
+        running = false; renderView(); return;
       }
     }
 
     running = false;
-    if (!aborted) {
-      showToast('Full workflow complete!', 'success');
-    }
+    if (!aborted) showToast('Workflow complete!', 'success');
     renderView();
   }
 
