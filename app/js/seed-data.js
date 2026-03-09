@@ -1141,6 +1141,134 @@ By the end of this lesson, students will be able to:
         updatedAt: Date.now()
       }
     }
+  },
+  {
+    title: 'Integration \u2014 Area Under a Curve',
+    classKey: 2, // links to 4C Mathematics
+    status: 'ready',
+    e21ccFocus: ['cait'],
+    objectives: 'Students will understand integration as the reverse of differentiation, evaluate definite integrals of polynomial functions, and interpret the definite integral as the area under a curve.',
+    chatHistory: [
+      { role: 'user', content: 'Plan a Sec 4 A-Math lesson on integration. Focus on definite integrals and area under a curve. I want students to build intuition through graphing before moving to algebraic methods. Include LaTeX-formatted worked examples.' },
+      { role: 'assistant', content: `## Integration \u2014 Area Under a Curve (Sec 4 Additional Mathematics)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. State that integration is the reverse process of differentiation
+2. Integrate expressions of the form $ax^n$ where $n \\neq -1$
+3. Evaluate definite integrals such as $\\displaystyle\\int_1^3 (2x + 1)\\,dx$
+4. Interpret the definite integral as the area bounded by a curve, the $x$-axis, and the lines $x = a$ and $x = b$
+
+### Lesson Flow (70 min double period)
+
+**Phase 1 \u2014 Hook: The Rectangle Problem (10 min)**
+- Display the graph of $y = x^2$ on the board (or projector)
+- Ask: *"How would you find the area between this curve and the $x$-axis, from $x = 0$ to $x = 2$?"*
+- Students suggest ideas \u2014 likely: count grid squares, draw rectangles
+- Show a diagram with 4 rectangles under the curve, then 8 rectangles, then 16
+- Key insight: as rectangles get thinner, the approximation improves
+- Introduce the idea: *"Integration gives us the exact answer."*
+
+**Phase 2 \u2014 Concept Build: Integration as Anti-differentiation (15 min)**
+- Recall differentiation rules:
+
+$$\\frac{d}{dx}(x^3) = 3x^2 \\qquad \\frac{d}{dx}(x^4) = 4x^3$$
+
+- Pose the reverse question: *"If $\\frac{dy}{dx} = 2x$, what is $y$?"*
+- Introduce the integral notation and the power rule for integration:
+
+$$\\int x^n\\,dx = \\frac{x^{n+1}}{n+1} + C \\qquad (n \\neq -1)$$
+
+- Worked Example 1 \u2014 Indefinite integral:
+
+$$\\int (3x^2 + 4x - 5)\\,dx = \\frac{3x^3}{3} + \\frac{4x^2}{2} - 5x + C = x^3 + 2x^2 - 5x + C$$
+
+- Emphasise the constant of integration $C$ for indefinite integrals
+
+**Phase 3 \u2014 Definite Integrals: From Algebra to Area (20 min)**
+- Introduce the definite integral with limits:
+
+$$\\int_a^b f(x)\\,dx = F(b) - F(a)$$
+
+- Worked Example 2 \u2014 Evaluate step by step:
+
+$$\\int_1^3 (2x + 1)\\,dx = \\Big[x^2 + x\\Big]_1^3 = (9 + 3) - (1 + 1) = 12 - 2 = 10$$
+
+- Graphing connection: sketch $y = 2x + 1$ from $x = 1$ to $x = 3$ \u2014 it is a trapezium!
+- Verify using the trapezium formula: $\\frac{1}{2}(3 + 7)(2) = 10$ \u2709
+
+- Worked Example 3 \u2014 Area under a curve:
+
+$$\\text{Find the area under } y = x^2 + 1 \\text{ from } x = 0 \\text{ to } x = 3$$
+
+$$A = \\int_0^3 (x^2 + 1)\\,dx = \\left[\\frac{x^3}{3} + x\\right]_0^3 = \\left(\\frac{27}{3} + 3\\right) - (0) = 9 + 3 = 12 \\text{ units}^2$$
+
+- Draw the curve, shade the region, label the bounds \u2014 connect algebra to geometry
+
+**Phase 4 \u2014 Guided Practice: Graphing & Computing (20 min)**
+- Students work in pairs on a set of 5 problems. For each:
+  1. Sketch the graph of $y = f(x)$
+  2. Shade the required region
+  3. Evaluate the definite integral
+  4. Verify the answer makes sense (e.g. positive area, reasonable magnitude)
+
+Practice Set:
+- (a) $\\displaystyle\\int_0^2 3x^2\\,dx$
+- (b) $\\displaystyle\\int_1^4 (x + 2)\\,dx$
+- (c) $\\displaystyle\\int_0^1 (4 - x^2)\\,dx$
+- (d) $\\displaystyle\\int_2^5 (2x - 3)\\,dx$
+- (e) $\\displaystyle\\int_{-1}^{2} (x^2 + x + 1)\\,dx$
+
+Key discussion point for (e): the limits include a negative $x$-value \u2014 does the area still work? (Yes, the curve is above the $x$-axis throughout.)
+
+**Phase 5 \u2014 Consolidate & Exit Ticket (5 min)**
+- Summary on board:
+  - $\\int x^n\\,dx = \\frac{x^{n+1}}{n+1} + C$
+  - $\\int_a^b f(x)\\,dx = F(b) - F(a) = $ area under curve (when $f(x) \\geq 0$)
+
+- Exit Ticket: *Evaluate $\\displaystyle\\int_1^4 (3x^2 - 2x + 1)\\,dx$ and sketch the region whose area it represents.*
+
+- Metacognitive prompt: *"In your own words, how are differentiation and integration related? Give one example."*
+
+### Resources Needed
+- Graphing calculator or Desmos on student devices (for curve sketching)
+- Printed practice worksheet with graph paper grids
+- Mini-whiteboards for quick checks
+- Projector for displaying graphs and worked examples
+
+### Differentiation
+- **Support**: Provide a step-by-step scaffold card: "Step 1: Integrate each term. Step 2: Write with square brackets and limits. Step 3: Substitute upper limit. Step 4: Subtract lower limit."
+- **Extension**: Introduce regions below the $x$-axis where $\\int_a^b f(x)\\,dx < 0$ and the need to take $\\left|\\int_a^b f(x)\\,dx\\right|$ for area. Challenge: find the area enclosed between $y = x^2$ and $y = 4$.
+
+### E21CC Focus
+- **CAIT**: Algebraic reasoning, connecting graphical and algebraic representations, verifying answers using multiple methods` }
+    ],
+    plan: '',
+    components: {
+      timeline: {
+        content: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Rectangle Problem | 0\u201310 min | Hook: estimating area under $y = x^2$ using rectangles | Direct Instruction |
+| Anti-differentiation | 10\u201325 min | Integration rules, power rule, indefinite integrals with $C$ | Direct Instruction |
+| Definite Integrals | 25\u201345 min | Worked examples: $\\int_1^3 (2x+1)\\,dx$, area under $y = x^2 + 1$ | Direct Instruction |
+| Guided Practice | 45\u201365 min | Pairs: sketch, shade, compute 5 definite integrals | Collaborative Pods |
+| Consolidate | 65\u201370 min | Exit ticket: evaluate and sketch $\\int_1^4 (3x^2 - 2x + 1)\\,dx$ | Quiet Work |`,
+        meta: 'Auto-generated exemplar',
+        updatedAt: Date.now()
+      },
+      rubric: {
+        content: `### Integration \u2014 Area Under a Curve Rubric
+
+| Criterion | Excellent (4) | Good (3) | Developing (2) | Beginning (1) |
+|-----------|--------------|----------|-----------------|----------------|
+| Integration technique | Correctly integrates all terms using $\\frac{x^{n+1}}{n+1}$ | Minor arithmetic error in one term | Applies rule inconsistently or forgets $+C$ in indefinite | Cannot apply the integration rule |
+| Definite integral evaluation | Accurate substitution of limits and correct $F(b) - F(a)$ | Correct method, minor calculation slip | Confuses upper/lower limits or subtraction order | Does not attempt limit substitution |
+| Graphical interpretation | Accurately sketches curve, shades correct region, labels bounds | Sketch mostly correct, minor labelling gaps | Sketch attempted but region incorrectly identified | No graph or incorrect graph |
+| Verification | Cross-checks answer using alternative method (e.g. trapezium) | Checks answer is reasonable (sign, magnitude) | Limited verification | No checking |`,
+        meta: 'Assessment rubric for Integration',
+        updatedAt: Date.now()
+      }
+    }
   }
 ];
 

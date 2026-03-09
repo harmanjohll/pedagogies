@@ -173,6 +173,23 @@ const SIMULATIONS = [
     description: 'Explore wave behaviour \u2014 reflection, refraction, and diffraction in a simulated ripple tank.',
     difficulty: 'Intermediate',
     path: 'simulations/physics/waves/index.html'
+  },
+  /* ─── Interactives ─── */
+  {
+    id: 'molecular-builder',
+    title: 'Molecular Builder',
+    subject: 'Interactive',
+    description: 'Build molecules atom by atom. Explore bonding, molecular geometry, and 3D structure with an interactive construction tool.',
+    difficulty: 'Intermediate',
+    path: 'simulations/interactives/molecular-builder/index.html'
+  },
+  {
+    id: 'particle-dynamics',
+    title: 'Particle Dynamics',
+    subject: 'Interactive',
+    description: 'Simulate particle systems \u2014 explore states of matter, gas laws, diffusion, and kinetic theory with adjustable parameters.',
+    difficulty: 'Intermediate',
+    path: 'simulations/interactives/particle-dynamics/index.html'
   }
 ];
 
@@ -180,6 +197,7 @@ const SIMULATIONS = [
 function subjectColor(subject) {
   if (subject === 'Chemistry') return '#4361ee';
   if (subject === 'Biology') return '#06d6a0';
+  if (subject === 'Interactive') return '#8b5cf6';
   return '#f77f00';
 }
 

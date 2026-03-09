@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Johll">
+  <title>Molecular Builder – SciSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="builder.css?v=1">
+</head>
+<body>
+
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand" style="text-decoration:none;">Sci<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../index.html">Interactives</a> &rsaquo; Molecular Builder
+    </span>
+    <div class="topbar-actions">
+      <span id="dark-mode-toggle"></span>
+    </div>
+  </nav>
+
+  <main class="builder-layout">
+
+    <!-- Atom Palette -->
+    <aside class="palette" id="palette">
+      <h2 class="palette-title">Atoms</h2>
+      <div class="palette-atoms" id="palette-atoms"></div>
+
+      <h2 class="palette-title" style="margin-top:var(--sp-4);">Bonds</h2>
+      <div class="bond-tools">
+        <button class="bond-btn active" data-bond="1" title="Single bond">&#8212;</button>
+        <button class="bond-btn" data-bond="2" title="Double bond">&#9552;</button>
+        <button class="bond-btn" data-bond="3" title="Triple bond">&#9776;</button>
+      </div>
+
+      <h2 class="palette-title" style="margin-top:var(--sp-4);">Tools</h2>
+      <div class="tool-buttons">
+        <button class="tool-btn" id="btn-delete" title="Delete mode">&#128465; Delete</button>
+        <button class="tool-btn" id="btn-clear" title="Clear canvas">&#128260; Clear</button>
+      </div>
+    </aside>
+
+    <!-- Canvas -->
+    <div class="canvas-wrap">
+      <canvas id="mol-canvas"></canvas>
+      <div class="canvas-hint" id="canvas-hint">Drag atoms from the palette onto the canvas to start building</div>
+    </div>
+
+    <!-- Info Panel -->
+    <aside class="info-panel" id="info-panel">
+      <h2 class="panel-heading">Molecule Info</h2>
+
+      <div class="info-section">
+        <label class="info-label">Formula</label>
+        <div class="info-value" id="info-formula">—</div>
+      </div>
+
+      <div class="info-section">
+        <label class="info-label">Molecular Mass</label>
+        <div class="info-value" id="info-mass">—</div>
+      </div>
+
+      <div class="info-section">
+        <label class="info-label">Total Bonds</label>
+        <div class="info-value" id="info-bonds">—</div>
+      </div>
+
+      <div class="info-section">
+        <label class="info-label">Valence Warnings</label>
+        <div class="info-value" id="info-warnings" style="color:var(--color-danger);">None</div>
+      </div>
+
+      <div class="info-section">
+        <label class="info-label">Atoms</label>
+        <div class="atom-list" id="info-atoms">—</div>
+      </div>
+
+      <h2 class="panel-heading" style="margin-top:var(--sp-5);">Presets</h2>
+      <div class="preset-buttons" id="preset-buttons"></div>
+    </aside>
+
+  </main>
+
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="builder.js?v=1"></script>
+
+</body>
+</html>
