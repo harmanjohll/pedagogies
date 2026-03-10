@@ -7,7 +7,7 @@
   <title>Molecular Builder – SciSim</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../shared/design-system.css?v=5">
-  <link rel="stylesheet" href="builder.css?v=1">
+  <link rel="stylesheet" href="builder.css?v=3">
 </head>
 <body>
 
@@ -23,29 +23,54 @@
 
   <main class="builder-layout">
 
-    <!-- Atom Palette -->
+    <!-- Atom Palette & Tools -->
     <aside class="palette" id="palette">
-      <h2 class="palette-title">Atoms</h2>
+      <h2 class="palette-title">Element</h2>
       <div class="palette-atoms" id="palette-atoms"></div>
 
-      <h2 class="palette-title" style="margin-top:var(--sp-4);">Bonds</h2>
-      <div class="bond-tools">
-        <button class="bond-btn active" data-bond="1" title="Single bond">&#8212;</button>
-        <button class="bond-btn" data-bond="2" title="Double bond">&#9552;</button>
-        <button class="bond-btn" data-bond="3" title="Triple bond">&#9776;</button>
+      <h2 class="palette-title" style="margin-top:var(--sp-4);">Mode</h2>
+      <div class="mode-tools">
+        <button class="mode-btn active" data-mode="bond" title="Bond tool (B)">Bond</button>
+        <button class="mode-btn" data-mode="move" title="Move / Select (V)">Move</button>
+        <button class="mode-btn" data-mode="rotate" title="Rotate selection (R)">Rotate</button>
+        <button class="mode-btn" data-mode="delete" title="Delete tool (X)">Delete</button>
       </div>
 
-      <h2 class="palette-title" style="margin-top:var(--sp-4);">Tools</h2>
-      <div class="tool-buttons">
-        <button class="tool-btn" id="btn-delete" title="Delete mode">&#128465; Delete</button>
-        <button class="tool-btn" id="btn-clear" title="Clear canvas">&#128260; Clear</button>
+      <h2 class="palette-title" style="margin-top:var(--sp-4);">Bond Order</h2>
+      <div class="bond-tools">
+        <button class="bond-btn active" data-bond="1" title="Single bond (1)">&mdash;</button>
+        <button class="bond-btn" data-bond="2" title="Double bond (2)">=</button>
+        <button class="bond-btn" data-bond="3" title="Triple bond (3)">&equiv;</button>
+      </div>
+
+      <h2 class="palette-title" style="margin-top:var(--sp-4);">Actions</h2>
+      <div class="action-buttons">
+        <button class="action-btn" id="btn-clean" title="Auto-layout using VSEPR geometry (L)">&#9881; Clean Geometry</button>
+        <button class="action-btn" id="btn-clear" title="Remove everything">&#128465; Clear All</button>
+      </div>
+
+      <h2 class="palette-title" style="margin-top:var(--sp-4);">Shortcuts</h2>
+      <div class="shortcut-hints">
+        <kbd>B</kbd> Bond &nbsp; <kbd>V</kbd> Move &nbsp; <kbd>R</kbd> Rotate &nbsp; <kbd>X</kbd> Delete<br>
+        <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Bond order<br>
+        <kbd>H</kbd> Fill H &nbsp; <kbd>L</kbd> Clean geometry<br>
+        <kbd>Ctrl</kbd>+<kbd>A</kbd> Select all &nbsp; <kbd>Esc</kbd> Deselect<br>
+        <kbd>Del</kbd> Delete hovered/selected<br>
+        Scroll wheel rotates selection<br>
+        <kbd>Shift</kbd>+click bond: wedge/dash<br>
+        Double-click atom: add H<br>
+        In Move: drag-box to select, Shift+click to toggle
       </div>
     </aside>
 
     <!-- Canvas -->
     <div class="canvas-wrap">
       <canvas id="mol-canvas"></canvas>
-      <div class="canvas-hint" id="canvas-hint">Drag atoms from the palette onto the canvas to start building</div>
+      <div class="canvas-hint" id="canvas-hint">
+        Click to place atoms. Drag between atoms to bond them.<br>
+        Use Move mode to select and drag entire molecules.<br>
+        Presets add molecules — have up to 20 on the canvas.
+      </div>
     </div>
 
     <!-- Info Panel -->
@@ -54,17 +79,17 @@
 
       <div class="info-section">
         <label class="info-label">Formula</label>
-        <div class="info-value" id="info-formula">—</div>
+        <div class="info-value" id="info-formula">&mdash;</div>
       </div>
 
       <div class="info-section">
         <label class="info-label">Molecular Mass</label>
-        <div class="info-value" id="info-mass">—</div>
+        <div class="info-value" id="info-mass">&mdash;</div>
       </div>
 
       <div class="info-section">
-        <label class="info-label">Total Bonds</label>
-        <div class="info-value" id="info-bonds">—</div>
+        <label class="info-label">Bonds</label>
+        <div class="info-value" id="info-bonds">&mdash;</div>
       </div>
 
       <div class="info-section">
@@ -73,18 +98,28 @@
       </div>
 
       <div class="info-section">
-        <label class="info-label">Atoms</label>
-        <div class="atom-list" id="info-atoms">—</div>
+        <label class="info-label">Geometry (VSEPR)</label>
+        <div class="info-value" id="info-geometry" style="font-size:var(--text-sm);font-weight:400;">&mdash;</div>
       </div>
 
-      <h2 class="panel-heading" style="margin-top:var(--sp-5);">Presets</h2>
+      <div class="info-section">
+        <label class="info-label">On Canvas</label>
+        <div class="info-value" id="info-molcount" style="font-size:var(--text-sm);font-weight:400;">&mdash;</div>
+      </div>
+
+      <div class="info-section">
+        <label class="info-label">Atom Detail</label>
+        <div class="atom-list" id="info-atoms">&mdash;</div>
+      </div>
+
+      <h2 class="panel-heading" style="margin-top:var(--sp-5);">Presets (click to add)</h2>
       <div class="preset-buttons" id="preset-buttons"></div>
     </aside>
 
   </main>
 
   <script src="../../shared/dark-mode.js?v=5"></script>
-  <script src="builder.js?v=1"></script>
+  <script src="builder.js?v=3"></script>
 
 </body>
 </html>
