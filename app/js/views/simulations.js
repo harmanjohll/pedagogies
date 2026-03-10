@@ -184,6 +184,14 @@ const SIMULATIONS = [
     path: 'simulations/interactives/molecular-builder/index.html'
   },
   {
+    id: 'molecular-viewer',
+    title: '3D Molecular Viewer',
+    subject: 'Interactive',
+    description: 'Rotate and examine molecules in 3D. Explore VSEPR shapes, bond angles, polarity, and molecular geometry with ball-and-stick, space-filling, and wireframe views.',
+    difficulty: 'Beginner',
+    path: 'simulations/interactives/molecular-viewer/index.html'
+  },
+  {
     id: 'particle-dynamics',
     title: 'Particle Dynamics',
     subject: 'Interactive',
