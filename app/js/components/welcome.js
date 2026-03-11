@@ -139,6 +139,18 @@ export function renderWelcome(onComplete) {
         >
           Enter Co-Cher
         </button>
+
+        <button id="welcome-skip" style="
+          width: 100%; padding: 10px; margin-top: 8px;
+          background: none; border: none; cursor: pointer;
+          font-size: 0.8125rem; color: #94a3b8; font-family: inherit;
+          transition: color 0.15s;
+        "
+        onmouseenter="this.style.color='#4361ee';"
+        onmouseleave="this.style.color='#94a3b8';"
+        >
+          I'll provide my API key later in Settings
+        </button>
       </div>
     </div>
   `;
@@ -180,8 +192,22 @@ export function renderWelcome(onComplete) {
 
   // Start button
   const startBtn = overlay.querySelector('#welcome-start');
+  const skipBtn = overlay.querySelector('#welcome-skip');
   const errorEl = overlay.querySelector('#welcome-error');
   const modelSelect = overlay.querySelector('#welcome-model');
+
+  const dismissWelcome = () => {
+    const card = overlay.querySelector('#welcome-card');
+    card.style.transition = 'opacity 0.3s, transform 0.3s';
+    card.style.opacity = '0';
+    card.style.transform = 'scale(0.96)';
+    overlay.style.transition = 'opacity 0.4s';
+    setTimeout(() => { overlay.style.opacity = '0'; }, 150);
+    setTimeout(() => {
+      overlay.remove();
+      onComplete();
+    }, 500);
+  };
 
   startBtn.addEventListener('click', () => {
     const key = keyInput.value.trim();
@@ -202,18 +228,21 @@ export function renderWelcome(onComplete) {
       Store.set('pedagogicalPriorities', priorities);
     }
 
-    // Animate out
-    const card = overlay.querySelector('#welcome-card');
-    card.style.transition = 'opacity 0.3s, transform 0.3s';
-    card.style.opacity = '0';
-    card.style.transform = 'scale(0.96)';
+    dismissWelcome();
+  });
 
-    overlay.style.transition = 'opacity 0.4s';
-    setTimeout(() => { overlay.style.opacity = '0'; }, 150);
-    setTimeout(() => {
-      overlay.remove();
-      onComplete();
-    }, 500);
+  // Skip API key — proceed without key
+  skipBtn.addEventListener('click', () => {
+    Store.set('apiKeyDeferred', true);
+    Store.set('model', modelSelect.value);
+
+    // Save pedagogical priorities if any selected
+    const priorities = [...overlay.querySelectorAll('.ped-priority-cb:checked')].map(cb => cb.value);
+    if (priorities.length > 0) {
+      Store.set('pedagogicalPriorities', priorities);
+    }
+
+    dismissWelcome();
   });
 
   // Enter key
@@ -226,5 +255,9 @@ export function renderWelcome(onComplete) {
 }
 
 export function shouldShowWelcome() {
+  return !Store.get('apiKey') && !Store.get('apiKeyDeferred');
+}
+
+export function isApiKeyMissing() {
   return !Store.get('apiKey');
 }
