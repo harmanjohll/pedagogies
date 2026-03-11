@@ -7,82 +7,83 @@
 
   const STAGES = [
     {
-      id: 'identify',
+      id: 'empathise',
       num: 1,
-      label: 'Identify',
-      sub: 'Define the Problem',
+      label: 'Empathise',
+      sub: 'Understand the User',
       color: '#ef4444',
-      desc: 'Understand the design brief. Who is the user? What problem needs solving? What are the constraints?',
+      desc: 'Immerse yourself in the user\'s world. Observe, engage, and listen to understand their experiences, needs, and motivations.',
       prompts: [
-        { id: 'brief', label: 'Design Brief', hint: 'What is the problem you are trying to solve? Who is it for?', placeholder: 'Describe the design challenge and who will use your solution...' },
-        { id: 'needs', label: 'User Needs', hint: 'What does the user need? What are their pain points?', placeholder: 'List the needs and requirements of your target user...' },
-        { id: 'constraints', label: 'Constraints', hint: 'What limitations do you have? (time, materials, budget, size)', placeholder: 'List any constraints or limitations for your design...' },
-        { id: 'criteria', label: 'Success Criteria', hint: 'How will you know if your design is successful?', placeholder: 'Define measurable success criteria...' },
+        { id: 'user', label: 'User Profile', hint: 'Who is the user? Describe their age, context, and daily life.', placeholder: 'Describe the target user — who they are, what they do, their environment...' },
+        { id: 'observations', label: 'Observations', hint: 'What did you see and hear when observing the user? What stood out?', placeholder: 'Record what you observed about the user and their behaviour...' },
+        { id: 'interviews', label: 'Interview Insights', hint: 'What did the user tell you about their experience? Direct quotes are powerful.', placeholder: 'Key quotes and insights from user interviews...' },
+        { id: 'empathymap', label: 'Empathy Map', hint: 'What does the user Think, Feel, Say, and Do?', placeholder: 'Think: ...\nFeel: ...\nSay: ...\nDo: ...' },
       ],
-      tools: ['research'],
-      guide: 'Start by empathising with your user. Conduct interviews, surveys, or observations. Use the "5 Whys" technique to get to the root of the problem.',
+      tools: ['empathymap', 'interview5whys', 'shadowing'],
+      guide: 'Use an Empathy Map to organise what the user thinks, feels, says, and does. Conduct interviews with the "5 Whys" technique. Shadow or observe users in their real environment.',
     },
     {
-      id: 'explore',
+      id: 'define',
       num: 2,
-      label: 'Explore',
-      sub: 'Research & Ideate',
+      label: 'Define',
+      sub: 'Frame the Problem',
       color: '#f59e0b',
-      desc: 'Research existing solutions. Brainstorm ideas. Explore different approaches and materials.',
+      desc: 'Synthesise your empathy findings into a clear problem statement. Define the design challenge with a Point of View (POV) or "How Might We" question.',
       prompts: [
-        { id: 'research', label: 'Research Findings', hint: 'What existing products or solutions did you find? What can you learn from them?', placeholder: 'Document your research into existing solutions, materials, and techniques...' },
-        { id: 'ideas', label: 'Idea Generation', hint: 'Brainstorm at least 5 different ideas. No idea is too wild!', placeholder: 'List your brainstormed ideas (aim for quantity over quality at this stage)...' },
-        { id: 'materials', label: 'Materials & Techniques', hint: 'What materials, tools, or techniques could you use?', placeholder: 'List potential materials, manufacturing techniques, and tools...' },
+        { id: 'needs', label: 'User Needs', hint: 'What are the core needs you identified? Prioritise the most important.', placeholder: 'List the key user needs discovered during empathy research...' },
+        { id: 'pov', label: 'Point of View Statement', hint: '[User] needs [need] because [insight].', placeholder: '[User] needs [need] because [surprising insight]...' },
+        { id: 'hmw', label: '"How Might We" Questions', hint: 'Reframe the problem as opportunity questions starting with "How might we..."', placeholder: 'HMW 1: How might we...\nHMW 2: How might we...\nHMW 3: How might we...' },
+        { id: 'constraints', label: 'Constraints & Criteria', hint: 'What limitations exist? What does success look like?', placeholder: 'Constraints: time, materials, budget, size...\nSuccess criteria: ...' },
       ],
-      tools: ['tinkercad', 'pinterest', 'teachable'],
-      guide: 'Use SCAMPER (Substitute, Combine, Adapt, Modify, Put to another use, Eliminate, Reverse) to generate more ideas. Sketch thumbnails for each concept.',
+      tools: ['affinitydiagram', 'hmw', 'povstatement'],
+      guide: 'Use an Affinity Diagram to cluster your empathy research into themes. Frame "How Might We" questions to open up the problem space. Write a clear POV statement: [User] needs [need] because [insight].',
     },
     {
-      id: 'develop',
+      id: 'ideate',
       num: 3,
-      label: 'Develop',
-      sub: 'Design & Model',
+      label: 'Ideate',
+      sub: 'Generate Ideas',
       color: '#22c55e',
-      desc: 'Develop your best idea into a detailed design. Create sketches, CAD models, or prototypes.',
+      desc: 'Generate a wide range of creative solutions. Go for quantity over quality. Build on each other\'s ideas. Defer judgement.',
       prompts: [
-        { id: 'chosen', label: 'Chosen Design', hint: 'Which idea did you choose and why?', placeholder: 'Explain which design you selected and the reasoning behind your choice...' },
-        { id: 'details', label: 'Design Details', hint: 'Describe dimensions, materials, colours, and key features.', placeholder: 'Detail the specifications: dimensions, materials, assembly method, finish...' },
-        { id: 'cad', label: 'CAD / Digital Model Notes', hint: 'If using CAD tools, note the software used and key design decisions.', placeholder: 'Document your CAD work: software used, file names, key measurements...' },
-        { id: 'iteration', label: 'Design Iterations', hint: 'What changes did you make from your initial concept?', placeholder: 'Describe how your design evolved through iterations...' },
+        { id: 'brainstorm', label: 'Brainstorm Output', hint: 'List every idea — wild, practical, or in between. Aim for 15+.', placeholder: 'List all brainstormed ideas (the wilder the better at this stage)...' },
+        { id: 'selection', label: 'Idea Selection', hint: 'Which 2–3 ideas are strongest? Why?', placeholder: 'Top ideas selected and the reasoning behind each choice...' },
+        { id: 'sketch', label: 'Concept Sketches', hint: 'Upload or describe quick sketches for your top ideas.', placeholder: 'Describe your concept sketches or upload images...' },
       ],
-      tools: ['tinkercad', 'onshape', 'fusion', '3dprint'],
-      guide: 'This is where CAD tools shine. Use TinkerCAD for quick 3D modelling, Onshape for parametric design, or Fusion 360 for advanced projects. Export STL files for 3D printing.',
+      tools: ['crazyeights', 'scamper', 'brainwriting'],
+      guide: 'Use Crazy Eights: fold paper into 8 panels, sketch 8 ideas in 8 minutes. Apply SCAMPER (Substitute, Combine, Adapt, Modify, Put to other use, Eliminate, Reverse) to push ideas further. Try Brainwriting 6-3-5 for group ideation.',
     },
     {
-      id: 'realise',
+      id: 'prototype',
       num: 4,
-      label: 'Realise',
-      sub: 'Make & Build',
+      label: 'Prototype',
+      sub: 'Build to Think',
       color: '#3b82f6',
-      desc: 'Build your prototype or final product. Document the making process with photos and notes.',
+      desc: 'Create quick, low-fidelity representations of your ideas. Prototypes are for learning, not perfection. Build to think and to test.',
       prompts: [
-        { id: 'plan', label: 'Making Plan', hint: 'List the steps to build your design in order.', placeholder: 'Step-by-step making plan:\n1. \n2. \n3. ...' },
-        { id: 'process', label: 'Process Documentation', hint: 'Document what happened during making. Any problems? How did you solve them?', placeholder: 'Record what happened during the build process...' },
-        { id: 'safety', label: 'Safety Considerations', hint: 'What safety precautions did you follow?', placeholder: 'List safety measures taken during the making process...' },
+        { id: 'plan', label: 'Prototype Plan', hint: 'What will you make? What materials/tools will you use? What do you want to learn?', placeholder: 'Describe what you will prototype and the questions it should answer...' },
+        { id: 'process', label: 'Making Process', hint: 'Document the build with notes and photos. What worked? What didn\'t?', placeholder: 'Step-by-step record of your prototyping process...' },
+        { id: 'cad', label: 'Digital Model / CAD Notes', hint: 'If using CAD, note the software, key measurements, and export format.', placeholder: 'CAD software used, file names, dimensions, STL/print settings...' },
+        { id: 'safety', label: 'Safety Considerations', hint: 'What safety precautions did you follow during making?', placeholder: 'List safety measures: PPE, workshop rules, material handling...' },
       ],
-      tools: ['3dprint', 'lasercutter'],
-      guide: 'Take photos at every stage! Safety first — wear PPE, follow workshop rules. If 3D printing, check print settings: layer height, infill, supports.',
+      tools: ['tinkercad', 'onshape', '3dprint'],
+      guide: 'Start low-fidelity: paper, cardboard, tape. Move to digital: TinkerCAD for quick 3D models, Onshape for parametric design. For 3D printing, export STL and check settings: 0.2mm layer height, 20% infill.',
     },
     {
       id: 'test',
       num: 5,
-      label: 'Test & Evaluate',
-      sub: 'Review & Improve',
+      label: 'Test',
+      sub: 'Learn & Iterate',
       color: '#a855f7',
-      desc: 'Test your product against success criteria. Gather feedback. Reflect on what you would change.',
+      desc: 'Put your prototype in front of users. Observe, listen, and learn. Testing is not about proving your idea works — it\'s about learning what to improve.',
       prompts: [
-        { id: 'testing', label: 'Testing Results', hint: 'Did your product meet the success criteria? What tests did you run?', placeholder: 'Describe the tests you conducted and the results...' },
-        { id: 'feedback', label: 'User Feedback', hint: 'What did your user/peers say about your product?', placeholder: 'Record feedback from testing with users or peer review...' },
-        { id: 'evaluation', label: 'Self-Evaluation', hint: 'What went well? What would you improve? What did you learn?', placeholder: 'Reflect on your design process and outcome...' },
-        { id: 'next', label: 'Next Steps', hint: 'If you had more time, what would you change or add?', placeholder: 'Describe potential improvements and next iterations...' },
+        { id: 'testing', label: 'Test Setup', hint: 'Who tested your prototype? What scenario or task did you give them?', placeholder: 'Describe the test: who, where, what task, how observed...' },
+        { id: 'feedback', label: 'User Feedback', hint: 'What did users say and do? What surprised you?', placeholder: 'Record feedback: direct quotes, observed behaviour, difficulties...' },
+        { id: 'evaluation', label: 'Evaluation Against Criteria', hint: 'How well did the prototype meet your success criteria?', placeholder: 'Rate each success criterion and explain the evidence...' },
+        { id: 'iterate', label: 'Iterate — What\'s Next?', hint: 'What will you change? Do you need to go back to an earlier stage?', placeholder: 'Improvements for next iteration. Which stage to revisit if needed...' },
       ],
-      tools: ['teachable', 'forms'],
-      guide: 'Test with real users if possible. Use a rubric or scoring sheet to evaluate systematically. The design process is iterative — testing leads back to identifying improvements.',
+      tools: ['feedbackgrid', 'forms', 'rubric'],
+      guide: 'Use a Feedback Capture Grid (likes, wishes, questions, ideas) to structure testing. Create a simple survey with Google Forms for broader feedback. Evaluate against your success criteria with a rubric.',
     },
   ];
 
@@ -91,15 +92,26 @@
    * ══════════════════════════════════════════ */
 
   const EXTERNAL_TOOLS = {
-    tinkercad:   { icon: '🧊', name: 'TinkerCAD', desc: 'Free 3D modelling for beginners', url: 'https://www.tinkercad.com/' },
-    onshape:     { icon: '⚙️', name: 'Onshape', desc: 'Professional parametric CAD (free edu)', url: 'https://www.onshape.com/en/education' },
-    fusion:      { icon: '🔧', name: 'Fusion 360', desc: 'Advanced CAD/CAM by Autodesk', url: 'https://www.autodesk.com/products/fusion-360/education' },
-    '3dprint':   { icon: '🖨️', name: '3D Printing Guide', desc: 'Slicing, settings, troubleshooting', url: 'https://www.simplify3d.com/resources/print-quality-troubleshooting/' },
-    teachable:   { icon: '🤖', name: 'Teachable Machine', desc: 'Train ML models with no code', url: 'https://teachablemachine.withgoogle.com/' },
-    pinterest:   { icon: '📌', name: 'Pinterest', desc: 'Visual research & mood boards', url: 'https://www.pinterest.com/' },
-    research:    { icon: '🔍', name: 'Design Research', desc: 'Methods & empathy mapping', url: 'https://designkit.org/methods' },
-    lasercutter: { icon: '✂️', name: 'Laser Cutting Tips', desc: 'Settings, materials, safety', url: 'https://www.instructables.com/How-to-Use-a-Laser-Cutter/' },
-    forms:       { icon: '📋', name: 'Google Forms', desc: 'Create feedback surveys', url: 'https://forms.google.com/' },
+    // Empathise tools
+    empathymap:     { icon: '🗺️', name: 'Empathy Map Canvas', desc: 'Think / Feel / Say / Do framework', url: 'https://designkit.org/methods/empathy-map' },
+    interview5whys: { icon: '❓', name: '5 Whys Interview', desc: 'Root-cause questioning technique', url: 'https://designkit.org/methods/interview' },
+    shadowing:      { icon: '👁️', name: 'User Shadowing Guide', desc: 'Observe users in context', url: 'https://designkit.org/methods/shadowing' },
+    // Define tools
+    affinitydiagram:{ icon: '📎', name: 'Affinity Diagram', desc: 'Cluster research into themes', url: 'https://designkit.org/methods/affinity-diagram' },
+    hmw:            { icon: '💡', name: '"How Might We"', desc: 'Reframe problems as opportunities', url: 'https://designkit.org/methods/how-might-we' },
+    povstatement:   { icon: '🎯', name: 'POV Statement', desc: '[User] needs [need] because [insight]', url: 'https://dschool.stanford.edu/resources/design-thinking-bootleg' },
+    // Ideate tools
+    crazyeights:    { icon: '⚡', name: 'Crazy Eights', desc: '8 ideas in 8 minutes — rapid sketching', url: 'https://designsprintkit.withgoogle.com/methodology/phase3-sketch/crazy-eights' },
+    scamper:        { icon: '🔄', name: 'SCAMPER', desc: 'Substitute, Combine, Adapt, Modify...', url: 'https://www.interaction-design.org/literature/article/learn-how-to-use-the-best-ideation-methods-scamper' },
+    brainwriting:   { icon: '✏️', name: 'Brainwriting 6-3-5', desc: '6 people, 3 ideas, 5 minutes each', url: 'https://www.interaction-design.org/literature/article/brainwriting' },
+    // Prototype tools
+    tinkercad:      { icon: '🧊', name: 'TinkerCAD', desc: 'Free 3D modelling for beginners', url: 'https://www.tinkercad.com/' },
+    onshape:        { icon: '⚙️', name: 'Onshape', desc: 'Professional parametric CAD (free edu)', url: 'https://www.onshape.com/en/education' },
+    '3dprint':      { icon: '🖨️', name: '3D Printing Guide', desc: 'Slicing, settings, troubleshooting', url: 'https://www.simplify3d.com/resources/print-quality-troubleshooting/' },
+    // Test tools
+    feedbackgrid:   { icon: '📊', name: 'Feedback Capture Grid', desc: 'Likes, wishes, questions, ideas', url: 'https://designsprintkit.withgoogle.com/methodology/phase6-validate/feedback-capture-grid' },
+    forms:          { icon: '📋', name: 'Google Forms', desc: 'Create feedback surveys', url: 'https://forms.google.com/' },
+    rubric:         { icon: '📝', name: 'Rubric Builder', desc: 'Criteria-based evaluation sheets', url: 'https://www.rcampus.com/rubricshellc.cfm' },
   };
 
   /* ══════════════════════════════════════════
@@ -310,10 +322,20 @@
         ${stage.guide}
       </div>
       <div class="guide-card">
-        <strong>D&T Framework</strong>
-        The 5-stage design process is iterative. You can always go back to earlier stages as you learn more.
+        <strong>Design Thinking</strong>
+        The 5-stage process is iterative. Testing often leads back to empathy or ideation. Embrace the loop!
       </div>
-      ${stage.id === 'develop' ? `
+      ${stage.id === 'ideate' ? `
+        <div class="guide-card">
+          <strong>Crazy Eights</strong>
+          Fold A4 paper into 8 panels. Set a timer for 8 minutes. Sketch one idea per panel — speed forces creativity.
+        </div>
+        <div class="guide-card">
+          <strong>SCAMPER Checklist</strong>
+          <strong>S</strong>ubstitute · <strong>C</strong>ombine · <strong>A</strong>dapt · <strong>M</strong>odify · <strong>P</strong>ut to other use · <strong>E</strong>liminate · <strong>R</strong>everse
+        </div>
+      ` : ''}
+      ${stage.id === 'prototype' ? `
         <div class="guide-card">
           <strong>CAD Workflow</strong>
           1. Sketch on paper first<br>
@@ -322,16 +344,16 @@
           4. Check dimensions match constraints
         </div>
         <div class="guide-card">
-          <strong>ML Integration</strong>
-          Use Teachable Machine to train a classifier (e.g. material types, gesture controls) that can enhance your product.
-        </div>
-      ` : ''}
-      ${stage.id === 'realise' ? `
-        <div class="guide-card">
           <strong>3D Print Settings</strong>
           Layer height: 0.2mm (standard)<br>
           Infill: 20% (normal strength)<br>
           Supports: auto-generate for overhangs &gt;45°
+        </div>
+      ` : ''}
+      ${stage.id === 'test' ? `
+        <div class="guide-card">
+          <strong>Feedback Capture Grid</strong>
+          Draw 4 quadrants: Likes (+), Wishes (△), Questions (?), Ideas (💡). Have testers fill each section.
         </div>
       ` : ''}
     `;
