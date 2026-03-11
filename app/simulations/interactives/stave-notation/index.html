@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stave Notation — Co-Cher</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #0f0f1a; color: #e2e8f0; height: 100vh; overflow: hidden; }
+    .app { display: flex; flex-direction: column; height: 100vh; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #12122a; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9375rem; color: #9980FA; }
+    .controls { display: flex; align-items: center; gap: 12px; }
+    .ctrl-group { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #94a3b8; }
+    .ctrl-group label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.625rem; }
+    .ctrl-group select, .ctrl-group input { background: #1e1f2e; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; }
+    .btn { border: none; border-radius: 8px; cursor: pointer; padding: 6px 14px; font-size: 0.75rem; font-family: inherit; transition: all 0.15s; }
+    .btn-primary { background: #9980FA; color: #fff; }
+    .btn-primary:hover { background: #7c5ce7; }
+    .btn-ghost { background: transparent; color: #64748b; border: 1px solid #334155; }
+    .btn-ghost:hover { background: #1e293b; color: #e2e8f0; }
+
+    .main { flex: 1; display: flex; overflow: hidden; }
+
+    /* Note palette */
+    .palette { width: 80px; background: #12122a; border-right: 1px solid rgba(255,255,255,0.06); padding: 12px 8px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+    .note-btn { width: 100%; padding: 8px 4px; border: 1px solid #334155; border-radius: 8px; background: #1e1f2e; color: #e2e8f0; font-size: 0.6875rem; cursor: pointer; text-align: center; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .note-btn:hover { border-color: #9980FA; background: rgba(153,128,250,0.1); }
+    .note-btn.active { border-color: #9980FA; background: rgba(153,128,250,0.2); color: #fff; }
+    .note-btn .symbol { font-size: 1.25rem; line-height: 1; }
+
+    /* Staff area */
+    .staff-area { flex: 1; padding: 20px; overflow: auto; }
+    .staff-canvas { background: #1a1b2e; border-radius: 12px; min-height: 300px; position: relative; cursor: crosshair; }
+
+    /* Info panel */
+    .info { width: 220px; background: #12122a; border-left: 1px solid rgba(255,255,255,0.06); padding: 16px; overflow-y: auto; font-size: 0.8125rem; }
+    .info h3 { font-size: 0.75rem; font-weight: 600; color: #9980FA; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+    .info p { color: #94a3b8; line-height: 1.5; margin-bottom: 12px; }
+    .info .note-ref { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.75rem; color: #94a3b8; }
+    .info .note-ref .sym { font-size: 1.1rem; width: 24px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span>Stave Notation</span>
+      </div>
+      <div class="controls">
+        <div class="ctrl-group">
+          <label>Clef</label>
+          <select id="clef-select"><option value="treble">Treble</option><option value="bass">Bass</option></select>
+        </div>
+        <div class="ctrl-group">
+          <label>Time</label>
+          <select id="time-select"><option value="4/4">4/4</option><option value="3/4">3/4</option><option value="2/4">2/4</option><option value="6/8">6/8</option></select>
+        </div>
+        <div class="ctrl-group">
+          <label>Key</label>
+          <select id="key-select"><option value="C">C Major</option><option value="G">G Major</option><option value="F">F Major</option><option value="D">D Major</option><option value="Bb">Bb Major</option><option value="Am">A Minor</option></select>
+        </div>
+        <button class="btn btn-primary" id="play-btn">Play</button>
+        <button class="btn btn-ghost" id="clear-btn">Clear</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="palette" id="palette"></div>
+      <div class="staff-area">
+        <canvas class="staff-canvas" id="staff-canvas" width="900" height="300"></canvas>
+      </div>
+      <div class="info">
+        <h3>Note Reference</h3>
+        <div id="note-ref"></div>
+        <h3 style="margin-top:16px;">How to Use</h3>
+        <p>Select a note value from the left palette, then click on the staff to place it. Click an existing note to remove it.</p>
+        <p>Use <strong>Play</strong> to hear your composition. Notes are played from left to right.</p>
+        <h3 style="margin-top:16px;">Staff Lines</h3>
+        <p>Treble clef: Lines = E G B D F (bottom to top). Spaces = F A C E.</p>
+        <p>Bass clef: Lines = G B D F A. Spaces = A C E G.</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    const NOTE_VALUES = [
+      { id: 'whole', label: 'Whole', symbol: '𝅝', beats: 4 },
+      { id: 'half', label: 'Half', symbol: '𝅗𝅥', beats: 2 },
+      { id: 'quarter', label: 'Quarter', symbol: '♩', beats: 1 },
+      { id: 'eighth', label: 'Eighth', symbol: '♪', beats: 0.5 },
+      { id: 'sixteenth', label: '16th', symbol: '𝅘𝅥𝅯', beats: 0.25 },
+      { id: 'rest-quarter', label: 'Rest', symbol: '𝄾', beats: 1 },
+    ];
+
+    // Treble clef pitches (bottom of staff to top, including ledger lines)
+    const TREBLE_PITCHES = ['C4','D4','E4','F4','G4','A4','B4','C5','D5','E5','F5','G5','A5'];
+    const BASS_PITCHES   = ['E2','F2','G2','A2','B2','C3','D3','E3','F3','G3','A3','B3','C4'];
+    const PITCH_FREQS = {
+      'C4':261.63,'D4':293.66,'E4':329.63,'F4':349.23,'G4':392,'A4':440,'B4':493.88,
+      'C5':523.25,'D5':587.33,'E5':659.25,'F5':698.46,'G5':783.99,'A5':880,
+      'E2':82.41,'F2':87.31,'G2':98,'A2':110,'B2':123.47,'C3':130.81,'D3':146.83,
+      'E3':164.81,'F3':174.61,'G3':196,'A3':220,'B3':246.94
+    };
+
+    let selectedNote = 'quarter';
+    let clef = 'treble';
+    let placedNotes = []; // { x, pitchIdx, noteType, pitch }
+    let audioCtx = null;
+
+    const canvas = document.getElementById('staff-canvas');
+    const ctx = canvas.getContext('2d');
+
+    function getPitches() { return clef === 'treble' ? TREBLE_PITCHES : BASS_PITCHES; }
+
+    // Build palette
+    function buildPalette() {
+      const pal = document.getElementById('palette');
+      pal.innerHTML = NOTE_VALUES.map(n =>
+        `<button class="note-btn ${n.id === selectedNote ? 'active' : ''}" data-note="${n.id}">
+          <span class="symbol">${n.symbol}</span>
+          <span>${n.label}</span>
+        </button>`
+      ).join('');
+      pal.querySelectorAll('.note-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedNote = btn.dataset.note;
+          buildPalette();
+        });
+      });
+
+      // Note reference
+      const ref = document.getElementById('note-ref');
+      ref.innerHTML = NOTE_VALUES.map(n =>
+        `<div class="note-ref"><span class="sym">${n.symbol}</span>${n.label} (${n.beats} beat${n.beats !== 1 ? 's' : ''})</div>`
+      ).join('');
+    }
+
+    // Draw staff
+    function drawStaff() {
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#1a1b2e';
+      ctx.fillRect(0, 0, w, h);
+
+      const staffTop = 80;
+      const lineSpacing = 16;
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1;
+
+      // 5 staff lines
+      for (let i = 0; i < 5; i++) {
+        const y = staffTop + i * lineSpacing;
+        ctx.beginPath();
+        ctx.moveTo(40, y);
+        ctx.lineTo(w - 20, y);
+        ctx.stroke();
+      }
+
+      // Clef symbol
+      ctx.font = '48px serif';
+      ctx.fillStyle = '#9980FA';
+      ctx.fillText(clef === 'treble' ? '𝄞' : '𝄢', 44, staffTop + lineSpacing * 3.5);
+
+      // Time signature
+      const time = document.getElementById('time-select').value;
+      ctx.font = 'bold 20px Inter, sans-serif';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.textAlign = 'center';
+      ctx.fillText(time.split('/')[0], 95, staffTop + lineSpacing * 1.8);
+      ctx.fillText(time.split('/')[1], 95, staffTop + lineSpacing * 3.6);
+      ctx.textAlign = 'left';
+
+      // Draw placed notes
+      const pitches = getPitches();
+      placedNotes.forEach(note => {
+        const pitchY = staffTop + (lineSpacing * 4) - (note.pitchIdx * (lineSpacing / 2));
+        const nv = NOTE_VALUES.find(n => n.id === note.noteType);
+        ctx.font = '28px serif';
+        ctx.fillStyle = note.noteType.includes('rest') ? '#64748b' : '#ffd93d';
+        ctx.fillText(nv?.symbol || '♩', note.x, pitchY + 8);
+
+        // Ledger lines
+        if (note.pitchIdx <= 0) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.beginPath();
+          ctx.moveTo(note.x - 4, staffTop + lineSpacing * 5);
+          ctx.lineTo(note.x + 24, staffTop + lineSpacing * 5);
+          ctx.stroke();
+        }
+        if (note.pitchIdx >= 10) {
+          const ly = staffTop - lineSpacing;
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.beginPath();
+          ctx.moveTo(note.x - 4, ly);
+          ctx.lineTo(note.x + 24, ly);
+          ctx.stroke();
+        }
+
+        // Pitch label
+        ctx.font = '9px Inter, sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(note.pitch, note.x + 2, pitchY + 20);
+      });
+    }
+
+    // Click to place note
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const staffTop = 80;
+      const lineSpacing = 16;
+      const pitches = getPitches();
+
+      // Check if clicking on existing note (remove it)
+      const existing = placedNotes.findIndex(n => Math.abs(n.x - x) < 16 && Math.abs((staffTop + lineSpacing * 4 - n.pitchIdx * lineSpacing / 2) - y) < 12);
+      if (existing >= 0) {
+        placedNotes.splice(existing, 1);
+        drawStaff();
+        return;
+      }
+
+      // Snap to pitch
+      const pitchIdx = Math.round(((staffTop + lineSpacing * 4) - y) / (lineSpacing / 2));
+      if (pitchIdx < 0 || pitchIdx >= pitches.length) return;
+      if (x < 120) return; // Don't place on clef/time sig
+
+      placedNotes.push({ x: Math.round(x), pitchIdx, noteType: selectedNote, pitch: pitches[pitchIdx] });
+      placedNotes.sort((a, b) => a.x - b.x);
+      drawStaff();
+    });
+
+    // Play
+    document.getElementById('play-btn').addEventListener('click', () => {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      let t = audioCtx.currentTime + 0.1;
+      const tempo = 120;
+      placedNotes.forEach(note => {
+        const nv = NOTE_VALUES.find(n => n.id === note.noteType);
+        const dur = (nv?.beats || 1) * (60 / tempo);
+        if (note.noteType.includes('rest')) { t += dur; return; }
+        const freq = PITCH_FREQS[note.pitch];
+        if (!freq) { t += dur; return; }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.3, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + dur * 0.9);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + dur);
+        t += dur;
+      });
+    });
+
+    // Clear
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      placedNotes = [];
+      drawStaff();
+    });
+
+    // Clef change
+    document.getElementById('clef-select').addEventListener('change', (e) => {
+      clef = e.target.value;
+      placedNotes = [];
+      drawStaff();
+    });
+
+    document.getElementById('time-select').addEventListener('change', drawStaff);
+    document.getElementById('key-select').addEventListener('change', drawStaff);
+
+    buildPalette();
+    drawStaff();
+  })();
+  </script>
+</body>
+</html>
