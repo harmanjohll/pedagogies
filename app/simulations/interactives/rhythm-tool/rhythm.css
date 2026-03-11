@@ -198,6 +198,38 @@ body {
 .rhythm-row[data-sound="pat"] .rhythm-cell.on { background: #06b6d4; }
 .rhythm-row[data-sound="rest"] .rhythm-cell.on { background: #475569; }
 
+/* Piano key rows */
+.rhythm-row[data-sound="C4"] .rhythm-cell.on { background: #ffd93d; }
+.rhythm-row[data-sound="D4"] .rhythm-cell.on { background: #ffb347; }
+.rhythm-row[data-sound="E4"] .rhythm-cell.on { background: #ff6b6b; }
+.rhythm-row[data-sound="F4"] .rhythm-cell.on { background: #c084fc; }
+.rhythm-row[data-sound="G4"] .rhythm-cell.on { background: #67e8f9; }
+.rhythm-row[data-sound="A4"] .rhythm-cell.on { background: #86efac; }
+.rhythm-row[data-sound="B4"] .rhythm-cell.on { background: #fca5a5; }
+.rhythm-row[data-sound="C5"] .rhythm-cell.on { background: #fde68a; }
+
+/* Group divider */
+.rhythm-group-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.rhythm-group-divider span {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #ffd93d;
+  white-space: nowrap;
+}
+.rhythm-group-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,217,61,0.2);
+}
+
 /* ── Legend ── */
 .rhythm-legend {
   display: flex;

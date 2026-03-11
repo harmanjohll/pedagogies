@@ -17,7 +17,19 @@
     { id: 'stamp', label: 'Stamp',     icon: '🦶', color: '#8b5cf6', freq: 80,  type: 'body' },
     { id: 'snap',  label: 'Snap',      icon: '🤌', color: '#ec4899', freq: 1200, type: 'body' },
     { id: 'pat',   label: 'Pat (Lap)', icon: '🫳', color: '#06b6d4', freq: 300, type: 'body' },
+    // Piano / Keys — one octave (C4–B4) + high C
+    { id: 'C4',  label: 'C4',  icon: '🎹', color: '#ffd93d', freq: 261.63, type: 'keys' },
+    { id: 'D4',  label: 'D4',  icon: '🎹', color: '#ffb347', freq: 293.66, type: 'keys' },
+    { id: 'E4',  label: 'E4',  icon: '🎹', color: '#ff6b6b', freq: 329.63, type: 'keys' },
+    { id: 'F4',  label: 'F4',  icon: '🎹', color: '#c084fc', freq: 349.23, type: 'keys' },
+    { id: 'G4',  label: 'G4',  icon: '🎹', color: '#67e8f9', freq: 392.00, type: 'keys' },
+    { id: 'A4',  label: 'A4',  icon: '🎹', color: '#86efac', freq: 440.00, type: 'keys' },
+    { id: 'B4',  label: 'B4',  icon: '🎹', color: '#fca5a5', freq: 493.88, type: 'keys' },
+    { id: 'C5',  label: 'C5',  icon: '🎹', color: '#fde68a', freq: 523.25, type: 'keys' },
   ];
+
+  // Voice: organ, piano, or pad
+  let keyVoice = 'piano'; // 'piano' | 'organ' | 'pad'
 
   // ── State ──
   let bpm = 100;
@@ -164,6 +176,66 @@
       noise.connect(lp).connect(gain).connect(ctx.destination);
       noise.start(t);
       noise.stop(t + 0.08);
+    } else if (sound.type === 'keys') {
+      // Piano / Organ / Pad synthesis
+      const freq = sound.freq;
+      if (keyVoice === 'piano') {
+        // Piano: sharp attack, fast decay
+        const osc = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc2.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        osc2.frequency.setValueAtTime(freq * 2, t); // overtone
+        gain.gain.setValueAtTime(0.35, t);
+        gain.gain.exponentialRampToValueAtTime(0.15, t + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+        osc.connect(gain).connect(ctx.destination);
+        osc2.connect(gain);
+        osc.start(t); osc2.start(t);
+        osc.stop(t + 0.5); osc2.stop(t + 0.5);
+      } else if (keyVoice === 'organ') {
+        // Organ: sustained, rich harmonics
+        const osc = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const osc3 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc2.type = 'sine';
+        osc3.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        osc2.frequency.setValueAtTime(freq * 2, t);
+        osc3.frequency.setValueAtTime(freq * 3, t);
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.setValueAtTime(0.2, t + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.6);
+        osc.connect(gain).connect(ctx.destination);
+        osc2.connect(gain);
+        osc3.connect(gain);
+        osc.start(t); osc2.start(t); osc3.start(t);
+        osc.stop(t + 0.6); osc2.stop(t + 0.6); osc3.stop(t + 0.6);
+      } else if (keyVoice === 'pad') {
+        // Pad: slow attack, long sustain, warm
+        const osc = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 2000;
+        osc.type = 'sawtooth';
+        osc2.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, t);
+        osc2.frequency.setValueAtTime(freq * 1.005, t); // slight detune for warmth
+        gain.gain.setValueAtTime(0.01, t);
+        gain.gain.linearRampToValueAtTime(0.18, t + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 1.0);
+        osc.connect(lp);
+        osc2.connect(lp);
+        lp.connect(gain).connect(ctx.destination);
+        osc.start(t); osc2.start(t);
+        osc.stop(t + 1.0); osc2.stop(t + 1.0);
+      }
     }
   }
 
@@ -173,6 +245,7 @@
     const container = document.getElementById('rhythm-grid');
     container.innerHTML = '';
 
+    let prevType = '';
     SOUNDS.forEach(sound => {
       // Ensure grid array is correct length
       if (!grid[sound.id] || grid[sound.id].length !== totalSteps) {
@@ -180,6 +253,15 @@
         grid[sound.id] = new Array(totalSteps).fill(false);
         for (let i = 0; i < Math.min(old.length, totalSteps); i++) grid[sound.id][i] = old[i];
       }
+
+      // Group divider between percussion and keys
+      if (sound.type === 'keys' && prevType !== 'keys') {
+        const divider = document.createElement('div');
+        divider.className = 'rhythm-group-divider';
+        divider.innerHTML = '<span>Piano / Keys</span>';
+        container.appendChild(divider);
+      }
+      prevType = sound.type;
 
       const row = document.createElement('div');
       row.className = 'rhythm-row';
@@ -356,6 +438,11 @@
       numBars = parseInt(e.target.value);
       totalSteps = beatsPerBar * numBars;
       buildGrid();
+    });
+
+    // Voice selector
+    document.getElementById('voice-select').addEventListener('change', (e) => {
+      keyVoice = e.target.value;
     });
 
     // Play / Pause

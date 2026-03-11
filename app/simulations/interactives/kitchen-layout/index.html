@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kitchen Layout Planner — Co-Cher</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="kitchen.css">
+</head>
+<body>
+  <div class="kitchen-app">
+    <header class="kitchen-header">
+      <div class="kitchen-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        <span>Kitchen Layout Planner</span>
+      </div>
+      <div class="kitchen-controls">
+        <div class="ctrl-group">
+          <label>Template</label>
+          <select id="template-select">
+            <option value="blank">Blank Kitchen</option>
+            <option value="masterchef" selected>MasterChef Style</option>
+            <option value="u-shape">U-Shape Lab</option>
+            <option value="island">Island Central</option>
+            <option value="pairs">Paired Stations</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <label>Students</label>
+          <select id="students-select">
+            <option value="4">4</option>
+            <option value="6">6</option>
+            <option value="8" selected>8</option>
+            <option value="10">10</option>
+            <option value="12">12</option>
+            <option value="16">16</option>
+          </select>
+        </div>
+        <button class="btn-action" id="toggle-safety" title="Toggle safety zones">Safety</button>
+        <button class="btn-action" id="toggle-flow" title="Toggle workflow arrows">Flow</button>
+        <button class="btn-action btn-clear" id="clear-btn">Clear</button>
+      </div>
+    </header>
+
+    <main class="kitchen-main">
+      <!-- Equipment Palette -->
+      <aside class="equipment-palette" id="equipment-palette">
+        <div class="palette-section">
+          <div class="palette-section-title">Cooking</div>
+          <div class="palette-items" id="cooking-items"></div>
+        </div>
+        <div class="palette-section">
+          <div class="palette-section-title">Prep</div>
+          <div class="palette-items" id="prep-items"></div>
+        </div>
+        <div class="palette-section">
+          <div class="palette-section-title">Storage</div>
+          <div class="palette-items" id="storage-items"></div>
+        </div>
+        <div class="palette-section">
+          <div class="palette-section-title">Safety</div>
+          <div class="palette-items" id="safety-items"></div>
+        </div>
+      </aside>
+
+      <!-- Kitchen Floor Plan -->
+      <div class="floor-plan-wrap">
+        <div class="floor-plan" id="floor-plan">
+          <canvas id="kitchen-canvas" width="800" height="600"></canvas>
+          <!-- Placed items rendered as absolutely positioned divs -->
+          <div class="placed-items" id="placed-items"></div>
+        </div>
+        <div class="floor-legend" id="floor-legend"></div>
+      </div>
+
+      <!-- Info Panel -->
+      <aside class="info-panel">
+        <h3>Station Info</h3>
+        <div id="station-info">
+          <p class="info-hint">Click a station or placed item to see details.</p>
+        </div>
+        <h3 style="margin-top:16px;">Pedagogy Tips</h3>
+        <div id="pedagogy-tips">
+          <div class="tip-card">
+            <strong>MasterChef Challenge</strong>
+            <p>Assign teams to stations with timed rotations. Each station has a specific task — chop, sauté, plate.</p>
+          </div>
+          <div class="tip-card">
+            <strong>Safety Zones</strong>
+            <p>Toggle safety view to see hot zones (red) near ovens/hobs and wet zones (blue) near sinks.</p>
+          </div>
+          <div class="tip-card">
+            <strong>Workflow Arrows</strong>
+            <p>Show the flow from prep → cook → plate to teach kitchen efficiency and food safety principles.</p>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="kitchen.js"></script>
+</body>
+</html>

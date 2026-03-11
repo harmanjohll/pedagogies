@@ -258,10 +258,10 @@ function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
     const isPedMatch = pedFilter && pedMatches.has(key);
     const dimmed = pedFilter && !pedMatches.has(key);
 
-    // Sub-type badge
+    // Sub-type badge — NL palette tones
     const typeBadge = v.type === 'tool'
-      ? '<span style="font-size:0.5625rem;padding:1px 6px;border-radius:8px;background:#dbeafe;color:#1e40af;white-space:nowrap;">Teaching Tool</span>'
-      : '<span style="font-size:0.5625rem;padding:1px 6px;border-radius:8px;background:#fef3c7;color:#92400e;white-space:nowrap;">Lesson Resource</span>';
+      ? '<span style="font-size:0.5625rem;padding:2px 7px;border-radius:8px;background:rgba(18,203,196,0.12);color:#12CBC4;border:1px solid rgba(18,203,196,0.25);white-space:nowrap;">Teaching Tool</span>'
+      : '<span style="font-size:0.5625rem;padding:2px 7px;border-radius:8px;background:rgba(255,195,18,0.12);color:#F79F1F;border:1px solid rgba(255,195,18,0.25);white-space:nowrap;">Lesson Resource</span>';
 
     // Subject tags
     const subjectTags = (v.subjects || [])
@@ -270,14 +270,14 @@ function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
       .map(s => `<span style="font-size:0.5625rem;padding:1px 6px;border-radius:8px;background:var(--bg-subtle);color:var(--ink-faint);white-space:nowrap;">${s}</span>`)
       .join('');
     const allTag = (v.subjects || []).includes('all')
-      ? '<span style="font-size:0.5625rem;padding:1px 6px;border-radius:8px;background:var(--accent-light);color:var(--accent);white-space:nowrap;">All Subjects</span>'
+      ? '<span style="font-size:0.5625rem;padding:2px 7px;border-radius:8px;background:rgba(163,203,56,0.12);color:#A3CB38;border:1px solid rgba(163,203,56,0.2);white-space:nowrap;">All Subjects</span>'
       : '';
 
     // Pedagogy signpost — show most relevant match
     let signpost = '';
     if (v.pedagogy && v.pedagogy.length > 0) {
       const signpostKey = pedFilter && v.pedagogy.includes(pedFilter) ? pedFilter : v.pedagogy[0];
-      signpost = `<div style="font-size:0.625rem;font-style:italic;color:#6366f1;margin-top:4px;line-height:1.3;">${PEDAGOGY_SIGNPOSTS[signpostKey] || ''}</div>`;
+      signpost = `<div style="font-size:0.625rem;font-style:italic;color:#9980FA;margin-top:4px;line-height:1.3;">${PEDAGOGY_SIGNPOSTS[signpostKey] || ''}</div>`;
     }
 
     const cardBg = isActive ? _hexToRGBA(color, 0.08) : 'var(--bg-card, #fff)';
@@ -320,25 +320,28 @@ function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
   return html;
 }
 
-/* Map COMPONENT_META from lesson-planner for settings display */
+/* ── Flat UI NL Palette for marketplace cards ──
+ * Source: flatuicolors.com/palette/nl (Dutch Palette by Jeroen van Eerden)
+ * Assigned per-tool for harmonious, light-touch colour coding.
+ */
 const COMPONENT_META_SETTINGS = {
-  youtubeVideos:   { color: '#ff0000', icon: '<polygon points="5 3 19 12 5 21 5 3"/>' },
-  simulations:     { color: '#8b5cf6', icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>' },
-  worksheet:       { color: '#3b82f6', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/>' },
-  externalLinks:   { color: '#22c55e', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>' },
-  stimulus:        { color: '#0ea5e9', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/>' },
-  vocabulary:      { color: '#06b6d4', icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>' },
-  modelResponse:   { color: '#d946ef', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>' },
-  sourceAnalysis:  { color: '#f97316', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>' },
-  seatPlan:        { color: '#64748b', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>' },
-  cceDiscussion:   { color: '#e11d48', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>' },
-  discussionPrompts: { color: '#f59e0b', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
-  staveNotation:   { color: '#7c3aed', icon: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' },
-  rhythmTool:      { color: '#a855f7', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/>' },
-  artCritique:     { color: '#ec4899', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>' },
-  designProcess:   { color: '#14b8a6', icon: '<polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>' },
-  recipeBuilder:   { color: '#f97316', icon: '<path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10H5a7 7 0 0 0 14 0z"/>' },
-  kitchenLayout:   { color: '#0d9488', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>' },
+  youtubeVideos:   { color: '#EA2027', icon: '<polygon points="5 3 19 12 5 21 5 3"/>' },                    // Red Pigment
+  simulations:     { color: '#12CBC4', icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>' }, // Blue Martina
+  worksheet:       { color: '#0652DD', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/>' }, // Merchant Marine Blue
+  externalLinks:   { color: '#A3CB38', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>' }, // Android Green
+  stimulus:        { color: '#1289A7', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/>' }, // Mediterranean Sea
+  vocabulary:      { color: '#F79F1F', icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>' }, // Radiant Yellow
+  modelResponse:   { color: '#B53471', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>' }, // Very Berry
+  sourceAnalysis:  { color: '#5758BB', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>' }, // Circumorbital Ring
+  seatPlan:        { color: '#006266', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>' }, // Turkish Aqua
+  cceDiscussion:   { color: '#ED4C67', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>' }, // Bara Red
+  discussionPrompts: { color: '#FFC312', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' }, // Sunflower
+  staveNotation:   { color: '#9980FA', icon: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' }, // Forgotten Purple
+  rhythmTool:      { color: '#D980FA', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/>' }, // Lavender Tea
+  artCritique:     { color: '#FDA7DF', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>' }, // Lavender Rose
+  designProcess:   { color: '#1289A7', icon: '<polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>' }, // Mediterranean Sea
+  recipeBuilder:   { color: '#EE5A24', icon: '<path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10H5a7 7 0 0 0 14 0z"/>' }, // Puffins Bill
+  kitchenLayout:   { color: '#009432', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>' }, // Pixelated Grass
 };
 
 export function render(container) {

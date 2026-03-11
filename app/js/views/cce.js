@@ -228,6 +228,7 @@ export function render(container) {
     const area = CONTENT_AREAS.find(a => a.id === activeTab);
 
     container.innerHTML = `
+      <div class="main-scroll">
       <style>
         .cce-header {
           text-align: center;
@@ -622,6 +623,7 @@ export function render(container) {
           </div>
         </div>
 
+      </div>
       </div>
     `;
 
