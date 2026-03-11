@@ -30,6 +30,9 @@ import { render as renderCCE } from './views/cce.js';
 import { render as renderMyCCA } from './views/my-cca.js';
 import { render as renderAutopilot } from './views/autopilot.js';
 import { render as renderMathSandbox } from './views/math-sandbox.js';
+import { render as renderRhythmTool } from './views/rhythm-tool.js';
+import { render as renderArtCritique } from './views/art-critique.js';
+import { renderStaveNotation, renderDesignProcess, renderKitchenLayout } from './views/tool-stub.js';
 import { initGlobalSearch, openSearch } from './components/unified-search.js';
 import { initOnboarding } from './components/onboarding.js';
 import { initKeyboardShortcuts } from './components/keyboard-shortcuts.js';
@@ -112,6 +115,11 @@ function init() {
   registerRoute('/my-cca', renderMyCCA);
   registerRoute('/autopilot', renderAutopilot);
   registerRoute('/math-sandbox', renderMathSandbox);
+  registerRoute('/rhythm-tool', renderRhythmTool);
+  registerRoute('/art-critique', renderArtCritique);
+  registerRoute('/stave-notation', renderStaveNotation);
+  registerRoute('/design-process', renderDesignProcess);
+  registerRoute('/kitchen-layout', renderKitchenLayout);
   registerRoute('/settings', renderSettings);
 
   // Start router

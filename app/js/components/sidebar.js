@@ -59,12 +59,12 @@ const EEE_NAV_MAP = {
   sourceAnalysis: { route: '/source-analysis',   icon: 'sourceAnalysis', label: 'Source Analysis' },
   seatPlan:       { route: '/lesson-planner',   icon: 'seatPlan',       label: 'Seating Plan' },
   cceDiscussion:  { route: '/cce',              icon: 'cceDiscussion',  label: 'CCE Discussion' },
-  staveNotation:  { route: '/lesson-planner',   icon: 'staveNotation',  label: 'Stave Notation' },
-  rhythmTool:     { route: '/lesson-planner',   icon: 'rhythmTool',     label: 'Rhythm & Percussion' },
-  artCritique:    { route: '/lesson-planner',   icon: 'artCritique',    label: 'Art Critique' },
-  designProcess:  { route: '/lesson-planner',   icon: 'designProcess',  label: 'Design Process' },
+  staveNotation:  { route: '/stave-notation',    icon: 'staveNotation',  label: 'Stave Notation' },
+  rhythmTool:     { route: '/rhythm-tool',      icon: 'rhythmTool',     label: 'Rhythm & Percussion' },
+  artCritique:    { route: '/art-critique',     icon: 'artCritique',    label: 'Art Critique' },
+  designProcess:  { route: '/design-process',   icon: 'designProcess',  label: 'Design Process' },
   recipeBuilder:  { route: '/lesson-planner',   icon: 'recipeBuilder',  label: 'Recipe & Nutrition' },
-  kitchenLayout:  { route: '/spatial',          icon: 'kitchenLayout',  label: 'Kitchen Layout' },
+  kitchenLayout:  { route: '/kitchen-layout',   icon: 'kitchenLayout',  label: 'Kitchen Layout' },
 };
 
 function buildNavItems() {
