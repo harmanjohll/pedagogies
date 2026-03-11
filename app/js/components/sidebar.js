@@ -67,26 +67,48 @@ function buildNavItems() {
   ];
 
   // Build dynamic enactment items from sidebar-specific selections
+  // Split into Teaching Tools and Lesson Resources sub-groups
   const selections = getEEESidebarSelections();
-  const enactmentItems = [];
-  let first = true;
+  const toolItems = [];
+  const resourceItems = [];
   for (const key of Object.keys(EEE_NAV_MAP)) {
-    if (key === 'cceDiscussion') continue; // CCE is a static Design item now
-    if (selections.includes(key) || EEE_REGISTRY[key]?.cat === 'core') {
-      // Only show enactment (non-core) items that are selected
-      if (EEE_REGISTRY[key]?.cat !== 'enactment') continue;
-      if (!selections.includes(key)) continue;
-      const nav = EEE_NAV_MAP[key];
-      enactmentItems.push({
-        id: nav.route,
-        icon: nav.icon,
-        label: nav.label,
-        ...(first ? { section: 'Enactment' } : {}),
-        eeeKey: key,
-      });
-      first = false;
+    if (key === 'cceDiscussion') continue;
+    if (EEE_REGISTRY[key]?.cat !== 'enactment') continue;
+    if (!selections.includes(key)) continue;
+    const nav = EEE_NAV_MAP[key];
+    const entry = EEE_REGISTRY[key];
+    const item = {
+      id: nav.route,
+      icon: nav.icon,
+      label: nav.label,
+      eeeKey: key,
+    };
+    if (entry.type === 'resource') {
+      resourceItems.push(item);
+    } else {
+      toolItems.push(item);
     }
   }
+
+  // Combine with sub-section labels
+  const enactmentItems = [];
+  if (toolItems.length > 0 || resourceItems.length > 0) {
+    // Teaching Tools sub-group
+    if (toolItems.length > 0) {
+      toolItems[0].section = 'Enactment';
+      toolItems[0].subsection = 'Teaching Tools';
+      enactmentItems.push(...toolItems);
+    }
+    // Lesson Resources sub-group
+    if (resourceItems.length > 0) {
+      if (toolItems.length === 0) {
+        resourceItems[0].section = 'Enactment';
+      }
+      resourceItems[0].subsection = resourceItems[0].subsection || 'Lesson Resources';
+      enactmentItems.push(...resourceItems);
+    }
+  }
+
   // Always include Lesson Rehearsal under Enactment
   enactmentItems.push({
     id: '/lesson-rehearsal',
@@ -141,6 +163,11 @@ export function renderSidebar(container) {
           ${currentSection}
         </div>
         <div class="sidebar-section-items" data-section-items="${currentSection}" style="${isCollapsed ? 'display:none;' : ''}">`;
+    }
+
+    // Sub-section divider (e.g. "Teaching Tools" / "Lesson Resources" under Enactment)
+    if (item.subsection) {
+      navHTML += `<div style="font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);padding:8px 16px 2px;opacity:0.7;">${item.subsection}</div>`;
     }
 
     let badge = '';

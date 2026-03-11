@@ -99,13 +99,15 @@ export function renderWelcome(onComplete) {
           <div id="ped-priorities" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
             ${[
               { id: 'differentiation', label: 'Differentiation', icon: '&#9879;' },
-              { id: 'assessment', label: 'Assessment Literacy', icon: '&#9733;' },
+              { id: 'assessment', label: 'Assessment for Learning', icon: '&#9733;' },
               { id: 'engagement', label: 'Student Engagement', icon: '&#9829;' },
               { id: 'e21cc', label: 'E21CC Development', icon: '&#9883;' },
               { id: 'edtech', label: 'EdTech Integration', icon: '&#9000;' },
               { id: 'inquiry', label: 'Inquiry-Based Learning', icon: '?' },
+              { id: 'collaborative', label: 'Collaborative Learning', icon: '&#9733;' },
               { id: 'sel', label: 'SEL & Well-being', icon: '&#9786;' },
-              { id: 'cce', label: 'CCE & Values', icon: '&#9825;' }
+              { id: 'cce', label: 'CCE & Values', icon: '&#9825;' },
+              { id: 'direct', label: 'Direct Instruction', icon: '&#9654;' }
             ].map(p => `
               <label class="ped-priority-chip" style="
                 display: flex; align-items: center; gap: 6px;
