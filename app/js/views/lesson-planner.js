@@ -810,7 +810,41 @@ function buildToolbarHTML(mode) {
       </div>`;
     }).join('');
   }
-  // Icon mode — compact buttons with tooltip on hover, filtered by EEE
+  // Icon mode — grouped by subject relevance with visual labels
+  if (currentSubject) {
+    const subjectNorm = currentSubject.toLowerCase();
+    const recommended = visibleTools.filter(t => {
+      const entry = EEE_REGISTRY[t.eee];
+      return entry?.subjects?.some(s => s === 'all' || s.toLowerCase() === subjectNorm);
+    });
+    const others = visibleTools.filter(t => !recommended.includes(t));
+
+    let html = '';
+    if (recommended.length > 0) {
+      html += `<div style="display:flex;align-items:center;gap:4px;width:100%;margin-bottom:2px;">
+        <span style="font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--accent);white-space:nowrap;">For ${currentSubject.replace(/</g,'&lt;')}</span>
+        <div style="flex:1;height:1px;background:var(--border-light);"></div>
+      </div>`;
+      html += recommended.map(t =>
+        `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
+        </button>`
+      ).join('');
+      if (others.length > 0) {
+        html += `<div style="display:flex;align-items:center;gap:4px;width:100%;margin-top:4px;margin-bottom:2px;">
+          <span style="font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);white-space:nowrap;">Other Tools</span>
+          <div style="flex:1;height:1px;background:var(--border-light);"></div>
+        </div>`;
+        html += others.map(t =>
+          `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}opacity:0.6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
+          </button>`
+        ).join('');
+      }
+      return html;
+    }
+  }
+  // No subject context — flat list
   return visibleTools.map(t =>
     `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>

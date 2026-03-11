@@ -147,52 +147,125 @@ function suggestEEEsForSubjects(subjects) {
   return [...suggested];
 }
 
-function buildEEEListHTML() {
+/* ── Subject categories for marketplace grouping ── */
+const EEE_SUBJECT_GROUPS = [
+  { id: 'all', label: 'All Tools' },
+  { id: 'sciences', label: 'Sciences', match: ['Science', 'Chemistry', 'Physics', 'Biology', 'Geography'] },
+  { id: 'math', label: 'Mathematics', match: ['Mathematics'] },
+  { id: 'languages', label: 'Languages', match: ['English', 'Chinese', 'Malay', 'Tamil'] },
+  { id: 'humanities', label: 'Humanities', match: ['History', 'Social Studies', 'General Paper', 'Geography'] },
+  { id: 'arts', label: 'Arts & Music', match: ['Art', 'Music'] },
+  { id: 'applied', label: 'Applied', match: ['D&T', 'Design & Technology', 'NFS', 'Food & Nutrition', 'FCE'] },
+  { id: 'cce', label: 'CCE & Values', match: ['CCE', 'Social Studies'] },
+];
+
+function getToolSubjectGroup(entry) {
+  if (!entry.subjects || entry.subjects.includes('all')) return 'universal';
+  return 'subject-specific';
+}
+
+function toolMatchesGroup(entry, groupId) {
+  if (groupId === 'all') return true;
+  const group = EEE_SUBJECT_GROUPS.find(g => g.id === groupId);
+  if (!group || !group.match) return false;
+  if (!entry.subjects) return false;
+  if (entry.subjects.includes('all')) return true;
+  return entry.subjects.some(s => group.match.includes(s));
+}
+
+function buildEEEListHTML(filterGroup = 'all') {
   const plannerSel = getEEESelections();
   const sidebarSel = getEEESidebarSelections();
   const entries = Object.entries(EEE_REGISTRY).filter(([, v]) => v.cat === 'enactment');
+  const filtered = filterGroup === 'all' ? entries : entries.filter(([, v]) => toolMatchesGroup(v, filterGroup));
 
-  // Header row
-  let html = `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:var(--sp-2);align-items:center;padding:0 var(--sp-3);margin-bottom:var(--sp-1);">
-    <div style="font-size:0.6875rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.04em;">Tool</div>
-    <div style="font-size:0.6875rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.04em;text-align:center;">Sidebar</div>
-    <div style="font-size:0.6875rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.04em;text-align:center;">Planner</div>
+  // Subject filter tabs
+  let html = `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:var(--sp-3);">
+    ${EEE_SUBJECT_GROUPS.map(g => `
+      <button class="eee-filter-btn btn btn-ghost btn-sm" data-filter="${g.id}" style="font-size:0.6875rem;padding:4px 10px;border-radius:999px;${filterGroup === g.id ? 'background:var(--accent);color:#fff;' : ''}">${g.label}</button>
+    `).join('')}
   </div>`;
 
   // Select/deselect all row
-  html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:var(--sp-2);align-items:center;padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-subtle);margin-bottom:var(--sp-2);">
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-2);background:var(--bg-subtle);border-radius:var(--radius);border:1px solid var(--border-light);">
     <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);">Select / Deselect All</div>
-    <div style="text-align:center;"><input type="checkbox" id="eee-sidebar-all" ${sidebarSel.length === entries.length ? 'checked' : ''} /></div>
-    <div style="text-align:center;"><input type="checkbox" id="eee-planner-all" ${plannerSel.length >= entries.length ? 'checked' : ''} /></div>
+    <div style="display:flex;gap:16px;">
+      <label style="font-size:0.6875rem;color:var(--ink-muted);display:flex;align-items:center;gap:4px;"><input type="checkbox" id="eee-sidebar-all" ${sidebarSel.length === entries.length ? 'checked' : ''} /> Sidebar</label>
+      <label style="font-size:0.6875rem;color:var(--ink-muted);display:flex;align-items:center;gap:4px;"><input type="checkbox" id="eee-planner-all" ${plannerSel.length >= entries.length ? 'checked' : ''} /> Planner</label>
+    </div>
   </div>`;
 
-  // Tool rows
-  entries.forEach(([key, v]) => {
+  // Marketplace card grid
+  html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--sp-3);">`;
+  filtered.forEach(([key, v]) => {
     const inPlanner = plannerSel.includes(key);
     const inSidebar = sidebarSel.includes(key);
+    const isActive = inPlanner || inSidebar;
+    const meta = COMPONENT_META_SETTINGS[key];
+    const color = meta?.color || 'var(--accent)';
+
     const subjectTags = (v.subjects || [])
       .filter(s => s !== 'all')
-      .slice(0, 4)
-      .map(s => `<span style="font-size:0.5625rem;padding:0 5px;border-radius:8px;background:var(--bg-subtle);color:var(--ink-faint);">${s}</span>`)
+      .slice(0, 5)
+      .map(s => `<span style="font-size:0.5625rem;padding:1px 6px;border-radius:8px;background:var(--bg-subtle);color:var(--ink-faint);white-space:nowrap;">${s}</span>`)
       .join('');
     const allTag = (v.subjects || []).includes('all')
-      ? '<span style="font-size:0.5625rem;padding:0 5px;border-radius:8px;background:var(--accent-light);color:var(--accent);">All</span>'
+      ? '<span style="font-size:0.5625rem;padding:1px 6px;border-radius:8px;background:var(--accent-light);color:var(--accent);white-space:nowrap;">All Subjects</span>'
       : '';
-    const moreCount = (v.subjects || []).filter(s => s !== 'all').length - 4;
 
-    html += `<div style="display:grid;grid-template-columns:1fr 80px 80px;gap:var(--sp-2);align-items:center;padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-card);">
-      <div style="min-width:0;">
-        <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:1px;">${v.label}</div>
-        <div style="font-size:0.6875rem;color:var(--ink-muted);line-height:1.4;margin-bottom:2px;">${v.desc}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:3px;">${allTag}${subjectTags}${moreCount > 0 ? `<span style="font-size:0.5625rem;color:var(--ink-faint);">+${moreCount}</span>` : ''}</div>
+    html += `
+    <div class="eee-marketplace-card" data-eee="${key}" style="
+      padding:14px;border-radius:12px;
+      border:2px solid ${isActive ? color : 'var(--border-light, #e5e7eb)'};
+      background:${isActive ? `${color}08` : 'var(--bg-card, #fff)'};
+      transition:all 0.15s;cursor:default;position:relative;
+    ">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+        <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+          background:${isActive ? color : 'var(--bg-subtle)'};color:${isActive ? '#fff' : 'var(--ink-muted)'};font-size:1rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${meta?.icon || '<circle cx="12" cy="12" r="10"/>'}</svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:2px;">${v.label}</div>
+          <div style="font-size:0.6875rem;color:var(--ink-muted);line-height:1.4;">${v.desc}</div>
+        </div>
       </div>
-      <div style="text-align:center;"><input type="checkbox" class="eee-sidebar-toggle" data-eee="${key}" ${inSidebar ? 'checked' : ''} /></div>
-      <div style="text-align:center;"><input type="checkbox" class="eee-planner-toggle" data-eee="${key}" ${inPlanner ? 'checked' : ''} /></div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:10px;">${allTag}${subjectTags}</div>
+      <div style="display:flex;gap:12px;border-top:1px solid var(--border-light, #e5e7eb);padding-top:8px;">
+        <label style="font-size:0.6875rem;color:var(--ink-muted);display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="checkbox" class="eee-planner-toggle" data-eee="${key}" ${inPlanner ? 'checked' : ''} /> Planner
+        </label>
+        <label style="font-size:0.6875rem;color:var(--ink-muted);display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="checkbox" class="eee-sidebar-toggle" data-eee="${key}" ${inSidebar ? 'checked' : ''} /> Sidebar
+        </label>
+      </div>
     </div>`;
   });
+  html += `</div>`;
 
   return html;
 }
+
+/* Map COMPONENT_META from lesson-planner for settings display */
+const COMPONENT_META_SETTINGS = {
+  youtubeVideos:   { color: '#ff0000', icon: '<polygon points="5 3 19 12 5 21 5 3"/>' },
+  simulations:     { color: '#8b5cf6', icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>' },
+  worksheet:       { color: '#3b82f6', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/>' },
+  externalLinks:   { color: '#22c55e', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>' },
+  stimulus:        { color: '#0ea5e9', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/>' },
+  vocabulary:      { color: '#06b6d4', icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>' },
+  modelResponse:   { color: '#d946ef', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>' },
+  sourceAnalysis:  { color: '#f97316', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>' },
+  seatPlan:        { color: '#64748b', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>' },
+  cceDiscussion:   { color: '#e11d48', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>' },
+  discussionPrompts: { color: '#f59e0b', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
+  staveNotation:   { color: '#7c3aed', icon: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' },
+  rhythmTool:      { color: '#a855f7', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/>' },
+  artCritique:     { color: '#ec4899', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>' },
+  designProcess:   { color: '#14b8a6', icon: '<polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>' },
+  recipeBuilder:   { color: '#f97316', icon: '<path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10H5a7 7 0 0 0 14 0z"/>' },
+  kitchenLayout:   { color: '#0d9488', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>' },
+};
 
 export function render(container) {
   const apiKey = Store.get('apiKey') || '';
@@ -344,28 +417,29 @@ export function render(container) {
         <!-- TAB: Lesson Planner -->
         <div class="settings-panel" data-panel="planner" style="display:none;">
 
-        <!-- EEE: Enactment Enhancements for Engagement -->
+        <!-- EEE: Enactment Enhancement Marketplace -->
         <div class="card" style="margin-bottom: var(--sp-6);">
-          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Enactment Enhancements</h3>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
-            Control where each tool appears. <strong>Sidebar</strong> adds it to the left navigation panel. <strong>Planner</strong> adds it to the Lesson Planner toolbar. You can enable both, either, or neither.
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Enactment Tool Marketplace</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.5;">
+            Browse and enable tools by subject. Toggle <strong>Planner</strong> to add a tool to the Lesson Planner toolbar,
+            or <strong>Sidebar</strong> to pin it to the left navigation for quick access.
           </p>
 
           <!-- Core tools (always on, shown for reference) -->
           <div style="margin-bottom: var(--sp-4);">
-            <div style="font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--sp-2);">Core Tools (always in Planner)</div>
-            <div style="display: flex; flex-wrap: wrap; gap: var(--sp-2);">
+            <div style="font-size: 0.6875rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--sp-2);">Core Tools (always available)</div>
+            <div style="display: flex; flex-wrap: wrap; gap: var(--sp-1);">
               ${Object.entries(EEE_REGISTRY).filter(([,v]) => v.cat === 'core').map(([, v]) =>
-                `<span class="badge badge-blue" style="font-size: 0.75rem; padding: 4px 10px;">${v.label}</span>`
+                `<span class="badge badge-blue" style="font-size: 0.6875rem; padding: 3px 8px;">${v.label}</span>`
               ).join('')}
             </div>
           </div>
 
-          <!-- Enactment tools (dual toggles) -->
-          <div id="eee-tool-list" style="display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-4);">
+          <!-- Marketplace tools grid -->
+          <div id="eee-tool-list">
             ${buildEEEListHTML()}
           </div>
-          <button class="btn btn-primary btn-sm" id="eee-save-btn">Save Enactment Tools</button>
+          <button class="btn btn-primary btn-sm" id="eee-save-btn" style="margin-top:var(--sp-3);">Save Enactment Tools</button>
         </div>
 
         </div><!-- end planner panel -->
@@ -594,36 +668,65 @@ export function render(container) {
     document.documentElement.classList.toggle('dark', dark);
   });
 
-  // EEE save — auto-save on every toggle change
+  // EEE marketplace — save, filter, card visual updates
+  let currentEEEFilter = 'all';
+
   const saveEEE = () => {
     const plannerChecked = [...container.querySelectorAll('.eee-planner-toggle:checked')].map(cb => cb.dataset.eee);
     const sidebarChecked = [...container.querySelectorAll('.eee-sidebar-toggle:checked')].map(cb => cb.dataset.eee);
     saveEEESelections(plannerChecked);
     saveEEESidebarSelections(sidebarChecked);
-    // Trigger Store subscribers (sidebar re-render)
     Store.set('_eeeUpdated', Date.now());
+    // Update card visual states
+    container.querySelectorAll('.eee-marketplace-card').forEach(card => {
+      const key = card.dataset.eee;
+      const meta = COMPONENT_META_SETTINGS[key];
+      const color = meta?.color || 'var(--accent)';
+      const inP = plannerChecked.includes(key);
+      const inS = sidebarChecked.includes(key);
+      const active = inP || inS;
+      card.style.borderColor = active ? color : 'var(--border-light, #e5e7eb)';
+      card.style.background = active ? `${color}08` : 'var(--bg-card, #fff)';
+      const iconBox = card.querySelector('div > div > div:first-child');
+      if (iconBox && iconBox.style) {
+        iconBox.style.background = active ? color : 'var(--bg-subtle)';
+        iconBox.style.color = active ? '#fff' : 'var(--ink-muted)';
+      }
+    });
     return { planner: plannerChecked, sidebar: sidebarChecked };
   };
+
+  const wireEEEEvents = () => {
+    // Filter buttons
+    container.querySelectorAll('.eee-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentEEEFilter = btn.dataset.filter;
+        const listEl = container.querySelector('#eee-tool-list');
+        if (listEl) listEl.innerHTML = buildEEEListHTML(currentEEEFilter);
+        wireEEEEvents(); // Re-wire after re-render
+      });
+    });
+
+    // Auto-save on individual toggle
+    container.querySelectorAll('.eee-planner-toggle, .eee-sidebar-toggle').forEach(cb => {
+      cb.addEventListener('change', () => saveEEE());
+    });
+
+    // Select/deselect all
+    container.querySelector('#eee-sidebar-all')?.addEventListener('change', (e) => {
+      container.querySelectorAll('.eee-sidebar-toggle').forEach(cb => { cb.checked = e.target.checked; });
+      saveEEE();
+    });
+    container.querySelector('#eee-planner-all')?.addEventListener('change', (e) => {
+      container.querySelectorAll('.eee-planner-toggle').forEach(cb => { cb.checked = e.target.checked; });
+      saveEEE();
+    });
+  };
+  wireEEEEvents();
 
   container.querySelector('#eee-save-btn')?.addEventListener('click', () => {
     const { planner, sidebar } = saveEEE();
     showToast(`Tools updated — ${planner.length} in Planner, ${sidebar.length} in Sidebar.`, 'success');
-  });
-
-  // Auto-save on individual toggle
-  container.querySelectorAll('.eee-planner-toggle, .eee-sidebar-toggle').forEach(cb => {
-    cb.addEventListener('change', () => saveEEE());
-  });
-
-  // Select/deselect all
-  const allEnactmentKeys = Object.entries(EEE_REGISTRY).filter(([,v]) => v.cat === 'enactment').map(([k]) => k);
-  container.querySelector('#eee-sidebar-all')?.addEventListener('change', (e) => {
-    container.querySelectorAll('.eee-sidebar-toggle').forEach(cb => { cb.checked = e.target.checked; });
-    saveEEE();
-  });
-  container.querySelector('#eee-planner-all')?.addEventListener('change', (e) => {
-    container.querySelectorAll('.eee-planner-toggle').forEach(cb => { cb.checked = e.target.checked; });
-    saveEEE();
   });
 
   // Save

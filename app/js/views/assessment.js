@@ -161,34 +161,18 @@ const ASSESS_STYLES = `
   .tos-2d-obj-label { font-weight: 700; font-size: 0.8125rem; color: var(--ink); }
   .tos-2d-obj-desc { color: var(--ink-muted); margin-top: 1px; }
 
-  /* ── AoL Wizard Stepper ── */
-  .aol-stepper { display: flex; align-items: center; gap: 0; margin-bottom: 20px; padding: 16px 0; }
-  .aol-step {
-    display: flex; align-items: center; gap: 8px; flex: 1; position: relative;
-    padding: 10px 16px; border-radius: 10px; cursor: default;
-    transition: all 0.2s;
+  /* ── AoL Sequential Card Flow ── */
+  .aol-card { position: relative; }
+  .aol-card-header {
+    display: flex; align-items: center; gap: 12px;
   }
-  .aol-step::after {
-    content: ''; position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
-    width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent;
-    border-left: 10px solid var(--border, #e2e5ea);
+  .aol-card-num {
+    width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.875rem; flex-shrink: 0;
+    background: var(--accent, #4361ee); color: #fff;
   }
-  .aol-step:last-child::after { display: none; }
-  .aol-step-num {
-    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.8125rem; flex-shrink: 0;
-    background: var(--border, #e2e5ea); color: var(--ink-muted, #999);
-    transition: all 0.2s;
-  }
-  .aol-step-text { font-size: 0.8125rem; font-weight: 600; color: var(--ink-muted, #999); line-height: 1.2; }
-  .aol-step-hint { font-size: 0.6875rem; font-weight: 400; color: var(--ink-faint, #bbb); margin-top: 1px; }
-  .aol-step.active { background: rgba(67,97,238,0.08); }
-  .aol-step.active .aol-step-num { background: var(--accent, #4361ee); color: #fff; }
-  .aol-step.active .aol-step-text { color: var(--accent, #4361ee); }
-  .aol-step.active::after { border-left-color: rgba(67,97,238,0.2); }
-  .aol-step.done .aol-step-num { background: #22c55e; color: #fff; }
-  .aol-step.done .aol-step-text { color: #16a34a; }
-  .aol-step.done::after { border-left-color: rgba(34,197,94,0.2); }
+  .aol-card-title { font-size: 1rem; font-weight: 700; color: var(--ink); line-height: 1.2; }
+  .aol-card-hint { font-size: 0.75rem; font-weight: 400; color: var(--ink-muted); margin-top: 2px; }
   .aol-tos-mismatch {
     display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px;
     background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 0.8125rem;
@@ -314,29 +298,17 @@ export function renderAoL(container) {
           </div>
         </div>
 
-        <div class="assess-card">
-          <!-- Wizard Stepper -->
-          <div class="aol-stepper" id="aol-stepper">
-            <div class="aol-step active" data-step="1">
-              <div class="aol-step-num">1</div>
-              <div><div class="aol-step-text">Setup</div><div class="aol-step-hint">Mode, objectives, marks</div></div>
-            </div>
-            <div class="aol-step" data-step="2">
-              <div class="aol-step-num">2</div>
-              <div><div class="aol-step-text">Build TOS</div><div class="aol-step-hint">Allocate marks to levels</div></div>
-            </div>
-            <div class="aol-step" data-step="3">
-              <div class="aol-step-num">3</div>
-              <div><div class="aol-step-text">Generate</div><div class="aol-step-hint">AI drafts questions</div></div>
-            </div>
-            <div class="aol-step" data-step="4">
-              <div class="aol-step-num">4</div>
-              <div><div class="aol-step-text">Review & Export</div><div class="aol-step-hint">Verify, then print/copy</div></div>
+        <!-- Step 1: Setup -->
+        <div class="assess-card aol-card" id="aol-step-1">
+          <div class="aol-card-header">
+            <div class="aol-card-num">1</div>
+            <div>
+              <div class="aol-card-title">Setup</div>
+              <div class="aol-card-hint">Choose taxonomy mode, set objectives and total marks</div>
             </div>
           </div>
 
-          <div class="assess-section-title">Table of Specifications (TOS)</div>
-          <div class="assess-section-desc">
+          <div class="assess-section-desc" style="margin-top:12px;">
             A TOS maps assessment items to cognitive levels, ensuring balanced coverage.
             Choose between the <strong>original 1D taxonomy</strong> (topics \u00d7 cognitive levels) or the
             <strong>revised 2D taxonomy</strong> (Anderson & Krathwohl \u2014 knowledge dimension \u00d7 cognitive process).
@@ -348,19 +320,43 @@ export function renderAoL(container) {
           </div>
 
           ${tosMode === '1d' ? render1DInputs(lessons) : render2DInputs(lessons)}
+        </div>
 
-          <div style="display:flex;gap:8px;margin-bottom:16px;">
-            <button class="btn btn-primary btn-sm" id="tos-generate-btn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              AI Suggest Distribution
+        <!-- Step 2: Build TOS -->
+        <div class="assess-card aol-card" id="aol-step-2">
+          <div class="aol-card-header">
+            <div class="aol-card-num">2</div>
+            <div>
+              <div class="aol-card-title">Build Table of Specifications</div>
+              <div class="aol-card-hint">Generate the grid, then allocate marks manually or with AI assistance</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:12px;margin-bottom:16px;">
+            <button class="btn btn-primary btn-sm" id="tos-build-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+              Build TOS Grid
             </button>
-            <button class="btn btn-secondary btn-sm" id="tos-build-btn">Build TOS</button>
+            <button class="btn btn-secondary btn-sm" id="tos-generate-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              AI-Suggested Distribution
+            </button>
           </div>
 
           <div id="tos-output"></div>
+        </div>
 
-          <!-- Difficulty / Cognitive Level Selector -->
-          <div style="margin-top:16px;padding:16px;border:1px solid var(--border,#e2e5ea);border-radius:10px;background:var(--bg-subtle,#f8f9fa);">
+        <!-- Step 3: Generate Questions -->
+        <div class="assess-card aol-card" id="aol-step-3">
+          <div class="aol-card-header">
+            <div class="aol-card-num">3</div>
+            <div>
+              <div class="aol-card-title">Generate Draft Questions</div>
+              <div class="aol-card-hint">Set parameters and let AI draft questions based on your TOS</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;padding:16px;border:1px solid var(--border,#e2e5ea);border-radius:10px;background:var(--bg-subtle,#f8f9fa);">
             <div style="font-weight:700;font-size:0.875rem;color:var(--ink);margin-bottom:8px;">Cognitive Level of Demand</div>
             <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:10px;line-height:1.5;">
               Set the difficulty distribution for generated questions. This maps to Bloom's taxonomy levels.
@@ -412,9 +408,19 @@ export function renderAoL(container) {
 
           <!-- Generated Questions Output -->
           <div id="aol-questions-output" style="margin-top:16px;"></div>
+        </div>
 
-          <!-- Review Confirmation & Export (hidden until questions generated) -->
-          <div id="aol-export-section" style="display:none;margin-top:16px;padding:16px;border:1px solid var(--border,#e2e5ea);border-radius:10px;">
+        <!-- Step 4: Review & Export -->
+        <div class="assess-card aol-card" id="aol-step-4">
+          <div class="aol-card-header">
+            <div class="aol-card-num">4</div>
+            <div>
+              <div class="aol-card-title">Review & Export</div>
+              <div class="aol-card-hint">Verify all questions, then export or copy</div>
+            </div>
+          </div>
+
+          <div id="aol-export-section" style="margin-top:12px;">
             <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-bottom:12px;">
               <input type="checkbox" id="aol-review-confirm" style="margin-top:3px;" />
               <span style="font-size:0.875rem;color:var(--ink);line-height:1.5;">
@@ -1250,33 +1256,7 @@ function recalcTOS(container, rowCount, totalMarks) {
 }
 
 function updateAoLStepper(container) {
-  const steps = container.querySelectorAll('.aol-step');
-  if (!steps.length) return;
-
-  const hasTOS = container.querySelectorAll('.tos-cell').length > 0;
-  const cells = container.querySelectorAll('.tos-cell');
-  const hasData = [...cells].some(c => parseInt(c.value) > 0);
-  const hasQuestions = container.querySelector('#aol-questions-output')?.children.length > 0;
-  const reviewConfirmed = container.querySelector('#aol-review-confirm')?.checked;
-
-  steps.forEach(s => s.classList.remove('active', 'done'));
-
-  if (reviewConfirmed) {
-    steps.forEach(s => s.classList.add('done'));
-    steps[3].classList.add('active');
-    steps[3].classList.remove('done');
-  } else if (hasQuestions) {
-    [steps[0], steps[1], steps[2]].forEach(s => s.classList.add('done'));
-    steps[3].classList.add('active');
-  } else if (hasData) {
-    [steps[0], steps[1]].forEach(s => s.classList.add('done'));
-    steps[2].classList.add('active');
-  } else if (hasTOS) {
-    steps[0].classList.add('done');
-    steps[1].classList.add('active');
-  } else {
-    steps[0].classList.add('active');
-  }
+  // Sequential card flow — no stepper to update; kept as no-op for compatibility
 }
 
 

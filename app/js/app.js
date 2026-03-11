@@ -7,7 +7,7 @@
 import { Store } from './state.js';
 import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
-import { renderWelcome, shouldShowWelcome } from './components/welcome.js';
+import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
 import { renderLogin, isLoggedIn } from './components/login.js';
 import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedAssessmentIfNeeded } from './seed-data.js';
 
@@ -125,6 +125,19 @@ function init() {
 
   // Onboarding for first-time users
   initOnboarding();
+
+  // Show API key reminder banner if key was deferred
+  if (isApiKeyMissing()) {
+    const banner = document.createElement('div');
+    banner.id = 'api-key-banner';
+    banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9990;background:linear-gradient(135deg,#fef3c7,#fde68a);padding:10px 20px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:0.8125rem;color:#92400e;box-shadow:0 -2px 8px rgba(0,0,0,0.1);';
+    banner.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>AI features require an API key. <a href="#/settings" style="color:#92400e;font-weight:600;text-decoration:underline;">Add one in Settings</a></span>
+      <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#92400e;font-size:1.1rem;padding:0 4px;margin-left:8px;">&times;</button>
+    `;
+    document.body.appendChild(banner);
+  }
 }
 
 /* ── Bootstrap ── */

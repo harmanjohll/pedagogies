@@ -12,21 +12,96 @@ import { sendChat } from '../api.js';
 import { getCurrentUser } from '../components/login.js';
 
 /**
- * Build a FormSG URL with pre-populated query parameters.
- * FormSG supports ?field_id=value for pre-filling.
- * We pass event metadata as URL-encoded parameters.
+ * FormSG Pre-fill Configuration
+ * ==============================
+ * FormSG uses MongoDB ObjectID field IDs as query parameter keys.
+ * Format: https://form.gov.sg/<formId>?<fieldId1>=<value1>&<fieldId2>=<value2>
+ *
+ * To configure pre-fill for your forms:
+ * 1. Open FormSG form builder > click each field > copy the field ID
+ * 2. Map each field ID to a data source below
+ *
+ * Field IDs below need to be replaced with your actual FormSG field IDs.
+ * Set a field ID to empty string '' to skip pre-filling that field.
+ */
+const FORMSG_FIELD_MAP = {
+  // Bus Booking Form (https://form.gov.sg/697319e97621e837dda7c331)
+  // Fields: 1.Name, 2.Email, 3.Contact, 4.Date, 5.Purpose, 6.Teacher IC,
+  //         7.Depart From, 8.Departure Time, 9.Destination, 10.Return Time,
+  //         11.Return To, 12.Number of Passengers
+  bus_booking: {
+    formId: '697319e97621e837dda7c331',
+    fields: {
+      // Replace these placeholder IDs with actual FormSG field IDs:
+      // 'FIELD_ID_HERE': { source: 'user.name' },
+      // 'FIELD_ID_HERE': { source: 'user.email' },
+      // 'FIELD_ID_HERE': { source: 'event.date' },
+      // 'FIELD_ID_HERE': { source: 'task.data.destination' },
+      // 'FIELD_ID_HERE': { source: 'task.data.departure_time' },
+      // 'FIELD_ID_HERE': { source: 'task.data.return_time' },
+      // 'FIELD_ID_HERE': { source: 'task.data.num_buses' },
+    }
+  },
+  // AOR Form (https://form.gov.sg/6957392872041c1d962c3ab1)
+  // Fields: 1.Name, 2.Email, 3.Title/Name of Purchase, 4.Budget Source,
+  //         5.Justification, 6.Procurement Type, 7.Items Table, 9.Strategic Thrust
+  aor: {
+    formId: '6957392872041c1d962c3ab1',
+    fields: {
+      // Replace these placeholder IDs with actual FormSG field IDs:
+      // 'FIELD_ID_HERE': { source: 'user.name' },
+      // 'FIELD_ID_HERE': { source: 'user.email' },
+    }
+  }
+};
+
+/**
+ * Build a FormSG URL with pre-populated query parameters using field ID mapping.
+ * Falls back to opening the form without pre-fill if no field IDs are configured.
  */
 function buildFormURL(baseUrl, event, task) {
   try {
     const url = new URL(baseUrl);
     const user = getCurrentUser();
-    // Pre-populate common fields via FormSG prefill convention
-    if (user?.name) url.searchParams.set('prefill_name', user.name);
-    if (user?.email) url.searchParams.set('prefill_email', user.email);
-    if (event?.title) url.searchParams.set('prefill_event', event.title);
-    if (event?.date) url.searchParams.set('prefill_date', event.date);
-    if (task?.data?.venue) url.searchParams.set('prefill_venue', task.data.venue);
-    if (task?.data?.num_students) url.searchParams.set('prefill_students', task.data.num_students);
+
+    // Determine which form config to use based on URL
+    let formConfig = null;
+    for (const [, config] of Object.entries(FORMSG_FIELD_MAP)) {
+      if (baseUrl.includes(config.formId)) {
+        formConfig = config;
+        break;
+      }
+    }
+
+    if (!formConfig || !formConfig.fields || Object.keys(formConfig.fields).length === 0) {
+      // No field IDs configured — return base URL as-is
+      return baseUrl;
+    }
+
+    // Resolve data sources to values
+    const dataContext = {
+      'user.name': user?.name || '',
+      'user.email': user?.email || '',
+      'event.title': event?.title || '',
+      'event.date': event?.date || '',
+      'task.data.venue': task?.data?.venue || '',
+      'task.data.destination': task?.data?.destination || '',
+      'task.data.pickup_point': task?.data?.pickup_point || '',
+      'task.data.departure_time': task?.data?.departure_time || '',
+      'task.data.return_time': task?.data?.return_time || '',
+      'task.data.num_students': task?.data?.num_students || '',
+      'task.data.num_buses': task?.data?.num_buses || '',
+      'task.data.budget_code': task?.data?.budget_code || '',
+      'task.data.estimated_cost': task?.data?.estimated_cost || '',
+    };
+
+    for (const [fieldId, config] of Object.entries(formConfig.fields)) {
+      const value = dataContext[config.source] || '';
+      if (value && fieldId) {
+        url.searchParams.set(fieldId, value);
+      }
+    }
+
     return url.toString();
   } catch {
     return baseUrl;
@@ -145,8 +220,7 @@ const EVENT_TASKS = [
 
 /* ── Standalone admin tools ── */
 const ADMIN_TOOLS = [
-  { key: 'quick_aor', label: 'Quick AOR', desc: 'Submit a standalone Approval of Request for purchases or services.', icon: '📄' },
-  { key: 'aor_form', label: 'AOR Form', desc: 'Open the official Approval of Request form.', icon: '💰', href: 'https://form.gov.sg/6957392872041c1d962c3ab1' },
+  { key: 'aor_form', label: 'AOR Form', desc: 'Open the official Approval of Request form. Remember to attach quotations separately.', icon: '💰', href: 'https://form.gov.sg/6957392872041c1d962c3ab1' },
   { key: 'bus_form', label: 'Bus Booking', desc: 'Open the official bus booking form.', icon: '🚌', href: 'https://form.gov.sg/697319e97621e837dda7c331' },
   { key: 'relief_timetable', label: 'Relief Timetable', desc: 'Plan teacher relief assignments when staff are away.', icon: '🔄', href: 'btyrelief/relief.html' },
   { key: 'org_chart', label: 'Org Chart', desc: 'View and edit the school organisational chart.', icon: '🏢', href: 'btyrelief/orgstruc.html' },
@@ -273,8 +347,6 @@ function renderQuickTools(el) {
     const tool = ADMIN_TOOLS.find(t => t.key === card.dataset.tool);
     if (tool?.href) {
       openAdminOverlay(tool.label, tool.href);
-    } else if (tool?.key === 'quick_aor') {
-      showQuickAOR();
     } else {
       showToast(`${card.querySelector('.action-card-title').textContent} — coming in the next update!`, 'success');
     }
@@ -749,72 +821,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
   });
 }
 
-/* ══════════ Quick AOR (standalone) ══════════ */
-function showQuickAOR() {
-  const { backdrop, close } = openModal({
-    title: 'Quick Approval of Request (AOR)',
-    body: `
-      <div class="input-group">
-        <label class="input-label">Description</label>
-        <input class="input" id="aor-desc" placeholder="e.g. Purchase of calculators for Math Dept" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">Budget Code</label>
-        <input class="input" id="aor-code" placeholder="e.g. SC-MATH-2026" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">Estimated Cost ($)</label>
-        <input class="input" id="aor-cost" placeholder="e.g. 350.00" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">Funding Source</label>
-        <select class="input" id="aor-source">
-          <option value="School Budget">School Budget</option>
-          <option value="Department Budget">Department Budget</option>
-          <option value="MOE Grant">MOE Grant</option>
-          <option value="Student Fee">Student Fee</option>
-          <option value="External Sponsor">External Sponsor</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <label class="input-label">Approving Officer</label>
-        <input class="input" id="aor-approver" placeholder="e.g. HOD Mathematics" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">Justification</label>
-        <textarea class="input" id="aor-justification" rows="3" placeholder="Why is this purchase needed?"></textarea>
-      </div>
-    `,
-    footer: `
-      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
-      <button class="btn btn-primary" data-action="submit">Submit AOR</button>
-    `
-  });
-
-  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
-  backdrop.querySelector('[data-action="submit"]').addEventListener('click', () => {
-    const desc = backdrop.querySelector('#aor-desc').value.trim();
-    if (!desc) { showToast('Please enter a description.', 'danger'); return; }
-    const cost = backdrop.querySelector('#aor-cost').value.trim();
-    const code = backdrop.querySelector('#aor-code').value.trim();
-    const source = backdrop.querySelector('#aor-source').value;
-    const approver = backdrop.querySelector('#aor-approver').value.trim();
-    const justification = backdrop.querySelector('#aor-justification').value.trim();
-
-    // Save to state
-    const aors = Store.get('adminAORs') || [];
-    aors.push({
-      id: generateId(),
-      desc, cost, code, source, approver, justification,
-      status: 'pending',
-      createdAt: Date.now()
-    });
-    Store.set('adminAORs', aors);
-
-    showToast('AOR submitted successfully!', 'success');
-    close();
-  });
-}
+/* Quick AOR removed — use AOR Form (FormSG) directly */
 
 /* ══════════ MS Teams & Email Notification Helpers ══════════ */
 
