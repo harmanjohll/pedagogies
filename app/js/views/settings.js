@@ -187,6 +187,14 @@ const PEDAGOGY_SIGNPOSTS = {
   cce: 'Supports CCE & values education',
 };
 
+// Build rgba tint from hex — used for card backgrounds
+function _hexToRGBA(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
   const plannerSel = getEEESelections();
   const sidebarSel = getEEESidebarSelections();
@@ -272,14 +280,18 @@ function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
       signpost = `<div style="font-size:0.625rem;font-style:italic;color:#6366f1;margin-top:4px;line-height:1.3;">${PEDAGOGY_SIGNPOSTS[signpostKey] || ''}</div>`;
     }
 
+    const cardBg = isActive ? _hexToRGBA(color, 0.08) : 'var(--bg-card, #fff)';
+    const cardBorder = isActive ? color : 'var(--border-light, #e5e7eb)';
+    const pedGlow = isPedMatch ? `box-shadow:0 0 0 3px ${_hexToRGBA('#6366f1', 0.18)};` : '';
+
     html += `
     <div class="eee-marketplace-card" data-eee="${key}" style="
       padding:12px;border-radius:12px;
-      border:2px solid ${isActive ? color : 'var(--border-light, #e5e7eb)'};
-      background:${isActive ? `${color}08` : 'var(--bg-card, #fff)'};
+      border:2px solid ${cardBorder};
+      background:${cardBg};
       transition:all 0.15s;cursor:default;position:relative;
       ${dimmed ? 'opacity:0.45;' : ''}
-      ${isPedMatch ? 'box-shadow:0 0 0 2px #6366f130;' : ''}
+      ${pedGlow}
     ">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:6px;">
         <div style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
@@ -734,6 +746,14 @@ export function render(container) {
   // EEE marketplace — save, filter, card visual updates
   let currentEEEFilter = 'all';
 
+  // Helper: convert hex color to rgba with alpha
+  function hexToRGBA(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
   const saveEEE = () => {
     const plannerChecked = [...container.querySelectorAll('.eee-planner-toggle:checked')].map(cb => cb.dataset.eee);
     const sidebarChecked = [...container.querySelectorAll('.eee-sidebar-toggle:checked')].map(cb => cb.dataset.eee);
@@ -744,12 +764,12 @@ export function render(container) {
     container.querySelectorAll('.eee-marketplace-card').forEach(card => {
       const key = card.dataset.eee;
       const meta = COMPONENT_META_SETTINGS[key];
-      const color = meta?.color || 'var(--accent)';
+      const color = meta?.color || '#4361ee';
       const inP = plannerChecked.includes(key);
       const inS = sidebarChecked.includes(key);
       const active = inP || inS;
       card.style.borderColor = active ? color : 'var(--border-light, #e5e7eb)';
-      card.style.background = active ? `${color}08` : 'var(--bg-card, #fff)';
+      card.style.background = active ? hexToRGBA(color, 0.08) : 'var(--bg-card, #fff)';
       const iconBox = card.querySelector('div > div > div:first-child');
       if (iconBox && iconBox.style) {
         iconBox.style.background = active ? color : 'var(--bg-subtle)';
@@ -763,51 +783,56 @@ export function render(container) {
   const savedPriorities = Store.get('pedagogicalPriorities') || [];
   let currentPedFilter = savedPriorities.length > 0 ? savedPriorities[0] : '';
 
-  const wireEEEEvents = () => {
-    // Subject filter buttons
-    container.querySelectorAll('.eee-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentEEEFilter = btn.dataset.filter;
-        const listEl = container.querySelector('#eee-tool-list');
-        if (listEl) listEl.innerHTML = buildEEEListHTML(currentEEEFilter, currentPedFilter);
-        wireEEEEvents();
-      });
-    });
-
-    // Pedagogy filter buttons
-    container.querySelectorAll('.eee-ped-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentPedFilter = btn.dataset.ped;
-        const listEl = container.querySelector('#eee-tool-list');
-        if (listEl) listEl.innerHTML = buildEEEListHTML(currentEEEFilter, currentPedFilter);
-        wireEEEEvents();
-      });
-    });
-
-    // Auto-save on individual toggle
-    container.querySelectorAll('.eee-planner-toggle, .eee-sidebar-toggle').forEach(cb => {
-      cb.addEventListener('change', () => saveEEE());
-    });
-
-    // Select/deselect all
-    container.querySelector('#eee-sidebar-all')?.addEventListener('change', (e) => {
-      container.querySelectorAll('.eee-sidebar-toggle').forEach(cb => { cb.checked = e.target.checked; });
-      saveEEE();
-    });
-    container.querySelector('#eee-planner-all')?.addEventListener('change', (e) => {
-      container.querySelectorAll('.eee-planner-toggle').forEach(cb => { cb.checked = e.target.checked; });
-      saveEEE();
-    });
-  };
-  wireEEEEvents();
-
-  // Apply default pedagogy filter from onboarding priorities
-  if (currentPedFilter) {
+  const rerenderEEEList = () => {
     const listEl = container.querySelector('#eee-tool-list');
-    if (listEl) {
-      listEl.innerHTML = buildEEEListHTML(currentEEEFilter, currentPedFilter);
-      wireEEEEvents();
-    }
+    if (listEl) listEl.innerHTML = buildEEEListHTML(currentEEEFilter, currentPedFilter);
+  };
+
+  // ── Event delegation: ONE listener on #eee-tool-list, never re-attached ──
+  const eeeListContainer = container.querySelector('#eee-tool-list');
+  if (eeeListContainer) {
+    // Click delegation for filter buttons
+    eeeListContainer.addEventListener('click', (e) => {
+      const filterBtn = e.target.closest('.eee-filter-btn');
+      if (filterBtn) {
+        currentEEEFilter = filterBtn.dataset.filter;
+        rerenderEEEList();
+        return;
+      }
+      const pedBtn = e.target.closest('.eee-ped-btn');
+      if (pedBtn) {
+        currentPedFilter = pedBtn.dataset.ped;
+        rerenderEEEList();
+        return;
+      }
+    });
+
+    // Change delegation for checkboxes
+    eeeListContainer.addEventListener('change', (e) => {
+      const target = e.target;
+      // Individual planner/sidebar toggle
+      if (target.classList.contains('eee-planner-toggle') || target.classList.contains('eee-sidebar-toggle')) {
+        saveEEE();
+        return;
+      }
+      // Select/deselect ALL sidebar
+      if (target.id === 'eee-sidebar-all') {
+        container.querySelectorAll('.eee-sidebar-toggle').forEach(cb => { cb.checked = target.checked; });
+        saveEEE();
+        return;
+      }
+      // Select/deselect ALL planner
+      if (target.id === 'eee-planner-all') {
+        container.querySelectorAll('.eee-planner-toggle').forEach(cb => { cb.checked = target.checked; });
+        saveEEE();
+        return;
+      }
+    });
+  }
+
+  // Apply default pedagogy filter from onboarding priorities (initial render)
+  if (currentPedFilter) {
+    rerenderEEEList();
   }
 
   container.querySelector('#eee-save-btn')?.addEventListener('click', () => {
