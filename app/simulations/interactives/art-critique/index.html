@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Art Critique Guide — Co-Cher</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="art-critique.css">
+</head>
+<body>
+  <div class="critique-app">
+    <!-- Header -->
+    <header class="critique-header">
+      <div class="critique-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>Art Critique Guide</span>
+      </div>
+      <div class="critique-actions">
+        <button id="clear-btn" class="btn-action">New Critique</button>
+        <button id="print-btn" class="btn-action btn-primary">Print / Export</button>
+      </div>
+    </header>
+
+    <!-- Main layout: image left, critique right -->
+    <main class="critique-main">
+      <!-- Left: Artwork -->
+      <section class="artwork-panel">
+        <div class="artwork-drop" id="artwork-drop">
+          <div class="drop-placeholder" id="drop-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <p>Drop an image here, paste from clipboard, or</p>
+            <button id="upload-btn" class="btn-upload">Choose File</button>
+            <input type="file" id="file-input" accept="image/*" style="display:none;" />
+            <p class="drop-hint">Supports JPG, PNG, WebP</p>
+          </div>
+          <img id="artwork-img" class="artwork-img" style="display:none;" />
+        </div>
+        <div class="artwork-info">
+          <input type="text" id="artwork-title" placeholder="Artwork title (optional)" class="text-input" />
+          <input type="text" id="artwork-artist" placeholder="Artist name (optional)" class="text-input" />
+        </div>
+      </section>
+
+      <!-- Right: Feldman Model Stages -->
+      <section class="critique-panel">
+        <!-- Progress -->
+        <div class="stage-progress" id="stage-progress"></div>
+
+        <!-- Stage Content -->
+        <div class="stage-container" id="stage-container"></div>
+
+        <!-- Navigation -->
+        <div class="stage-nav">
+          <button id="prev-btn" class="btn-nav" disabled>&larr; Previous</button>
+          <span id="stage-indicator" class="stage-indicator">1 / 4</span>
+          <button id="next-btn" class="btn-nav">Next &rarr;</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="art-critique.js"></script>
+</body>
+</html>
