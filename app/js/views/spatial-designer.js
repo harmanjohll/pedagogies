@@ -208,6 +208,8 @@ const PRESETS = [
   { id: 'warmup', label: 'Warm-up Formation', desc: 'Lines facing instructor', icon: '🤸', pe: true },
   { id: 'hiit', label: 'HIIT / Interval', desc: 'High-intensity work-rest intervals', icon: '⏱️', pe: true },
   { id: 'skills_stations', label: 'Skills Stations', desc: 'Sport-specific drill stations', icon: '🎯', pe: true },
+  // NFS presets
+  { id: 'kitchen', label: 'Kitchen Layout', desc: 'NFS cooking workstation setup', icon: '🍳', nfs: true },
 ];
 
 /* ═══════════ Preset Insights (E21CC + STP ties) ═══════════ */
@@ -278,6 +280,11 @@ const PRESET_INSIGHTS = {
     { title: '🎯 Sport-Specific Drill Zones', affordance: 'Dedicated stations for specific techniques (passing, dribbling, shooting, serving) allow focused, repetitive practice that builds muscle memory.', moves: ['Design 4–6 stations targeting the key skills of the unit sport (e.g. badminton: serve, clear, drop, net play).', 'Provide clear visual task cards with coaching cues at each station.', 'Use small-sided space to maximise touches and repetitions per student.'], e21cc: 'CAIT — deliberate practice at skill stations develops adaptive motor learning.' },
     { title: '📊 Peer Observation & Feedback', affordance: 'At each station, students can observe and coach each other, reinforcing technique and building communication skills.', moves: ['Pair students: one performs, one observes and gives feedback using a simple checklist (e.g. "Racket high? Follow through?").', 'Rotate roles after every set of repetitions.', 'Use video recording (tablets) for self-analysis at one station.'], e21cc: 'CCI — structured peer feedback develops constructive communication and observation skills.' },
     { title: '🔀 Progression & Game Application', affordance: 'Stations can be arranged from isolated drills to conditioned games, building up to match-like scenarios.', moves: ['Arrange stations in order of complexity: closed drill → open drill → small-sided game → full game.', 'At the final station, apply skills in a mini-match or game scenario.', 'Debrief: which skill transferred best to the game? What needs more work?'], e21cc: 'CAIT — linking drills to game application develops critical and inventive tactical thinking.' }
+  ],
+  kitchen: [
+    { title: '🍳 Workstation Organisation', affordance: 'Clearly defined workstations with prep, cooking, and cleaning zones ensure efficient workflow and minimise cross-contamination.', moves: ['Assign students to numbered workstations with clear mise en place.', 'Post illustrated recipe cards and hygiene reminders at each station.', 'Use colour-coded chopping boards for different food groups.'], e21cc: 'CAIT — systematic organisation develops procedural thinking.' },
+    { title: '🧼 Food Safety & Hygiene', affordance: 'Designated handwashing and cleaning stations reinforce food safety habits required by the NFS syllabus.', moves: ['Begin every practical with a hygiene checklist: apron, hair tied, hands washed, nails trimmed.', 'Place sanitiser stations between prep and cooking areas.', 'Debrief on food safety principles after each practical.'], e21cc: 'CGC — food safety awareness builds civic responsibility and health literacy.' },
+    { title: '👥 Team Cooking & Communication', affordance: 'Paired or grouped workstations encourage collaborative cooking, role division, and communication under time pressure.', moves: ['Assign roles: chef, sous chef, timekeeper. Rotate each session.', 'Use timers visible to all groups for time management.', 'Facilitate a tasting and feedback round at the end of each session.'], e21cc: 'CCI — team cooking develops communication, collaboration, and shared responsibility.' }
   ]
 };
 
@@ -427,6 +434,7 @@ export function render(container) {
 
       <!-- Center: Canvas -->
       <div id="spatial-canvas-col" style="display:flex;flex-direction:column;overflow:hidden;border-radius:var(--radius-xl);background:var(--surface);box-shadow:var(--shadow-card);">
+        <div id="preset-purpose-banner" style="display:none;align-items:center;padding:6px 14px;background:var(--accent-light,#eef2ff);border-bottom:1px solid var(--border-light,#e5e7eb);font-size:0.8125rem;flex-shrink:0;"></div>
         <svg id="spatial-svg" viewBox="0 0 ${VB_W} ${VB_H}" style="flex:1;cursor:crosshair;display:block;background:#fff;border-radius:var(--radius-xl);" xmlns="${SVG_NS}">
           <defs>
             <pattern id="grid" width="${UNIT}" height="${UNIT}" patternUnits="userSpaceOnUse">
@@ -1808,10 +1816,10 @@ export function render(container) {
       // Instructor at front
       place(find('speaker'), UNIT * 11, UNIT * 1.5);
       // Students in rows (cones as markers)
-      const cols = 6, rows = Math.ceil(count / cols);
+      const cols = 5, rows = Math.ceil(count / cols);
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols && r * cols + c < count; c++) {
-          place(find('cone_large'), UNIT * (4 + c * 3), UNIT * (3.5 + r * 2));
+          place(find('cone_large'), UNIT * (3.5 + c * 3.5), UNIT * (3.5 + r * 2.5));
         }
       }
       // Equipment at the side
@@ -1949,11 +1957,51 @@ export function render(container) {
       place(find('water_station'), UNIT * 22, UNIT * 10.5);
       place(find('bib_stack'), UNIT * 0.5, UNIT * 10.5);
       place(find('bib_stack'), UNIT * 22, UNIT * 0.5);
+    } else if (name === 'kitchen') {
+      // NFS kitchen layout: 6 cooking workstations, demo station, washing area
+      closeWall('A'); closeWall('B');
+      // Teacher demo station (front)
+      place(find('teacher_desk'), UNIT * 10, UNIT * 1.5);
+      place(find('writable_tv'), UNIT * 13, UNIT * 1.5, 0);
+      // 6 workstations (2 rows of 3)
+      for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 3; c++) {
+          place(find('group_table'), UNIT * (3 + c * 6.5), UNIT * (4 + r * 3.5));
+          place(find('chair'), UNIT * (2 + c * 6.5), UNIT * (3.5 + r * 3.5));
+          place(find('chair'), UNIT * (4 + c * 6.5), UNIT * (3.5 + r * 3.5));
+          place(find('chair'), UNIT * (3 + c * 6.5), UNIT * (5 + r * 3.5));
+        }
+      }
+      // Washing/cleaning area (back right)
+      place(find('stand_table'), UNIT * 20, UNIT * 4);
+      place(find('stand_table'), UNIT * 20, UNIT * 6);
+      // Storage (back left)
+      place(find('tool_cabinet'), UNIT * 1, UNIT * 10);
+      place(find('equipment_box'), UNIT * 1, UNIT * 8.5);
+      // Safety / hygiene station
+      place(find('whiteboard'), UNIT * 22, UNIT * 2, -90);
     }
 
     updateMetrics();
     renderInsights(null, PRESET_INSIGHTS[name] || []);
-    showToast(`Applied "${PRESETS.find(p => p.id === name)?.label}" preset`);
+
+    // Show purpose banner for PE presets
+    const preset = PRESETS.find(p => p.id === name);
+    const purposeBanner = container.querySelector('#preset-purpose-banner');
+    if (purposeBanner && preset?.pe) {
+      const insights = PRESET_INSIGHTS[name] || [];
+      const mainInsight = insights[0];
+      purposeBanner.style.display = 'flex';
+      purposeBanner.innerHTML = `
+        <span style="font-weight:600;color:var(--accent);">${preset.icon} ${preset.label}</span>
+        <span style="color:var(--ink-muted);font-size:0.75rem;margin-left:8px;">— ${preset.desc}${mainInsight ? '. ' + mainInsight.title : ''}</span>
+        <button style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--ink-faint);font-size:1rem;" onclick="this.parentElement.style.display='none'">&times;</button>
+      `;
+    } else if (purposeBanner) {
+      purposeBanner.style.display = 'none';
+    }
+
+    showToast(`Applied "${preset?.label}" preset`);
   }
 
   /* ══════ Radar Chart ══════ */

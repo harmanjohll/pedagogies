@@ -10,6 +10,7 @@ import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser } from '../components/login.js';
 import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections } from './lesson-planner.js';
+import { startTour, resetTour } from '../components/spotlight-tour.js';
 
 /* ── Dashboard Layout Prefs ── */
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
@@ -242,6 +243,14 @@ export function render(container) {
             border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Data
+          </button>
+          <button class="settings-tab" data-tab="help" style="
+            display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:0.8125rem;font-weight:400;
+            color:var(--ink-muted);background:transparent;
+            border:none;border-bottom:2px solid transparent;margin-bottom:-2px;
+            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Help & Guides
           </button>
         </div>
 
@@ -476,6 +485,77 @@ export function render(container) {
 
         </div><!-- end data panel -->
 
+        <!-- TAB: Help & Guides -->
+        <div class="settings-panel" data-panel="help" style="display:none;">
+
+          <div style="margin-bottom:var(--sp-5);padding:var(--sp-4);border:1px solid var(--border-light,#e5e7eb);border-radius:var(--radius,8px);background:var(--bg-card,#fff);">
+            <h3 style="font-size:1rem;font-weight:600;margin-bottom:var(--sp-1);color:var(--ink);">Guided Tour</h3>
+            <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">
+              Take a guided walkthrough of Co-Cher's main features. The tour highlights key areas of the interface with explanations.
+            </p>
+            <button class="btn btn-primary btn-sm" id="replay-tour-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Start Guided Tour
+            </button>
+          </div>
+
+          <div style="margin-bottom:var(--sp-5);">
+            <h3 style="font-size:1rem;font-weight:600;margin-bottom:var(--sp-3);color:var(--ink);">Module Quick Reference</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--sp-3);">
+
+              <div style="padding:var(--sp-3);border:1px solid var(--border-light,#e5e7eb);border-radius:var(--radius,8px);border-left:3px solid #4361ee;">
+                <div style="font-weight:600;font-size:0.875rem;color:var(--ink);margin-bottom:4px;">Lesson Planner</div>
+                <div style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Design lessons with AI assistance. Select a class, set objectives, and Co-Cher generates activities aligned to E21CC and your SoW. Use enactment tools for YouTube, worksheets, and more.</div>
+              </div>
+
+              <div style="padding:var(--sp-3);border:1px solid var(--border-light,#e5e7eb);border-radius:var(--radius,8px);border-left:3px solid #22c55e;">
+                <div style="font-weight:600;font-size:0.875rem;color:var(--ink);margin-bottom:4px;">My Classes</div>
+                <div style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Set up classes with subject, level, and student names. Class info feeds into the lesson planner for personalised suggestions and seating plans.</div>
+              </div>
+
+              <div style="padding:var(--sp-3);border:1px solid var(--border-light,#e5e7eb);border-radius:var(--radius,8px);border-left:3px solid #f59e0b;">
+                <div style="font-weight:600;font-size:0.875rem;color:var(--ink);margin-bottom:4px;">Knowledge Base</div>
+                <div style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Upload your Scheme of Work and reference materials. Co-Cher uses these as context when generating lesson content, ensuring alignment with your teaching plan.</div>
+              </div>
+
+              <div style="padding:var(--sp-3);border:1px solid var(--border-light,#e5e7eb);border-radius:var(--radius,8px);border-left:3px solid #8b5cf6;">
+                <div style="font-weight:600;font-size:0.875rem;color:var(--ink);margin-bottom:4px;">Assessment (AaL / AfL / AoL)</div>
+                <div style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Three assessment modes: AaL for metacognitive reflections, AfL for formative exit tickets, and AoL for summative tests with Table of Specifications and Bloom's taxonomy alignment.</div>
+              </div>
+
+              <div style="padding:var(--sp-3);border:1px solid var(--border-light,#e5e7eb);border-radius:var(--radius,8px);border-left:3px solid #ec4899;">
+                <div style="font-weight:600;font-size:0.875rem;color:var(--ink);margin-bottom:4px;">Spatial Designer</div>
+                <div style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Plan classroom layouts for PE circuits, group work, or lab setups. Drag equipment and student positions on a grid. Includes preset templates and E21CC alignment.</div>
+              </div>
+
+              <div style="padding:var(--sp-3);border:1px solid var(--border-light,#e5e7eb);border-radius:var(--radius,8px);border-left:3px solid #06b6d4;">
+                <div style="font-weight:600;font-size:0.875rem;color:var(--ink);margin-bottom:4px;">Simulations</div>
+                <div style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Browse and launch science simulations and interactives covering Biology, Chemistry, and Physics. Includes molecular builders, particle dynamics, and more.</div>
+              </div>
+
+            </div>
+          </div>
+
+          <div style="padding:var(--sp-4);border:1px solid var(--border-light,#e5e7eb);border-radius:var(--radius,8px);background:var(--bg-card,#fff);">
+            <h3 style="font-size:1rem;font-weight:600;margin-bottom:var(--sp-1);color:var(--ink);">How Preferences Work</h3>
+            <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-2);">
+              Your <strong>pedagogical priorities</strong> (set during onboarding or in General settings) directly influence how Co-Cher generates lesson content:
+            </p>
+            <ul style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.7;padding-left:20px;margin:0;">
+              <li><strong>Differentiated Instruction</strong> — AI generates tiered activities and scaffolded content for diverse learners</li>
+              <li><strong>Collaborative Learning</strong> — Suggestions emphasise group work, discussion protocols, and peer activities</li>
+              <li><strong>Critical Thinking</strong> — Higher-order questions and analysis tasks are prioritised</li>
+              <li><strong>Student-Centred</strong> — Activities shift focus from teacher-led to student-driven exploration</li>
+              <li><strong>Assessment for Learning</strong> — Formative check-ins and exit tickets are woven into lesson plans</li>
+              <li><strong>ICT Integration</strong> — Digital tools and simulations are recommended where appropriate</li>
+            </ul>
+            <p style="font-size:0.75rem;color:var(--ink-faint);margin-top:var(--sp-2);margin-bottom:0;">
+              These priorities are injected into AI prompts as context. You can update them anytime in the General tab above.
+            </p>
+          </div>
+
+        </div><!-- end help panel -->
+
       </div>
     </div>
   `;
@@ -691,6 +771,12 @@ export function render(container) {
         }
       }
     }
+  });
+
+  // ── Replay Tour ──
+  container.querySelector('#replay-tour-btn')?.addEventListener('click', () => {
+    resetTour('main');
+    startTour('main');
   });
 
   // ── Clear Sample Data ──

@@ -62,6 +62,13 @@ export const EEE_REGISTRY = {
   sourceAnalysis: { label: 'Source Analysis',     cat: 'enactment', desc: 'Structured SBQ/SEQ-style source-based questions', subjects: ['History', 'Social Studies', 'General Paper', 'Geography'] },
   seatPlan:       { label: 'Seating Plan',        cat: 'enactment', desc: 'AI seat assignments with visual classroom map', subjects: ['all'] },
   cceDiscussion:  { label: 'CCE Discussion',      cat: 'enactment', desc: 'Structured values-based discussion with CCE2021 framework', subjects: ['CCE', 'Social Studies', 'all'] },
+  // === NEW TOOLS — Arts, Music, NFS, D&T ===
+  staveNotation:  { label: 'Stave Notation',      cat: 'enactment', desc: 'Staff notation snippets for music theory — treble/bass clef, time signatures, note values', subjects: ['Music'] },
+  rhythmTool:     { label: 'Rhythm & Percussion',  cat: 'enactment', desc: 'Interactive rhythm patterns, drum notation, and body percussion guides', subjects: ['Music'] },
+  artCritique:    { label: 'Art Critique Guide',   cat: 'enactment', desc: 'Structured observation prompts using Feldman model: describe, analyse, interpret, judge', subjects: ['Art'] },
+  designProcess:  { label: 'Design Process',       cat: 'enactment', desc: 'D&T design thinking framework: identify, explore, develop, realise, test', subjects: ['D&T', 'Design & Technology'] },
+  recipeBuilder:  { label: 'Recipe & Nutrition',   cat: 'enactment', desc: 'Recipe card builder with nutritional analysis and food safety notes', subjects: ['NFS', 'Food & Nutrition', 'FCE'] },
+  kitchenLayout:  { label: 'Kitchen Layout',       cat: 'enactment', desc: 'Plan kitchen workstation layout — spatial planner opens with kitchen preset', subjects: ['NFS', 'Food & Nutrition', 'FCE'] },
 };
 
 const DEFAULT_PLANNER = ['youtubeVideos', 'worksheet', 'externalLinks', 'seatPlan', 'simulations', 'stimulus', 'vocabulary', 'modelResponse', 'sourceAnalysis', 'cceDiscussion'];
@@ -125,6 +132,12 @@ const COMPONENT_META = {
   modelResponse:   { label: 'Model Response',            color: '#d946ef',              icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>', order: 15 },
   sourceAnalysis:  { label: 'Source Analysis',           color: '#f97316',              icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>', order: 16 },
   cceDiscussion:   { label: 'CCE Discussion',            color: '#e11d48',              icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>', order: 17 },
+  staveNotation:   { label: 'Stave Notation',            color: '#7c3aed',              icon: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>', order: 18 },
+  rhythmTool:      { label: 'Rhythm & Percussion',       color: '#a855f7',              icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/>', order: 19 },
+  artCritique:     { label: 'Art Critique Guide',         color: '#ec4899',              icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>', order: 20 },
+  designProcess:   { label: 'Design Process',             color: '#14b8a6',              icon: '<polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/>', order: 21 },
+  recipeBuilder:   { label: 'Recipe & Nutrition',         color: '#f97316',              icon: '<path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10H5a7 7 0 0 0 14 0z"/><line x1="12" y1="17" x2="12" y2="22"/>', order: 22 },
+  kitchenLayout:   { label: 'Kitchen Layout',             color: '#0d9488',              icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>', order: 23 },
 };
 
 function setComponent(key, content, meta = '') {
@@ -757,12 +770,31 @@ const AI_TOOLS = [
   { id: 'ai-model-response-btn', label: 'Model Resp.', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>', color: '#d946ef', cat: 'enactment', eee: 'modelResponse' },
   { id: 'ai-source-analysis-btn', label: 'Source Analysis', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>', color: '#f97316', cat: 'enactment', eee: 'sourceAnalysis' },
   { id: 'ai-cce-btn', label: 'CCE Discussion', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>', color: '#e11d48', cat: 'enactment', eee: 'cceDiscussion' },
+  { id: 'ai-stave-btn', label: 'Stave Notation', icon: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>', color: '#7c3aed', cat: 'enactment', eee: 'staveNotation' },
+  { id: 'ai-rhythm-btn', label: 'Rhythm', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/>', color: '#a855f7', cat: 'enactment', eee: 'rhythmTool' },
+  { id: 'ai-art-critique-btn', label: 'Art Critique', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>', color: '#ec4899', cat: 'enactment', eee: 'artCritique' },
+  { id: 'ai-design-process-btn', label: 'Design Process', icon: '<polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>', color: '#14b8a6', cat: 'enactment', eee: 'designProcess' },
+  { id: 'ai-recipe-btn', label: 'Recipe & Nutrition', icon: '<path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10H5a7 7 0 0 0 14 0z"/>', color: '#f97316', cat: 'enactment', eee: 'recipeBuilder' },
+  { id: 'ai-kitchen-btn', label: 'Kitchen Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>', color: '#0d9488', cat: 'enactment', eee: 'kitchenLayout' },
   { id: 'spatial-layout-btn', label: 'Spatial Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', color: '', cat: 'planning', eee: 'seatPlan' }
 ];
 
 function buildToolbarHTML(mode) {
   // Filter tools based on EEE selections
-  const visibleTools = AI_TOOLS.filter(t => isEEEEnabled(t.eee));
+  let visibleTools = AI_TOOLS.filter(t => isEEEEnabled(t.eee));
+
+  // Smart subject-based floating: tools matching the current class subject go first
+  const currentSubject = planClassContext?.subject || '';
+  if (currentSubject) {
+    const subjectNorm = currentSubject.toLowerCase();
+    visibleTools = [...visibleTools].sort((a, b) => {
+      const aEntry = EEE_REGISTRY[a.eee];
+      const bEntry = EEE_REGISTRY[b.eee];
+      const aMatch = aEntry?.subjects?.some(s => s === 'all' || s.toLowerCase() === subjectNorm) ? 1 : 0;
+      const bMatch = bEntry?.subjects?.some(s => s === 'all' || s.toLowerCase() === subjectNorm) ? 1 : 0;
+      return bMatch - aMatch; // subject-relevant tools first
+    });
+  }
 
   if (mode === 'dropdown') {
     const cats = { planning: 'Planning', assess: 'Assessment', enactment: 'Enactment' };
@@ -1871,6 +1903,49 @@ export function render(container) {
 
   // Linked Resources
   renderLinkedResourcesSection(container);
+  // === NEW TOOLS: Arts, Music, NFS, D&T ===
+  const newToolHandler = async (btnId, toolKey, label, systemPrompt) => {
+    container.querySelector(btnId)?.addEventListener('click', async () => {
+      if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+      const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+      if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+      const planText = aiMsgs.map(m => m.content).join('\n\n');
+      const cls = planClassContext || {};
+      const resultEl = container.querySelector('#ai-result');
+      resultEl.innerHTML = `<div class="chat-typing" style="padding:var(--sp-4);">Generating ${label}...</div>`;
+      resultEl.scrollIntoView({ behavior: 'smooth' });
+      try {
+        const result = await sendChat([{ role: 'user', content: `Based on this lesson plan:\n\n${planText}\n\nGenerate ${label} content for ${cls.subject || 'the lesson'} (${cls.level || 'Secondary'}).` }], {
+          systemPrompt, temperature: 0.6, maxTokens: 2048
+        });
+        setComponent(toolKey, result, cls.subject || label);
+        resultEl.innerHTML = '';
+        renderComponents(container);
+        showToast(`${label} added!`, 'success');
+      } catch (err) {
+        resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+      }
+    });
+  };
+
+  newToolHandler('#ai-stave-btn', 'staveNotation', 'Stave Notation',
+    'You are a music theory specialist for Singapore secondary schools. Generate staff notation exercises with treble clef, time signatures, and note values. Use text-based notation representation that is clear and educational.');
+  newToolHandler('#ai-rhythm-btn', 'rhythmTool', 'Rhythm & Percussion',
+    'You are a music education specialist for Singapore schools. Generate rhythm patterns, body percussion sequences, and drum notation guides. Include counting patterns and call-and-response exercises.');
+  newToolHandler('#ai-art-critique-btn', 'artCritique', 'Art Critique Guide',
+    'You are an art education specialist for Singapore schools. Generate structured art critique guides using the Feldman model: describe, analyse, interpret, judge. Include guiding questions for each stage.');
+  newToolHandler('#ai-design-process-btn', 'designProcess', 'Design Process',
+    'You are a Design & Technology specialist for Singapore secondary schools. Generate a structured design process guide: identify needs, explore ideas, develop solutions, realise prototype, test and evaluate. Include specific prompts for each stage.');
+  newToolHandler('#ai-recipe-btn', 'recipeBuilder', 'Recipe & Nutrition',
+    'You are a Food & Nutrition Science specialist for Singapore secondary schools. Generate recipe cards with ingredients, step-by-step instructions, nutritional information, and food safety notes. Align with NFS syllabus outcomes.');
+
+  container.querySelector('#ai-kitchen-btn')?.addEventListener('click', () => {
+    // Open spatial designer with a kitchen preset hint
+    sessionStorage.setItem('cocher_spatial_preset', 'stations'); // stations preset works for kitchen layout
+    import('../router.js').then(m => m.navigate('/spatial'));
+    showToast('Opening Spatial Designer for kitchen layout...', 'success');
+  });
+
   container.querySelector('#spatial-layout-btn')?.addEventListener('click', () => {
     const spatialSection = container.querySelector('#spatial-section');
     spatialSection.scrollIntoView({ behavior: 'smooth' });

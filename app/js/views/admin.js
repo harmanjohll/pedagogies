@@ -9,6 +9,29 @@ import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { openModal } from '../components/modals.js';
 import { sendChat } from '../api.js';
+import { getCurrentUser } from '../components/login.js';
+
+/**
+ * Build a FormSG URL with pre-populated query parameters.
+ * FormSG supports ?field_id=value for pre-filling.
+ * We pass event metadata as URL-encoded parameters.
+ */
+function buildFormURL(baseUrl, event, task) {
+  try {
+    const url = new URL(baseUrl);
+    const user = getCurrentUser();
+    // Pre-populate common fields via FormSG prefill convention
+    if (user?.name) url.searchParams.set('prefill_name', user.name);
+    if (user?.email) url.searchParams.set('prefill_email', user.email);
+    if (event?.title) url.searchParams.set('prefill_event', event.title);
+    if (event?.date) url.searchParams.set('prefill_date', event.date);
+    if (task?.data?.venue) url.searchParams.set('prefill_venue', task.data.venue);
+    if (task?.data?.num_students) url.searchParams.set('prefill_students', task.data.num_students);
+    return url.toString();
+  } catch {
+    return baseUrl;
+  }
+}
 
 /* ── Admin task templates (checked by default) ── */
 const EVENT_TASKS = [
@@ -132,6 +155,49 @@ const ADMIN_TOOLS = [
   { key: 'calendar', label: 'Department Calendar', desc: 'View and plan department events, deadlines, and milestones.', icon: '📅' }
 ];
 
+/* ── In-app iframe overlay for admin tools ── */
+function openAdminOverlay(title, href) {
+  // External links (form.gov.sg etc.) open in new tab since they block iframing
+  if (href.startsWith('http')) {
+    window.open(href, '_blank');
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);animation:simFadeIn 0.2s ease;';
+
+  const win = document.createElement('div');
+  win.style.cssText = 'position:absolute;top:2%;left:3%;right:3%;bottom:2%;display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:12px;box-shadow:0 25px 60px rgba(0,0,0,0.4);';
+
+  const topBar = document.createElement('div');
+  topBar.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--bg-card,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0;';
+  topBar.innerHTML = `
+    <span style="font-weight:600;font-size:0.9375rem;color:var(--ink);flex:1;">${title}</span>
+    <button style="background:none;border:none;cursor:pointer;padding:4px 10px;font-size:1.25rem;color:var(--ink-muted);border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='var(--surface-hover,#f1f5f9)'" onmouseout="this.style.background='none'" id="admin-overlay-close">&times;</button>
+  `;
+
+  const iframe = document.createElement('iframe');
+  iframe.src = href;
+  iframe.style.cssText = 'flex:1;border:none;width:100%;background:#fff;';
+
+  win.appendChild(topBar);
+  win.appendChild(iframe);
+  overlay.appendChild(win);
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.2s';
+    setTimeout(() => overlay.remove(), 200);
+  };
+
+  topBar.querySelector('#admin-overlay-close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+  });
+}
+
 /* ══════════ Main render ══════════ */
 export function render(container) {
   const events = Store.get('adminEvents') || [];
@@ -206,7 +272,7 @@ function renderQuickTools(el) {
     if (!card) return;
     const tool = ADMIN_TOOLS.find(t => t.key === card.dataset.tool);
     if (tool?.href) {
-      window.open(tool.href, '_blank');
+      openAdminOverlay(tool.label, tool.href);
     } else if (tool?.key === 'quick_aor') {
       showQuickAOR();
     } else {
@@ -571,7 +637,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
                   ${isComplete ? 'Mark Incomplete' : 'Mark Complete'}
                 </button>
                 ${tmpl.externalLink ? `
-                  <a href="${tmpl.externalLink.url}" target="_blank" rel="noopener" class="btn btn-sm" style="background:var(--info);color:#fff;text-decoration:none;margin-left:auto;">
+                  <a href="${buildFormURL(tmpl.externalLink.url, event, task)}" target="_blank" rel="noopener" class="btn btn-sm" style="background:var(--info);color:#fff;text-decoration:none;margin-left:auto;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     ${tmpl.externalLink.label}
                   </a>
