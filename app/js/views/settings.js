@@ -217,38 +217,61 @@ function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
     });
   }
 
-  // Subject filter tabs
-  let html = `<div style="margin-bottom:var(--sp-3);">
-    <div style="font-size:0.6875rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Browse by Subject</div>
-    <div style="display:flex;flex-wrap:wrap;gap:4px;">
-      ${EEE_SUBJECT_GROUPS.map(g => `
-        <button class="eee-filter-btn btn btn-ghost btn-sm" data-filter="${g.id}" style="font-size:0.6875rem;padding:4px 10px;border-radius:999px;${filterGroup === g.id ? 'background:var(--accent);color:#fff;' : ''}">${g.label}</button>
-      `).join('')}
+  // Subject filter tabs — refined pill style
+  let html = `<div style="margin-bottom:14px;">
+    <div style="font-size:0.625rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Browse by Subject</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;">
+      ${EEE_SUBJECT_GROUPS.map(g => {
+        const isAct = filterGroup === g.id;
+        return `<button class="eee-filter-btn" data-filter="${g.id}" style="
+          font-size:0.6875rem;font-weight:${isAct ? '600' : '500'};font-family:inherit;
+          padding:5px 14px;border-radius:999px;cursor:pointer;
+          border:1px solid ${isAct ? 'var(--accent)' : 'var(--border-light, #d1d5db)'};
+          background:${isAct ? 'var(--accent)' : 'var(--bg, #fff)'};
+          color:${isAct ? '#fff' : 'var(--ink-secondary, #555)'};
+          transition:all 0.15s;
+        ">${g.label}</button>`;
+      }).join('')}
     </div>
   </div>`;
 
-  // Pedagogy filter row
-  html += `<div style="margin-bottom:var(--sp-3);">
-    <div style="font-size:0.6875rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Filter by Pedagogical Approach</div>
-    <div style="display:flex;flex-wrap:wrap;gap:4px;">
-      <button class="eee-ped-btn btn btn-ghost btn-sm" data-ped="" style="font-size:0.6875rem;padding:4px 10px;border-radius:999px;${!pedFilter ? 'background:var(--accent);color:#fff;' : ''}">All Approaches</button>
-      ${PEDAGOGY_APPROACHES.map(p => `
-        <button class="eee-ped-btn btn btn-ghost btn-sm" data-ped="${p.id}" style="font-size:0.6875rem;padding:4px 10px;border-radius:999px;${pedFilter === p.id ? 'background:#4338ca;color:#fff;' : ''}">${p.label}</button>
-      `).join('')}
+  // Pedagogy filter row — refined pill style
+  html += `<div style="margin-bottom:14px;">
+    <div style="font-size:0.625rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Filter by Pedagogical Approach</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;">
+      <button class="eee-ped-btn" data-ped="" style="
+        font-size:0.6875rem;font-weight:${!pedFilter ? '600' : '500'};font-family:inherit;
+        padding:5px 14px;border-radius:999px;cursor:pointer;
+        border:1px solid ${!pedFilter ? '#6366f1' : 'var(--border-light, #d1d5db)'};
+        background:${!pedFilter ? '#6366f1' : 'var(--bg, #fff)'};
+        color:${!pedFilter ? '#fff' : 'var(--ink-secondary, #555)'};
+        transition:all 0.15s;
+      ">All</button>
+      ${PEDAGOGY_APPROACHES.map(p => {
+        const isAct = pedFilter === p.id;
+        return `<button class="eee-ped-btn" data-ped="${p.id}" style="
+          font-size:0.6875rem;font-weight:${isAct ? '600' : '500'};font-family:inherit;
+          padding:5px 14px;border-radius:999px;cursor:pointer;
+          border:1px solid ${isAct ? '#6366f1' : 'var(--border-light, #d1d5db)'};
+          background:${isAct ? '#6366f1' : 'var(--bg, #fff)'};
+          color:${isAct ? '#fff' : 'var(--ink-secondary, #555)'};
+          transition:all 0.15s;
+        ">${p.label}</button>`;
+      }).join('')}
     </div>
   </div>`;
 
   // Select/deselect all row
-  html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-2);background:var(--bg-subtle);border-radius:var(--radius);border:1px solid var(--border-light);">
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;margin-bottom:10px;background:var(--bg-subtle, #f8f9fa);border-radius:10px;border:1px solid var(--border-light, #e5e7eb);">
     <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);">Select / Deselect All</div>
     <div style="display:flex;gap:16px;">
-      <label style="font-size:0.6875rem;color:var(--ink-muted);display:flex;align-items:center;gap:4px;"><input type="checkbox" id="eee-sidebar-all" ${sidebarSel.length === entries.length ? 'checked' : ''} /> Sidebar</label>
-      <label style="font-size:0.6875rem;color:var(--ink-muted);display:flex;align-items:center;gap:4px;"><input type="checkbox" id="eee-planner-all" ${plannerSel.length >= entries.length ? 'checked' : ''} /> Planner</label>
+      <label style="font-size:0.6875rem;font-weight:500;color:var(--ink-secondary);display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="eee-sidebar-all" ${sidebarSel.length === entries.length ? 'checked' : ''} /> Sidebar</label>
+      <label style="font-size:0.6875rem;font-weight:500;color:var(--ink-secondary);display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="eee-planner-all" ${plannerSel.length >= entries.length ? 'checked' : ''} /> Planner</label>
     </div>
   </div>`;
 
   // Marketplace card grid — 3-4 columns
-  html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--sp-3);">`;
+  html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">`;
   filtered.forEach(([key, v]) => {
     const inPlanner = plannerSel.includes(key);
     const inSidebar = sidebarSel.includes(key);
@@ -258,58 +281,63 @@ function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
     const isPedMatch = pedFilter && pedMatches.has(key);
     const dimmed = pedFilter && !pedMatches.has(key);
 
-    // Sub-type badge — NL palette tones
+    // Sub-type badge — mode-safe using CSS vars for text, tinted bg
     const typeBadge = v.type === 'tool'
-      ? '<span style="font-size:0.5625rem;padding:2px 7px;border-radius:8px;background:rgba(18,203,196,0.12);color:#12CBC4;border:1px solid rgba(18,203,196,0.25);white-space:nowrap;">Teaching Tool</span>'
-      : '<span style="font-size:0.5625rem;padding:2px 7px;border-radius:8px;background:rgba(255,195,18,0.12);color:#F79F1F;border:1px solid rgba(255,195,18,0.25);white-space:nowrap;">Lesson Resource</span>';
+      ? `<span style="font-size:0.5625rem;font-weight:600;padding:2px 8px;border-radius:6px;background:${_hexToRGBA('#0d9488', 0.14)};color:var(--ink-secondary);border:1px solid ${_hexToRGBA('#0d9488', 0.3)};white-space:nowrap;letter-spacing:0.02em;">Teaching Tool</span>`
+      : `<span style="font-size:0.5625rem;font-weight:600;padding:2px 8px;border-radius:6px;background:${_hexToRGBA('#d97706', 0.12)};color:var(--ink-secondary);border:1px solid ${_hexToRGBA('#d97706', 0.28)};white-space:nowrap;letter-spacing:0.02em;">Lesson Resource</span>`;
 
-    // Subject tags
+    // Subject tags — readable in both modes
     const subjectTags = (v.subjects || [])
       .filter(s => s !== 'all')
       .slice(0, 4)
-      .map(s => `<span style="font-size:0.5625rem;padding:1px 6px;border-radius:8px;background:var(--bg-subtle);color:var(--ink-faint);white-space:nowrap;">${s}</span>`)
+      .map(s => `<span style="font-size:0.5625rem;font-weight:500;padding:1px 7px;border-radius:6px;background:var(--bg-subtle, #f1f5f9);color:var(--ink-secondary);border:1px solid var(--border-light, #e2e8f0);white-space:nowrap;">${s}</span>`)
       .join('');
     const allTag = (v.subjects || []).includes('all')
-      ? '<span style="font-size:0.5625rem;padding:2px 7px;border-radius:8px;background:rgba(163,203,56,0.12);color:#A3CB38;border:1px solid rgba(163,203,56,0.2);white-space:nowrap;">All Subjects</span>'
+      ? `<span style="font-size:0.5625rem;font-weight:600;padding:2px 8px;border-radius:6px;background:${_hexToRGBA('#059669', 0.12)};color:var(--ink-secondary);border:1px solid ${_hexToRGBA('#059669', 0.28)};white-space:nowrap;">All Subjects</span>`
       : '';
 
-    // Pedagogy signpost — show most relevant match
+    // Pedagogy signpost — uses CSS var for readability across modes
     let signpost = '';
     if (v.pedagogy && v.pedagogy.length > 0) {
       const signpostKey = pedFilter && v.pedagogy.includes(pedFilter) ? pedFilter : v.pedagogy[0];
-      signpost = `<div style="font-size:0.625rem;font-style:italic;color:#9980FA;margin-top:4px;line-height:1.3;">${PEDAGOGY_SIGNPOSTS[signpostKey] || ''}</div>`;
+      signpost = `<div style="font-size:0.625rem;font-style:italic;color:var(--ink-faint);margin-top:4px;line-height:1.3;">${PEDAGOGY_SIGNPOSTS[signpostKey] || ''}</div>`;
     }
 
-    const cardBg = isActive ? _hexToRGBA(color, 0.08) : 'var(--bg-card, #fff)';
-    const cardBorder = isActive ? color : 'var(--border-light, #e5e7eb)';
-    const pedGlow = isPedMatch ? `box-shadow:0 0 0 3px ${_hexToRGBA('#6366f1', 0.18)};` : '';
+    // Card styling — refined, elevated with left accent bar
+    const cardBg = isActive ? _hexToRGBA(color, 0.06) : 'var(--bg-card, #fff)';
+    const cardBorder = isActive ? _hexToRGBA(color, 0.5) : 'var(--border-light, #e5e7eb)';
+    const activeLeftBar = isActive ? `border-left:3px solid ${color};` : 'border-left:3px solid transparent;';
+    const pedGlow = isPedMatch ? `box-shadow:0 0 0 2px ${_hexToRGBA('#6366f1', 0.22)};` : '';
 
     html += `
     <div class="eee-marketplace-card" data-eee="${key}" style="
-      padding:12px;border-radius:12px;
-      border:2px solid ${cardBorder};
+      padding:14px 14px 10px;border-radius:12px;
+      border:1px solid ${cardBorder};${activeLeftBar}
       background:${cardBg};
       transition:all 0.15s;cursor:default;position:relative;
-      ${dimmed ? 'opacity:0.45;' : ''}
+      box-shadow:0 1px 4px rgba(0,0,0,0.04);
+      ${dimmed ? 'opacity:0.4;' : ''}
       ${pedGlow}
     ">
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:6px;">
-        <div style="width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-          background:${isActive ? color : 'var(--bg-subtle)'};color:${isActive ? '#fff' : 'var(--ink-muted)'};font-size:1rem;">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+        <div style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+          background:${isActive ? color : _hexToRGBA(color, 0.1)};
+          color:${isActive ? '#fff' : color};font-size:1rem;
+          transition:all 0.15s;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${meta?.icon || '<circle cx="12" cy="12" r="10"/>'}</svg>
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:2px;">${v.label}</div>
-          <div style="font-size:0.6875rem;color:var(--ink-muted);line-height:1.3;">${v.desc}</div>
+          <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:2px;line-height:1.3;">${v.label}</div>
+          <div style="font-size:0.6875rem;color:var(--ink-muted);line-height:1.4;">${v.desc}</div>
           ${signpost}
         </div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">${typeBadge}${allTag}${subjectTags}</div>
-      <div style="display:flex;gap:12px;border-top:1px solid var(--border-light, #e5e7eb);padding-top:6px;">
-        <label style="font-size:0.6875rem;color:var(--ink-muted);display:flex;align-items:center;gap:4px;cursor:pointer;">
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${typeBadge}${allTag}${subjectTags}</div>
+      <div style="display:flex;gap:14px;border-top:1px solid var(--border-light, #e5e7eb);padding-top:8px;">
+        <label style="font-size:0.6875rem;font-weight:500;color:var(--ink-secondary);display:flex;align-items:center;gap:5px;cursor:pointer;">
           <input type="checkbox" class="eee-planner-toggle" data-eee="${key}" ${inPlanner ? 'checked' : ''} /> Planner
         </label>
-        <label style="font-size:0.6875rem;color:var(--ink-muted);display:flex;align-items:center;gap:4px;cursor:pointer;">
+        <label style="font-size:0.6875rem;font-weight:500;color:var(--ink-secondary);display:flex;align-items:center;gap:5px;cursor:pointer;">
           <input type="checkbox" class="eee-sidebar-toggle" data-eee="${key}" ${inSidebar ? 'checked' : ''} /> Sidebar
         </label>
       </div>
@@ -496,19 +524,26 @@ export function render(container) {
 
         <!-- EEE: Enactment Enhancement Marketplace -->
         <div class="card" style="margin-bottom: var(--sp-6);">
-          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Enactment &mdash; Tools &amp; Resources</h3>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.5;">
-            Browse <strong>Teaching Tools</strong> (interactive, run in class) and <strong>Lesson Resources</strong> (display or distribute).
-            Filter by subject or pedagogical approach. Toggle <strong>Planner</strong> to add to the Lesson Planner toolbar,
-            or <strong>Sidebar</strong> to pin to the left navigation. All tools are available to every teacher.
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--accent-light, rgba(67,97,238,0.08));display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div>
+              <h3 style="font-size: 1.0625rem; font-weight: 700; margin: 0; color: var(--ink);">Enactment &mdash; Tools &amp; Resources</h3>
+            </div>
+          </div>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: 16px; line-height: 1.6;">
+            Browse <strong style="color:var(--ink-secondary);">Teaching Tools</strong> (interactive, run in class) and <strong style="color:var(--ink-secondary);">Lesson Resources</strong> (display or distribute).
+            Filter by subject or pedagogical approach. Toggle <strong style="color:var(--ink-secondary);">Planner</strong> to add to the toolbar,
+            or <strong style="color:var(--ink-secondary);">Sidebar</strong> to pin to navigation.
           </p>
 
           <!-- Core tools (always on, shown for reference) -->
-          <div style="margin-bottom: var(--sp-4);">
-            <div style="font-size: 0.6875rem; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--sp-2);">Core Tools (always available)</div>
-            <div style="display: flex; flex-wrap: wrap; gap: var(--sp-1);">
+          <div style="margin-bottom: 16px;padding:10px 14px;background:var(--bg-subtle, #f8f9fa);border-radius:10px;border:1px solid var(--border-light, #e5e7eb);">
+            <div style="font-size: 0.625rem; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">Core Tools (always available)</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
               ${Object.entries(EEE_REGISTRY).filter(([,v]) => v.cat === 'core').map(([, v]) =>
-                `<span class="badge badge-blue" style="font-size: 0.6875rem; padding: 3px 8px;">${v.label}</span>`
+                `<span style="font-size:0.6875rem;font-weight:500;padding:3px 10px;border-radius:6px;background:var(--bg, #fff);color:var(--ink-secondary);border:1px solid var(--border-light, #e2e8f0);">${v.label}</span>`
               ).join('')}
             </div>
           </div>
@@ -517,7 +552,7 @@ export function render(container) {
           <div id="eee-tool-list">
             ${buildEEEListHTML()}
           </div>
-          <button class="btn btn-primary btn-sm" id="eee-save-btn" style="margin-top:var(--sp-3);">Save Enactment Tools</button>
+          <button class="btn btn-primary btn-sm" id="eee-save-btn" style="margin-top:12px;">Save Enactment Tools</button>
         </div>
 
         </div><!-- end planner panel -->

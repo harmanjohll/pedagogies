@@ -26,13 +26,14 @@ export function render(container) {
             <div style="flex:1;">
               <h3 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-2);">5-Stage Design Thinking</h3>
               <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-3);">
-                Guide students through the complete design cycle: <strong>Identify → Explore → Develop → Realise → Test</strong>.
-                Each stage has guided prompts, image upload, and links to external CAD and ML tools.
+                Guide students through the design thinking cycle: <strong>Empathise → Define → Ideate → Prototype → Test</strong>.
+                Each stage has guided prompts, phase-specific tools, image upload, and links to external CAD and ML tools.
               </p>
               <ul style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.8;padding-left:20px;margin-bottom:var(--sp-4);">
                 <li>5-stage guided workflow with prompts and templates</li>
                 <li>Image upload for sketches, photos, and screenshots at each stage</li>
-                <li>Integrated links: TinkerCAD, Onshape, Fusion 360, Teachable Machine</li>
+                <li>Phase tools: Empathy Maps, Crazy Eights, SCAMPER, Feedback Grid, and more</li>
+                <li>Integrated links: TinkerCAD, Onshape, Google Forms</li>
                 <li>3D printing guides with recommended slicer settings</li>
                 <li>Auto-save progress with export to Markdown journal</li>
                 <li>Visual completion tracker across all stages</li>
