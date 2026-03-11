@@ -40,35 +40,52 @@ function saveLPPrefs(p) {
 const EEE_KEY = 'cocher_eee_selections';
 const EEE_SIDEBAR_KEY = 'cocher_eee_sidebar';
 
+/* ── Pedagogical Approaches ── */
+export const PEDAGOGY_APPROACHES = [
+  { id: 'differentiation', label: 'Differentiation', icon: '&#9879;' },
+  { id: 'inquiry',         label: 'Inquiry-Based Learning', icon: '?' },
+  { id: 'collaborative',   label: 'Collaborative Learning', icon: '&#9733;' },
+  { id: 'direct',          label: 'Direct Instruction', icon: '&#9654;' },
+  { id: 'assessment',      label: 'Assessment for Learning', icon: '&#9733;' },
+  { id: 'e21cc',           label: 'E21CC Development', icon: '&#9883;' },
+  { id: 'sel',             label: 'SEL & Well-being', icon: '&#9786;' },
+  { id: 'edtech',          label: 'EdTech Integration', icon: '&#9000;' },
+  { id: 'engagement',      label: 'Student Engagement', icon: '&#9829;' },
+  { id: 'cce',             label: 'CCE & Values', icon: '&#9825;' },
+];
+
 // All available EEEs: core tools (always visible) and optional enhancements
+// type: 'tool' = interactive Teaching Tool, 'resource' = Lesson Resource (display/distribute)
 export const EEE_REGISTRY = {
   // === CORE (always enabled, not toggleable) ===
-  lisc:           { label: 'LI / SC',           cat: 'core', desc: 'Learning Intentions & Success Criteria with E21CC alignment' },
-  review:         { label: 'Lesson Review',      cat: 'core', desc: 'AI analysis of your lesson plan against STP & E21CC' },
-  timeline:       { label: 'Timeline',           cat: 'core', desc: 'Lesson pacing with phase-by-phase suggestions' },
-  grouping:       { label: 'Student Groups',     cat: 'core', desc: 'Group formation using class roster & E21CC profiles' },
-  differentiation:{ label: 'Differentiation',    cat: 'core', desc: 'Scaffolding & extension strategies for diverse learners' },
-  exitTicket:     { label: 'Exit Ticket',        cat: 'core', desc: 'Formative check questions for lesson closure' },
-  discussionPrompts:{ label: 'Discussion Prompts', cat: 'core', desc: 'Structured questions for classroom discourse' },
-  rubric:         { label: 'Rubric',             cat: 'core', desc: 'Assessment rubrics with criteria & levels' },
+  lisc:           { label: 'LI / SC',           cat: 'core', type: 'resource', desc: 'Learning Intentions & Success Criteria with E21CC alignment', pedagogy: ['assessment', 'e21cc'] },
+  review:         { label: 'Lesson Review',      cat: 'core', type: 'tool', desc: 'AI analysis of your lesson plan against STP & E21CC', pedagogy: ['assessment'] },
+  timeline:       { label: 'Timeline',           cat: 'core', type: 'resource', desc: 'Lesson pacing with phase-by-phase suggestions', pedagogy: ['direct', 'engagement'] },
+  grouping:       { label: 'Student Groups',     cat: 'core', type: 'tool', desc: 'Group formation using class roster & E21CC profiles', pedagogy: ['collaborative', 'differentiation', 'e21cc'] },
+  differentiation:{ label: 'Differentiation',    cat: 'core', type: 'resource', desc: 'Scaffolding & extension strategies for diverse learners', pedagogy: ['differentiation'] },
+  exitTicket:     { label: 'Exit Ticket',        cat: 'core', type: 'resource', desc: 'Formative check questions for lesson closure', pedagogy: ['assessment', 'engagement'] },
+  discussionPrompts:{ label: 'Discussion Prompts', cat: 'core', type: 'tool', desc: 'Structured questions for classroom discourse', pedagogy: ['inquiry', 'collaborative', 'engagement'] },
+  rubric:         { label: 'Rubric',             cat: 'core', type: 'resource', desc: 'Assessment rubrics with criteria & levels', pedagogy: ['assessment'] },
   // === ENACTMENT ENHANCEMENTS (teacher chooses) ===
-  youtubeVideos:  { label: 'YouTube Curation',   cat: 'enactment', desc: 'Curated video recommendations with preview tiles', subjects: ['all'] },
-  simulations:    { label: 'Simulations & Models', cat: 'enactment', desc: 'Interactive sims: PhET, GeoGebra, built-in practicals', subjects: ['Science', 'Chemistry', 'Physics', 'Biology', 'Mathematics', 'Geography'] },
-  worksheet:      { label: 'Worksheet / Handout', cat: 'enactment', desc: 'Print-ready student worksheets with mixed question types', subjects: ['all'] },
-  externalLinks:  { label: 'External Resources', cat: 'enactment', desc: 'Curated links to SLS, MOE resources, and open platforms', subjects: ['all'] },
-  stimulus:       { label: 'Stimulus Material',  cat: 'enactment', desc: 'Comprehension passages, source texts, scenario briefs', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'History', 'Social Studies', 'Geography', 'General Paper'] },
-  vocabulary:     { label: 'Vocabulary Builder', cat: 'enactment', desc: 'Word walls, sentence frames, cloze passages, academic language', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'all'] },
-  modelResponse:  { label: 'Model Response',     cat: 'enactment', desc: 'Annotated model answers showing structure & techniques', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'History', 'Social Studies', 'General Paper', 'Geography'] },
-  sourceAnalysis: { label: 'Source Analysis',     cat: 'enactment', desc: 'Structured SBQ/SEQ-style source-based questions', subjects: ['History', 'Social Studies', 'General Paper', 'Geography'] },
-  seatPlan:       { label: 'Seating Plan',        cat: 'enactment', desc: 'AI seat assignments with visual classroom map', subjects: ['all'] },
-  cceDiscussion:  { label: 'CCE Discussion',      cat: 'enactment', desc: 'Structured values-based discussion with CCE2021 framework', subjects: ['CCE', 'Social Studies', 'all'] },
+  // type: 'tool' = Teaching Tool (interactive, run in class)
+  // type: 'resource' = Lesson Resource (display/distribute in class)
+  youtubeVideos:  { label: 'YouTube Curation',   cat: 'enactment', type: 'resource', desc: 'Curated video recommendations with preview tiles', subjects: ['all'], pedagogy: ['engagement', 'edtech', 'direct'] },
+  simulations:    { label: 'Simulations & Models', cat: 'enactment', type: 'tool', desc: 'Interactive sims: PhET, GeoGebra, built-in practicals', subjects: ['Science', 'Chemistry', 'Physics', 'Biology', 'Mathematics', 'Geography'], pedagogy: ['inquiry', 'edtech', 'engagement'] },
+  worksheet:      { label: 'Worksheet / Handout', cat: 'enactment', type: 'resource', desc: 'Print-ready student worksheets with mixed question types', subjects: ['all'], pedagogy: ['differentiation', 'assessment', 'direct'] },
+  externalLinks:  { label: 'External Resources', cat: 'enactment', type: 'resource', desc: 'Curated links to SLS, MOE resources, and open platforms', subjects: ['all'], pedagogy: ['edtech', 'inquiry'] },
+  stimulus:       { label: 'Stimulus Material',  cat: 'enactment', type: 'resource', desc: 'Comprehension passages, source texts, scenario briefs', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'History', 'Social Studies', 'Geography', 'General Paper'], pedagogy: ['inquiry', 'direct', 'engagement'] },
+  vocabulary:     { label: 'Vocabulary Builder', cat: 'enactment', type: 'resource', desc: 'Word walls, sentence frames, cloze passages, academic language', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'all'], pedagogy: ['differentiation', 'direct'] },
+  modelResponse:  { label: 'Model Response',     cat: 'enactment', type: 'resource', desc: 'Annotated model answers showing structure & techniques', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'History', 'Social Studies', 'General Paper', 'Geography'], pedagogy: ['direct', 'assessment'] },
+  sourceAnalysis: { label: 'Source Analysis',     cat: 'enactment', type: 'tool', desc: 'Structured SBQ/SEQ-style source-based questions', subjects: ['History', 'Social Studies', 'General Paper', 'Geography'], pedagogy: ['inquiry', 'assessment', 'e21cc'] },
+  seatPlan:       { label: 'Seating Plan',        cat: 'enactment', type: 'tool', desc: 'AI seat assignments with visual classroom map', subjects: ['all'], pedagogy: ['collaborative', 'differentiation', 'sel'] },
+  cceDiscussion:  { label: 'CCE Discussion',      cat: 'enactment', type: 'tool', desc: 'Structured values-based discussion with CCE2021 framework', subjects: ['CCE', 'Social Studies', 'all'], pedagogy: ['cce', 'sel', 'collaborative'] },
   // === NEW TOOLS — Arts, Music, NFS, D&T ===
-  staveNotation:  { label: 'Stave Notation',      cat: 'enactment', desc: 'Staff notation snippets for music theory — treble/bass clef, time signatures, note values', subjects: ['Music'] },
-  rhythmTool:     { label: 'Rhythm & Percussion',  cat: 'enactment', desc: 'Interactive rhythm patterns, drum notation, and body percussion guides', subjects: ['Music'] },
-  artCritique:    { label: 'Art Critique Guide',   cat: 'enactment', desc: 'Structured observation prompts using Feldman model: describe, analyse, interpret, judge', subjects: ['Art'] },
-  designProcess:  { label: 'Design Process',       cat: 'enactment', desc: 'D&T design thinking framework: identify, explore, develop, realise, test', subjects: ['D&T', 'Design & Technology'] },
-  recipeBuilder:  { label: 'Recipe & Nutrition',   cat: 'enactment', desc: 'Recipe card builder with nutritional analysis and food safety notes', subjects: ['NFS', 'Food & Nutrition', 'FCE'] },
-  kitchenLayout:  { label: 'Kitchen Layout',       cat: 'enactment', desc: 'Plan kitchen workstation layout — spatial planner opens with kitchen preset', subjects: ['NFS', 'Food & Nutrition', 'FCE'] },
+  staveNotation:  { label: 'Stave Notation',      cat: 'enactment', type: 'tool', desc: 'Staff notation snippets for music theory — treble/bass clef, time signatures, note values', subjects: ['Music'], pedagogy: ['direct', 'engagement'] },
+  rhythmTool:     { label: 'Rhythm & Percussion',  cat: 'enactment', type: 'tool', desc: 'Interactive rhythm patterns, drum notation, and body percussion guides', subjects: ['Music'], pedagogy: ['engagement', 'collaborative'] },
+  artCritique:    { label: 'Art Critique Guide',   cat: 'enactment', type: 'tool', desc: 'Structured observation prompts using Feldman model: describe, analyse, interpret, judge', subjects: ['Art'], pedagogy: ['inquiry', 'e21cc'] },
+  designProcess:  { label: 'Design Process',       cat: 'enactment', type: 'tool', desc: 'D&T design thinking framework: identify, explore, develop, realise, test', subjects: ['D&T', 'Design & Technology'], pedagogy: ['inquiry', 'e21cc', 'collaborative'] },
+  recipeBuilder:  { label: 'Recipe & Nutrition',   cat: 'enactment', type: 'resource', desc: 'Recipe card builder with nutritional analysis and food safety notes', subjects: ['NFS', 'Food & Nutrition', 'FCE'], pedagogy: ['direct', 'inquiry'] },
+  kitchenLayout:  { label: 'Kitchen Layout',       cat: 'enactment', type: 'tool', desc: 'Plan kitchen workstation layout — spatial planner opens with kitchen preset', subjects: ['NFS', 'Food & Nutrition', 'FCE'], pedagogy: ['collaborative', 'engagement'] },
 };
 
 const DEFAULT_PLANNER = ['youtubeVideos', 'worksheet', 'externalLinks', 'seatPlan', 'simulations', 'stimulus', 'vocabulary', 'modelResponse', 'sourceAnalysis', 'cceDiscussion'];
@@ -836,7 +853,7 @@ function buildToolbarHTML(mode) {
           <div style="flex:1;height:1px;background:var(--border-light);"></div>
         </div>`;
         html += others.map(t =>
-          `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}opacity:0.6;">
+          `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
           </button>`
         ).join('');
