@@ -98,7 +98,7 @@ export async function renderLogin(onComplete) {
         <input
           type="email"
           id="login-email"
-          placeholder="e.g. name@schools.gov.sg"
+          placeholder="e.g. name@btyss.moe.edu.sg"
           autocomplete="email"
           style="
             width: 100%; padding: 12px 14px;

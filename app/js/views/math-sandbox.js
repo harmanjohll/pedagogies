@@ -146,6 +146,34 @@ export function render(container) {
             <button id="ms-example-btn" class="btn btn-ghost">Load Example (Differentiation)</button>
           </div>
 
+          <!-- Math Scanner -->
+          <div style="margin-bottom:20px;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--bg-card);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="3"/></svg>
+              <span style="font-weight:700;font-size:0.9375rem;color:var(--ink);">Math Scanner</span>
+              <span style="font-size:0.6875rem;color:var(--ink-faint);background:var(--surface-hover);padding:1px 8px;border-radius:999px;">beta</span>
+            </div>
+            <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:12px;line-height:1.5;">
+              Upload a photo of handwritten or printed equations. AI will extract them as editable LaTeX.
+            </p>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Upload Image
+                <input type="file" id="ms-scanner-file" accept="image/*" style="display:none;" />
+              </label>
+              <span id="ms-scanner-filename" style="font-size:0.75rem;color:var(--ink-faint);"></span>
+            </div>
+            <div id="ms-scanner-preview" style="display:none;margin-top:12px;">
+              <img id="ms-scanner-img" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border);" />
+              <button class="btn btn-primary btn-sm" id="ms-scanner-extract" style="margin-top:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Extract LaTeX
+              </button>
+            </div>
+            <div id="ms-scanner-output" style="margin-top:12px;"></div>
+          </div>
+
           <div id="ms-output">
             ${outputText ? `
               <div class="ms-output-card" id="ms-rendered">
@@ -171,6 +199,71 @@ export function render(container) {
     container.querySelector('#ms-example-btn').addEventListener('click', () => {
       outputText = EXAMPLE_LESSON;
       renderView();
+    });
+
+    // Math Scanner events
+    const scannerFile = container.querySelector('#ms-scanner-file');
+    const scannerPreview = container.querySelector('#ms-scanner-preview');
+    const scannerImg = container.querySelector('#ms-scanner-img');
+    const scannerFilename = container.querySelector('#ms-scanner-filename');
+    let scannerBase64 = null;
+
+    scannerFile?.addEventListener('change', () => {
+      const file = scannerFile.files[0];
+      if (!file) return;
+      scannerFilename.textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        scannerBase64 = e.target.result;
+        scannerImg.src = scannerBase64;
+        scannerPreview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    container.querySelector('#ms-scanner-extract')?.addEventListener('click', async () => {
+      if (!scannerBase64) return;
+      const btn = container.querySelector('#ms-scanner-extract');
+      const output = container.querySelector('#ms-scanner-output');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="ms-spinner"></span>Extracting...';
+
+      try {
+        const text = await sendChat([{
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Extract ALL mathematical equations and expressions from this image. Return each equation as LaTeX, using $...$ for inline and $$...$$ for display. If there is handwritten working, reproduce each step. Format the output as clean LaTeX that can be rendered.' },
+            { type: 'image', source: { type: 'base64', media_type: scannerBase64.match(/data:(.*?);/)?.[1] || 'image/png', data: scannerBase64.split(',')[1] } }
+          ]
+        }], {
+          systemPrompt: 'You are a math OCR specialist. Extract equations from images and return them as clean LaTeX. Use $...$ for inline and $$...$$ for display math. Reproduce all steps and working shown.',
+          temperature: 0.2, maxTokens: 2048
+        });
+
+        output.innerHTML = `
+          <div class="ms-output-card" style="margin-top:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-weight:600;font-size:0.875rem;color:var(--ink);">Extracted LaTeX</span>
+              <button class="btn btn-ghost btn-sm" id="ms-scanner-copy" style="font-size:0.75rem;">Copy Raw</button>
+            </div>
+            <div id="ms-scanner-rendered">${renderMd(text)}</div>
+            <details style="margin-top:12px;">
+              <summary style="font-size:0.75rem;color:var(--ink-muted);cursor:pointer;">Show raw LaTeX source</summary>
+              <pre style="font-size:0.75rem;background:var(--surface-hover);padding:12px;border-radius:8px;overflow-x:auto;margin-top:8px;white-space:pre-wrap;">${text.replace(/</g, '&lt;')}</pre>
+            </details>
+          </div>
+        `;
+        processLatex(output.querySelector('#ms-scanner-rendered'));
+
+        output.querySelector('#ms-scanner-copy')?.addEventListener('click', () => {
+          navigator.clipboard.writeText(text).then(() => showToast('Copied raw LaTeX!', 'success'));
+        });
+      } catch (err) {
+        output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${err.message}</p>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Extract LaTeX';
+      }
     });
   }
 

@@ -11,6 +11,7 @@ import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { sendChat } from '../api.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
+import { processLatex } from '../utils/latex.js';
 
 /* ── Bloom's Cognitive Process Dimension ── */
 const BLOOMS = [
@@ -160,6 +161,47 @@ const ASSESS_STYLES = `
   .tos-2d-obj-label { font-weight: 700; font-size: 0.8125rem; color: var(--ink); }
   .tos-2d-obj-desc { color: var(--ink-muted); margin-top: 1px; }
 
+  /* ── AoL Wizard Stepper ── */
+  .aol-stepper { display: flex; align-items: center; gap: 0; margin-bottom: 20px; padding: 16px 0; }
+  .aol-step {
+    display: flex; align-items: center; gap: 8px; flex: 1; position: relative;
+    padding: 10px 16px; border-radius: 10px; cursor: default;
+    transition: all 0.2s;
+  }
+  .aol-step::after {
+    content: ''; position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
+    width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent;
+    border-left: 10px solid var(--border, #e2e5ea);
+  }
+  .aol-step:last-child::after { display: none; }
+  .aol-step-num {
+    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.8125rem; flex-shrink: 0;
+    background: var(--border, #e2e5ea); color: var(--ink-muted, #999);
+    transition: all 0.2s;
+  }
+  .aol-step-text { font-size: 0.8125rem; font-weight: 600; color: var(--ink-muted, #999); line-height: 1.2; }
+  .aol-step-hint { font-size: 0.6875rem; font-weight: 400; color: var(--ink-faint, #bbb); margin-top: 1px; }
+  .aol-step.active { background: rgba(67,97,238,0.08); }
+  .aol-step.active .aol-step-num { background: var(--accent, #4361ee); color: #fff; }
+  .aol-step.active .aol-step-text { color: var(--accent, #4361ee); }
+  .aol-step.active::after { border-left-color: rgba(67,97,238,0.2); }
+  .aol-step.done .aol-step-num { background: #22c55e; color: #fff; }
+  .aol-step.done .aol-step-text { color: #16a34a; }
+  .aol-step.done::after { border-left-color: rgba(34,197,94,0.2); }
+  .aol-tos-mismatch {
+    display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px;
+    background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 0.8125rem;
+    margin-top: 8px;
+  }
+  .dark .aol-tos-mismatch { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #fca5a5; }
+  .aol-tos-match {
+    display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px;
+    background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; font-size: 0.8125rem;
+    margin-top: 8px;
+  }
+  .dark .aol-tos-match { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.3); color: #86efac; }
+
   .tos-mode-toggle { display: inline-flex; border: 1px solid var(--border, #e2e5ea); border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
   .tos-mode-btn {
     padding: 8px 18px; font-size: 0.8125rem; font-weight: 600; cursor: pointer;
@@ -273,6 +315,26 @@ export function renderAoL(container) {
         </div>
 
         <div class="assess-card">
+          <!-- Wizard Stepper -->
+          <div class="aol-stepper" id="aol-stepper">
+            <div class="aol-step active" data-step="1">
+              <div class="aol-step-num">1</div>
+              <div><div class="aol-step-text">Setup</div><div class="aol-step-hint">Mode, objectives, marks</div></div>
+            </div>
+            <div class="aol-step" data-step="2">
+              <div class="aol-step-num">2</div>
+              <div><div class="aol-step-text">Build TOS</div><div class="aol-step-hint">Allocate marks to levels</div></div>
+            </div>
+            <div class="aol-step" data-step="3">
+              <div class="aol-step-num">3</div>
+              <div><div class="aol-step-text">Generate</div><div class="aol-step-hint">AI drafts questions</div></div>
+            </div>
+            <div class="aol-step" data-step="4">
+              <div class="aol-step-num">4</div>
+              <div><div class="aol-step-text">Review & Export</div><div class="aol-step-hint">Verify, then print/copy</div></div>
+            </div>
+          </div>
+
           <div class="assess-section-title">Table of Specifications (TOS)</div>
           <div class="assess-section-desc">
             A TOS maps assessment items to cognitive levels, ensuring balanced coverage.
@@ -437,9 +499,17 @@ export function renderAoL(container) {
     </div>
   `;
 
-  // Mode toggle
+  // Mode toggle with data-loss warning
   container.querySelectorAll('.tos-mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (btn.classList.contains('active')) return;
+      const cells = container.querySelectorAll('.tos-cell');
+      const hasData = [...cells].some(c => parseInt(c.value) > 0);
+      const hasQuestions = (container._aolQuestions || []).length > 0;
+      if (hasData || hasQuestions) {
+        if (!confirm('Switching modes will clear your current TOS data and any generated questions. Continue?')) return;
+      }
+      container._aolQuestions = null;
       tosMode = btn.dataset.mode;
       renderAoL(container);
     });
@@ -735,6 +805,7 @@ function wireAoLEvents(container, lessons) {
       const copyBtn = container.querySelector('#aol-copy-btn');
       if (exportBtn) exportBtn.disabled = !enabled;
       if (copyBtn) copyBtn.disabled = !enabled;
+      updateAoLStepper(container);
     });
   }
 
@@ -937,6 +1008,9 @@ function renderGeneratedQuestions(container, questions) {
   // Store questions on the container for export
   container._aolQuestions = [...questions];
 
+  // Update wizard stepper to reflect questions generated
+  updateAoLStepper(container);
+
   // Wire Keep/Edit/Delete buttons
   output.querySelectorAll('.aol-q-keep').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1002,6 +1076,9 @@ function renderGeneratedQuestions(container, questions) {
       }
     });
   });
+
+  // Render any LaTeX in generated questions
+  processLatex(output);
 }
 
 /* ── Export Questions (print-ready with watermark) ── */
@@ -1149,6 +1226,56 @@ function recalcTOS(container, rowCount, totalMarks) {
   if (grandEl) {
     grandEl.textContent = grandTotal;
     grandEl.style.color = grandTotal === totalMarks ? 'var(--success, #22c55e)' : (grandTotal > totalMarks ? 'var(--danger, #ef4444)' : 'var(--ink)');
+  }
+
+  // Show match / mismatch indicator
+  const existing = container.querySelector('.aol-tos-mismatch, .aol-tos-match');
+  if (existing) existing.remove();
+  const tosOutput = container.querySelector('#tos-output');
+  if (tosOutput && grandTotal > 0) {
+    const indicator = document.createElement('div');
+    if (grandTotal === totalMarks) {
+      indicator.className = 'aol-tos-match';
+      indicator.innerHTML = '\u2705 Mark allocation matches target (' + totalMarks + ' marks). Ready to generate questions.';
+    } else {
+      indicator.className = 'aol-tos-mismatch';
+      indicator.innerHTML = '\u26a0\ufe0f Allocated <strong>' + grandTotal + '</strong> of <strong>' + totalMarks + '</strong> marks. ' +
+        (grandTotal < totalMarks ? 'Distribute <strong>' + (totalMarks - grandTotal) + '</strong> more marks.' : 'Remove <strong>' + (grandTotal - totalMarks) + '</strong> marks.');
+    }
+    tosOutput.appendChild(indicator);
+  }
+
+  // Update wizard stepper
+  updateAoLStepper(container);
+}
+
+function updateAoLStepper(container) {
+  const steps = container.querySelectorAll('.aol-step');
+  if (!steps.length) return;
+
+  const hasTOS = container.querySelectorAll('.tos-cell').length > 0;
+  const cells = container.querySelectorAll('.tos-cell');
+  const hasData = [...cells].some(c => parseInt(c.value) > 0);
+  const hasQuestions = container.querySelector('#aol-questions-output')?.children.length > 0;
+  const reviewConfirmed = container.querySelector('#aol-review-confirm')?.checked;
+
+  steps.forEach(s => s.classList.remove('active', 'done'));
+
+  if (reviewConfirmed) {
+    steps.forEach(s => s.classList.add('done'));
+    steps[3].classList.add('active');
+    steps[3].classList.remove('done');
+  } else if (hasQuestions) {
+    [steps[0], steps[1], steps[2]].forEach(s => s.classList.add('done'));
+    steps[3].classList.add('active');
+  } else if (hasData) {
+    [steps[0], steps[1]].forEach(s => s.classList.add('done'));
+    steps[2].classList.add('active');
+  } else if (hasTOS) {
+    steps[0].classList.add('done');
+    steps[1].classList.add('active');
+  } else {
+    steps[0].classList.add('active');
   }
 }
 
@@ -1727,6 +1854,7 @@ Make them concrete, empowering, and suitable for student self-reflection journal
       });
 
       output.innerHTML = renderAIOutput(text);
+      processLatex(output);
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {
@@ -1777,6 +1905,7 @@ Make them empowering, non-defensive, and suitable for student self-reflection af
       });
 
       output.innerHTML = renderAIOutput(text);
+      processLatex(output);
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {
@@ -1860,6 +1989,7 @@ Format each as a numbered question. Make them concrete, student-friendly, and ap
       });
 
       output.innerHTML = renderAIOutput(text);
+      processLatex(output);
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {
@@ -2110,6 +2240,7 @@ function wireAfLEvents(container) {
       });
 
       output.innerHTML = renderAIOutput(text);
+      processLatex(output);
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {
@@ -2176,6 +2307,7 @@ function wireAfLEvents(container) {
       });
 
       output.innerHTML = renderAIOutput(text);
+      processLatex(output);
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {
