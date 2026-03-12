@@ -120,6 +120,20 @@ export function saveEEESidebarSelections(selections) {
   try { localStorage.setItem(EEE_SIDEBAR_KEY, JSON.stringify(selections)); } catch {}
 }
 
+/* ── Custom Links: teacher-added URLs in the marketplace ── */
+const CUSTOM_LINKS_KEY = 'cocher_custom_links';
+
+export function getCustomLinks() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_LINKS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+export function saveCustomLinks(links) {
+  try { localStorage.setItem(CUSTOM_LINKS_KEY, JSON.stringify(links)); } catch {}
+}
+
 function isEEEEnabled(toolKey) {
   const entry = EEE_REGISTRY[toolKey];
   if (!entry) return false;

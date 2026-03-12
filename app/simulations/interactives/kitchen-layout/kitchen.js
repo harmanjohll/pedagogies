@@ -160,10 +160,11 @@
         <button class="remove-btn" data-remove="${item.id}">&times;</button>
       `;
 
-      // Dragging
-      el.addEventListener('mousedown', (e) => {
+      // Dragging — pointer events for mouse + touch support
+      el.addEventListener('pointerdown', (e) => {
         if (e.target.closest('.remove-btn')) return;
         e.preventDefault();
+        el.setPointerCapture(e.pointerId);
         dragItem = item;
         dragOffset.x = e.clientX - item.x;
         dragOffset.y = e.clientY - item.y;
@@ -178,6 +179,8 @@
         updateInfoPanel(item);
       });
 
+      el.style.touchAction = 'none';
+
       placedContainer.appendChild(el);
     });
 
@@ -189,13 +192,16 @@
       el.textContent = `S${s.num}`;
       el.title = `Student ${s.num}`;
 
-      el.addEventListener('mousedown', (e) => {
+      el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        el.setPointerCapture(e.pointerId);
         dragItem = s;
         dragItem.w = 28; dragItem.h = 28;
         dragOffset.x = e.clientX - s.x;
         dragOffset.y = e.clientY - s.y;
       });
+
+      el.style.touchAction = 'none';
 
       placedContainer.appendChild(el);
     });
@@ -208,7 +214,7 @@
    * Drag & drop
    * ══════════════════════════════════════════ */
 
-  document.addEventListener('mousemove', (e) => {
+  document.addEventListener('pointermove', (e) => {
     if (!dragItem) return;
     const rect = canvas.getBoundingClientRect();
     dragItem.x = Math.max(0, Math.min(e.clientX - dragOffset.x, rect.width - (dragItem.w || 28)));
@@ -217,7 +223,7 @@
     draw();
   });
 
-  document.addEventListener('mouseup', () => {
+  document.addEventListener('pointerup', () => {
     dragItem = null;
   });
 
