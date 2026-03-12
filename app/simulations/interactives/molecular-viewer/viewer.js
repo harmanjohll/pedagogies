@@ -344,13 +344,15 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-/* ── Mouse interaction ── */
-canvas.addEventListener('mousedown', e => {
+/* ── Pointer interaction (unified mouse + touch) ── */
+canvas.style.touchAction = 'none';
+canvas.addEventListener('pointerdown', e => {
   dragging = true;
+  canvas.setPointerCapture(e.pointerId);
   lastMX = e.clientX;
   lastMY = e.clientY;
 });
-window.addEventListener('mousemove', e => {
+window.addEventListener('pointermove', e => {
   if (!dragging) return;
   const dx = e.clientX - lastMX;
   const dy = e.clientY - lastMY;
@@ -361,27 +363,7 @@ window.addEventListener('mousemove', e => {
   lastMX = e.clientX;
   lastMY = e.clientY;
 });
-window.addEventListener('mouseup', () => { dragging = false; });
-
-// Touch support
-canvas.addEventListener('touchstart', e => {
-  if (e.touches.length === 1) {
-    dragging = true;
-    lastMX = e.touches[0].clientX;
-    lastMY = e.touches[0].clientY;
-  }
-}, { passive: true });
-canvas.addEventListener('touchmove', e => {
-  if (!dragging || e.touches.length !== 1) return;
-  const dx = e.touches[0].clientX - lastMX;
-  const dy = e.touches[0].clientY - lastMY;
-  rotY += dx * 0.01;
-  rotX += dy * 0.01;
-  rotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotX));
-  lastMX = e.touches[0].clientX;
-  lastMY = e.touches[0].clientY;
-}, { passive: true });
-canvas.addEventListener('touchend', () => { dragging = false; }, { passive: true });
+window.addEventListener('pointerup', () => { dragging = false; });
 
 // Scroll to zoom
 canvas.addEventListener('wheel', e => {

@@ -9,7 +9,7 @@ import { validateApiKey, AVAILABLE_MODELS } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser } from '../components/login.js';
-import { EEE_REGISTRY, PEDAGOGY_APPROACHES, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections } from './lesson-planner.js';
+import { EEE_REGISTRY, PEDAGOGY_APPROACHES, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks } from './lesson-planner.js';
 import { startTour, resetTour } from '../components/spotlight-tour.js';
 
 /* ── Dashboard Layout Prefs ── */
@@ -195,6 +195,32 @@ function _hexToRGBA(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+function buildCustomLinksHTML() {
+  const links = getCustomLinks();
+  if (links.length === 0) {
+    return `<div style="font-size:0.8125rem;color:var(--ink-faint);padding:12px;text-align:center;">No custom links yet. Add one above.</div>`;
+  }
+  return links.map((link, i) => `
+    <div class="custom-link-card" data-link-idx="${i}">
+      <div class="custom-link-card-icon" style="background:var(--accent-light);color:var(--accent);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div class="custom-link-card-title">${link.title}</div>
+        <div class="custom-link-card-url">${link.url}</div>
+      </div>
+      <div class="custom-link-card-actions">
+        <button class="btn btn-ghost btn-sm custom-link-open" data-url="${link.url}" title="Open link" style="padding:4px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </button>
+        <button class="btn btn-ghost btn-sm custom-link-remove" data-link-idx="${i}" title="Remove" style="padding:4px;color:var(--danger);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
 function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
   const plannerSel = getEEESelections();
   const sidebarSel = getEEESidebarSelections();
@@ -217,56 +243,35 @@ function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
     });
   }
 
-  // Subject filter tabs — refined pill style
+  // Subject filter tabs — pill style using CSS classes
   let html = `<div style="margin-bottom:14px;">
-    <div style="font-size:0.625rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Browse by Subject</div>
+    <div class="mkt-section-label">Browse by Subject</div>
     <div style="display:flex;flex-wrap:wrap;gap:5px;">
       ${EEE_SUBJECT_GROUPS.map(g => {
         const isAct = filterGroup === g.id;
-        return `<button class="eee-filter-btn" data-filter="${g.id}" style="
-          font-size:0.6875rem;font-weight:${isAct ? '600' : '500'};font-family:inherit;
-          padding:5px 14px;border-radius:999px;cursor:pointer;
-          border:1px solid ${isAct ? 'var(--accent)' : 'var(--border-light, #d1d5db)'};
-          background:${isAct ? 'var(--accent)' : 'var(--bg, #fff)'};
-          color:${isAct ? '#fff' : 'var(--ink-secondary, #555)'};
-          transition:all 0.15s;
-        ">${g.label}</button>`;
+        return `<button class="pill eee-filter-btn${isAct ? ' active' : ''}" data-filter="${g.id}">${g.label}</button>`;
       }).join('')}
     </div>
   </div>`;
 
-  // Pedagogy filter row — refined pill style
+  // Pedagogy filter row — pill style using CSS classes
   html += `<div style="margin-bottom:14px;">
-    <div style="font-size:0.625rem;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Filter by Pedagogical Approach</div>
+    <div class="mkt-section-label">Filter by Pedagogical Approach</div>
     <div style="display:flex;flex-wrap:wrap;gap:5px;">
-      <button class="eee-ped-btn" data-ped="" style="
-        font-size:0.6875rem;font-weight:${!pedFilter ? '600' : '500'};font-family:inherit;
-        padding:5px 14px;border-radius:999px;cursor:pointer;
-        border:1px solid ${!pedFilter ? '#6366f1' : 'var(--border-light, #d1d5db)'};
-        background:${!pedFilter ? '#6366f1' : 'var(--bg, #fff)'};
-        color:${!pedFilter ? '#fff' : 'var(--ink-secondary, #555)'};
-        transition:all 0.15s;
-      ">All</button>
+      <button class="pill eee-ped-btn${!pedFilter ? ' active-indigo' : ''}" data-ped="">All</button>
       ${PEDAGOGY_APPROACHES.map(p => {
         const isAct = pedFilter === p.id;
-        return `<button class="eee-ped-btn" data-ped="${p.id}" style="
-          font-size:0.6875rem;font-weight:${isAct ? '600' : '500'};font-family:inherit;
-          padding:5px 14px;border-radius:999px;cursor:pointer;
-          border:1px solid ${isAct ? '#6366f1' : 'var(--border-light, #d1d5db)'};
-          background:${isAct ? '#6366f1' : 'var(--bg, #fff)'};
-          color:${isAct ? '#fff' : 'var(--ink-secondary, #555)'};
-          transition:all 0.15s;
-        ">${p.label}</button>`;
+        return `<button class="pill eee-ped-btn${isAct ? ' active-indigo' : ''}" data-ped="${p.id}">${p.label}</button>`;
       }).join('')}
     </div>
   </div>`;
 
   // Select/deselect all row
-  html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;margin-bottom:10px;background:var(--bg-subtle, #f8f9fa);border-radius:10px;border:1px solid var(--border-light, #e5e7eb);">
+  html += `<div class="mkt-select-bar">
     <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);">Select / Deselect All</div>
     <div style="display:flex;gap:16px;">
-      <label style="font-size:0.6875rem;font-weight:500;color:var(--ink-secondary);display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="eee-sidebar-all" ${sidebarSel.length === entries.length ? 'checked' : ''} /> Sidebar</label>
-      <label style="font-size:0.6875rem;font-weight:500;color:var(--ink-secondary);display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="eee-planner-all" ${plannerSel.length >= entries.length ? 'checked' : ''} /> Planner</label>
+      <label><input type="checkbox" id="eee-sidebar-all" ${sidebarSel.length === entries.length ? 'checked' : ''} /> Sidebar</label>
+      <label><input type="checkbox" id="eee-planner-all" ${plannerSel.length >= entries.length ? 'checked' : ''} /> Planner</label>
     </div>
   </div>`;
 
@@ -281,50 +286,39 @@ function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
     const isPedMatch = pedFilter && pedMatches.has(key);
     const dimmed = pedFilter && !pedMatches.has(key);
 
-    // Sub-type badge — mode-safe using CSS vars for text, tinted bg
+    // Sub-type badge — using CSS classes
     const typeBadge = v.type === 'tool'
-      ? `<span style="font-size:0.5625rem;font-weight:600;padding:2px 8px;border-radius:6px;background:${_hexToRGBA('#0d9488', 0.14)};color:var(--ink-secondary);border:1px solid ${_hexToRGBA('#0d9488', 0.3)};white-space:nowrap;letter-spacing:0.02em;">Teaching Tool</span>`
-      : `<span style="font-size:0.5625rem;font-weight:600;padding:2px 8px;border-radius:6px;background:${_hexToRGBA('#d97706', 0.12)};color:var(--ink-secondary);border:1px solid ${_hexToRGBA('#d97706', 0.28)};white-space:nowrap;letter-spacing:0.02em;">Lesson Resource</span>`;
+      ? `<span class="micro-badge micro-badge-tool">Teaching Tool</span>`
+      : `<span class="micro-badge micro-badge-resource">Lesson Resource</span>`;
 
-    // Subject tags — readable in both modes
+    // Subject tags — using CSS classes
     const subjectTags = (v.subjects || [])
       .filter(s => s !== 'all')
       .slice(0, 4)
-      .map(s => `<span style="font-size:0.5625rem;font-weight:500;padding:1px 7px;border-radius:6px;background:var(--bg-subtle, #f1f5f9);color:var(--ink-secondary);border:1px solid var(--border-light, #e2e8f0);white-space:nowrap;">${s}</span>`)
+      .map(s => `<span class="subject-tag">${s}</span>`)
       .join('');
     const allTag = (v.subjects || []).includes('all')
-      ? `<span style="font-size:0.5625rem;font-weight:600;padding:2px 8px;border-radius:6px;background:${_hexToRGBA('#059669', 0.12)};color:var(--ink-secondary);border:1px solid ${_hexToRGBA('#059669', 0.28)};white-space:nowrap;">All Subjects</span>`
+      ? `<span class="micro-badge micro-badge-all">All Subjects</span>`
       : '';
 
-    // Pedagogy signpost — uses CSS var for readability across modes
+    // Pedagogy signpost
     let signpost = '';
     if (v.pedagogy && v.pedagogy.length > 0) {
       const signpostKey = pedFilter && v.pedagogy.includes(pedFilter) ? pedFilter : v.pedagogy[0];
-      signpost = `<div style="font-size:0.625rem;font-style:italic;color:var(--ink-faint);margin-top:4px;line-height:1.3;">${PEDAGOGY_SIGNPOSTS[signpostKey] || ''}</div>`;
+      signpost = `<div class="mkt-signpost">${PEDAGOGY_SIGNPOSTS[signpostKey] || ''}</div>`;
     }
 
-    // Card styling — refined, elevated with left accent bar
-    const cardBg = isActive ? _hexToRGBA(color, 0.06) : 'var(--bg-card, #fff)';
-    const cardBorder = isActive ? _hexToRGBA(color, 0.5) : 'var(--border-light, #e5e7eb)';
-    const activeLeftBar = isActive ? `border-left:3px solid ${color};` : 'border-left:3px solid transparent;';
-    const pedGlow = isPedMatch ? `box-shadow:0 0 0 2px ${_hexToRGBA('#6366f1', 0.22)};` : '';
+    // Card classes & dynamic accent styles
+    const cardClasses = `mkt-card eee-marketplace-card${isActive ? ' active' : ''}${dimmed ? ' dimmed' : ''}${isPedMatch ? ' ped-match' : ''}`;
+    const accentStyles = isActive
+      ? `border-left-color:${color};border-color:${_hexToRGBA(color, 0.5)};background:${_hexToRGBA(color, 0.06)};`
+      : '';
 
     html += `
-    <div class="eee-marketplace-card" data-eee="${key}" style="
-      padding:14px 14px 10px;border-radius:12px;
-      border:1px solid ${cardBorder};${activeLeftBar}
-      background:${cardBg};
-      transition:all 0.15s;cursor:default;position:relative;
-      box-shadow:0 1px 4px rgba(0,0,0,0.04);
-      ${dimmed ? 'opacity:0.4;' : ''}
-      ${pedGlow}
-    ">
+    <div class="${cardClasses}" data-eee="${key}" style="${accentStyles}">
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
-        <div style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-          background:${isActive ? color : _hexToRGBA(color, 0.1)};
-          color:${isActive ? '#fff' : color};font-size:1rem;
-          transition:all 0.15s;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${meta?.icon || '<circle cx="12" cy="12" r="10"/>'}</svg>
+        <div class="mkt-icon" style="background:${isActive ? color : _hexToRGBA(color, 0.1)};color:${isActive ? '#fff' : color};">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${meta?.icon || '<circle cx="12" cy="12" r="10"/>'}</svg>
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:2px;line-height:1.3;">${v.label}</div>
@@ -333,11 +327,11 @@ function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
         </div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${typeBadge}${allTag}${subjectTags}</div>
-      <div style="display:flex;gap:14px;border-top:1px solid var(--border-light, #e5e7eb);padding-top:8px;">
-        <label style="font-size:0.6875rem;font-weight:500;color:var(--ink-secondary);display:flex;align-items:center;gap:5px;cursor:pointer;">
+      <div class="mkt-footer">
+        <label>
           <input type="checkbox" class="eee-planner-toggle" data-eee="${key}" ${inPlanner ? 'checked' : ''} /> Planner
         </label>
-        <label style="font-size:0.6875rem;font-weight:500;color:var(--ink-secondary);display:flex;align-items:center;gap:5px;cursor:pointer;">
+        <label>
           <input type="checkbox" class="eee-sidebar-toggle" data-eee="${key}" ${inSidebar ? 'checked' : ''} /> Sidebar
         </label>
       </div>
@@ -390,45 +384,25 @@ export function render(container) {
 
         <!-- Settings Tabs -->
         <div id="settings-tabs" style="display:flex;gap:2px;margin-bottom:var(--sp-4);border-bottom:2px solid var(--border-light);padding-bottom:0;">
-          <button class="settings-tab active" data-tab="general" style="
-            display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:0.8125rem;font-weight:600;
-            color:var(--accent);background:var(--accent-light);
-            border:none;border-bottom:2px solid var(--accent);margin-bottom:-2px;
-            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <button class="settings-tab active" data-tab="general">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             General
           </button>
-          <button class="settings-tab" data-tab="planner" style="
-            display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:0.8125rem;font-weight:400;
-            color:var(--ink-muted);background:transparent;
-            border:none;border-bottom:2px solid transparent;margin-bottom:-2px;
-            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          <button class="settings-tab" data-tab="planner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
             Enactment
           </button>
-          <button class="settings-tab" data-tab="dashboard" style="
-            display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:0.8125rem;font-weight:400;
-            color:var(--ink-muted);background:transparent;
-            border:none;border-bottom:2px solid transparent;margin-bottom:-2px;
-            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <button class="settings-tab" data-tab="dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
             Dashboard
           </button>
-          <button class="settings-tab" data-tab="data" style="
-            display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:0.8125rem;font-weight:400;
-            color:var(--ink-muted);background:transparent;
-            border:none;border-bottom:2px solid transparent;margin-bottom:-2px;
-            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <button class="settings-tab" data-tab="data">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Data
           </button>
-          <button class="settings-tab" data-tab="help" style="
-            display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:0.8125rem;font-weight:400;
-            color:var(--ink-muted);background:transparent;
-            border:none;border-bottom:2px solid transparent;margin-bottom:-2px;
-            border-radius:var(--radius-md) var(--radius-md) 0 0;cursor:pointer;transition:all 0.15s;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Help & Guides
+          <button class="settings-tab" data-tab="help">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Help &amp; Guides
           </button>
         </div>
 
@@ -539,11 +513,11 @@ export function render(container) {
           </p>
 
           <!-- Core tools (always on, shown for reference) -->
-          <div style="margin-bottom: 16px;padding:10px 14px;background:var(--bg-subtle, #f8f9fa);border-radius:10px;border:1px solid var(--border-light, #e5e7eb);">
-            <div style="font-size: 0.625rem; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">Core Tools (always available)</div>
+          <div class="mkt-core-bar">
+            <div class="mkt-section-label">Core Tools (always available)</div>
             <div style="display: flex; flex-wrap: wrap; gap: 6px;">
               ${Object.entries(EEE_REGISTRY).filter(([,v]) => v.cat === 'core').map(([, v]) =>
-                `<span style="font-size:0.6875rem;font-weight:500;padding:3px 10px;border-radius:6px;background:var(--bg, #fff);color:var(--ink-secondary);border:1px solid var(--border-light, #e2e8f0);">${v.label}</span>`
+                `<span class="mkt-core-chip">${v.label}</span>`
               ).join('')}
             </div>
           </div>
@@ -553,6 +527,36 @@ export function render(container) {
             ${buildEEEListHTML()}
           </div>
           <button class="btn btn-primary btn-sm" id="eee-save-btn" style="margin-top:12px;">Save Enactment Tools</button>
+        </div>
+
+        <!-- Custom Links -->
+        <div class="card" style="margin-top: var(--sp-6);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--success-light);display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </div>
+            <div>
+              <h3 style="font-size: 1.0625rem; font-weight: 700; margin: 0; color: var(--ink);">My Custom Links</h3>
+            </div>
+          </div>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: 16px; line-height: 1.6;">
+            Add your own links to external tools, resources, or platforms. These appear in your sidebar under <strong style="color:var(--ink-secondary);">My Links</strong>.
+          </p>
+
+          <!-- Add new link form -->
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <input class="input" type="text" id="custom-link-title" placeholder="Link title" style="flex:1;min-width:140px;" />
+            <input class="input" type="url" id="custom-link-url" placeholder="https://..." style="flex:2;min-width:200px;" />
+            <button class="btn btn-secondary btn-sm" id="custom-link-add">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add
+            </button>
+          </div>
+
+          <!-- Custom links list -->
+          <div id="custom-links-list" style="display:flex;flex-direction:column;gap:8px;">
+            ${buildCustomLinksHTML()}
+          </div>
         </div>
 
         </div><!-- end planner panel -->
@@ -753,11 +757,7 @@ export function render(container) {
       const target = tab.dataset.tab;
       // Update tab styles
       container.querySelectorAll('.settings-tab').forEach(t => {
-        const isActive = t.dataset.tab === target;
-        t.style.fontWeight = isActive ? '600' : '400';
-        t.style.color = isActive ? 'var(--accent)' : 'var(--ink-muted)';
-        t.style.background = isActive ? 'var(--accent-light)' : 'transparent';
-        t.style.borderBottomColor = isActive ? 'var(--accent)' : 'transparent';
+        t.classList.toggle('active', t.dataset.tab === target);
       });
       // Show/hide panels
       container.querySelectorAll('.settings-panel').forEach(p => {
@@ -806,12 +806,14 @@ export function render(container) {
       const inP = plannerChecked.includes(key);
       const inS = sidebarChecked.includes(key);
       const active = inP || inS;
-      card.style.borderColor = active ? color : 'var(--border-light, #e5e7eb)';
-      card.style.background = active ? hexToRGBA(color, 0.08) : 'var(--bg-card, #fff)';
-      const iconBox = card.querySelector('div > div > div:first-child');
-      if (iconBox && iconBox.style) {
-        iconBox.style.background = active ? color : 'var(--bg-subtle)';
-        iconBox.style.color = active ? '#fff' : 'var(--ink-muted)';
+      card.classList.toggle('active', active);
+      card.style.borderColor = active ? _hexToRGBA(color, 0.5) : '';
+      card.style.borderLeftColor = active ? color : '';
+      card.style.background = active ? _hexToRGBA(color, 0.06) : '';
+      const iconBox = card.querySelector('.mkt-icon');
+      if (iconBox) {
+        iconBox.style.background = active ? color : _hexToRGBA(color, 0.1);
+        iconBox.style.color = active ? '#fff' : color;
       }
     });
     return { planner: plannerChecked, sidebar: sidebarChecked };
@@ -877,6 +879,52 @@ export function render(container) {
     const { planner, sidebar } = saveEEE();
     showToast(`Tools updated — ${planner.length} in Planner, ${sidebar.length} in Sidebar.`, 'success');
   });
+
+  // Custom links — add, remove, open
+  const customLinksListEl = container.querySelector('#custom-links-list');
+
+  function rerenderCustomLinks() {
+    if (customLinksListEl) customLinksListEl.innerHTML = buildCustomLinksHTML();
+    Store.set('_customLinksUpdated', Date.now());
+  }
+
+  container.querySelector('#custom-link-add')?.addEventListener('click', () => {
+    const titleInput = container.querySelector('#custom-link-title');
+    const urlInput = container.querySelector('#custom-link-url');
+    const title = titleInput.value.trim();
+    let url = urlInput.value.trim();
+    if (!title || !url) {
+      showToast('Please enter both a title and URL.', 'danger');
+      return;
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+    const links = getCustomLinks();
+    links.push({ title, url, id: Date.now().toString(36) });
+    saveCustomLinks(links);
+    titleInput.value = '';
+    urlInput.value = '';
+    rerenderCustomLinks();
+    showToast(`"${title}" added to My Links.`, 'success');
+  });
+
+  if (customLinksListEl) {
+    customLinksListEl.addEventListener('click', (e) => {
+      const openBtn = e.target.closest('.custom-link-open');
+      if (openBtn) {
+        window.open(openBtn.dataset.url, '_blank', 'noopener');
+        return;
+      }
+      const removeBtn = e.target.closest('.custom-link-remove');
+      if (removeBtn) {
+        const idx = parseInt(removeBtn.dataset.linkIdx);
+        const links = getCustomLinks();
+        links.splice(idx, 1);
+        saveCustomLinks(links);
+        rerenderCustomLinks();
+        showToast('Link removed.', 'success');
+      }
+    });
+  }
 
   // Save
   container.querySelector('#save-settings').addEventListener('click', () => {

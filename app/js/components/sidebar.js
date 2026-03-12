@@ -6,7 +6,7 @@
 
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
-import { EEE_REGISTRY, getEEESidebarSelections } from '../views/lesson-planner.js';
+import { EEE_REGISTRY, getEEESidebarSelections, getCustomLinks } from '../views/lesson-planner.js';
 
 /* ── SVG Icons (Feather-style) ── */
 const ICONS = {
@@ -129,6 +129,16 @@ function buildNavItems() {
     ...(enactmentItems.length === 0 ? { section: 'Enactment' } : {}),
   });
 
+  // Custom links from teacher
+  const customLinks = getCustomLinks();
+  const customLinkItems = customLinks.map((link, i) => ({
+    id: `__custom_link__${i}`,
+    icon: 'externalLinks',
+    label: link.title,
+    customUrl: link.url,
+    ...(i === 0 ? { section: 'My Links' } : {}),
+  }));
+
   const staticAfter = [
     { id: '/assessment/aal', icon: 'aal', label: 'AaL', section: 'Assessment' },
     { id: '/assessment/afl', icon: 'afl', label: 'AfL' },
@@ -140,7 +150,7 @@ function buildNavItems() {
     { id: '/admin', icon: 'admin', label: 'Admin One-Stop', section: 'Operations' }
   ];
 
-  return [...staticBefore, ...enactmentItems, ...staticAfter];
+  return [...staticBefore, ...enactmentItems, ...customLinkItems, ...staticAfter];
 }
 
 /* ── Collapsed sections persistence ── */
@@ -186,8 +196,9 @@ export function renderSidebar(container) {
     if (item.id === '/classes' && classCount > 0) badge = `<span class="sidebar-item-badge">${classCount}</span>`;
     if (item.id === '/lessons' && lessonCount > 0) badge = `<span class="sidebar-item-badge">${lessonCount}</span>`;
 
+    const customUrlAttr = item.customUrl ? ` data-custom-url="${item.customUrl}"` : '';
     navHTML += `
-      <button class="sidebar-item" data-route="${item.id}" aria-label="${item.label}">
+      <button class="sidebar-item" data-route="${item.id}"${customUrlAttr} aria-label="${item.label}">
         <span class="sidebar-item-icon">${ICONS[item.icon]}</span>
         <span class="sidebar-item-label">${item.label}</span>
         ${badge}
@@ -226,7 +237,14 @@ export function renderSidebar(container) {
 
   // Navigation click handlers
   container.querySelectorAll('.sidebar-item[data-route]').forEach(btn => {
-    btn.addEventListener('click', () => navigate(btn.dataset.route));
+    btn.addEventListener('click', () => {
+      // Custom links open in new tab
+      if (btn.dataset.route.startsWith('__custom_link__') && btn.dataset.customUrl) {
+        window.open(btn.dataset.customUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      navigate(btn.dataset.route);
+    });
   });
 
   // Section collapse/expand toggles
@@ -265,13 +283,16 @@ export function renderSidebar(container) {
     });
   }
 
-  // Subscribe to state changes to update badges & re-render on EEE changes
+  // Subscribe to state changes to update badges & re-render on EEE/custom link changes
   let lastEEEUpdate = Store.get('_eeeUpdated') || 0;
+  let lastCustomLinksUpdate = Store.get('_customLinksUpdated') || 0;
   return Store.subscribe(() => {
-    // Re-render entire sidebar when EEE sidebar selections change
+    // Re-render entire sidebar when EEE sidebar selections or custom links change
     const curEEEUpdate = Store.get('_eeeUpdated') || 0;
-    if (curEEEUpdate !== lastEEEUpdate) {
+    const curCustomLinksUpdate = Store.get('_customLinksUpdated') || 0;
+    if (curEEEUpdate !== lastEEEUpdate || curCustomLinksUpdate !== lastCustomLinksUpdate) {
       lastEEEUpdate = curEEEUpdate;
+      lastCustomLinksUpdate = curCustomLinksUpdate;
       renderSidebar(container);
       return;
     }
