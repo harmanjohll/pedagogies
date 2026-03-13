@@ -154,8 +154,7 @@ const EEE_SUBJECT_GROUPS = [
   { id: 'math', label: 'Mathematics', match: ['Mathematics'] },
   { id: 'languages', label: 'Languages', match: ['English', 'Chinese', 'Malay', 'Tamil'] },
   { id: 'humanities', label: 'Humanities', match: ['History', 'Social Studies', 'General Paper', 'Geography'] },
-  { id: 'arts', label: 'Arts & Music', match: ['Art', 'Music'] },
-  { id: 'applied', label: 'Applied', match: ['D&T', 'Design & Technology', 'NFS', 'Food & Nutrition', 'FCE'] },
+  { id: 'aesthetics', label: 'Aesthetics & Technology', match: ['Art', 'Music', 'D&T', 'Design & Technology', 'NFS', 'Food & Nutrition', 'FCE'] },
   { id: 'cce', label: 'CCE & Values', match: ['CCE', 'Social Studies'] },
 ];
 

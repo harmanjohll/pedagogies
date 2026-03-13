@@ -152,10 +152,11 @@ body {
 .floor-plan {
   flex: 1;
   position: relative;
-  background: #1a1b2e;
-  border-radius: 12px;
+  background: #f5f0e8;
+  border-radius: 4px;
   overflow: hidden;
   touch-action: none;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
 }
 
 #kitchen-canvas {
@@ -170,38 +171,52 @@ body {
   pointer-events: none;
 }
 
+/* ── Equipment Items (architectural style) ── */
 .placed-item {
   position: absolute;
   pointer-events: all;
   cursor: move;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   flex-direction: column;
-  border-radius: 6px;
   font-size: 0.625rem;
   font-weight: 600;
-  color: #fff;
+  color: #44403c;
   text-align: center;
   transition: box-shadow 0.12s;
   user-select: none;
 }
+
+/* Canvas-rendered equipment items */
+.placed-item.equip-rendered {
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06);
+  overflow: visible;
+}
+
 .placed-item:hover {
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.4);
+  box-shadow: 0 0 0 2px #009432, 0 2px 8px rgba(0,148,50,0.2);
 }
 .placed-item.selected {
   box-shadow: 0 0 0 2px #009432, 0 0 12px rgba(0,148,50,0.3);
 }
-.placed-item .item-icon {
-  font-size: 1.25rem;
-  line-height: 1;
-}
+
 .placed-item .item-label {
-  font-size: 0.5rem;
-  opacity: 0.8;
-  margin-top: 1px;
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.4375rem;
+  font-weight: 600;
+  color: #57534e;
   white-space: nowrap;
+  background: rgba(245,240,232,0.85);
+  padding: 0 3px;
+  border-radius: 2px;
+  letter-spacing: 0.01em;
 }
+
 .placed-item .remove-btn {
   position: absolute;
   top: -6px;
@@ -211,13 +226,14 @@ body {
   border-radius: 50%;
   background: #ef4444;
   color: #fff;
-  border: none;
+  border: 2px solid #f5f0e8;
   font-size: 0.6rem;
   cursor: pointer;
   display: none;
   align-items: center;
   justify-content: center;
   line-height: 1;
+  z-index: 5;
 }
 .placed-item:hover .remove-btn { display: flex; }
 
@@ -226,9 +242,18 @@ body {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  font-size: 0.625rem;
+  font-size: 0.5625rem;
   font-weight: 700;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid #7c3aed;
+  background: rgba(139,92,246,0.2) !important;
+  color: #6d28d9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(139,92,246,0.25);
+}
+.student-marker:hover {
+  box-shadow: 0 0 0 2px #7c3aed, 0 2px 8px rgba(139,92,246,0.3);
 }
 
 /* Safety overlay zones */
@@ -240,8 +265,8 @@ body {
   transition: opacity 0.3s;
 }
 .safety-zone.visible { opacity: 1; }
-.safety-zone.hot { background: radial-gradient(circle, rgba(239,68,68,0.25) 0%, transparent 70%); }
-.safety-zone.wet { background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, transparent 70%); }
+.safety-zone.hot { background: radial-gradient(circle, rgba(239,68,68,0.18) 0%, transparent 70%); }
+.safety-zone.wet { background: radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 70%); }
 
 /* Workflow arrows */
 .flow-arrow {
@@ -272,6 +297,7 @@ body {
   width: 12px;
   height: 12px;
   border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
 /* ── Info Panel ── */
