@@ -10,6 +10,10 @@ import { showToast } from '../components/toast.js';
 import { openModal } from '../components/modals.js';
 import { sendChat } from '../api.js';
 import { getCurrentUser } from '../components/login.js';
+import { createStudentUploadZone } from '../components/student-upload.js';
+import { openStaffPicker, loadStaffDirectory, renderRecipientChips, ALL_STAFF_EMAIL } from '../components/staff-picker.js';
+import { openRamsEditor } from '../components/rams-editor.js';
+import { renderAdminWorkflow, bindAdminWorkflowClicks } from '../components/admin-workflow.js';
 
 /**
  * FormSG Pre-fill Configuration
@@ -26,31 +30,25 @@ import { getCurrentUser } from '../components/login.js';
  */
 const FORMSG_FIELD_MAP = {
   // Bus Booking Form (https://form.gov.sg/697319e97621e837dda7c331)
-  // Fields: 1.Name, 2.Email, 3.Contact, 4.Date, 5.Purpose, 6.Teacher IC,
-  //         7.Depart From, 8.Departure Time, 9.Destination, 10.Return Time,
-  //         11.Return To, 12.Number of Passengers
   bus_booking: {
     formId: '697319e97621e837dda7c331',
     fields: {
-      // Replace these placeholder IDs with actual FormSG field IDs:
-      // 'FIELD_ID_HERE': { source: 'user.name' },
-      // 'FIELD_ID_HERE': { source: 'user.email' },
-      // 'FIELD_ID_HERE': { source: 'event.date' },
-      // 'FIELD_ID_HERE': { source: 'task.data.destination' },
-      // 'FIELD_ID_HERE': { source: 'task.data.departure_time' },
-      // 'FIELD_ID_HERE': { source: 'task.data.return_time' },
-      // 'FIELD_ID_HERE': { source: 'task.data.num_buses' },
+      '684fd791b4b55d8d30aaab55': { source: 'user.name' },
+      '685b8a996a8a89b5c8189cdb': { source: 'task.data.teacher_ic' },
+      '685ba4469fbd086f7acc6abb': { source: 'task.data.departure_time' },
+      '685b9c52596a83029205e6d1': { source: 'task.data.destination' },
+      '685bbb660bebdec17bf56ffc': { source: 'task.data.return_time' },
+      '685b877390b1e26e036b6b5e': { source: 'task.data.return_to' },
+      '685b8722f370bac1792b4e67': { source: 'task.data.num_passengers' },
     }
   },
   // AOR Form (https://form.gov.sg/6957392872041c1d962c3ab1)
-  // Fields: 1.Name, 2.Email, 3.Title/Name of Purchase, 4.Budget Source,
-  //         5.Justification, 6.Procurement Type, 7.Items Table, 9.Strategic Thrust
   aor: {
     formId: '6957392872041c1d962c3ab1',
     fields: {
-      // Replace these placeholder IDs with actual FormSG field IDs:
-      // 'FIELD_ID_HERE': { source: 'user.name' },
-      // 'FIELD_ID_HERE': { source: 'user.email' },
+      '67c700d3bd735f3be14e6301': { source: 'user.name' },
+      '67c6f91d8a5feac346c31879': { source: 'event.title' },
+      '67c792455dd4738afd7f1a2d': { source: 'task.data.cost_breakdown' },
     }
   }
 };
@@ -82,17 +80,21 @@ function buildFormURL(baseUrl, event, task) {
     const dataContext = {
       'user.name': user?.name || '',
       'user.email': user?.email || '',
-      'event.title': event?.title || '',
+      'event.title': event?.name || event?.title || '',
       'event.date': event?.date || '',
-      'task.data.venue': task?.data?.venue || '',
+      'task.data.venue': task?.data?.venue || task?.data?.venue_name || '',
       'task.data.destination': task?.data?.destination || '',
       'task.data.pickup_point': task?.data?.pickup_point || '',
       'task.data.departure_time': task?.data?.departure_time || '',
       'task.data.return_time': task?.data?.return_time || '',
-      'task.data.num_students': task?.data?.num_students || '',
+      'task.data.return_to': task?.data?.return_to || 'School',
+      'task.data.teacher_ic': task?.data?.teacher_ic || user?.name || '',
+      'task.data.num_students': task?.data?.num_students || task?.data?.total_students || '',
+      'task.data.num_passengers': task?.data?.num_passengers || task?.data?.total_students || '',
       'task.data.num_buses': task?.data?.num_buses || '',
       'task.data.budget_code': task?.data?.budget_code || '',
       'task.data.estimated_cost': task?.data?.estimated_cost || '',
+      'task.data.cost_breakdown': task?.data?.cost_breakdown || '',
     };
 
     for (const [fieldId, config] of Object.entries(formConfig.fields)) {
@@ -131,10 +133,13 @@ const EVENT_TASKS = [
     icon: '🚌',
     externalLink: { url: 'https://form.gov.sg/697319e97621e837dda7c331', label: 'Open Bus Booking Form' },
     fields: [
+      { id: 'teacher_ic', label: 'Teacher-in-Charge', type: 'text', placeholder: 'e.g. Ms Tan Wei Ling' },
       { id: 'pickup_point', label: 'Pick-up Point', type: 'text', placeholder: 'e.g. School Main Gate' },
       { id: 'destination', label: 'Destination', type: 'text', placeholder: 'e.g. Singapore Science Centre' },
       { id: 'departure_time', label: 'Departure Time', type: 'text', placeholder: 'e.g. 8:00 AM' },
       { id: 'return_time', label: 'Expected Return', type: 'text', placeholder: 'e.g. 1:00 PM' },
+      { id: 'return_to', label: 'Return To', type: 'text', placeholder: 'e.g. School' },
+      { id: 'num_passengers', label: 'Number of Passengers (incl. teachers)', type: 'text', placeholder: 'e.g. 37' },
       { id: 'num_buses', label: 'Number of Buses', type: 'text', placeholder: 'e.g. 2' },
       { id: 'bus_company', label: 'Bus Company', type: 'text', placeholder: 'e.g. SBS Transit Charter' },
       { id: 'special_needs', label: 'Special Requirements', type: 'textarea', placeholder: 'Wheelchair access, extra luggage space, etc.' }
@@ -416,9 +421,20 @@ function renderEventsList(el, events) {
 
 /* ══════════ New Event Modal — Single-Point Entry with AI ══════════ */
 function showNewEventModal(container) {
+  const savedTemplates = Store.get('adminTemplates') || [];
+
   const { backdrop, close } = openModal({
     title: 'New Event / Activity',
     body: `
+      ${savedTemplates.length > 0 ? `
+        <div class="input-group">
+          <label class="input-label">From Template (optional)</label>
+          <select class="input" id="event-template">
+            <option value="">— Start from scratch —</option>
+            ${savedTemplates.map(t => `<option value="${t.id}">${esc(t.name)} (${t.eventType || 'Activity'})</option>`).join('')}
+          </select>
+        </div>
+      ` : ''}
       <div class="input-group">
         <label class="input-label">Event Name</label>
         <input class="input" id="event-name" placeholder="e.g. Math Olympiad 2026" />
@@ -514,6 +530,26 @@ E.g. 'Taking 4A and 4B Pure Chemistry students (32 students) to NUS Science Facu
     }
   });
 
+  // Template selection handler
+  const tmplSelect = backdrop.querySelector('#event-template');
+  if (tmplSelect) {
+    tmplSelect.addEventListener('change', () => {
+      const tmpl = savedTemplates.find(t => t.id === tmplSelect.value);
+      if (!tmpl) return;
+      const nameInput = backdrop.querySelector('#event-name');
+      const typeSelect = backdrop.querySelector('#event-type');
+      if (nameInput && !nameInput.value) nameInput.value = tmpl.name;
+      if (typeSelect) typeSelect.value = tmpl.eventType || 'Other';
+      // Pre-check tasks from template
+      const checks = [...backdrop.querySelectorAll('.event-task-check')];
+      checks.forEach(c => {
+        const tc = tmpl.taskConfig?.find(tc => tc.key === c.value);
+        c.checked = tc ? tc.enabled : false;
+      });
+      showToast(`Template "${tmpl.name}" applied`);
+    });
+  }
+
   setTimeout(() => backdrop.querySelector('#event-name')?.focus(), 100);
 }
 
@@ -541,7 +577,7 @@ function createEventFromModal(backdrop, container, close, aiData, nameOverride, 
         if (aiTaskData[f.id]) data[f.id] = aiTaskData[f.id];
       });
     }
-    return { key: t.key, enabled, status: 'pending', data };
+    return { key: t.key, enabled, status: 'pending', approvalStatus: 'not_started', data };
   });
 
   const event = {
@@ -643,6 +679,24 @@ For select fields, use one of the provided options exactly. For text/textarea fi
   }
 }
 
+/* ── Approval Status Config ── */
+const APPROVAL_STATES = [
+  { key: 'not_started', label: 'Not Started', color: 'var(--ink-faint)', bg: 'var(--bg-subtle)' },
+  { key: 'draft', label: 'Draft', color: '#3b82f6', bg: '#eff6ff' },
+  { key: 'submitted', label: 'Submitted', color: '#f59e0b', bg: '#fffbeb' },
+  { key: 'approved', label: 'Approved', color: 'var(--success)', bg: '#f0fdf4' },
+  { key: 'completed', label: 'Completed', color: 'var(--success)', bg: '#f0fdf4' },
+];
+
+function nextApprovalState(current) {
+  const idx = APPROVAL_STATES.findIndex(s => s.key === current);
+  return APPROVAL_STATES[(idx + 1) % APPROVAL_STATES.length].key;
+}
+
+function getApprovalStyle(status) {
+  return APPROVAL_STATES.find(s => s.key === status) || APPROVAL_STATES[0];
+}
+
 /* ══════════ Event Detail View ══════════ */
 function showEventDetail(pageContainer, ev, opts = {}) {
   const events = Store.get('adminEvents') || [];
@@ -656,14 +710,40 @@ function showEventDetail(pageContainer, ev, opts = {}) {
       </button>
     </div>
 
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:var(--sp-6);">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:var(--sp-4);">
       <div>
         <h1 class="page-title">${esc(ev.name)}</h1>
         <p class="page-subtitle">${ev.date ? ev.date + ' · ' : ''}${ev.eventType || 'Activity'}</p>
       </div>
-      <div style="display:flex;gap:var(--sp-2);">
+      <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" id="save-template-btn" title="Save as reusable template">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Template
+        </button>
         <button class="btn btn-secondary btn-sm" id="delete-event-btn">Delete</button>
       </div>
+    </div>
+
+    <!-- Workflow Breadcrumb -->
+    <div id="admin-workflow-bar">${renderAdminWorkflow(ev)}</div>
+
+    <!-- Status Board -->
+    <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-6);flex-wrap:wrap;overflow-x:auto;" id="status-board">
+      ${enabledTasks.map(task => {
+        const tmpl = EVENT_TASKS.find(et => et.key === task.key);
+        if (!tmpl) return '';
+        const approval = getApprovalStyle(task.approvalStatus || 'not_started');
+        return `
+          <div class="approval-badge" data-task-key="${task.key}" style="
+            display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-full);
+            background:${approval.bg};border:1px solid ${approval.color}30;cursor:pointer;transition:all 0.15s;
+            font-size:0.6875rem;white-space:nowrap;
+          " title="Click to cycle status">
+            <span style="font-size:0.875rem;">${tmpl.icon}</span>
+            <span style="font-weight:600;color:var(--ink);">${tmpl.label}</span>
+            <span style="color:${approval.color};font-weight:500;">${approval.label}</span>
+          </div>`;
+      }).join('')}
     </div>
 
     <div style="display:flex;flex-direction:column;gap:var(--sp-4);" id="task-panels">
@@ -671,6 +751,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
         const tmpl = EVENT_TASKS.find(et => et.key === task.key);
         if (!tmpl) return '';
         const isComplete = task.status === 'completed';
+        const approval = getApprovalStyle(task.approvalStatus || 'not_started');
 
         return `
           <div class="card" style="border-left:4px solid ${isComplete ? 'var(--success)' : 'var(--border)'};transition:border-color 0.2s;" data-task-key="${task.key}">
@@ -683,11 +764,13 @@ function showEventDetail(pageContainer, ev, opts = {}) {
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:var(--sp-2);">
+                <span class="badge" style="background:${approval.bg};color:${approval.color};font-size:0.625rem;">${approval.label}</span>
                 <span class="badge ${isComplete ? 'badge-green' : 'badge-gray'} badge-dot">${isComplete ? 'Done' : 'Pending'}</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" class="task-chevron" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
             </div>
             <div class="task-body" style="display:none;margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--border-light);">
+              ${task.key === 'student_list' ? '<div id="student-upload-zone" style="margin-bottom:var(--sp-4);"></div>' : ''}
               <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
                 ${tmpl.fields.map(f => `
                   <div class="input-group">
@@ -708,8 +791,20 @@ function showEventDetail(pageContainer, ev, opts = {}) {
                 <button class="btn ${isComplete ? 'btn-secondary' : 'btn-accent'} btn-sm toggle-complete-btn">
                   ${isComplete ? 'Mark Incomplete' : 'Mark Complete'}
                 </button>
+                ${task.key === 'rams' ? `
+                  <button class="btn btn-sm open-rams-editor-btn" style="background:#6366f1;color:#fff;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Open RAMS Editor
+                  </button>
+                ` : ''}
+                ${task.key === 'student_list' ? `
+                  <button class="btn btn-sm btn-secondary print-students-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    Print List
+                  </button>
+                ` : ''}
                 ${tmpl.externalLink ? `
-                  <a href="${buildFormURL(tmpl.externalLink.url, event, task)}" target="_blank" rel="noopener" class="btn btn-sm" style="background:var(--info);color:#fff;text-decoration:none;margin-left:auto;">
+                  <a href="${buildFormURL(tmpl.externalLink.url, ev, task)}" target="_blank" rel="noopener" class="btn btn-sm" style="background:var(--info);color:#fff;text-decoration:none;margin-left:auto;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     ${tmpl.externalLink.label}
                   </a>
@@ -806,7 +901,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
       const key = btn.dataset.taskKey;
       const recipientType = key === 'parent_notification' ? 'parent' : 'teacher';
       const tmpl = EVENT_TASKS.find(et => et.key === key);
-      showNotifyModal(ev.name, tmpl?.label || key, recipientType);
+      showNotifyModal(ev.name, tmpl?.label || key, recipientType, ev);
     });
   });
 
@@ -816,9 +911,156 @@ function showEventDetail(pageContainer, ev, opts = {}) {
       const key = btn.dataset.taskKey;
       const recipientType = key === 'parent_notification' ? 'parent' : 'teacher';
       const tmpl = EVENT_TASKS.find(et => et.key === key);
-      showNotifyModal(ev.name, tmpl?.label || key, recipientType);
+      showNotifyModal(ev.name, tmpl?.label || key, recipientType, ev);
     });
   });
+
+  // Workflow breadcrumb clicks
+  bindAdminWorkflowClicks(pageContainer);
+
+  // Approval status badge cycling
+  pageContainer.querySelectorAll('.approval-badge').forEach(badge => {
+    badge.addEventListener('click', () => {
+      const key = badge.dataset.taskKey;
+      const task = ev.tasks.find(t => t.key === key);
+      if (task) {
+        task.approvalStatus = nextApprovalState(task.approvalStatus || 'not_started');
+        ev.updatedAt = Date.now();
+        Store.set('adminEvents', [...events]);
+        showEventDetail(pageContainer, ev);
+      }
+    });
+  });
+
+  // RAMS Editor button
+  const ramsBtn = pageContainer.querySelector('.open-rams-editor-btn');
+  if (ramsBtn) {
+    ramsBtn.addEventListener('click', () => {
+      const ramsTask = ev.tasks.find(t => t.key === 'rams');
+      openRamsEditor(ev, ramsTask, (updatedData) => {
+        if (ramsTask) {
+          ramsTask.data._ramsEditorData = updatedData;
+          ev.updatedAt = Date.now();
+          Store.set('adminEvents', [...events]);
+        }
+      });
+    });
+  }
+
+  // Student upload zone
+  const uploadContainer = pageContainer.querySelector('#student-upload-zone');
+  if (uploadContainer) {
+    const uploader = createStudentUploadZone({
+      onParsed: (students) => {
+        const studentTask = ev.tasks.find(t => t.key === 'student_list');
+        if (studentTask) {
+          studentTask.data._uploadedStudents = students;
+          studentTask.data.total_students = String(students.length);
+          const classes = [...new Set(students.map(s => s.class).filter(Boolean))].sort();
+          studentTask.data.participating_classes = classes.join(', ');
+          ev.updatedAt = Date.now();
+          Store.set('adminEvents', [...events]);
+          // Update displayed fields
+          const panel = pageContainer.querySelector('[data-task-key="student_list"]');
+          if (panel) {
+            const totalField = panel.querySelector('[data-field="total_students"]');
+            const classField = panel.querySelector('[data-field="participating_classes"]');
+            if (totalField) totalField.value = studentTask.data.total_students;
+            if (classField) classField.value = studentTask.data.participating_classes;
+          }
+          // Also update bus booking passenger count if exists
+          const busTask = ev.tasks.find(t => t.key === 'bus_booking' && t.enabled);
+          if (busTask) {
+            const accompTeachers = parseInt(ev.tasks.find(t => t.key === 'student_list')?.data?.accompanying_teachers?.split(',').length) || 2;
+            busTask.data.num_passengers = String(students.length + accompTeachers);
+            const busPanel = pageContainer.querySelector('[data-task-key="bus_booking"]');
+            if (busPanel) {
+              const passField = busPanel.querySelector('[data-field="num_passengers"]');
+              if (passField) passField.value = busTask.data.num_passengers;
+            }
+          }
+          showToast(`${students.length} students loaded!`, 'success');
+        }
+      }
+    });
+    uploadContainer.appendChild(uploader.el);
+  }
+
+  // Print student list
+  const printStudentsBtn = pageContainer.querySelector('.print-students-btn');
+  if (printStudentsBtn) {
+    printStudentsBtn.addEventListener('click', () => {
+      const studentTask = ev.tasks.find(t => t.key === 'student_list');
+      const students = studentTask?.data?._uploadedStudents || [];
+      printStudentList(ev, studentTask, students);
+    });
+  }
+
+  // Save as Template
+  pageContainer.querySelector('#save-template-btn')?.addEventListener('click', () => {
+    const templates = Store.get('adminTemplates') || [];
+    const tmpl = {
+      id: generateId(),
+      name: ev.name,
+      eventType: ev.eventType,
+      taskConfig: ev.tasks.map(t => ({
+        key: t.key,
+        enabled: t.enabled,
+        defaultData: { ...t.data },
+      })),
+      createdAt: Date.now(),
+    };
+    // Remove uploaded students from template data (too large)
+    tmpl.taskConfig.forEach(tc => {
+      delete tc.defaultData._uploadedStudents;
+      delete tc.defaultData._ramsEditorData;
+    });
+    templates.push(tmpl);
+    Store.set('adminTemplates', templates);
+    showToast(`Template "${ev.name}" saved!`, 'success');
+  });
+}
+
+/* ── Print Student Attendance List ── */
+function printStudentList(event, task, students) {
+  const rows = students.length > 0
+    ? students.map((s, i) => `<tr><td style="border:1px solid #999;padding:4px 8px;text-align:center;">${i + 1}</td><td style="border:1px solid #999;padding:4px 8px;">${esc(s.name)}</td><td style="border:1px solid #999;padding:4px 8px;">${esc(s.class)}</td><td style="border:1px solid #999;padding:4px 8px;">${esc(s.emergencyContact || s.contact || '')}</td></tr>`).join('')
+    : '<tr><td colspan="4" style="border:1px solid #999;padding:20px;text-align:center;color:#64748b;">No students uploaded. Upload a CSV/Excel file to populate this list.</td></tr>';
+
+  const html = `<html><head><meta charset="utf-8"><title>Student Attendance List — ${esc(event.name)}</title>
+<style>body{font-family:Calibri,sans-serif;font-size:10pt;margin:20px;}table{border-collapse:collapse;width:100%;}
+h1{font-size:14pt;margin-bottom:4px;}p{font-size:9pt;color:#64748b;margin:2px 0 12px;}
+th{background:#f1f5f9;font-size:9pt;}
+.sig{margin-top:24px;display:flex;gap:40px;font-size:9pt;}
+.sig-line{border-top:1px solid #999;padding-top:4px;width:200px;margin-top:30px;}</style></head>
+<body>
+<h1>Student Attendance List</h1>
+<p>${esc(event.name)} &middot; ${event.date || ''} &middot; ${event.eventType || 'Activity'}</p>
+<table>
+  <thead><tr>
+    <th style="border:1px solid #999;padding:4px 8px;width:5%;">S/N</th>
+    <th style="border:1px solid #999;padding:4px 8px;width:35%;">Name</th>
+    <th style="border:1px solid #999;padding:4px 8px;width:15%;">Class</th>
+    <th style="border:1px solid #999;padding:4px 8px;width:25%;">Emergency Contact</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<p style="margin-top:12px;">Total Students: <strong>${students.length}</strong> &nbsp;&nbsp;|&nbsp;&nbsp; Classes: ${task?.data?.participating_classes || '—'}</p>
+<p>Teacher-in-Charge: ${esc(task?.data?.teacher_ic || '—')} &nbsp;&nbsp;|&nbsp;&nbsp; Accompanying Teachers: ${esc(task?.data?.accompanying_teachers || '—')}</p>
+<div class="sig">
+  <div><div class="sig-line">Teacher-in-Charge Signature</div></div>
+  <div><div class="sig-line">Date</div></div>
+</div>
+</body></html>`;
+
+  const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Attendance_${(event.name || 'Event').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Attendance list exported!', 'success');
 }
 
 /* Quick AOR removed — use AOR Form (FormSG) directly */
@@ -1020,12 +1262,15 @@ Regards,
 };
 
 /**
- * Show a Notify modal for an event task, letting the user send via Teams or Email.
+ * Show a Notify modal with staff picker integration.
  */
-function showNotifyModal(eventName, taskLabel, recipientType) {
+function showNotifyModal(eventName, taskLabel, recipientType, event) {
   const templates = NOTIFICATION_TEMPLATES[recipientType] || [];
+  let selectedEmails = recipientType === 'teacher' ? [ALL_STAFF_EMAIL] : [];
+
   const { backdrop, close } = openModal({
     title: `Notify — ${taskLabel}`,
+    width: 560,
     body: `
       <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);">
         Send a notification about <strong>${esc(eventName)}</strong> via MS Teams or Email.
@@ -1043,9 +1288,16 @@ function showNotifyModal(eventName, taskLabel, recipientType) {
       ` : ''}
 
       <div class="input-group">
-        <label class="input-label">Recipient Email(s)</label>
-        <input class="input" id="notify-emails" placeholder="e.g. teacher@school.edu.sg, teacher2@school.edu.sg" />
-        <span style="font-size:0.6875rem;color:var(--ink-faint);">Comma-separated for multiple recipients</span>
+        <label class="input-label">Recipients</label>
+        <div style="display:flex;gap:var(--sp-2);align-items:center;margin-bottom:var(--sp-2);">
+          <button class="btn btn-secondary btn-sm" id="open-staff-picker" style="font-size:0.75rem;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Choose Recipients
+          </button>
+          <button class="btn btn-ghost btn-sm" id="all-staff-quick" style="font-size:0.6875rem;">All Staff</button>
+        </div>
+        <div id="recipient-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:var(--sp-2);"></div>
+        <input class="input" id="notify-emails" placeholder="Or type emails manually (comma-separated)" style="font-size:0.8125rem;" />
       </div>
       <div class="input-group">
         <label class="input-label">Subject</label>
@@ -1073,6 +1325,50 @@ function showNotifyModal(eventName, taskLabel, recipientType) {
     `
   });
 
+  // Render recipient chips
+  function updateChips() {
+    const container = backdrop.querySelector('#recipient-chips');
+    if (container) {
+      loadStaffDirectory().then(staff => {
+        container.innerHTML = renderRecipientChips(selectedEmails, staff);
+        // Wire remove buttons
+        container.querySelectorAll('.chip-remove').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const email = btn.dataset.email;
+            selectedEmails = selectedEmails.filter(e => e !== email);
+            updateChips();
+          });
+        });
+      });
+    }
+    // Also update hidden email field
+    const emailInput = backdrop.querySelector('#notify-emails');
+    if (emailInput && selectedEmails.length > 0) {
+      emailInput.value = selectedEmails.join(', ');
+    }
+  }
+  updateChips();
+
+  // Staff picker button
+  backdrop.querySelector('#open-staff-picker').addEventListener('click', () => {
+    openStaffPicker({
+      preSelected: selectedEmails,
+      showAllStaff: recipientType === 'teacher',
+      onSelect: (emails) => {
+        selectedEmails = emails;
+        updateChips();
+      }
+    });
+  });
+
+  // All Staff quick button
+  backdrop.querySelector('#all-staff-quick').addEventListener('click', () => {
+    selectedEmails = [ALL_STAFF_EMAIL];
+    updateChips();
+    showToast('All staff selected');
+  });
+
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
 
   // Template buttons
@@ -1083,7 +1379,6 @@ function showNotifyModal(eventName, taskLabel, recipientType) {
       if (!tmpl) return;
       backdrop.querySelector('#notify-subject').value = tmpl.subject(eventName);
       backdrop.querySelector('#notify-body').value = tmpl.body(eventName);
-      // Highlight active template
       backdrop.querySelectorAll('.tmpl-btn').forEach(b => {
         b.style.borderColor = 'var(--border)';
         b.style.background = '';
