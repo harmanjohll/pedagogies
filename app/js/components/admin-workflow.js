@@ -3,16 +3,16 @@
  * =========================
  * Horizontal step indicator for Admin One-Stop event planning.
  * Modelled after Co-Cher+ teaching workflow breadcrumb.
- * Steps: Event Setup → RAMS → Bus Booking → AOR → Notifications → Student List → Review
+ * Steps: Event Setup → RAMS → Bus Booking → Students → Notify → AOR → Review
  */
 
 const ADMIN_WORKFLOW_STEPS = [
   { id: 'setup', label: 'Event Setup', taskKey: null, icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
   { id: 'rams', label: 'RAMS', taskKey: 'rams', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>' },
   { id: 'bus_booking', label: 'Bus Booking', taskKey: 'bus_booking', icon: '<rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-1"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/>' },
-  { id: 'aor', label: 'AOR', taskKey: 'aor', icon: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
-  { id: 'notifications', label: 'Notify', taskKey: 'parent_notification', icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>' },
   { id: 'student_list', label: 'Students', taskKey: 'student_list', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' },
+  { id: 'notifications', label: 'Notify', taskKey: 'parent_notification', icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>' },
+  { id: 'aor', label: 'AOR', taskKey: 'aor', icon: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
   { id: 'review', label: 'Review', taskKey: null, icon: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
 ];
 

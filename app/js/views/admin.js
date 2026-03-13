@@ -146,6 +146,18 @@ const EVENT_TASKS = [
     ]
   },
   {
+    key: 'student_list',
+    label: 'Student Attendance List',
+    desc: 'Prepare the list of participating students with emergency contacts.',
+    icon: '📋',
+    fields: [
+      { id: 'participating_classes', label: 'Participating Classes', type: 'text', placeholder: 'e.g. 4A, 4B' },
+      { id: 'total_students', label: 'Total Students', type: 'text', placeholder: 'e.g. 35' },
+      { id: 'teacher_ic', label: 'Teacher-in-Charge', type: 'text', placeholder: 'e.g. Ms Tan Wei Ling' },
+      { id: 'accompanying_teachers', label: 'Accompanying Teachers', type: 'textarea', placeholder: 'List all accompanying teachers...' }
+    ]
+  },
+  {
     key: 'parent_notification',
     label: 'Parent Notification',
     desc: 'Notify parents via Parents Gateway about the activity.',
@@ -168,18 +180,6 @@ const EVENT_TASKS = [
       { id: 'teacher_message', label: 'Message to Teachers', type: 'textarea', placeholder: 'Draft notification to affected subject teachers...' },
       { id: 'classes_affected', label: 'Classes Affected', type: 'text', placeholder: 'e.g. 4A, 4B Pure Chemistry' },
       { id: 'notification_channel', label: 'Channel', type: 'select', options: ['MS Teams', 'Email', 'Staff Portal', 'WhatsApp Group', 'Hardcopy'] }
-    ]
-  },
-  {
-    key: 'student_list',
-    label: 'Student Attendance List',
-    desc: 'Prepare the list of participating students with emergency contacts.',
-    icon: '📋',
-    fields: [
-      { id: 'participating_classes', label: 'Participating Classes', type: 'text', placeholder: 'e.g. 4A, 4B' },
-      { id: 'total_students', label: 'Total Students', type: 'text', placeholder: 'e.g. 35' },
-      { id: 'teacher_ic', label: 'Teacher-in-Charge', type: 'text', placeholder: 'e.g. Ms Tan Wei Ling' },
-      { id: 'accompanying_teachers', label: 'Accompanying Teachers', type: 'textarea', placeholder: 'List all accompanying teachers...' }
     ]
   },
   {
@@ -246,18 +246,18 @@ function openAdminOverlay(title, href) {
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);animation:simFadeIn 0.2s ease;';
 
   const win = document.createElement('div');
-  win.style.cssText = 'position:absolute;top:2%;left:3%;right:3%;bottom:2%;display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:12px;box-shadow:0 25px 60px rgba(0,0,0,0.4);';
+  win.style.cssText = 'position:absolute;top:2%;left:3%;right:3%;bottom:2%;display:flex;flex-direction:column;overflow:hidden;background:var(--bg-card);border-radius:12px;box-shadow:0 25px 60px rgba(0,0,0,0.4);';
 
   const topBar = document.createElement('div');
-  topBar.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--bg-card,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0;';
+  topBar.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--bg-card);border-bottom:1px solid var(--border);flex-shrink:0;';
   topBar.innerHTML = `
     <span style="font-weight:600;font-size:0.9375rem;color:var(--ink);flex:1;">${title}</span>
-    <button style="background:none;border:none;cursor:pointer;padding:4px 10px;font-size:1.25rem;color:var(--ink-muted);border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='var(--surface-hover,#f1f5f9)'" onmouseout="this.style.background='none'" id="admin-overlay-close">&times;</button>
+    <button style="background:none;border:none;cursor:pointer;padding:4px 10px;font-size:1.25rem;color:var(--ink-muted);border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='none'" id="admin-overlay-close">&times;</button>
   `;
 
   const iframe = document.createElement('iframe');
   iframe.src = href;
-  iframe.style.cssText = 'flex:1;border:none;width:100%;background:#fff;';
+  iframe.style.cssText = 'flex:1;border:none;width:100%;background:var(--bg-card);';
 
   win.appendChild(topBar);
   win.appendChild(iframe);
@@ -567,9 +567,14 @@ function createEventFromModal(backdrop, container, close, aiData, nameOverride, 
     enabledKeys = checks.filter(c => c.checked).map(c => c.value);
   }
 
+  const currentUser = getCurrentUser();
   const tasks = EVENT_TASKS.map(t => {
     const enabled = enabledKeys.includes(t.key);
     const data = {};
+    // Pre-fill teacher-in-charge from current user
+    if (currentUser?.name && (t.key === 'student_list' || t.key === 'bus_booking')) {
+      data.teacher_ic = currentUser.name;
+    }
     // Pre-fill from AI data if available
     if (aiData && enabled && aiData[t.key]) {
       const aiTaskData = aiData[t.key];
@@ -682,10 +687,10 @@ For select fields, use one of the provided options exactly. For text/textarea fi
 /* ── Approval Status Config ── */
 const APPROVAL_STATES = [
   { key: 'not_started', label: 'Not Started', color: 'var(--ink-faint)', bg: 'var(--bg-subtle)' },
-  { key: 'draft', label: 'Draft', color: '#3b82f6', bg: '#eff6ff' },
-  { key: 'submitted', label: 'Submitted', color: '#f59e0b', bg: '#fffbeb' },
-  { key: 'approved', label: 'Approved', color: 'var(--success)', bg: '#f0fdf4' },
-  { key: 'completed', label: 'Completed', color: 'var(--success)', bg: '#f0fdf4' },
+  { key: 'draft', label: 'Draft', color: 'var(--accent)', bg: 'var(--accent-light)' },
+  { key: 'submitted', label: 'Submitted', color: 'var(--warning)', bg: 'var(--warning-light)' },
+  { key: 'approved', label: 'Approved', color: 'var(--success)', bg: 'var(--success-light)' },
+  { key: 'completed', label: 'Completed', color: 'var(--success)', bg: 'var(--success-light)' },
 ];
 
 function nextApprovalState(current) {
@@ -764,7 +769,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:var(--sp-2);">
-                <span class="badge" style="background:${approval.bg};color:${approval.color};font-size:0.625rem;">${approval.label}</span>
+                <span class="badge" style="background:${approval.bg};color:${approval.color};font-size:0.6875rem;">${approval.label}</span>
                 <span class="badge ${isComplete ? 'badge-green' : 'badge-gray'} badge-dot">${isComplete ? 'Done' : 'Pending'}</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" class="task-chevron" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
@@ -792,7 +797,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
                   ${isComplete ? 'Mark Incomplete' : 'Mark Complete'}
                 </button>
                 ${task.key === 'rams' ? `
-                  <button class="btn btn-sm open-rams-editor-btn" style="background:#6366f1;color:#fff;">
+                  <button class="btn btn-sm open-rams-editor-btn" style="background:var(--info);color:#fff;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     Open RAMS Editor
                   </button>
@@ -810,7 +815,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
                   </a>
                 ` : ''}
                 ${(task.key === 'parent_notification' || task.key === 'teacher_notification')
-                  ? `<button class="btn btn-sm notify-teams-btn" style="background:#6264A7;color:#fff;${tmpl.externalLink ? '' : 'margin-left:auto;'}" data-task-key="${task.key}">
+                  ? `<button class="btn btn-sm notify-teams-btn" style="background:var(--info);color:#fff;${tmpl.externalLink ? '' : 'margin-left:auto;'}" data-task-key="${task.key}">
                       Teams
                     </button>
                     <button class="btn btn-sm btn-secondary notify-email-btn" data-task-key="${task.key}">
@@ -1266,6 +1271,7 @@ Regards,
  */
 function showNotifyModal(eventName, taskLabel, recipientType, event) {
   const templates = NOTIFICATION_TEMPLATES[recipientType] || [];
+  const user = getCurrentUser();
   let selectedEmails = recipientType === 'teacher' ? [ALL_STAFF_EMAIL] : [];
 
   const { backdrop, close } = openModal({
@@ -1294,7 +1300,7 @@ function showNotifyModal(eventName, taskLabel, recipientType, event) {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             Choose Recipients
           </button>
-          <button class="btn btn-ghost btn-sm" id="all-staff-quick" style="font-size:0.6875rem;">All Staff</button>
+          <button class="btn btn-ghost btn-sm" id="all-staff-quick" style="font-size:0.75rem;">All Staff</button>
         </div>
         <div id="recipient-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:var(--sp-2);"></div>
         <input class="input" id="notify-emails" placeholder="Or type emails manually (comma-separated)" style="font-size:0.8125rem;" />
@@ -1305,16 +1311,16 @@ function showNotifyModal(eventName, taskLabel, recipientType, event) {
       </div>
       <div class="input-group">
         <label class="input-label">Message</label>
-        <textarea class="input" id="notify-body" rows="8" placeholder="Type your message here...">${recipientType === 'parent' ? `Dear Parents/Guardians,\n\nPlease be informed about the upcoming event: ${eventName}.\n\nDetails will be shared via Parents Gateway.\n\nThank you.` : `Dear Colleague,\n\nPlease be informed about the upcoming event: ${eventName}.\n\nKindly note the affected periods and make the necessary arrangements.\n\nThank you.`}</textarea>
+        <textarea class="input" id="notify-body" rows="8" placeholder="Type your message here...">${recipientType === 'parent' ? `Dear Parents/Guardians,\n\nPlease be informed about the upcoming event: ${eventName}.\n\nDetails will be shared via Parents Gateway.\n\nThank you.\n\nWarm regards,\n${user?.name || '[YOUR NAME]'}` : `Dear Colleague,\n\nPlease be informed about the upcoming event: ${eventName}.\n\nKindly note the affected periods and make the necessary arrangements.\n\nThank you.\n\nRegards,\n${user?.name || '[YOUR NAME]'}`}</textarea>
       </div>
       <div class="input-group">
         <label class="input-label">BCC (optional)</label>
-        <input class="input" id="notify-bcc" placeholder="e.g. admin@school.edu.sg" />
+        <input class="input" id="notify-bcc" value="${escAttr(user?.email || '')}" placeholder="e.g. admin@school.edu.sg" />
       </div>
     `,
     footer: `
       <button class="btn btn-secondary" data-action="cancel">Cancel</button>
-      <button class="btn btn-primary" data-action="teams" style="background:#6264A7;">
+      <button class="btn btn-primary" data-action="teams" style="background:var(--info);">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.24 4.76A7.42 7.42 0 0 0 14 2.5c-2.03 0-3.93.8-5.36 2.26A7.51 7.51 0 0 0 6.5 10c0 2.03.78 3.93 2.14 5.36l5.36 5.36 5.24-5.24A7.58 7.58 0 0 0 21.5 10c0-2.03-.8-3.93-2.26-5.24z"/></svg>
         Send via Teams
       </button>
@@ -1378,7 +1384,9 @@ function showNotifyModal(eventName, taskLabel, recipientType, event) {
       const tmpl = templates[idx];
       if (!tmpl) return;
       backdrop.querySelector('#notify-subject').value = tmpl.subject(eventName);
-      backdrop.querySelector('#notify-body').value = tmpl.body(eventName);
+      let body = tmpl.body(eventName);
+      if (user?.name) body = body.replace(/\[YOUR NAME\]/g, user.name);
+      backdrop.querySelector('#notify-body').value = body;
       backdrop.querySelectorAll('.tmpl-btn').forEach(b => {
         b.style.borderColor = 'var(--border)';
         b.style.background = '';
