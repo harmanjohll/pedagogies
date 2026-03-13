@@ -80,9 +80,9 @@ export function openRamsEditor(event, ramsTask, onSave) {
 
   function render() {
     overlay.innerHTML = `
-      <div style="max-width:1000px;margin:20px auto;background:var(--surface,#fff);border-radius:12px;box-shadow:0 25px 60px rgba(0,0,0,0.4);overflow:hidden;">
+      <div style="max-width:1000px;margin:20px auto;background:var(--bg-card);border-radius:12px;box-shadow:0 25px 60px rgba(0,0,0,0.4);overflow:hidden;">
         <!-- Top Bar -->
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--bg-card,#fff);border-bottom:1px solid var(--border,#e2e8f0);position:sticky;top:0;z-index:10;">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--bg-card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;">
           <span style="font-weight:700;font-size:1rem;color:var(--ink);flex:1;">RAMS Editor — ${esc(event?.name || 'Event')}</span>
           <button class="btn btn-ghost btn-sm rams-ai-btn" style="font-size:0.75rem;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -98,45 +98,45 @@ export function openRamsEditor(event, ramsTask, onSave) {
           <!-- Header Table -->
           <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:0.8125rem;" class="rams-header-table">
             <tr>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;width:15%;">School Name:</td>
-              <td style="border:1px solid #999;padding:6px 10px;width:20%;"><input class="rams-input" data-field="schoolName" value="${esc(data.schoolName)}" /></td>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;width:15%;" rowspan="2">RAMS Team Leader:</td>
-              <td style="border:1px solid #999;padding:6px 10px;width:15%;" rowspan="2"><input class="rams-input" data-field="teamLeader" value="${esc(data.teamLeader)}" /></td>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;width:10%;">Vetted by:</td>
-              <td style="border:1px solid #999;padding:6px 10px;width:10%;"><input class="rams-input" data-field="vettedBy" value="${esc(data.vettedBy)}" /></td>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;width:10%;">Approved by:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"><input class="rams-input" data-field="approvedBy" value="${esc(data.approvedBy)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;width:15%;">School Name:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;width:20%;"><input class="rams-input" data-field="schoolName" value="${esc(data.schoolName)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;width:15%;" rowspan="2">RAMS Team Leader:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;width:15%;" rowspan="2"><input class="rams-input" data-field="teamLeader" value="${esc(data.teamLeader)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;width:10%;">Vetted by:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;width:10%;"><input class="rams-input" data-field="vettedBy" value="${esc(data.vettedBy)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;width:10%;">Approved by:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"><input class="rams-input" data-field="approvedBy" value="${esc(data.approvedBy)}" /></td>
             </tr>
             <tr>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;">Location:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"><input class="rams-input" data-field="location" value="${esc(data.location)}" /></td>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;">Designation:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"><input class="rams-input" data-field="vettedDesignation" value="${esc(data.vettedDesignation)}" /></td>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;">Designation:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"><input class="rams-input" data-field="approvedDesignation" value="${esc(data.approvedDesignation)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;">Location:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"><input class="rams-input" data-field="location" value="${esc(data.location)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;">Designation:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"><input class="rams-input" data-field="vettedDesignation" value="${esc(data.vettedDesignation)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;">Designation:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"><input class="rams-input" data-field="approvedDesignation" value="${esc(data.approvedDesignation)}" /></td>
             </tr>
             <tr>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;">Activity/Process:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"><input class="rams-input" data-field="activityProcess" value="${esc(data.activityProcess)}" /></td>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;" rowspan="2">Member(s):</td>
-              <td style="border:1px solid #999;padding:6px 10px;" rowspan="2"><textarea class="rams-input" data-field="members" rows="2" style="resize:vertical;">${esc(data.members)}</textarea></td>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;">Date:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"><input class="rams-input" data-field="vettedDate" value="${esc(data.vettedDate)}" /></td>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;">Date:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"><input class="rams-input" data-field="approvedDate" value="${esc(data.approvedDate)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;">Activity/Process:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"><input class="rams-input" data-field="activityProcess" value="${esc(data.activityProcess)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;" rowspan="2">Member(s):</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;" rowspan="2"><textarea class="rams-input" data-field="members" rows="2" style="resize:vertical;">${esc(data.members)}</textarea></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;">Date:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"><input class="rams-input" data-field="vettedDate" value="${esc(data.vettedDate)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;">Date:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"><input class="rams-input" data-field="approvedDate" value="${esc(data.approvedDate)}" /></td>
             </tr>
             <tr>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;">Last Review Date:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"><input class="rams-input" data-field="lastReviewDate" value="${esc(data.lastReviewDate)}" /></td>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;">Signature:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"></td>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;">Signature:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;">Last Review Date:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"><input class="rams-input" data-field="lastReviewDate" value="${esc(data.lastReviewDate)}" /></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;">Signature:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;">Signature:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"></td>
             </tr>
             <tr>
-              <td style="border:1px solid #999;padding:6px 10px;font-weight:600;">Next Review Date:</td>
-              <td style="border:1px solid #999;padding:6px 10px;"><input class="rams-input" data-field="nextReviewDate" value="${esc(data.nextReviewDate)}" /></td>
-              <td colspan="6" style="border:1px solid #999;"></td>
+              <td style="border:1px solid var(--border);padding:6px 10px;font-weight:600;">Next Review Date:</td>
+              <td style="border:1px solid var(--border);padding:6px 10px;"><input class="rams-input" data-field="nextReviewDate" value="${esc(data.nextReviewDate)}" /></td>
+              <td colspan="6" style="border:1px solid var(--border);"></td>
             </tr>
           </table>
 
@@ -153,22 +153,22 @@ export function openRamsEditor(event, ramsTask, onSave) {
             <table style="width:100%;border-collapse:collapse;font-size:0.75rem;" class="rams-risk-table">
               <thead>
                 <tr>
-                  <th colspan="4" style="border:1px solid #999;padding:6px;text-align:center;background:#f1f5f9;font-weight:700;">Hazard Identification</th>
-                  <th colspan="3" style="border:1px solid #999;padding:6px;text-align:center;background:#f1f5f9;font-weight:700;">Risk Evaluation</th>
-                  <th colspan="3" style="border:1px solid #999;padding:6px;text-align:center;background:#f1f5f9;font-weight:700;">Implementation</th>
+                  <th colspan="4" style="border:1px solid var(--border);padding:6px;text-align:center;background:var(--bg-subtle);font-weight:700;">Hazard Identification</th>
+                  <th colspan="3" style="border:1px solid var(--border);padding:6px;text-align:center;background:var(--bg-subtle);font-weight:700;">Risk Evaluation</th>
+                  <th colspan="3" style="border:1px solid var(--border);padding:6px;text-align:center;background:var(--bg-subtle);font-weight:700;">Implementation</th>
                 </tr>
-                <tr style="background:#f8fafc;">
-                  <th style="border:1px solid #999;padding:6px;width:3%;text-align:center;">No.</th>
-                  <th style="border:1px solid #999;padding:6px;width:14%;">Description of Activities/Work Processes</th>
-                  <th style="border:1px solid #999;padding:6px;width:12%;">Hazard</th>
-                  <th style="border:1px solid #999;padding:6px;width:10%;">Possible Accident /Ill-health</th>
-                  <th style="border:1px solid #999;padding:6px;width:5%;text-align:center;" title="1=Negligible, 2=Minor, 3=Moderate, 4=Major, 5=Catastrophic">Sev.</th>
-                  <th style="border:1px solid #999;padding:6px;width:5%;text-align:center;" title="1=Rare, 2=Unlikely, 3=Possible, 4=Likely, 5=Almost Certain">Like.</th>
-                  <th style="border:1px solid #999;padding:6px;width:5%;text-align:center;">Risk Level</th>
-                  <th style="border:1px solid #999;padding:6px;width:20%;">Risk Control</th>
-                  <th style="border:1px solid #999;padding:6px;width:12%;">Action Officer, Designation (Follow-up date)</th>
-                  <th style="border:1px solid #999;padding:6px;width:8%;">Remarks</th>
-                  <th style="border:1px solid #999;padding:6px;width:3%;text-align:center;background:#f8fafc;"></th>
+                <tr style="background:var(--bg-subtle);">
+                  <th style="border:1px solid var(--border);padding:6px;width:3%;text-align:center;">No.</th>
+                  <th style="border:1px solid var(--border);padding:6px;width:14%;">Description of Activities/Work Processes</th>
+                  <th style="border:1px solid var(--border);padding:6px;width:12%;">Hazard</th>
+                  <th style="border:1px solid var(--border);padding:6px;width:10%;">Possible Accident /Ill-health</th>
+                  <th style="border:1px solid var(--border);padding:6px;width:5%;text-align:center;" title="1=Negligible, 2=Minor, 3=Moderate, 4=Major, 5=Catastrophic">Sev.</th>
+                  <th style="border:1px solid var(--border);padding:6px;width:5%;text-align:center;" title="1=Rare, 2=Unlikely, 3=Possible, 4=Likely, 5=Almost Certain">Like.</th>
+                  <th style="border:1px solid var(--border);padding:6px;width:5%;text-align:center;">Risk Level</th>
+                  <th style="border:1px solid var(--border);padding:6px;width:20%;">Risk Control</th>
+                  <th style="border:1px solid var(--border);padding:6px;width:12%;">Action Officer, Designation (Follow-up date)</th>
+                  <th style="border:1px solid var(--border);padding:6px;width:8%;">Remarks</th>
+                  <th style="border:1px solid var(--border);padding:6px;width:3%;text-align:center;background:var(--bg-subtle);"></th>
                 </tr>
               </thead>
               <tbody>
@@ -176,29 +176,29 @@ export function openRamsEditor(event, ramsTask, onSave) {
                   const rl = riskLevel(h.severity, h.likelihood);
                   return `
                     <tr data-hazard-idx="${i}">
-                      <td style="border:1px solid #999;padding:4px;text-align:center;vertical-align:top;">${i + 1}</td>
-                      <td style="border:1px solid #999;padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="description" rows="3">${esc(h.description)}</textarea></td>
-                      <td style="border:1px solid #999;padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="hazard" rows="3">${esc(h.hazard)}</textarea></td>
-                      <td style="border:1px solid #999;padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="accident" rows="3">${esc(h.accident)}</textarea></td>
-                      <td style="border:1px solid #999;padding:4px;text-align:center;vertical-align:top;">
+                      <td style="border:1px solid var(--border);padding:4px;text-align:center;vertical-align:top;">${i + 1}</td>
+                      <td style="border:1px solid var(--border);padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="description" rows="3">${esc(h.description)}</textarea></td>
+                      <td style="border:1px solid var(--border);padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="hazard" rows="3">${esc(h.hazard)}</textarea></td>
+                      <td style="border:1px solid var(--border);padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="accident" rows="3">${esc(h.accident)}</textarea></td>
+                      <td style="border:1px solid var(--border);padding:4px;text-align:center;vertical-align:top;">
                         <select class="rams-select" data-hazard="${i}" data-hfield="severity" style="width:100%;font-size:0.75rem;">
                           <option value="">-</option>
                           ${[1,2,3,4,5].map(v => `<option value="${v}" ${h.severity == v ? 'selected' : ''}>${v}</option>`).join('')}
                         </select>
                       </td>
-                      <td style="border:1px solid #999;padding:4px;text-align:center;vertical-align:top;">
+                      <td style="border:1px solid var(--border);padding:4px;text-align:center;vertical-align:top;">
                         <select class="rams-select" data-hazard="${i}" data-hfield="likelihood" style="width:100%;font-size:0.75rem;">
                           <option value="">-</option>
                           ${[1,2,3,4,5].map(v => `<option value="${v}" ${h.likelihood == v ? 'selected' : ''}>${v}</option>`).join('')}
                         </select>
                       </td>
-                      <td style="border:1px solid #999;padding:4px;text-align:center;vertical-align:top;font-weight:700;${rl.color ? 'color:#fff;background:' + rl.color : ''}">
+                      <td style="border:1px solid var(--border);padding:4px;text-align:center;vertical-align:top;font-weight:700;${rl.color ? 'color:#fff;background:' + rl.color : ''}">
                         ${rl.level ? rl.level + '<br/><span style="font-size:0.625rem;font-weight:400;">' + rl.label + '</span>' : '—'}
                       </td>
-                      <td style="border:1px solid #999;padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="controls" rows="3">${esc(h.controls)}</textarea></td>
-                      <td style="border:1px solid #999;padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="actionOfficer" rows="2">${esc(h.actionOfficer)}</textarea></td>
-                      <td style="border:1px solid #999;padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="remarks" rows="2">${esc(h.remarks)}</textarea></td>
-                      <td style="border:1px solid #999;padding:4px;text-align:center;vertical-align:top;">
+                      <td style="border:1px solid var(--border);padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="controls" rows="3">${esc(h.controls)}</textarea></td>
+                      <td style="border:1px solid var(--border);padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="actionOfficer" rows="2">${esc(h.actionOfficer)}</textarea></td>
+                      <td style="border:1px solid var(--border);padding:4px;vertical-align:top;"><textarea class="rams-cell" data-hazard="${i}" data-hfield="remarks" rows="2">${esc(h.remarks)}</textarea></td>
+                      <td style="border:1px solid var(--border);padding:4px;text-align:center;vertical-align:top;">
                         <button class="btn btn-ghost btn-sm rams-remove-row" data-idx="${i}" style="color:var(--danger);font-size:0.875rem;padding:0 4px;" title="Remove row">&times;</button>
                       </td>
                     </tr>`;
