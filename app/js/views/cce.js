@@ -259,9 +259,9 @@ export function render(container) {
           gap: 6px;
           padding: 10px 18px;
           border-radius: var(--radius-md, 10px);
-          border: 2px solid var(--border-light, #e5e7eb);
+          border: 2px solid var(--border-light);
           background: var(--bg, #fff);
-          color: var(--ink, #1a1a2e);
+          color: var(--ink);
           font-size: 0.8125rem;
           font-weight: 600;
           cursor: pointer;
@@ -269,7 +269,7 @@ export function render(container) {
           font-family: inherit;
         }
         .cce-tab:hover {
-          border-color: var(--accent, #4361ee);
+          border-color: var(--accent);
           transform: translateY(-1px);
         }
         .cce-tab.active {
@@ -297,7 +297,7 @@ export function render(container) {
         }
         .cce-card {
           border-radius: var(--radius-md, 10px);
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--border-light);
           background: var(--bg, #fff);
           padding: var(--sp-4, 16px) var(--sp-5, 20px);
         }
@@ -329,7 +329,7 @@ export function render(container) {
           border-radius: 14px;
           font-size: 0.6875rem;
           font-weight: 600;
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--border-light);
           color: var(--ink-secondary, #666);
           background: var(--bg, #fff);
         }
@@ -366,7 +366,7 @@ export function render(container) {
           margin-top: var(--sp-4, 16px);
           padding: var(--sp-4, 16px) var(--sp-5, 20px);
           border-radius: var(--radius-md, 10px);
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--border-light);
           background: var(--bg, #fff);
           display: none;
         }
@@ -384,7 +384,7 @@ export function render(container) {
           align-items: center;
           margin-top: var(--sp-3, 12px);
           padding-top: var(--sp-3, 12px);
-          border-top: 1px solid var(--border-light, #e5e7eb);
+          border-top: 1px solid var(--border-light);
         }
         .cce-library-grid {
           display: grid;
@@ -393,7 +393,7 @@ export function render(container) {
         }
         .cce-lib-card {
           border-radius: var(--radius-md, 10px);
-          border: 1px solid var(--border-light, #e5e7eb);
+          border: 1px solid var(--border-light);
           background: var(--bg, #fff);
           padding: var(--sp-3, 12px) var(--sp-4, 16px);
           cursor: pointer;
@@ -425,7 +425,7 @@ export function render(container) {
         .cce-expanded-content {
           margin-top: var(--sp-3, 12px);
           padding-top: var(--sp-3, 12px);
-          border-top: 1px solid var(--border-light, #e5e7eb);
+          border-top: 1px solid var(--border-light);
           font-size: 0.875rem;
           line-height: 1.7;
           display: none;
@@ -444,8 +444,8 @@ export function render(container) {
         .cce-loading.visible { display: flex; }
         .cce-spinner {
           width: 18px; height: 18px;
-          border: 2px solid var(--border-light, #e5e7eb);
-          border-top-color: var(--accent, #4361ee);
+          border: 2px solid var(--border-light);
+          border-top-color: var(--accent);
           border-radius: 50%;
           animation: cceSpin 0.6s linear infinite;
         }
@@ -536,7 +536,7 @@ export function render(container) {
                   <h4>${escapeHTML(d.title)}</h4>
                   <div class="cce-lib-meta">
                     <span class="cce-badge" style="background:${area.color}22;color:${area.color};">${d.contentArea}</span>
-                    ${d.bigIdea ? `<span class="cce-badge" style="background:#4361ee22;color:#4361ee;">${escapeHTML(d.bigIdea)}</span>` : ''}
+                    ${d.bigIdea ? `<span class="cce-badge" style="background:var(--accent-light);color:var(--accent);">${escapeHTML(d.bigIdea)}</span>` : ''}
                     ${d.values ? d.values.split(',').slice(0, 3).map(v =>
                       `<span class="cce-tag" style="font-size:0.625rem;">${escapeHTML(v.trim())}</span>`
                     ).join('') : ''}
@@ -548,7 +548,7 @@ export function render(container) {
                   <div class="cce-expanded-content" id="cce-exp-${d.id}">${renderMarkdown(d.content || '')}</div>
                   <div style="display:flex;gap:6px;margin-top:8px;">
                     <button class="btn btn-ghost cce-view-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;">View</button>
-                    <button class="btn btn-ghost cce-delete-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;color:#dc2626;">Delete</button>
+                    <button class="btn btn-ghost cce-delete-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;color:var(--danger);">Delete</button>
                   </div>
                 </div>
               `).join('')}

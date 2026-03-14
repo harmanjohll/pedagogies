@@ -18,19 +18,6 @@ const TOOL_INFO = {
       'Export as image for worksheets',
     ],
   },
-  'design-process': {
-    title: 'Design Process',
-    color: '#14b8a6',
-    icon: '<polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>',
-    desc: 'D&T design thinking framework — a guided 5-step workflow: Identify, Explore, Develop, Realise, Test.',
-    features: [
-      'Interactive 5-stage design thinking board',
-      'Each stage has guided prompts and templates',
-      'Attach images, sketches, and notes at each stage',
-      'Progress tracking across the design cycle',
-      'Export completed design journal',
-    ],
-  },
   'kitchen-layout': {
     title: 'Kitchen Layout',
     color: '#0d9488',
@@ -47,7 +34,6 @@ const TOOL_INFO = {
 };
 
 export function renderStaveNotation(container) { renderStub(container, 'stave-notation'); }
-export function renderDesignProcess(container) { renderStub(container, 'design-process'); }
 export function renderKitchenLayout(container) { renderStub(container, 'kitchen-layout'); }
 
 function renderStub(container, toolId) {
