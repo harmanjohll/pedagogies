@@ -93,13 +93,13 @@
 
   const EXTERNAL_TOOLS = {
     // Empathise tools
-    empathymap:     { icon: '🗺️', name: 'Empathy Map Canvas', desc: 'Think / Feel / Say / Do framework', url: 'https://designkit.org/methods/empathy-map' },
-    interview5whys: { icon: '❓', name: '5 Whys Interview', desc: 'Root-cause questioning technique', url: 'https://designkit.org/methods/interview' },
-    shadowing:      { icon: '👁️', name: 'User Shadowing Guide', desc: 'Observe users in context', url: 'https://designkit.org/methods/shadowing' },
+    empathymap:     { icon: '🗺️', name: 'Empathy Map Canvas', desc: 'Think / Feel / Say / Do framework', url: 'https://www.nngroup.com/articles/empathy-mapping/' },
+    interview5whys: { icon: '❓', name: '5 Whys Interview', desc: 'Root-cause questioning technique', url: 'https://www.designkit.org/methods/the-five-whys' },
+    shadowing:      { icon: '👁️', name: 'User Shadowing Guide', desc: 'Observe users in context', url: 'https://www.designkit.org/methods/immersion' },
     // Define tools
-    affinitydiagram:{ icon: '📎', name: 'Affinity Diagram', desc: 'Cluster research into themes', url: 'https://designkit.org/methods/affinity-diagram' },
-    hmw:            { icon: '💡', name: '"How Might We"', desc: 'Reframe problems as opportunities', url: 'https://designkit.org/methods/how-might-we' },
-    povstatement:   { icon: '🎯', name: 'POV Statement', desc: '[User] needs [need] because [insight]', url: 'https://dschool.stanford.edu/resources/design-thinking-bootleg' },
+    affinitydiagram:{ icon: '📎', name: 'Affinity Diagram', desc: 'Cluster research into themes', url: 'https://www.nngroup.com/articles/affinity-diagram/' },
+    hmw:            { icon: '💡', name: '"How Might We"', desc: 'Reframe problems as opportunities', url: 'https://www.designkit.org/methods/how-might-we' },
+    povstatement:   { icon: '🎯', name: 'POV Statement', desc: '[User] needs [need] because [insight]', url: 'https://dschool.stanford.edu/tools/design-thinking-bootleg' },
     // Ideate tools
     crazyeights:    { icon: '⚡', name: 'Crazy Eights', desc: '8 ideas in 8 minutes — rapid sketching', url: 'https://designsprintkit.withgoogle.com/methodology/phase3-sketch/crazy-eights' },
     scamper:        { icon: '🔄', name: 'SCAMPER', desc: 'Substitute, Combine, Adapt, Modify...', url: 'https://www.interaction-design.org/literature/article/learn-how-to-use-the-best-ideation-methods-scamper' },
