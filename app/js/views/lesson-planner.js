@@ -66,6 +66,8 @@ export const EEE_REGISTRY = {
   exitTicket:     { label: 'Exit Ticket',        cat: 'core', type: 'resource', desc: 'Formative check questions for lesson closure', pedagogy: ['assessment', 'engagement'] },
   discussionPrompts:{ label: 'Discussion Prompts', cat: 'core', type: 'tool', desc: 'Structured questions for classroom discourse', pedagogy: ['inquiry', 'collaborative', 'engagement'] },
   rubric:         { label: 'Rubric',             cat: 'core', type: 'resource', desc: 'Assessment rubrics with criteria & levels', pedagogy: ['assessment'] },
+  crossSubject:   { label: 'Cross-Subject Links', cat: 'core', type: 'tool', desc: 'Find connections to other subjects and suggest integration points', pedagogy: ['inquiry', 'e21cc', 'collaborative'] },
+  resourceRec:    { label: 'Resource Recommender', cat: 'core', type: 'tool', desc: 'Auto-suggest Knowledge Base items, simulations, and resources for the lesson', pedagogy: ['edtech', 'inquiry', 'engagement'] },
   // === ENACTMENT ENHANCEMENTS (teacher chooses) ===
   // type: 'tool' = Teaching Tool (interactive, run in class)
   // type: 'resource' = Lesson Resource (display/distribute in class)
@@ -807,7 +809,9 @@ const AI_TOOLS = [
   { id: 'ai-design-process-btn', label: 'Design Process', icon: '<polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>', color: '#14b8a6', cat: 'enactment', eee: 'designProcess' },
   { id: 'ai-recipe-btn', label: 'Recipe & Nutrition', icon: '<path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10H5a7 7 0 0 0 14 0z"/>', color: '#f97316', cat: 'enactment', eee: 'recipeBuilder' },
   { id: 'ai-kitchen-btn', label: 'Kitchen Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>', color: '#0d9488', cat: 'enactment', eee: 'kitchenLayout' },
-  { id: 'spatial-layout-btn', label: 'Spatial Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', color: '', cat: 'planning', eee: 'seatPlan' }
+  { id: 'spatial-layout-btn', label: 'Spatial Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', color: '', cat: 'planning', eee: 'seatPlan' },
+  { id: 'ai-cross-subject-btn', label: 'Cross-Subject', icon: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>', color: '#0891b2', cat: 'core', eee: 'crossSubject' },
+  { id: 'ai-resource-rec-btn', label: 'Recommend', icon: '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>', color: '#059669', cat: 'core', eee: 'resourceRec' },
 ];
 
 function buildToolbarHTML(mode) {
@@ -2003,6 +2007,66 @@ export function render(container) {
     'You are a Design & Technology specialist for Singapore secondary schools. Generate a structured design process guide: identify needs, explore ideas, develop solutions, realise prototype, test and evaluate. Include specific prompts for each stage.');
   newToolHandler('#ai-recipe-btn', 'recipeBuilder', 'Recipe & Nutrition',
     'You are a Food & Nutrition Science specialist for Singapore secondary schools. Generate recipe cards with ingredients, step-by-step instructions, nutritional information, and food safety notes. Align with NFS syllabus outcomes.');
+
+  // Cross-Subject Connector
+  newToolHandler('#ai-cross-subject-btn', 'crossSubject', 'Cross-Subject Links',
+    `You are a Singapore MOE curriculum specialist with deep knowledge of all subject syllabi from Primary to Pre-University.
+Given a lesson plan, identify 3-5 meaningful cross-curricular connections to OTHER subjects.
+For each connection:
+1. Name the connected subject and specific topic
+2. Explain the conceptual link (not just surface similarity)
+3. Suggest a concrete integration activity the teacher could try
+4. Note the relevant MOE syllabus outcome if applicable
+
+Format as clear sections with headers. Focus on connections that genuinely enrich learning, not forced links.
+Examples: Math↔Science (graphs, measurement), English↔History (source analysis), Music↔Physics (waves, frequency).`);
+
+  // Resource Recommender
+  container.querySelector('#ai-resource-rec-btn')?.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    const planText = aiMsgs.map(m => m.content).join('\n\n');
+    const cls = planClassContext || {};
+    const resultEl = container.querySelector('#ai-result');
+    resultEl.innerHTML = `<div class="chat-typing" style="padding:var(--sp-4);">Finding recommended resources...</div>`;
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+
+    // Gather local resources for the prompt
+    const knowledgeUploads = Store.getKnowledgeUploads?.() || [];
+    const stimulusLib = Store.getStimulusLibrary?.() || [];
+    const kbTitles = knowledgeUploads.map(k => k.title || k.name || 'Untitled').slice(0, 20).join(', ');
+    const stimTitles = stimulusLib.map(s => s.title || s.name || 'Untitled').slice(0, 20).join(', ');
+
+    // List of available simulations
+    const simCategories = 'Physics: pendulum, waves, specific-heat, electromagnets, lenses, density; Chemistry: titration, qualitative-analysis, electrolysis, rates-of-reaction, gas-tests, salts, chromatography; Biology: photosynthesis, diffusion, osmosis, enzyme-activity, microscopy, food-tests; Interactive: molecular-viewer, molecular-builder, particle-dynamics, design-process, kitchen-layout, stave-notation, rhythm-tool';
+
+    try {
+      const result = await sendChat([{ role: 'user', content: `Based on this lesson plan:\n\n${planText}\n\nSubject: ${cls.subject || 'General'}, Level: ${cls.level || 'Secondary'}
+
+AVAILABLE RESOURCES:
+- Knowledge Base uploads: ${kbTitles || 'None uploaded'}
+- Stimulus Library: ${stimTitles || 'None saved'}
+- Built-in Simulations: ${simCategories}
+
+Recommend the most relevant resources for this lesson:
+1. Which built-in simulations would enhance this lesson? (Only recommend if genuinely relevant)
+2. Which Knowledge Base items might be useful? (Match by topic, not just subject)
+3. Which external resources (SLS, MOE, open platforms) would complement the lesson?
+4. Suggest any stimulus material ideas if none exist yet
+
+Be specific and practical. Only recommend what truly fits this lesson.` }], {
+        systemPrompt: 'You are a Singapore teaching resource specialist. Recommend specific, relevant resources that enhance lesson delivery. Be selective — quality over quantity. Format with clear sections and brief explanations of why each resource is relevant.',
+        temperature: 0.5, maxTokens: 2048
+      });
+      setComponent('resourceRec', result, cls.subject || 'Resources');
+      resultEl.innerHTML = '';
+      renderComponents(container);
+      showToast('Resource recommendations added!', 'success');
+    } catch (err) {
+      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
+    }
+  });
 
   container.querySelector('#ai-kitchen-btn')?.addEventListener('click', () => {
     // Open spatial designer with a kitchen preset hint

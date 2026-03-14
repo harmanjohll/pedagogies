@@ -8,7 +8,8 @@ import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { showToast } from '../components/toast.js';
-import { summarizeNotes, suggestGrouping } from '../api.js';
+import { summarizeNotes, suggestGrouping, sendChat } from '../api.js';
+import { renderMd } from '../utils/latex.js';
 
 /* ═══════════ Classes List ═══════════ */
 
@@ -226,6 +227,10 @@ export function renderDetail(container, { id }) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                 Groups
               </button>
+              <button class="btn btn-ghost btn-sm" id="parent-digest-btn" title="Generate a weekly parent digest">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Parent Digest
+              </button>
             ` : ''}
           </div>
 
@@ -279,6 +284,11 @@ export function renderDetail(container, { id }) {
     // Student grouping
     container.querySelector('#group-students-btn')?.addEventListener('click', () => {
       showGroupingModal(id);
+    });
+
+    // Parent digest
+    container.querySelector('#parent-digest-btn')?.addEventListener('click', () => {
+      showParentDigestModal(freshCls);
     });
 
     container.querySelectorAll('.tab').forEach(tab => {
@@ -1029,4 +1039,168 @@ function stringToColor(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
   return colors[Math.abs(hash) % colors.length];
+}
+
+/* ═══════════ Parent Digest Generator ═══════════ */
+
+async function showParentDigestModal(cls) {
+  const lessons = Store.getLessonsForClass(cls.id);
+  const notes = cls.notes || [];
+
+  // Gather recent lesson summaries (last 7 days or last 5 lessons, whichever is more)
+  const recent = lessons
+    .sort((a, b) => (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || ''))
+    .slice(0, 5);
+
+  const recentNotes = notes
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .slice(0, 3);
+
+  const { backdrop, close } = openModal({
+    title: 'Parent Digest Generator',
+    size: 'lg',
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.6;">
+        Generate a parent-friendly weekly summary of what <strong>${escapeHtml(cls.name)}</strong> has been learning.
+        The digest pulls from recent lessons${recentNotes.length > 0 ? ' and class notes' : ''}.
+      </p>
+      <div style="display:flex;gap:var(--sp-3);margin-bottom:var(--sp-3);">
+        <div class="input-group" style="flex:1;">
+          <label class="input-label">Format</label>
+          <select class="input" id="digest-format">
+            <option value="whatsapp">WhatsApp / Plain Text</option>
+            <option value="email">Email / HTML</option>
+            <option value="pg">Parents Gateway</option>
+          </select>
+        </div>
+        <div class="input-group" style="flex:1;">
+          <label class="input-label">Tone</label>
+          <select class="input" id="digest-tone">
+            <option value="warm">Warm &amp; Encouraging</option>
+            <option value="formal">Formal</option>
+            <option value="bilingual">Bilingual (EN + Malay)</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Additional notes (optional)</label>
+        <textarea class="input" id="digest-notes" rows="2" placeholder="e.g. Reminder about upcoming test, field trip next week..." style="resize:vertical;"></textarea>
+      </div>
+      <div id="digest-output" style="display:none;margin-top:var(--sp-3);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-2);">
+          <label class="input-label" style="margin:0;">Generated Digest</label>
+          <button class="btn btn-ghost btn-sm" id="copy-digest-btn" style="font-size:0.75rem;">Copy</button>
+        </div>
+        <div id="digest-content" style="background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;padding:var(--sp-3);font-size:0.8125rem;color:var(--ink);line-height:1.7;max-height:300px;overflow-y:auto;"></div>
+      </div>
+      ${recent.length === 0 ? `
+        <div style="margin-top:var(--sp-3);padding:var(--sp-3);background:var(--warning-light);border-radius:8px;font-size:0.8125rem;color:var(--ink);">
+          No recent lessons found for this class. The digest will be generic. Add lessons via the Lesson Planner first for richer summaries.
+        </div>
+      ` : ''}
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Close</button>
+      <button class="btn btn-primary" data-action="generate" id="generate-digest-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Generate Digest
+      </button>
+    `
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+
+  backdrop.querySelector('#generate-digest-btn').addEventListener('click', async () => {
+    const btn = backdrop.querySelector('#generate-digest-btn');
+    const format = backdrop.querySelector('#digest-format').value;
+    const tone = backdrop.querySelector('#digest-tone').value;
+    const extra = backdrop.querySelector('#digest-notes').value.trim();
+    const outputEl = backdrop.querySelector('#digest-output');
+    const contentEl = backdrop.querySelector('#digest-content');
+
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+
+    // Build lesson context
+    const lessonContext = recent.map(l =>
+      `- "${l.title || 'Untitled'}" (${l.subject || cls.subject || 'General'}): ${l.learningIntentions || l.description || 'No description'}`
+    ).join('\n');
+
+    const noteContext = recentNotes.map(n =>
+      `- ${n.text || ''}`
+    ).join('\n');
+
+    const toneMap = {
+      warm: 'Warm, encouraging, and positive. Use phrases like "Your child has been..." and highlight effort and growth.',
+      formal: 'Professional and formal. Use clear, structured language suitable for official school communication.',
+      bilingual: 'Bilingual — write the digest in English first, then provide a Malay translation below. Use natural, conversational Malay (not overly formal).'
+    };
+
+    const formatMap = {
+      whatsapp: 'Plain text suitable for WhatsApp or SMS. Use line breaks, emojis sparingly, and keep it under 300 words. No HTML.',
+      email: 'Structured HTML email format with a greeting, sections (What We Learned, Looking Ahead, How to Help at Home), and a sign-off. Keep it professional but warm.',
+      pg: 'Parents Gateway format — concise, 150 words max, no HTML, no emojis. Official MOE tone.'
+    };
+
+    try {
+      const messages = [{
+        role: 'user',
+        content: `Generate a weekly parent digest for class ${cls.name} (${cls.level || ''} ${cls.subject || ''}).
+
+RECENT LESSONS:
+${lessonContext || 'No lessons recorded this week.'}
+
+${noteContext ? `CLASS NOTES:\n${noteContext}\n` : ''}
+${extra ? `TEACHER'S ADDITIONAL NOTES:\n${extra}\n` : ''}
+STUDENT COUNT: ${(cls.students || []).length}
+
+FORMAT: ${formatMap[format]}
+TONE: ${toneMap[tone]}
+
+Structure the digest to include:
+1. A warm greeting to parents
+2. Summary of what was covered this week (key topics, skills practised)
+3. Positive highlights or class achievements
+4. Looking ahead — what's coming next week
+5. How parents can support at home (1-2 suggestions)
+6. Sign-off from the teacher
+
+Keep it concise, parent-friendly, and avoid jargon. This is a Singapore school context.`
+      }];
+
+      const response = await sendChat(messages, {
+        systemPrompt: 'You are a Singapore school teacher writing a weekly update for parents. Be warm, informative, and concise. Parents are busy — respect their time. Use Singapore English where appropriate.',
+        maxTokens: 1500
+      });
+
+      outputEl.style.display = 'block';
+      if (format === 'email') {
+        contentEl.innerHTML = renderMd(response);
+      } else {
+        contentEl.textContent = response;
+      }
+    } catch (err) {
+      showToast(`Error: ${err.message}`, 'danger');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Regenerate`;
+  });
+
+  // Copy button
+  backdrop.querySelector('#copy-digest-btn')?.addEventListener('click', () => {
+    const contentEl = backdrop.querySelector('#digest-content');
+    const text = contentEl.textContent || contentEl.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Digest copied to clipboard!', 'success');
+    }).catch(() => {
+      // Fallback
+      const range = document.createRange();
+      range.selectNodeContents(contentEl);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      document.execCommand('copy');
+      showToast('Digest copied!', 'success');
+    });
+  });
 }

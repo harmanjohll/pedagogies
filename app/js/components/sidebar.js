@@ -47,6 +47,18 @@ const ICONS = {
   mathSandbox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/><circle cx="19" cy="19" r="2"/></svg>`,
 };
 
+/* ── Rotating section label for sandbox/innovation area ── */
+const SANDBOX_LABELS = [
+  'Innovations Akan Datang',
+  'The Lab',
+  'Eksperimen',
+  'Sandbox',
+  'Co-Cher+',
+  'Masak-Masak',
+];
+const SANDBOX_SECTION_KEY = '__sandbox__';
+let _sandboxLabel = SANDBOX_LABELS[Math.floor(Math.random() * SANDBOX_LABELS.length)];
+
 /* ── EEE-to-sidebar mapping: which EEE keys get sidebar nav items ── */
 const EEE_NAV_MAP = {
   simulations:    { route: '/simulations',      icon: 'simulations',    label: 'Simulations' },
@@ -145,7 +157,7 @@ function buildNavItems() {
     { id: '/assessment/aol', icon: 'aol', label: 'AoL' },
     { id: '/knowledge', icon: 'knowledge', label: 'Knowledge Bases', section: 'Growth' },
     { id: '/my-growth', icon: 'myGrowth', label: 'My Learning' },
-    { id: '/autopilot', icon: 'autopilot', label: 'Co-Cher+ (beta)', section: 'Co-Cher+' },
+    { id: '/autopilot', icon: 'autopilot', label: 'Co-Cher+ (beta)', section: SANDBOX_SECTION_KEY, sectionDisplay: _sandboxLabel },
     { id: '/math-sandbox', icon: 'mathSandbox', label: 'Math Sandbox' },
     { id: '/admin', icon: 'admin', label: 'Admin One-Stop', section: 'Operations' }
   ];
@@ -178,11 +190,12 @@ export function renderSidebar(container) {
         navHTML += `</div>`; // close .sidebar-section-items
       }
       currentSection = item.section;
+      const displayLabel = item.sectionDisplay || currentSection;
       const isCollapsed = collapsedSections.includes(currentSection);
       navHTML += `
         <div class="sidebar-section-label" data-section="${currentSection}" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;">
           <span class="sidebar-section-tri${isCollapsed ? '' : ' open'}" style="display:inline-block;width:0;height:0;border-left:5px solid var(--ink-faint);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform 0.2s ease;${isCollapsed ? '' : 'transform:rotate(90deg);'}"></span>
-          ${currentSection}
+          ${displayLabel}
         </div>
         <div class="sidebar-section-items" data-section-items="${currentSection}" style="${isCollapsed ? 'display:none;' : ''}">`;
     }

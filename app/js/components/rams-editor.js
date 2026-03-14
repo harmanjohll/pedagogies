@@ -86,7 +86,7 @@ export function openRamsEditor(event, ramsTask, onSave) {
           <span style="font-weight:700;font-size:1rem;color:var(--ink);flex:1;">RAMS Editor — ${esc(event?.name || 'Event')}</span>
           <button class="btn btn-ghost btn-sm rams-ai-btn" style="font-size:0.75rem;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Generate Hazards
+            Auto-Draft RAMS
           </button>
           <button class="btn btn-secondary btn-sm rams-print-btn">Print</button>
           <button class="btn btn-primary btn-sm rams-export-btn">Export .docx</button>
@@ -306,28 +306,31 @@ export function openRamsEditor(event, ramsTask, onSave) {
       printRams(data, event);
     });
 
-    // AI generate hazards
+    // AI auto-draft RAMS
     overlay.querySelector('.rams-ai-btn').addEventListener('click', async () => {
       const btn = overlay.querySelector('.rams-ai-btn');
       btn.disabled = true;
-      btn.textContent = 'Generating...';
+      btn.textContent = 'Drafting...';
 
       try {
         collectData();
+        // Detect if current hazards are just the default template (fresh RAMS)
+        const isFresh = data.hazards.length === 1 && data.hazards[0].hazard === 'Slip, trip and fall';
         const newHazards = await generateHazards(event, data);
         if (newHazards.length > 0) {
-          data.hazards = [...data.hazards, ...newHazards];
+          // Replace if fresh (only default row), otherwise append
+          data.hazards = isFresh ? newHazards : [...data.hazards, ...newHazards];
           render();
-          showToast(`${newHazards.length} hazard(s) generated!`, 'success');
+          showToast(`${newHazards.length} hazard(s) auto-drafted!`, 'success');
         } else {
-          showToast('No additional hazards generated.', 'danger');
+          showToast('No hazards generated — try adding more event details.', 'danger');
         }
       } catch (err) {
         showToast(`AI error: ${err.message}`, 'danger');
       }
 
       btn.disabled = false;
-      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generate Hazards`;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Auto-Draft RAMS`;
     });
 
     // Escape key
@@ -353,24 +356,38 @@ async function generateHazards(event, ramsData) {
 
   const existingHazards = ramsData.hazards.map(h => h.hazard).filter(Boolean).join(', ');
 
+  const numStudents = event?.tasks?.find(t => t.key === 'student_list')?.data?.total_students || '';
+
   const messages = [{
     role: 'user',
-    content: `Generate additional risk assessment hazards for this school activity.
+    content: `Auto-draft a comprehensive RAMS (Risk Assessment & Management Strategy) for this Singapore school activity.
 
-Event: ${event?.name || 'School Activity'}
-Type: ${event?.eventType || 'Activity'}
-Location: ${ramsData.location || 'School premises'}
-Activity: ${ramsData.activityProcess || 'General Activities'}
+EVENT DETAILS:
+- Event: ${event?.name || 'School Activity'}
+- Type: ${event?.eventType || 'Activity'}
+- Location: ${ramsData.location || 'School premises'}
+- Activity: ${ramsData.activityProcess || 'General Activities'}
+${numStudents ? `- Students: ${numStudents}` : ''}
 
-Already identified hazards: ${existingHazards || 'None'}
+${existingHazards ? `Already identified hazards (do NOT duplicate): ${existingHazards}` : 'No hazards identified yet — generate a complete first draft.'}
 
-Generate 3-5 NEW hazards (not duplicating existing ones) relevant to this specific activity.
-For each hazard, provide realistic risk controls appropriate for a Singapore secondary school context.
+Generate ${existingHazards ? '3-5 ADDITIONAL' : '5-8 comprehensive'} hazards covering these categories where relevant:
+1. TRANSPORT — travel to/from venue, road safety, bus boarding/alighting
+2. VENUE — unfamiliar environment, crowd management, slippery/uneven surfaces
+3. ACTIVITY-SPECIFIC — equipment handling, physical exertion, water/heights
+4. WEATHER — heat stroke (tropical Singapore), rain/thunderstorm, haze (NEA PSI)
+5. MEDICAL — pre-existing conditions, allergic reactions, dehydration
+6. GENERAL — slip/trip/fall, manual handling, food safety, stranger danger
+
+For each hazard:
+- Severity: 1=Negligible, 2=Minor, 3=Moderate, 4=Major, 5=Catastrophic
+- Likelihood: 1=Rare, 2=Unlikely, 3=Possible, 4=Likely, 5=Almost Certain
+- Controls: specific, actionable measures (not generic statements)
 
 Respond ONLY with valid JSON array:
 [
   {
-    "description": "activity/work process description",
+    "description": "activity/work process",
     "hazard": "specific hazard",
     "accident": "possible accident or ill-health",
     "severity": 2,
@@ -383,9 +400,9 @@ Respond ONLY with valid JSON array:
   }];
 
   const response = await sendChat(messages, {
-    systemPrompt: 'You are a risk assessment specialist for Singapore schools. Generate realistic, specific hazards and controls. Respond with valid JSON only.',
+    systemPrompt: 'You are a Singapore MOE school risk assessment specialist. Generate realistic, specific hazards and controls following the MOE RAMS framework. Consider Singapore-specific factors: tropical weather (heat, rain, haze), NEA PSI guidelines, SCDF fire safety, school bus safety regulations, and standard MOE Safe Work Procedures. Respond with valid JSON only.',
     jsonMode: true,
-    maxTokens: 2048
+    maxTokens: 4096
   });
 
   let jsonStr = response.trim();
