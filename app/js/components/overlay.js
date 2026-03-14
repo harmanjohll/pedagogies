@@ -27,7 +27,7 @@ export function openOverlay(title, opts) {
   iframe.style.cssText = 'flex:1;border:none;width:100%;background:#1e1f2b;';
   if (opts.src) iframe.src = opts.src;
   else if (opts.srcdoc) iframe.srcdoc = opts.srcdoc;
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
+  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox');
 
   // Optional post-load callback
   if (opts.onLoad) {
