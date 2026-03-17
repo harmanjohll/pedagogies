@@ -11,7 +11,7 @@ import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { sendChat } from '../api.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
-import { processLatex } from '../utils/latex.js';
+import { processLatex, renderMd } from '../utils/latex.js';
 
 /* ── Bloom's Cognitive Process Dimension ── */
 const BLOOMS = [
@@ -275,7 +275,7 @@ function getTopicsForClass(classId) {
 
 /* ── Helper: render AI output ── */
 function renderAIOutput(text) {
-  return `<div class="ai-output-box">${escHtml(text)}</div>`;
+  return `<div class="ai-output-box">${renderMd(text)}</div>`;
 }
 
 
@@ -878,6 +878,19 @@ async function generateDraftQuestions(container) {
   btn.textContent = 'Generating questions\u2026';
 
   try {
+    // Detect formula-heavy subjects for prompt tailoring
+    const formulaSubjectPattern = /math|physics|chemistry|chem|add\s*math|a\s*math|e\s*math/i;
+    const isFormulaSub = formulaSubjectPattern.test(subject);
+
+    const mathGuidance = isFormulaSub ? `
+IMPORTANT — This is a formula/calculation-heavy subject. Follow these rules:
+- Write questions concisely. State the problem directly, avoid unnecessary preamble or story context unless it is essential to the question.
+- Use LaTeX notation for all mathematical expressions: wrap inline math in $...$ and display math in $$...$$.
+- For example, write "Solve $2x + 5 = 17$." not "A student has an equation where two times x plus five equals seventeen. Solve for x."
+- For answers, show the working steps using LaTeX.
+- Prefer clean mathematical notation over verbose word descriptions of formulas.
+` : '';
+
     const prompt = `Generate draft assessment questions based on this Table of Specifications.
 
 Subject: ${subject || 'Not specified'}
@@ -885,7 +898,7 @@ Level: ${level || 'Secondary'}
 Total marks: ${totalMarks}
 TOS mode: ${tosMode === '2d' ? '2D (Knowledge Dimension x Cognitive Process)' : '1D (Objectives x Cognitive Levels)'}
 Difficulty preference: ${difficultyGuide[difficulty]}
-
+${mathGuidance}
 Table of Specifications:
 ${tosSummary}
 
@@ -912,7 +925,7 @@ Make questions appropriate for Singapore ${level || 'secondary'} students.
 Return ONLY the JSON array.`;
 
     const text = await sendChat([{ role: 'user', content: prompt }], {
-      systemPrompt: `You are an expert assessment designer for Singapore schools. Generate high-quality exam questions aligned to Bloom's taxonomy. Return ONLY valid JSON. Each question must be clear, unambiguous, and curriculum-appropriate. Include marking schemes.`,
+      systemPrompt: `You are an expert assessment designer for Singapore schools. Generate high-quality exam questions aligned to Bloom's taxonomy. Return ONLY valid JSON. Each question must be clear, unambiguous, and curriculum-appropriate. Include marking schemes.${isFormulaSub ? ' Use LaTeX ($...$ for inline, $$...$$ for display) for all mathematical expressions and formulas.' : ''}`,
       temperature: 0.5,
       maxTokens: 8192
     });
@@ -979,9 +992,9 @@ function renderGeneratedQuestions(container, questions) {
           </div>
         </div>
         <div class="aol-q-display">
-          <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Q${i + 1}. ${escHtml(q.question)}</div>
+          <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Q${i + 1}. ${renderMd(q.question)}</div>
           <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;padding:8px 12px;background:var(--bg-subtle,#f8f9fa);border-radius:6px;">
-            <strong style="color:var(--ink-secondary);">Suggested Answer:</strong> ${escHtml(q.answer || 'No answer provided')}
+            <strong style="color:var(--ink-secondary);">Suggested Answer:</strong> ${renderMd(q.answer || 'No answer provided')}
           </div>
         </div>
         <div class="aol-q-edit-area" style="display:none;">
@@ -1059,12 +1072,13 @@ function renderGeneratedQuestions(container, questions) {
       const display = card.querySelector('.aol-q-display');
       const editArea = card.querySelector('.aol-q-edit-area');
       display.innerHTML = `
-        <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Q${idx + 1}. ${escHtml(newText)}</div>
+        <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Q${idx + 1}. ${renderMd(newText)}</div>
         <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;padding:8px 12px;background:var(--bg-subtle,#f8f9fa);border-radius:6px;">
-          <strong style="color:var(--ink-secondary);">Suggested Answer:</strong> ${escHtml(newAnswer || 'No answer provided')}
+          <strong style="color:var(--ink-secondary);">Suggested Answer:</strong> ${renderMd(newAnswer || 'No answer provided')}
         </div>`;
       display.style.display = 'block';
       editArea.style.display = 'none';
+      processLatex(display);
 
       card.style.borderLeftColor = 'var(--accent, #4361ee)';
       showToast('Question updated.', 'success');
@@ -1099,11 +1113,19 @@ function exportQuestions(container) {
   const level = container.querySelector('#aol-level')?.value?.trim() || '';
   const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
 
+  // Detect formula-heavy subjects — use blank working space instead of lines
+  const formulaSubjects = /math|physics|chemistry|chem|add\s*math|a\s*math|e\s*math/i;
+  const isFormulaSubject = formulaSubjects.test(subject);
+
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
   <title>${escHtml(subject)} Assessment</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\\\[',right:'\\\\]',display:true},{left:'\\\\(',right:'\\\\)',display:false}],throwOnError:false});"><\/script>
   <style>
     @media print { @page { margin: 2cm; } .no-print { display: none !important; } }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px; color: #1e1e2e; position: relative; }
@@ -1118,6 +1140,7 @@ function exportQuestions(container) {
     .q-marks { font-size: 0.75rem; color: #666; }
     .q-text { font-size: 0.9375rem; line-height: 1.6; margin-bottom: 8px; }
     .q-lines { border-bottom: 1px solid #ddd; height: 28px; }
+    .q-blank { height: 28px; }
     .answer-section { margin-top: 32px; border-top: 2px dashed #ccc; padding-top: 16px; }
     .answer-section h2 { font-size: 1rem; margin-bottom: 12px; }
     .answer { margin-bottom: 12px; font-size: 0.8125rem; line-height: 1.5; }
@@ -1135,23 +1158,26 @@ function exportQuestions(container) {
     <div>Date: ________</div>
   </div>
 
-  ${questions.map((q, i) => `
+  ${questions.map((q, i) => {
+    const spaceLines = Math.max(2, Math.ceil((q.marks || 1) * 1.5));
+    const spaceClass = isFormulaSubject ? 'q-blank' : 'q-lines';
+    return `
     <div class="question">
       <div class="q-header">
         <span class="q-number">Q${i + 1}.</span>
         <span class="q-marks">[${q.marks} mark${q.marks !== 1 ? 's' : ''}]</span>
       </div>
-      <div class="q-text">${escHtml(q.question)}</div>
-      ${Array.from({length: Math.max(2, Math.ceil((q.marks || 1) * 1.5))}, () => '<div class="q-lines"></div>').join('')}
-    </div>
-  `).join('')}
+      <div class="q-text">${q.question}</div>
+      ${Array.from({length: spaceLines}, () => '<div class="' + spaceClass + '"></div>').join('')}
+    </div>`;
+  }).join('')}
 
   <div class="answer-section no-print">
     <h2>Answer Key / Marking Scheme</h2>
     ${questions.map((q, i) => `
       <div class="answer">
         <strong>Q${i + 1} (${(q.bloom_level || '').charAt(0).toUpperCase() + (q.bloom_level || '').slice(1)}, ${q.marks}m):</strong>
-        ${escHtml(q.answer || 'No answer provided')}
+        ${q.answer || 'No answer provided'}
       </div>
     `).join('')}
   </div>
@@ -1495,72 +1521,66 @@ export function renderAaL(container) {
             </span>
           </div>
           <div class="assess-section-desc">
-            Beatty\u2019s Proactive Learner model shows how GROW, ACT, MAP, and ASK work together in a continuous cycle
-            \u2014 both in and out of lessons. The inner ring represents the learner behaviours that drive the cycle: Prepare, Participate, and Process.
+            Beatty\u2019s Proactive Learner model shows how GROW, ACT, MAP, and ASK work together simultaneously
+            \u2014 both in and out of lessons. All practices happen all the time, not in sequence.
+            The inner ring represents the learner behaviours that drive learning: Prepare, Participate, and Process.
           </div>
 
           <div style="display:flex;justify-content:center;margin-bottom:20px;">
             <svg viewBox="0 0 440 440" width="380" height="380" style="max-width:100%;">
-              <defs>
-                <marker id="plArw1" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#3b82f6"/></marker>
-                <marker id="plArw2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#ef4444"/></marker>
-                <marker id="plArw3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#10b981"/></marker>
-                <marker id="plArw4" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#f59e0b"/></marker>
-              </defs>
+              <!-- Outer ring band (GROW / ACT / MAP / ASK) -->
+              <!-- Full outer ring background -->
+              <circle cx="220" cy="220" r="200" fill="none" stroke="var(--border,#e2e5ea)" stroke-width="1"/>
 
-              <!-- Outer circle border -->
-              <circle cx="220" cy="220" r="185" fill="none" stroke="#10b981" stroke-width="2.5"/>
+              <!-- Outer quadrant arcs as thick bands -->
+              <!-- GROW (top): blue band -->
+              <path d="M220,30 A190,190 0 0,1 410,220" fill="none" stroke="rgba(59,130,246,0.18)" stroke-width="40"/>
+              <path d="M220,30 A190,190 0 0,1 410,220" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="0"/>
+              <!-- ACT (right): red band -->
+              <path d="M410,220 A190,190 0 0,1 220,410" fill="none" stroke="rgba(239,68,68,0.18)" stroke-width="40"/>
+              <path d="M410,220 A190,190 0 0,1 220,410" fill="none" stroke="#ef4444" stroke-width="2"/>
+              <!-- MAP (bottom): green band -->
+              <path d="M220,410 A190,190 0 0,1 30,220" fill="none" stroke="rgba(16,185,129,0.18)" stroke-width="40"/>
+              <path d="M220,410 A190,190 0 0,1 30,220" fill="none" stroke="#10b981" stroke-width="2"/>
+              <!-- ASK (left): amber band -->
+              <path d="M30,220 A190,190 0 0,1 220,30" fill="none" stroke="rgba(245,158,11,0.18)" stroke-width="40"/>
+              <path d="M30,220 A190,190 0 0,1 220,30" fill="none" stroke="#f59e0b" stroke-width="2"/>
 
-              <!-- Outer quadrant dividers -->
-              <line x1="220" y1="35" x2="220" y2="405" stroke="var(--border,#d1d5db)" stroke-width="1.5"/>
-              <line x1="35" y1="220" x2="405" y2="220" stroke="var(--border,#d1d5db)" stroke-width="1.5"/>
+              <!-- Outer ring labels (positioned at midpoints of each quadrant arc) -->
+              <text x="345" y="100" text-anchor="middle" font-size="17" font-weight="800" fill="#3b82f6">GROW</text>
+              <text x="345" y="115" text-anchor="middle" font-size="7.5" fill="#3b82f6" font-weight="500" font-style="italic">Reflect on learning</text>
+              <text x="345" y="350" text-anchor="middle" font-size="17" font-weight="800" fill="#ef4444">ACT</text>
+              <text x="345" y="365" text-anchor="middle" font-size="7.5" fill="#ef4444" font-weight="500" font-style="italic">Act on feedback</text>
+              <text x="95" y="350" text-anchor="middle" font-size="17" font-weight="800" fill="#10b981">MAP</text>
+              <text x="95" y="365" text-anchor="middle" font-size="7.5" fill="#10b981" font-weight="500" font-style="italic">Map your progress</text>
+              <text x="95" y="100" text-anchor="middle" font-size="17" font-weight="800" fill="#f59e0b">ASK</text>
+              <text x="95" y="115" text-anchor="middle" font-size="7.5" fill="#f59e0b" font-weight="500" font-style="italic">Ask for help</text>
 
-              <!-- Outer quadrant fills -->
-              <!-- GROW (top-right): blue -->
-              <path d="M220,35 A185,185 0 0,1 405,220 L220,220 Z" fill="rgba(59,130,246,0.08)"/>
-              <!-- ACT (bottom-right): red/pink -->
-              <path d="M405,220 A185,185 0 0,1 220,405 L220,220 Z" fill="rgba(239,68,68,0.08)"/>
-              <!-- MAP (bottom-left): green -->
-              <path d="M220,405 A185,185 0 0,1 35,220 L220,220 Z" fill="rgba(16,185,129,0.08)"/>
-              <!-- ASK (top-left): orange -->
-              <path d="M35,220 A185,185 0 0,1 220,35 L220,220 Z" fill="rgba(245,158,11,0.08)"/>
+              <!-- Inner ring band (Prepare / Participate / Process) -->
+              <!-- Inner ring background -->
+              <circle cx="220" cy="220" r="120" fill="var(--bg-card,#fff)"/>
+              <circle cx="220" cy="220" r="120" fill="none" stroke="var(--border,#e2e5ea)" stroke-width="1"/>
 
-              <!-- Inner ring border -->
-              <circle cx="220" cy="220" r="95" fill="none" stroke="var(--border,#d1d5db)" stroke-width="1.5"/>
+              <!-- Inner thirds as curved bands -->
+              <!-- Prepare (top-right, 0° to 120°) -->
+              <path d="M220,110 A110,110 0 0,1 315.3,275" fill="none" stroke="rgba(99,102,241,0.2)" stroke-width="32"/>
+              <path d="M220,110 A110,110 0 0,1 315.3,275" fill="none" stroke="#6366f1" stroke-width="1.5"/>
+              <!-- Participate (120° to 240°) -->
+              <path d="M315.3,275 A110,110 0 0,1 124.7,275" fill="none" stroke="rgba(236,72,153,0.2)" stroke-width="32"/>
+              <path d="M315.3,275 A110,110 0 0,1 124.7,275" fill="none" stroke="#ec4899" stroke-width="1.5"/>
+              <!-- Process (240° to 360°) -->
+              <path d="M124.7,275 A110,110 0 0,1 220,110" fill="none" stroke="rgba(20,184,166,0.2)" stroke-width="32"/>
+              <path d="M124.7,275 A110,110 0 0,1 220,110" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
 
-              <!-- Inner ring thirds: Prepare (top-right), Participate (bottom), Process (top-left) -->
-              <!-- Prepare: from 12 o'clock CW to 4 o'clock (0° to 120°) -->
-              <path d="M220,125 A95,95 0 0,1 302,268 L220,220 Z" fill="rgba(99,102,241,0.08)" stroke="#6366f1" stroke-width="1"/>
-              <!-- Participate: from 4 o'clock CW to 8 o'clock (120° to 240°) -->
-              <path d="M302,268 A95,95 0 0,1 138,268 L220,220 Z" fill="rgba(236,72,153,0.08)" stroke="#ec4899" stroke-width="1"/>
-              <!-- Process: from 8 o'clock CW to 12 o'clock (240° to 360°) -->
-              <path d="M138,268 A95,95 0 0,1 220,125 L220,220 Z" fill="rgba(20,184,166,0.08)" stroke="#14b8a6" stroke-width="1"/>
+              <!-- Inner labels (positioned along the bands, rotated to follow the curve) -->
+              <text x="280" y="168" text-anchor="middle" font-size="12" font-weight="700" fill="#6366f1" transform="rotate(30,280,168)">Prepare</text>
+              <text x="220" y="310" text-anchor="middle" font-size="12" font-weight="700" fill="#ec4899">Participate</text>
+              <text x="158" y="168" text-anchor="middle" font-size="12" font-weight="700" fill="#14b8a6" transform="rotate(-30,158,168)">Process</text>
 
               <!-- Centre circle -->
-              <circle cx="220" cy="220" r="42" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
-              <text x="220" y="214" text-anchor="middle" font-size="10" font-weight="700" fill="var(--ink,#374151)">Proactive</text>
-              <text x="220" y="228" text-anchor="middle" font-size="10" font-weight="700" fill="var(--ink,#374151)">Learner</text>
-
-              <!-- Outer clockwise arrows -->
-              <path d="M250,40 Q320,28 378,75" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#plArw1)"/>
-              <path d="M410,250 Q418,320 378,370" fill="none" stroke="#ef4444" stroke-width="2" marker-end="url(#plArw2)"/>
-              <path d="M190,410 Q118,418 68,378" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#plArw3)"/>
-              <path d="M32,190 Q24,118 62,68" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#plArw4)"/>
-
-              <!-- Outer labels -->
-              <text x="330" y="110" text-anchor="middle" font-size="18" font-weight="800" fill="#3b82f6">GROW</text>
-              <text x="330" y="127" text-anchor="middle" font-size="8" fill="#3b82f6" font-weight="500" font-style="italic">Reflect on learning</text>
-              <text x="330" y="330" text-anchor="middle" font-size="18" font-weight="800" fill="#ef4444">ACT</text>
-              <text x="330" y="347" text-anchor="middle" font-size="8" fill="#ef4444" font-weight="500" font-style="italic">Act on feedback</text>
-              <text x="110" y="330" text-anchor="middle" font-size="18" font-weight="800" fill="#10b981">MAP</text>
-              <text x="110" y="347" text-anchor="middle" font-size="8" fill="#10b981" font-weight="500" font-style="italic">Map your progress</text>
-              <text x="110" y="110" text-anchor="middle" font-size="18" font-weight="800" fill="#f59e0b">ASK</text>
-              <text x="110" y="127" text-anchor="middle" font-size="8" fill="#f59e0b" font-weight="500" font-style="italic">Ask for help</text>
-
-              <!-- Inner labels -->
-              <text x="268" y="170" text-anchor="middle" font-size="10" font-weight="700" fill="#6366f1">Prepare</text>
-              <text x="220" y="295" text-anchor="middle" font-size="10" font-weight="700" fill="#ec4899">Participate</text>
-              <text x="172" y="170" text-anchor="middle" font-size="10" font-weight="700" fill="#14b8a6">Process</text>
+              <circle cx="220" cy="220" r="55" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
+              <text x="220" y="215" text-anchor="middle" font-size="11" font-weight="800" fill="var(--ink,#374151)">Proactive</text>
+              <text x="220" y="232" text-anchor="middle" font-size="11" font-weight="800" fill="var(--ink,#374151)">Learner</text>
             </svg>
           </div>
 
@@ -1568,18 +1588,19 @@ export function renderAaL(container) {
             <div>
               <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Outer Ring \u2014 Learning Practices</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
-                <span style="color:#3b82f6;font-weight:600;">GROW</span> \u2192 Reflect on what you know and don\u2019t know<br/>
-                <span style="color:#ef4444;font-weight:600;">ACT</span> \u2192 Process and act on feedback received<br/>
-                <span style="color:#10b981;font-weight:600;">MAP</span> \u2192 Track your progress against goals<br/>
-                <span style="color:#f59e0b;font-weight:600;">ASK</span> \u2192 Seek help and clarify understanding
+                <span style="color:#3b82f6;font-weight:600;">GROW</span> \u2014 Reflect on what you know and don\u2019t know<br/>
+                <span style="color:#ef4444;font-weight:600;">ACT</span> \u2014 Process and act on feedback received<br/>
+                <span style="color:#10b981;font-weight:600;">MAP</span> \u2014 Track your progress against goals<br/>
+                <span style="color:#f59e0b;font-weight:600;">ASK</span> \u2014 Seek help and clarify understanding
               </div>
+              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">All four practices happen simultaneously, not in sequence.</div>
             </div>
             <div>
               <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Inner Ring \u2014 Learner Behaviours</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
-                <span style="color:#6366f1;font-weight:600;">Prepare</span> \u2192 Get ready for learning before class<br/>
-                <span style="color:#ec4899;font-weight:600;">Participate</span> \u2192 Engage actively during lessons<br/>
-                <span style="color:#14b8a6;font-weight:600;">Process</span> \u2192 Make sense of learning after class
+                <span style="color:#6366f1;font-weight:600;">Prepare</span> \u2014 Get ready for learning before class<br/>
+                <span style="color:#ec4899;font-weight:600;">Participate</span> \u2014 Engage actively during lessons<br/>
+                <span style="color:#14b8a6;font-weight:600;">Process</span> \u2014 Make sense of learning after class
               </div>
             </div>
           </div>
@@ -1830,7 +1851,7 @@ Make them concrete, empowering, and suitable for student self-reflection journal
 
       const text = await sendChat([{ role: 'user', content: prompt }], {
         systemPrompt: 'You are a metacognition specialist for Singapore secondary schools using Beatty\'s GROW by reflecting framework. Generate empowering student self-reflection prompts.',
-        temperature: 0.6, maxTokens: 1500
+        temperature: 0.6, maxTokens: 4096
       });
 
       output.innerHTML = renderAIOutput(text);
@@ -1881,7 +1902,7 @@ Make them empowering, non-defensive, and suitable for student self-reflection af
 
       const text = await sendChat([{ role: 'user', content: prompt }], {
         systemPrompt: 'You are a metacognition specialist for Singapore secondary schools using Beatty\'s ACT on Feedback framework. Generate empowering student self-reflection prompts that help learners process and act on feedback.',
-        temperature: 0.6, maxTokens: 1500
+        temperature: 0.6, maxTokens: 4096
       });
 
       output.innerHTML = renderAIOutput(text);
