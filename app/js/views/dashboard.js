@@ -108,7 +108,16 @@ function getGreeting() {
 function getFirstName() {
   const user = getCurrentUser();
   if (!user || !user.name) return null;
-  return user.name.split(' ')[0];
+  const parts = user.name.trim().split(/\s+/);
+  // Skip salutation prefixes (MR, MS, MDM, MRS, DR, PROF) to get the actual first name
+  const salutations = new Set(['MR', 'MS', 'MDM', 'MRS', 'DR', 'PROF', 'MISS']);
+  let nameStart = 0;
+  if (parts.length > 1 && salutations.has(parts[0].toUpperCase())) {
+    nameStart = 1;
+  }
+  const firstName = parts[nameStart] || parts[0];
+  // Title-case: "FABIAN" → "Fabian"
+  return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
 }
 
 /* ── Curated quotes — one per day, rotated by period ── */

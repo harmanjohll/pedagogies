@@ -971,6 +971,122 @@
   });
 
   /* ══════════════════════════════════════════
+   * Save / Load / Print
+   * ══════════════════════════════════════════ */
+
+  const STORAGE_KEY = 'cocher_kitchen_layouts';
+
+  function getSavedLayouts() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; }
+  }
+
+  document.getElementById('save-btn').addEventListener('click', () => {
+    const name = prompt('Layout name:', `Kitchen ${new Date().toLocaleDateString()}`);
+    if (!name) return;
+    const layouts = getSavedLayouts();
+    layouts.push({
+      name,
+      date: new Date().toISOString(),
+      template: document.getElementById('template-select').value,
+      students: document.getElementById('students-select').value,
+      items: placedItems.map(i => ({ equipId: i.equipId, x: i.x, y: i.y, w: i.w, h: i.h, color: i.color, icon: i.icon, label: i.label, safetyType: i.safetyType })),
+      markers: studentMarkers.map(s => ({ x: s.x, y: s.y, num: s.num })),
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(layouts));
+    showNotification('Layout saved!');
+  });
+
+  document.getElementById('load-btn').addEventListener('click', () => {
+    const layouts = getSavedLayouts();
+    if (layouts.length === 0) { showNotification('No saved layouts found.'); return; }
+    const list = layouts.map((l, i) => `${i + 1}. ${l.name} (${new Date(l.date).toLocaleDateString()})`).join('\n');
+    const choice = prompt(`Select a layout to load:\n\n${list}\n\nEnter number:`);
+    const idx = parseInt(choice) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= layouts.length) return;
+    const layout = layouts[idx];
+    placedItems = [];
+    studentMarkers = [];
+    selectedItem = null;
+    nextItemId = 1;
+    const allEquip = [...EQUIPMENT.cooking, ...EQUIPMENT.prep, ...EQUIPMENT.storage, ...EQUIPMENT.safety];
+    layout.items.forEach(saved => {
+      const eq = allEquip.find(e => e.id === saved.equipId);
+      if (eq) addItem(eq, saved.x, saved.y);
+    });
+    layout.markers.forEach(m => {
+      studentMarkers.push({ id: `s${m.num}`, x: m.x, y: m.y, num: m.num });
+    });
+    if (layout.template) document.getElementById('template-select').value = layout.template;
+    if (layout.students) document.getElementById('students-select').value = layout.students;
+    renderPlacedItems();
+    draw();
+    showNotification(`Loaded: ${layout.name}`);
+  });
+
+  document.getElementById('print-btn').addEventListener('click', () => {
+    // Create a high-res snapshot of the floor plan for printing
+    const printCanvas = document.createElement('canvas');
+    const scale = 2;
+    printCanvas.width = canvas.width * scale;
+    printCanvas.height = canvas.height * scale;
+    const pCtx = printCanvas.getContext('2d');
+    pCtx.scale(scale, scale);
+    // Redraw floor
+    const origCtx = ctx;
+    // Draw the base floor plan onto print canvas
+    pCtx.drawImage(canvas, 0, 0);
+    // Draw placed equipment onto print canvas
+    placedItems.forEach(item => {
+      const equipCanvas = drawEquipmentCanvas(item.equipId, item.w, item.h);
+      pCtx.drawImage(equipCanvas, item.x, item.y);
+      // Label
+      pCtx.font = '8px Inter, sans-serif';
+      pCtx.fillStyle = '#57534e';
+      pCtx.textAlign = 'center';
+      pCtx.fillText(item.label, item.x + item.w / 2, item.y + item.h + 10);
+    });
+    // Draw student markers
+    studentMarkers.forEach(s => {
+      pCtx.beginPath();
+      pCtx.arc(s.x + 14, s.y + 14, 14, 0, Math.PI * 2);
+      pCtx.fillStyle = 'rgba(139,92,246,0.2)';
+      pCtx.fill();
+      pCtx.strokeStyle = '#7c3aed';
+      pCtx.lineWidth = 2;
+      pCtx.stroke();
+      pCtx.fillStyle = '#6d28d9';
+      pCtx.font = 'bold 9px Inter, sans-serif';
+      pCtx.textAlign = 'center';
+      pCtx.textBaseline = 'middle';
+      pCtx.fillText(`S${s.num}`, s.x + 14, s.y + 14);
+    });
+    // Open print window
+    const pw = window.open('', '_blank');
+    pw.document.write(`<!DOCTYPE html><html><head><title>Kitchen Layout — Co-Cher</title>
+    <style>@media print{@page{margin:1cm;}}body{margin:0;display:flex;flex-direction:column;align-items:center;font-family:Inter,sans-serif;}
+    h1{font-size:1rem;margin:12px 0 4px;}p{font-size:0.75rem;color:#666;margin:0 0 12px;}
+    img{max-width:100%;border:1px solid #ddd;}</style></head><body>
+    <h1>Kitchen Floor Plan</h1>
+    <p>${placedItems.length} equipment items · ${studentMarkers.length} student positions</p>
+    <img src="${printCanvas.toDataURL('image/png')}" alt="Kitchen Layout"/>
+    <script>window.onload=function(){window.print();}<\/script></body></html>`);
+    pw.document.close();
+  });
+
+  function showNotification(msg) {
+    let el = document.getElementById('kitchen-notification');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'kitchen-notification';
+      el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#009432;color:#fff;padding:8px 20px;border-radius:8px;font-size:0.8125rem;font-weight:600;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.opacity = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, 2000);
+  }
+
+  /* ══════════════════════════════════════════
    * Legend
    * ══════════════════════════════════════════ */
 
