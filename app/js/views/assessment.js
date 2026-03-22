@@ -727,6 +727,8 @@ function wireAoLEvents(container, lessons) {
         const prompt = `Create a Table of Specifications for an assessment with ${total} total marks.\n\nLearning Objectives:\n${objs.map((o,i) => `${i+1}. ${o}`).join('\n')}\n\nDistribute marks across Bloom's taxonomy levels: Remember, Understand, Apply, Analyse, Evaluate, Create.\nReturn ONLY a JSON array of objects, one per objective, like:\n[{"objective":"...","remember":2,"understand":3,"apply":4,"analyse":2,"evaluate":1,"create":0}]\nEnsure total across all objectives sums to exactly ${total}. Weight higher-order thinking appropriately.`;
 
         const text = await sendChat([{ role: 'user', content: prompt }], {
+          trackLabel: 'generateTOS',
+          trackDetail: [container.querySelector('#aol-subject')?.value, container.querySelector('#aol-level')?.value].filter(Boolean).join(' '),
           systemPrompt: 'You are an assessment design specialist. Return ONLY valid JSON, no explanation.',
           temperature: 0.3, maxTokens: 2048
         });
@@ -754,6 +756,8 @@ function wireAoLEvents(container, lessons) {
         const prompt = `Create a 2D Table of Specifications (Anderson & Krathwohl revised taxonomy) for an assessment with ${total} total marks.\n\n${context}\n\nDistribute marks across a 4\u00d76 grid:\nRows (Knowledge Dimension): Factual, Conceptual, Procedural, Metacognitive\nColumns (Cognitive Process): Remember, Understand, Apply, Analyse, Evaluate, Create\n\nReturn ONLY a JSON array of 4 objects (one per knowledge dimension, in order):\n[{"dimension":"factual","remember":2,"understand":3,"apply":4,"analyse":1,"evaluate":0,"create":0},\u2026]\nEnsure total sums to exactly ${total}. Weight appropriately.`;
 
         const text = await sendChat([{ role: 'user', content: prompt }], {
+          trackLabel: 'generateTOS_2D',
+          trackDetail: [container.querySelector('#aol-subject')?.value, container.querySelector('#aol-level')?.value].filter(Boolean).join(' '),
           systemPrompt: 'You are an assessment design specialist using Anderson & Krathwohl\'s revised taxonomy. Return ONLY valid JSON.',
           temperature: 0.3, maxTokens: 1024
         });
@@ -926,6 +930,8 @@ Make questions appropriate for Singapore ${level || 'secondary'} students.
 Return ONLY the JSON array.`;
 
     const text = await sendChat([{ role: 'user', content: prompt }], {
+      trackLabel: 'generateQuestions',
+      trackDetail: [subject, level].filter(Boolean).join(' '),
       systemPrompt: `You are an expert assessment designer for Singapore schools. Generate high-quality exam questions aligned to Bloom's taxonomy. Return ONLY valid JSON. Each question must be clear, unambiguous, and curriculum-appropriate. Include marking schemes.${isFormulaSub ? ' Use LaTeX ($...$ for inline, $$...$$ for display) for all mathematical expressions and formulas.' : ''}`,
       temperature: 0.5,
       maxTokens: 8192
@@ -1109,10 +1115,9 @@ function exportQuestions(container) {
     showToast('No questions to export.', 'warning');
     return;
   }
-  trackEvent('export', 'print_questions', `${questions.length} questions`);
-
   const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';
   const level = container.querySelector('#aol-level')?.value?.trim() || '';
+  trackEvent('export', 'print_questions', `${questions.length} questions`, [subject, level].filter(Boolean).join(' '));
   const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
 
   // Detect formula-heavy subjects — use blank working space instead of lines
@@ -1201,10 +1206,9 @@ function copyQuestions(container) {
     showToast('No questions to copy.', 'warning');
     return;
   }
-  trackEvent('export', 'copy_questions', `${questions.length} questions`);
-
   const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';
   const level = container.querySelector('#aol-level')?.value?.trim() || '';
+  trackEvent('export', 'copy_questions', `${questions.length} questions`, [subject, level].filter(Boolean).join(' '));
   const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
 
   let text = `${subject}${level ? ' \u2014 ' + level : ''}\nTotal Marks: ${totalMarks}\n\n`;

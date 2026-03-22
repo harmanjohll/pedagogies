@@ -1282,7 +1282,7 @@ export function render(container) {
     renderMessages(messagesEl, classes);
 
     try {
-      const response = await sendChat(chatMessages, { trackLabel: 'lessonChat' });
+      const response = await sendChat(chatMessages, { trackLabel: 'lessonChat', trackDetail: [planClassContext?.subject, planClassContext?.level].filter(Boolean).join(' ') || '' });
       chatMessages.push({ role: 'assistant', content: response });
     } catch (err) {
       chatMessages.push({ role: 'assistant', content: `I encountered an error: ${err.message}` });
