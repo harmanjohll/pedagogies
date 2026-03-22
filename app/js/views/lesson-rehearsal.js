@@ -471,7 +471,8 @@ function renderSetupInterface(container, eligibleLessons, classes) {
         showToast('Please select at least one student persona type.', 'warning');
         return;
       }
-      trackEvent('feature', 'rehearsal_start');
+      const _lesson = selectedLessonId ? Store.getLesson(selectedLessonId) : null;
+      trackEvent('feature', 'rehearsal_start', `${selectedPersonas.length} personas`, _lesson?.title || '');
       startRehearsal(container);
     });
   }

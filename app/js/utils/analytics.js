@@ -18,13 +18,14 @@
  *         r.category,
  *         r.action,
  *         r.label || '',
+ *         r.detail || '',
  *         r.sessionId
  *       ]);
  *     });
  *     return ContentService.createTextOutput('ok');
  *   }
  *
- * Sheet columns: Timestamp | User | Email | Category | Action | Label | Session
+ * Sheet columns: Timestamp | User | Email | Category | Action | Label | Detail | Session
  */
 
 const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyNy6dYOumxKBfGQ6z5qNndPtND6nd5xFhwONh_K8fYispkJzZ6Co8m7i_s-BrQWkVH/exec';
@@ -72,8 +73,9 @@ function flush() {
  * @param {string} category  e.g. 'navigation', 'ai', 'content', 'export', 'session'
  * @param {string} action    e.g. 'page_view', 'generate', 'class_created'
  * @param {string} [label]   optional detail e.g. route path, feature name
+ * @param {string} [detail]  optional short context e.g. 'Sec 2 English' or 'P4 Math'
  */
-export function trackEvent(category, action, label) {
+export function trackEvent(category, action, label, detail) {
   if (!isEnabled()) return; // fast exit if opted out
 
   let user = '';
@@ -83,7 +85,7 @@ export function trackEvent(category, action, label) {
     if (u) { user = u.name || ''; email = u.email || ''; }
   } catch { /* ignore */ }
 
-  _queue.push({ timestamp: Date.now(), user, email, category, action, label: label || '', sessionId: getSessionId() });
+  _queue.push({ timestamp: Date.now(), user, email, category, action, label: label || '', detail: detail || '', sessionId: getSessionId() });
 
   if (_queue.length >= BATCH_SIZE) {
     flush();

@@ -313,6 +313,7 @@ Measurable outcomes using "I can..." statements.
 
 IMPORTANT: Use extensive LaTeX throughout. Every equation, expression, and mathematical symbol should use LaTeX delimiters. Do NOT use plain text for math — always use $ or $$ delimiters. Use \\\\  for line breaks within multi-step solutions.`,
           trackLabel: 'mathLessonGenerate',
+          trackDetail: [topic, level].filter(Boolean).join(' · '),
           temperature: 0.6,
           maxTokens: 3072
         }
