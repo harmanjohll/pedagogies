@@ -44,7 +44,7 @@ function getSessionId() {
 }
 
 function isEnabled() {
-  try { return localStorage.getItem(OPT_OUT_KEY) !== '1'; } catch { return true; }
+  try { return localStorage.getItem(OPT_OUT_KEY) !== '1'; } catch(e) { return true; }
 }
 
 function flush() {
@@ -101,7 +101,7 @@ export function analyticsEnabled() {
 
 /** Toggle analytics on or off. */
 export function setAnalyticsEnabled(on) {
-  try { if (on) localStorage.removeItem(OPT_OUT_KEY); else localStorage.setItem(OPT_OUT_KEY, '1'); } catch {}
+  try { if (on) localStorage.removeItem(OPT_OUT_KEY); else localStorage.setItem(OPT_OUT_KEY, '1'); } catch(e) { /* ignore */ }
 }
 
 // Flush remaining events when the page is unloading
