@@ -6,6 +6,7 @@
  */
 
 import { openOverlay } from '../components/overlay.js';
+import { trackEvent } from '../utils/analytics.js';
 
 export function render(container) {
   container.innerHTML = `
@@ -74,6 +75,7 @@ export function render(container) {
   `;
 
   container.querySelector('#launch-design').addEventListener('click', () => {
+    trackEvent('feature', 'launch', 'designProcess');
     openOverlay('Design Process', {
       src: 'simulations/interactives/design-process/index.html'
     });

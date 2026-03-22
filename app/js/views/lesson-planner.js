@@ -1282,7 +1282,7 @@ export function render(container) {
     renderMessages(messagesEl, classes);
 
     try {
-      const response = await sendChat(chatMessages);
+      const response = await sendChat(chatMessages, { trackLabel: 'lessonChat' });
       chatMessages.push({ role: 'assistant', content: response });
     } catch (err) {
       chatMessages.push({ role: 'assistant', content: `I encountered an error: ${err.message}` });
@@ -1985,7 +1985,7 @@ export function render(container) {
       resultEl.scrollIntoView({ behavior: 'smooth' });
       try {
         const result = await sendChat([{ role: 'user', content: `Based on this lesson plan:\n\n${planText}\n\nGenerate ${label} content for ${cls.subject || 'the lesson'} (${cls.level || 'Secondary'}).` }], {
-          systemPrompt, temperature: 0.6, maxTokens: 2048
+          trackLabel: 'eeeToolGenerate', systemPrompt, temperature: 0.6, maxTokens: 2048
         });
         setComponent(toolKey, result, cls.subject || label);
         resultEl.innerHTML = '';
@@ -2056,6 +2056,7 @@ Recommend the most relevant resources for this lesson:
 4. Suggest any stimulus material ideas if none exist yet
 
 Be specific and practical. Only recommend what truly fits this lesson.` }], {
+        trackLabel: 'resourceRecommender',
         systemPrompt: 'You are a Singapore teaching resource specialist. Recommend specific, relevant resources that enhance lesson delivery. Be selective — quality over quantity. Format with clear sections and brief explanations of why each resource is relevant.',
         temperature: 0.5, maxTokens: 2048
       });

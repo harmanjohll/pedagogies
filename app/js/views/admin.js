@@ -652,6 +652,7 @@ For select fields, use one of the provided options exactly. For text/textarea fi
   }];
 
   const response = await sendChat(messages, {
+    trackLabel: 'eventSummary',
     systemPrompt: `You are Co-Cher's event planning assistant for Singapore schools. Generate complete, practical event planning documents based on teacher descriptions. Respond with valid JSON only. Be specific, professional, and follow Singapore MOE conventions for school communications.`,
     jsonMode: true,
     maxTokens: 8192

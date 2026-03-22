@@ -897,7 +897,7 @@ export function render(container) {
       try {
         const text = await sendChat(
           [{ role: 'user', content: user }],
-          { systemPrompt: system, temperature: 0.6, maxTokens: 3072 }
+          { trackLabel: 'autopilotPipeline', systemPrompt: system, temperature: 0.6, maxTokens: 3072 }
         );
         if (aborted) break;
         outputs[step.id] = text;

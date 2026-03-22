@@ -6,6 +6,7 @@
  */
 
 import { openOverlay } from '../components/overlay.js';
+import { trackEvent } from '../utils/analytics.js';
 
 export function render(container) {
   container.innerHTML = `
@@ -66,6 +67,7 @@ export function render(container) {
   `;
 
   container.querySelector('#launch-rhythm').addEventListener('click', () => {
+    trackEvent('feature', 'launch', 'rhythmTool');
     openOverlay('Rhythm & Percussion', {
       src: 'simulations/interactives/rhythm-tool/index.html'
     });

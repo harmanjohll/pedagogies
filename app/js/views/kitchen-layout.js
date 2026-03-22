@@ -450,6 +450,7 @@ Format as a clear checklist suitable for displaying in the kitchen.`,
 
     try {
       const text = await sendChat([{ role: 'user', content: prompts[mode] }], {
+        trackLabel: 'recipeAssistant',
         systemPrompt: 'You are a culinary educator for Singapore secondary school NFS (Nutrition & Food Science) and FCE (Food & Consumer Education) classes. Provide practical, safety-conscious, curriculum-aligned responses. Use metric measurements. Consider Singapore food context (local ingredients, halal options, HPB guidelines).',
         temperature: 0.5,
         maxTokens: 4096,
@@ -503,6 +504,7 @@ Provide:
 7. **Clean-up protocol** — systematic clean-up procedure
 
 Make it practical and classroom-ready for Singapore secondary school NFS/FCE.` }], {
+        trackLabel: 'kitchenSetupGuide',
         systemPrompt: 'You are an experienced NFS/FCE teacher in a Singapore secondary school. Generate detailed, classroom-ready practical lesson setups that are well-organised, safety-conscious, and pedagogically sound.',
         temperature: 0.5,
         maxTokens: 4096,

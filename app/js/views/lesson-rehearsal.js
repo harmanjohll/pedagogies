@@ -8,6 +8,7 @@
 
 import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
+import { trackEvent } from '../utils/analytics.js';
 
 /* ── Constants ── */
 
@@ -53,6 +54,7 @@ function getApiKey() {
 }
 
 async function callAnthropic(systemPrompt, messages, maxTokens = 4096) {
+  trackEvent('ai', 'rehearsal', 'message');
   const apiKey = getApiKey();
   if (!apiKey) throw new Error('No API key configured.');
 
@@ -469,6 +471,7 @@ function renderSetupInterface(container, eligibleLessons, classes) {
         showToast('Please select at least one student persona type.', 'warning');
         return;
       }
+      trackEvent('feature', 'rehearsal_start');
       startRehearsal(container);
     });
   }

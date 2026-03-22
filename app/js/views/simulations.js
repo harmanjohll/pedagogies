@@ -1332,7 +1332,7 @@ TECHNICAL:
 
         const text = await sendChat(
           [{ role: 'user', content: prompt }],
-          { systemPrompt, temperature: 0.5, maxTokens: 16000 }
+          { trackLabel: 'customSimulation', systemPrompt, temperature: 0.5, maxTokens: 16000 }
         );
 
         const html = extractHTML(text);
