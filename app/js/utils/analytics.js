@@ -27,7 +27,8 @@
  * Sheet columns: Timestamp | User | Email | Category | Action | Label | Session
  */
 
-const WEBHOOK_KEY = 'cocher_analytics_url';
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyNy6dYOumxKBfGQ6z5qNndPtND6nd5xFhwONh_K8fYispkJzZ6Co8m7i_s-BrQWkVH/exec';
+const OPT_OUT_KEY = 'cocher_analytics_off';
 const BATCH_SIZE = 5;
 const BATCH_INTERVAL = 10_000; // 10 seconds
 
@@ -42,8 +43,8 @@ function getSessionId() {
   return _sessionId;
 }
 
-function getWebhookUrl() {
-  try { return localStorage.getItem(WEBHOOK_KEY) || ''; } catch { return ''; }
+function isEnabled() {
+  try { return localStorage.getItem(OPT_OUT_KEY) !== '1'; } catch { return true; }
 }
 
 function flush() {
@@ -51,8 +52,7 @@ function flush() {
   _timer = null;
   if (_queue.length === 0) return;
 
-  const url = getWebhookUrl();
-  if (!url) { _queue = []; return; }
+  if (!isEnabled()) { _queue = []; return; }
 
   const batch = _queue.splice(0);
 
@@ -60,9 +60,9 @@ function flush() {
   try {
     const payload = JSON.stringify(batch);
     if (navigator.sendBeacon) {
-      navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+      navigator.sendBeacon(WEBHOOK_URL, new Blob([payload], { type: 'application/json' }));
     } else {
-      fetch(url, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
+      fetch(WEBHOOK_URL, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
     }
   } catch {
     // silently ignore
@@ -76,7 +76,7 @@ function flush() {
  * @param {string} [label]   optional detail e.g. route path, feature name
  */
 export function trackEvent(category, action, label) {
-  if (!getWebhookUrl()) return; // fast exit — no work at all if unconfigured
+  if (!isEnabled()) return; // fast exit if opted out
 
   let user = '';
   let email = '';
@@ -94,27 +94,14 @@ export function trackEvent(category, action, label) {
   }
 }
 
-/**
- * Send a single test event immediately (used by Settings "Test" button).
- * Returns a promise that resolves true on success, false on failure.
- */
-export async function sendTestEvent(url) {
-  const payload = JSON.stringify([{
-    timestamp: Date.now(),
-    user: 'Test',
-    email: 'test@cocher',
-    category: 'system',
-    action: 'test',
-    label: 'Webhook connectivity test',
-    sessionId: getSessionId()
-  }]);
+/** Check whether analytics is currently enabled. */
+export function analyticsEnabled() {
+  return isEnabled();
+}
 
-  try {
-    const res = await fetch(url, { method: 'POST', body: payload, headers: { 'Content-Type': 'application/json' } });
-    return res.ok || res.redirected; // Apps Script redirects on success
-  } catch {
-    return false;
-  }
+/** Toggle analytics on or off. */
+export function setAnalyticsEnabled(on) {
+  try { if (on) localStorage.removeItem(OPT_OUT_KEY); else localStorage.setItem(OPT_OUT_KEY, '1'); } catch {}
 }
 
 // Flush remaining events when the page is unloading
