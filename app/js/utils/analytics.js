@@ -57,13 +57,11 @@ function flush() {
   const batch = _queue.splice(0);
 
   // Fire-and-forget — never block the UI
+  // Use fetch (not sendBeacon) because Google Apps Script rejects
+  // sendBeacon's Blob content-type silently.
   try {
     const payload = JSON.stringify(batch);
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(WEBHOOK_URL, new Blob([payload], { type: 'application/json' }));
-    } else {
-      fetch(WEBHOOK_URL, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
-    }
+    fetch(WEBHOOK_URL, { method: 'POST', body: payload, keepalive: true }).catch(() => {});
   } catch {
     // silently ignore
   }
