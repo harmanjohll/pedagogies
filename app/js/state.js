@@ -4,6 +4,8 @@
  * Simple reactive store with localStorage persistence.
  */
 
+import { trackEvent } from './utils/analytics.js';
+
 const STORAGE_KEY = 'cocher_app_data';
 
 function generateId() {
@@ -568,6 +570,7 @@ export const Store = {
   _addActivity(type, description) {
     const activity = { id: generateId(), type, description, timestamp: Date.now() };
     _state.recentActivity = [activity, ...(_state.recentActivity || [])].slice(0, 20);
+    trackEvent('content', type, description);
   },
 
   getRecentActivity() {

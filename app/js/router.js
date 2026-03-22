@@ -4,6 +4,8 @@
  * Simple hash-based router for single-page navigation.
  */
 
+import { trackEvent } from './utils/analytics.js';
+
 const routes = new Map();
 let currentRoute = null;
 let currentCleanup = null;
@@ -45,6 +47,7 @@ function handleRoute() {
   // Try exact match first
   if (routes.has(full)) {
     currentRoute = full;
+    trackEvent('navigation', 'page_view', full);
     currentCleanup = routes.get(full)(container, {}) || null;
     updateSidebarActive(full);
     return;
@@ -68,6 +71,7 @@ function handleRoute() {
 
     if (match) {
       currentRoute = full;
+      trackEvent('navigation', 'page_view', full);
       currentCleanup = handler(container, params) || null;
       updateSidebarActive(pattern);
       return;

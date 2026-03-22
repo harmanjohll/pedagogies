@@ -11,6 +11,7 @@ import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser } from '../components/login.js';
 import { EEE_REGISTRY, PEDAGOGY_APPROACHES, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks } from './lesson-planner.js';
 import { startTour, resetTour } from '../components/spotlight-tour.js';
+import { trackEvent, sendTestEvent } from '../utils/analytics.js';
 
 /* ── Dashboard Layout Prefs ── */
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
@@ -653,6 +654,32 @@ export function render(container) {
           </button>
         </div>
 
+        <!-- Usage Analytics -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Usage Analytics</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            Track which features teachers use across the school. Events are sent to a Google Sheet via a webhook. No personal data is collected beyond name and email.
+          </p>
+          <div style="display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap;">
+            <input
+              type="url"
+              id="analytics-url"
+              placeholder="Google Apps Script webhook URL"
+              value="${localStorage.getItem('cocher_analytics_url') || ''}"
+              style="
+                flex: 1; min-width: 240px; padding: 10px 12px;
+                border: 1.5px solid var(--border-light, #e2e8f0); border-radius: 8px;
+                font-size: 0.8125rem; font-family: inherit;
+                background: var(--bg-input, #f8fafc); color: var(--ink);
+                box-sizing: border-box;
+              "
+            />
+            <button class="btn btn-secondary btn-sm" id="analytics-save-btn">Save</button>
+            <button class="btn btn-ghost btn-sm" id="analytics-test-btn">Test</button>
+          </div>
+          <p id="analytics-status" style="font-size: 0.75rem; color: var(--ink-muted); margin-top: var(--sp-2); display: none;"></p>
+        </div>
+
         <!-- Data Management -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Data Management</h3>
@@ -948,6 +975,22 @@ export function render(container) {
     }
   });
 
+  // Analytics webhook
+  container.querySelector('#analytics-save-btn').addEventListener('click', () => {
+    const url = container.querySelector('#analytics-url').value.trim();
+    localStorage.setItem('cocher_analytics_url', url);
+    showToast(url ? 'Analytics webhook saved.' : 'Analytics webhook cleared.', 'success');
+  });
+  container.querySelector('#analytics-test-btn').addEventListener('click', async () => {
+    const url = container.querySelector('#analytics-url').value.trim();
+    const statusEl = container.querySelector('#analytics-status');
+    if (!url) { statusEl.textContent = 'Enter a webhook URL first.'; statusEl.style.color = 'var(--danger, #f43f5e)'; statusEl.style.display = 'block'; return; }
+    statusEl.textContent = 'Sending test event…'; statusEl.style.color = 'var(--ink-muted)'; statusEl.style.display = 'block';
+    const ok = await sendTestEvent(url);
+    statusEl.textContent = ok ? 'Test event sent — check your Google Sheet.' : 'Failed to reach the webhook. Check the URL and ensure the Apps Script is deployed as a web app.';
+    statusEl.style.color = ok ? 'var(--success, #22c55e)' : 'var(--danger, #f43f5e)';
+  });
+
   // Export
   container.querySelector('#export-btn').addEventListener('click', () => {
     const data = Store.exportData();
@@ -958,6 +1001,7 @@ export function render(container) {
     a.download = `cocher-export-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    trackEvent('export', 'data_export', 'full_backup');
     showToast('Data exported!', 'success');
   });
 

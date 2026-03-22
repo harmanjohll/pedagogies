@@ -8,6 +8,7 @@
  */
 
 import { Store, generateId } from '../state.js';
+import { trackEvent } from '../utils/analytics.js';
 import { showToast } from '../components/toast.js';
 import { sendChat } from '../api.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
@@ -1108,6 +1109,8 @@ function exportQuestions(container) {
     showToast('No questions to export.', 'warning');
     return;
   }
+  trackEvent('export', 'print_questions', `${questions.length} questions`);
+  }
 
   const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';
   const level = container.querySelector('#aol-level')?.value?.trim() || '';
@@ -1198,6 +1201,8 @@ function copyQuestions(container) {
   if (questions.length === 0) {
     showToast('No questions to copy.', 'warning');
     return;
+  }
+  trackEvent('export', 'copy_questions', `${questions.length} questions`);
   }
 
   const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';

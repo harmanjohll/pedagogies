@@ -5,6 +5,7 @@
  */
 
 import { Store } from './state.js';
+import { trackEvent } from './utils/analytics.js';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -71,6 +72,7 @@ Align with the 4 areas: Lesson Preparation, Lesson Enactment, Monitoring & Feedb
 Respond conversationally. Help the teacher think through their lesson experience holistically.`;
 
 export async function sendChat(messages, options = {}) {
+  trackEvent('ai', 'generate', options.trackLabel || 'chat');
   const apiKey = Store.get('apiKey');
   const model = Store.get('model') || 'gemini-2.5-flash';
 
@@ -147,6 +149,7 @@ export async function summarizeNotes(notes) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'summarizeNotes',
     systemPrompt: 'You are a helpful assistant that summarizes teacher class notes concisely. Use bullet points. Focus on actionable insights and recurring themes. Keep it brief (3-5 bullet points).',
     temperature: 0.4,
     maxTokens: 1024
@@ -161,6 +164,7 @@ export async function reviewLesson(planText) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'reviewLesson',
     systemPrompt: `You are Co-Cher's lesson review assistant for Singapore educators. Analyse lesson plans against:
 - E21CC alignment (CAIT, CCI, CGC) — which domains are addressed, which could be strengthened
 - STP alignment — lesson preparation, enactment, monitoring/feedback, positive culture
@@ -195,6 +199,7 @@ export async function generateRubric(lessonTopic, level, subject) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateRubric',
     systemPrompt: `You are Co-Cher's assessment specialist for Singapore educators. Generate clear, practical rubrics.
 
 Format rubrics as markdown tables with:
@@ -232,6 +237,7 @@ ${studentSummary}`;
   const messages = [{ role: 'user', content: userContent }];
 
   return sendChat(messages, {
+    trackLabel: 'suggestGrouping',
     systemPrompt: `You are Co-Cher's grouping specialist. Create student groups for Singapore classrooms.
 
 ABSOLUTE RULES — FOLLOW EXACTLY:
@@ -277,6 +283,7 @@ export async function generateExitTicket(planText, subject, level) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateExitTicket',
     systemPrompt: `You are Co-Cher's assessment specialist for Singapore educators. Generate quick formative assessment questions (exit tickets) that teachers can use at the end of a lesson to check understanding.
 
 Create exactly 3–4 questions:
@@ -332,6 +339,7 @@ ${profileSummary}`
   }];
 
   return sendChat(messages, {
+    trackLabel: 'suggestDifferentiation',
     systemPrompt: `You are Co-Cher's differentiation specialist for Singapore educators. Analyse student E21CC profiles and identify which students may need additional support or extension for a given lesson.
 
 E21CC score interpretation:
@@ -376,6 +384,7 @@ export async function generateTimeline(planText, totalMinutes, subject) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateTimeline',
     systemPrompt: `You are Co-Cher's lesson pacing specialist for Singapore educators. Create a clear, practical lesson timeline that breaks the lesson into timed segments.
 
 Guidelines:
@@ -424,6 +433,7 @@ ${groupSummary}`
   }];
 
   return sendChat(messages, {
+    trackLabel: 'suggestSeatAssignment',
     systemPrompt: `You are Co-Cher's spatial arrangement specialist. Given student groups and a classroom layout preset, suggest where each group should sit.
 
 Layout presets and their spatial features:
@@ -466,6 +476,7 @@ export async function suggestYouTubeVideos(planText, subject, level) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'suggestYouTubeVideos',
     systemPrompt: `You are Co-Cher's YouTube specialist for Singapore educators. You have deep knowledge of educational YouTube content. Recommend specific, real YouTube videos that teachers can use.
 
 IMPORTANT: You MUST suggest exactly 6–8 videos. YouTube has millions of educational videos — there are always enough relevant ones to find.
@@ -619,6 +630,7 @@ export async function generateWorksheet(planText, subject, level) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateWorksheet',
     systemPrompt: `You are Co-Cher's worksheet designer for Singapore educators. Create a print-ready student worksheet that teachers can use in class.
 
 Guidelines:
@@ -646,6 +658,7 @@ export async function generateDiscussionPrompts(planText, subject, level) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateDiscussionPrompts',
     systemPrompt: `You are Co-Cher's discussion facilitator for Singapore educators. Generate thoughtful discussion prompts that promote deep thinking and classroom discourse.
 
 Generate prompts in these categories:
@@ -683,6 +696,7 @@ export async function suggestExternalResources(planText, subject, level) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'suggestExternalResources',
     systemPrompt: `You are Co-Cher's resource curator for Singapore educators. Recommend high-quality external educational resources that can enhance the lesson.
 
 Suggest resources from these categories:
@@ -730,6 +744,7 @@ export async function generateLISC(planText, subject, level) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateLISC',
     systemPrompt: `You are Co-Cher's curriculum design specialist for Singapore educators. Generate clear, measurable Learning Intentions (LI) and Success Criteria (SC) for lessons.
 
 ## Pedagogical Framework
@@ -796,6 +811,7 @@ export async function generateStimulusMaterial(planText, subject, level) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateStimulusMaterial',
     systemPrompt: `You are Co-Cher's stimulus material specialist for Singapore educators. Create rich, engaging stimulus texts and materials for classroom use.
 
 Generate materials appropriate for the subject:
@@ -842,6 +858,7 @@ export async function generateVocabulary(planText, subject, level) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateVocabulary',
     systemPrompt: `You are Co-Cher's vocabulary specialist for Singapore educators. Create structured vocabulary materials that build academic language proficiency.
 
 ## Generate
@@ -883,6 +900,7 @@ export async function generateModelResponse(planText, subject, level) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateModelResponse',
     systemPrompt: `You are Co-Cher's model response specialist for Singapore educators. Create annotated model answers that help students understand what good work looks like.
 
 ## Generate
@@ -932,6 +950,7 @@ export async function generateSourceAnalysis(planText, subject, level) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateSourceAnalysis',
     systemPrompt: `You are Co-Cher's source analysis specialist for Singapore educators. Create structured source-based question sets aligned with Singapore's inquiry-based approach.
 
 ## Generate
@@ -994,6 +1013,7 @@ export async function generateCCEDiscussion(topic, level, contentArea) {
   }];
 
   return sendChat(messages, {
+    trackLabel: 'generateCCEDiscussion',
     systemPrompt: `You are Co-Cher's CCE (Character & Citizenship Education) specialist for Singapore educators. Create structured CCE discussion lessons aligned with the CCE2021 framework.
 
 ## CCE2021 Framework
