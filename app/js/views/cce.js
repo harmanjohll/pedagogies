@@ -681,7 +681,7 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
 
         const text = await sendChat(
           [{ role: 'user', content: userMessage }],
-          { systemPrompt, temperature: 0.7, maxTokens: 4096 }
+          { trackLabel: 'cceDiscussionDirect', systemPrompt, temperature: 0.7, maxTokens: 4096 }
         );
 
         // If user switched tabs while we were generating, store result

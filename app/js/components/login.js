@@ -7,6 +7,7 @@
  */
 
 import { Store } from '../state.js';
+import { trackEvent } from '../utils/analytics.js';
 
 const TT_CSV_URL = './btyrelief/BTYTT_2026Sem1_v1.csv';
 
@@ -168,6 +169,7 @@ export async function renderLogin(onComplete) {
     }
 
     setCurrentUser(teacher);
+    trackEvent('session', 'login', teacher.email);
 
     // Animate out
     const card = overlay.querySelector('#login-card');

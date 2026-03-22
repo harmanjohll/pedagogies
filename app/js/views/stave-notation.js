@@ -6,6 +6,7 @@
  */
 
 import { openOverlay } from '../components/overlay.js';
+import { trackEvent } from '../utils/analytics.js';
 
 export function render(container) {
   container.innerHTML = `
@@ -193,6 +194,7 @@ export function render(container) {
   `;
 
   container.querySelector('#launch-stave').addEventListener('click', () => {
+    trackEvent('feature', 'launch', 'staveNotation');
     openOverlay('Stave Notation', {
       src: 'simulations/interactives/stave-notation/index.html'
     });

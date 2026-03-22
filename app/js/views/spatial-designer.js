@@ -961,6 +961,7 @@ export function render(container) {
 - "insights": array of 3 objects, each with "title" (string), "affordance" (string describing how the layout supports learning), and "moves" (array of 2 suggested teaching moves)`;
 
       const response = await sendChat([{ role: 'user', content: briefPrompt }], {
+        trackLabel: 'spatialLayoutSuggest',
         systemPrompt: sysPrompt,
         jsonMode: true
       });
@@ -1138,6 +1139,7 @@ export function render(container) {
 - "tip": one short teaching tip for this phase`;
 
       const response = await sendChat([{ role: 'user', content: prompt }], {
+        trackLabel: 'spatialTimeline',
         systemPrompt: sysPrompt,
         jsonMode: true
       });

@@ -1406,7 +1406,7 @@ You MUST respond with valid JSON only. No markdown, no explanation, just the JSO
 
       const text = await sendChat(
         [{ role: 'user', content: userPrompt }],
-        { systemPrompt, temperature: 0.7, maxTokens: 8000 }
+        { trackLabel: 'sourceAnalysisGenerate', systemPrompt, temperature: 0.7, maxTokens: 8000 }
       );
 
       let parsed;

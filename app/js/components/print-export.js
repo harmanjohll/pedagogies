@@ -5,6 +5,8 @@
  * Student version omits mark schemes; teacher version includes all.
  */
 
+import { trackEvent } from '../utils/analytics.js';
+
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
 /**
@@ -13,6 +15,7 @@ function esc(s) { const d = document.createElement('div'); d.textContent = s || 
  * @param {'student'|'teacher'} mode - Student (no answers) or teacher (with mark scheme)
  */
 export function printSourceAnalysis(item, mode = 'student') {
+  trackEvent('export', 'print_source_analysis', mode);
   const isTeacher = mode === 'teacher';
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -93,6 +96,7 @@ export function printSourceAnalysis(item, mode = 'student') {
  * @param {'student'|'teacher'} mode
  */
 export function printStimulusMaterial(item, mode = 'student') {
+  trackEvent('export', 'print_stimulus_material', mode);
   const isTeacher = mode === 'teacher';
   const html = `<!DOCTYPE html>
 <html lang="en">

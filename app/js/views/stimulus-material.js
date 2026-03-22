@@ -1008,7 +1008,7 @@ Always respond with well-structured content using the exact format requested. Do
 
       const text = await sendChat(
         [{ role: 'user', content: userPrompt }],
-        { systemPrompt, temperature: 0.7, maxTokens: 4096 }
+        { trackLabel: 'stimulusMaterialGenerate', systemPrompt, temperature: 0.7, maxTokens: 4096 }
       );
 
       const parsed = parseAiResponse(text, subject, level, type, topic);

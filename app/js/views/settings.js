@@ -11,6 +11,7 @@ import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser } from '../components/login.js';
 import { EEE_REGISTRY, PEDAGOGY_APPROACHES, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks } from './lesson-planner.js';
 import { startTour, resetTour } from '../components/spotlight-tour.js';
+import { trackEvent, analyticsEnabled, setAnalyticsEnabled } from '../utils/analytics.js';
 
 /* ── Dashboard Layout Prefs ── */
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
@@ -653,6 +654,18 @@ export function render(container) {
           </button>
         </div>
 
+        <!-- Usage Analytics -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Usage Analytics</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            Help improve Co-Cher by sharing anonymous usage data.
+          </p>
+          <label style="display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.8125rem; color: var(--ink);">
+            <input type="checkbox" id="analytics-toggle" ${analyticsEnabled() ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: var(--brand-navy, #000C53);" />
+            Send anonymous usage data
+          </label>
+        </div>
+
         <!-- Data Management -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Data Management</h3>
@@ -948,6 +961,11 @@ export function render(container) {
     }
   });
 
+  // Analytics toggle
+  container.querySelector('#analytics-toggle').addEventListener('change', (e) => {
+    setAnalyticsEnabled(e.target.checked);
+  });
+
   // Export
   container.querySelector('#export-btn').addEventListener('click', () => {
     const data = Store.exportData();
@@ -958,6 +976,7 @@ export function render(container) {
     a.download = `cocher-export-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    trackEvent('export', 'data_export', 'full_backup');
     showToast('Data exported!', 'success');
   });
 

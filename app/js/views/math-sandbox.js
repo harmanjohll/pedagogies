@@ -236,6 +236,7 @@ export function render(container) {
             { type: 'image', source: { type: 'base64', media_type: scannerBase64.match(/data:(.*?);/)?.[1] || 'image/png', data: scannerBase64.split(',')[1] } }
           ]
         }], {
+          trackLabel: 'mathScanner',
           systemPrompt: 'You are a math OCR specialist. Extract equations from images and return them as clean LaTeX. Use $...$ for inline and $$...$$ for display math. Reproduce all steps and working shown.',
           temperature: 0.2, maxTokens: 2048
         });
@@ -311,6 +312,7 @@ For questions involving calculus, use proper notation like $\\frac{dy}{dx}$.
 Measurable outcomes using "I can..." statements.
 
 IMPORTANT: Use extensive LaTeX throughout. Every equation, expression, and mathematical symbol should use LaTeX delimiters. Do NOT use plain text for math — always use $ or $$ delimiters. Use \\\\  for line breaks within multi-step solutions.`,
+          trackLabel: 'mathLessonGenerate',
           temperature: 0.6,
           maxTokens: 3072
         }
