@@ -1110,7 +1110,6 @@ function exportQuestions(container) {
     return;
   }
   trackEvent('export', 'print_questions', `${questions.length} questions`);
-  }
 
   const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';
   const level = container.querySelector('#aol-level')?.value?.trim() || '';
@@ -1203,7 +1202,6 @@ function copyQuestions(container) {
     return;
   }
   trackEvent('export', 'copy_questions', `${questions.length} questions`);
-  }
 
   const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';
   const level = container.querySelector('#aol-level')?.value?.trim() || '';
