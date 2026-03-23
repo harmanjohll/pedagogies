@@ -464,10 +464,10 @@ export function render(container) {
               ${[
                 { id: '', label: 'Ocean', color: '#3b82f6' },
                 { id: 'emerald', label: 'Emerald', color: '#059669' },
-                { id: 'crimson', label: 'Crimson', color: '#dc2626' },
+                { id: 'crimson', label: 'Crimson', color: '#CB1B45' },
                 { id: 'violet', label: 'Violet', color: '#7c3aed' },
                 { id: 'sunset', label: 'Sunset', color: '#ea580c' },
-                { id: 'rose', label: 'Rose', color: '#e11d48' },
+                { id: 'radiant', label: 'Radiant', color: '#FF0000' },
                 { id: 'teal', label: 'Teal', color: '#0d9488' },
                 { id: 'slate', label: 'Slate', color: '#475569' }
               ].map(p => {
