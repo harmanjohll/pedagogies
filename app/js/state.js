@@ -31,6 +31,7 @@ const DEFAULT_STATE = {
   apiKey: localStorage.getItem('cocher_api_key') || '',
   model: localStorage.getItem('cocher_model') || 'gemini-2.5-flash',
   darkMode: localStorage.getItem('cocher_dark_mode') === 'true',
+  palette: localStorage.getItem('cocher_palette') || '',
   classes: [],
   lessons: [],
   chatHistory: [],
@@ -105,6 +106,7 @@ export const Store = {
       apiKey: _state.apiKey,
       model: _state.model,
       darkMode: _state.darkMode,
+      palette: _state.palette || '',
       classes: _state.classes,
       lessons: _state.lessons,
       savedLayouts: _state.savedLayouts || [],
@@ -125,6 +127,7 @@ export const Store = {
     localStorage.setItem('cocher_api_key', _state.apiKey || '');
     localStorage.setItem('cocher_model', _state.model || 'gemini-2.5-flash');
     localStorage.setItem('cocher_dark_mode', _state.darkMode ? 'true' : 'false');
+    localStorage.setItem('cocher_palette', _state.palette || '');
   },
 
   /* ══════════ Classes CRUD ══════════ */
@@ -658,9 +661,12 @@ export const Store = {
   }
 };
 
-// Apply dark mode on load
+// Apply dark mode and colour palette on load
 if (_state.darkMode) {
   document.documentElement.classList.add('dark');
+}
+if (_state.palette) {
+  document.documentElement.classList.add(`palette-${_state.palette}`);
 }
 
 export { generateId };
