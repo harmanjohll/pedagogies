@@ -158,7 +158,7 @@ function buildNavItems() {
     { id: '/knowledge', icon: 'knowledge', label: 'Knowledge Bases', section: 'Growth' },
     { id: '/my-growth', icon: 'myGrowth', label: 'My Learning' },
     { id: '/autopilot', icon: 'autopilot', label: 'Co-Cher+ (beta)', section: SANDBOX_SECTION_KEY, sectionDisplay: _sandboxLabel },
-    { id: '/math-sandbox', icon: 'mathSandbox', label: 'Math Sandbox' },
+    { id: '/math-sandbox', icon: 'mathSandbox', label: 'Formula Lab' },
     { id: '/admin', icon: 'admin', label: 'Admin One-Stop', section: 'Operations' }
   ];
 

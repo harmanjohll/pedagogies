@@ -1,13 +1,114 @@
 /*
- * Math Sandbox — LaTeX Rendering Showcase
- * =========================================
- * A test module that demonstrates LaTeX rendering in lesson content.
- * Teachers can design a math lesson and see beautifully typeset output.
+ * Formula Lab — LaTeX-powered STEM lesson generator
+ * ==================================================
+ * Generate beautifully typeset lessons for Mathematics, Physics, and Chemistry.
+ * LaTeX renders automatically via KaTeX.
  */
 
 import { sendChat } from '../api.js';
+import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { renderMd, processLatex } from '../utils/latex.js';
+import { trackEvent } from '../utils/analytics.js';
+
+/* ── Subject-specific system prompts ── */
+const SUBJECT_PROMPTS = {
+  Mathematics: `You are Co-Cher's mathematics specialist for Singapore schools (O-Level / A-Level curriculum).
+
+Generate a well-structured math lesson with:
+
+## [Lesson Title]
+
+### Learning Intentions
+(What students will understand)
+
+### Key Concepts
+Define core concepts using proper LaTeX notation:
+- Use $...$ for inline expressions like $f(x) = x^2$
+- Use $$...$$ for display equations like $$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$
+- Use \\frac{}{} for fractions, \\sqrt{} for roots, \\sum, \\int, \\lim etc.
+
+### Worked Examples
+Show 2-3 detailed worked examples with step-by-step LaTeX derivations.
+Each step should be on its own display line.
+
+### Practice Questions
+3-5 practice questions of increasing difficulty.
+For questions involving calculus, use proper notation like $\\frac{dy}{dx}$.
+
+### Success Criteria
+Measurable outcomes using "I can..." statements.
+
+IMPORTANT: Use extensive LaTeX throughout. Every equation, expression, and mathematical symbol should use LaTeX delimiters. Do NOT use plain text for math — always use $ or $$ delimiters. Use \\\\  for line breaks within multi-step solutions.`,
+
+  Physics: `You are Co-Cher's physics specialist for Singapore schools (O-Level / A-Level curriculum).
+
+Generate a well-structured physics lesson with:
+
+## [Lesson Title]
+
+### Learning Intentions
+(What students will understand)
+
+### Key Concepts & Laws
+Define concepts using proper LaTeX notation for all equations and units:
+- Use $...$ for inline like $F = ma$, $v = u + at$
+- Use $$...$$ for display equations like $$E_k = \\frac{1}{2}mv^2$$
+- Use \\text{} for units: $9.81 \\, \\text{m s}^{-2}$
+- Use vector notation where appropriate: $\\vec{F}$, $\\vec{v}$
+
+### Worked Examples
+Show 2-3 detailed worked examples with:
+- Given / Find / Solution structure
+- Step-by-step substitution and derivation in LaTeX
+- Units carried through every step
+
+### Practice Questions
+3-5 practice questions of increasing difficulty.
+Include diagram descriptions where helpful.
+
+### Success Criteria
+Measurable outcomes using "I can..." statements.
+
+IMPORTANT: Use extensive LaTeX throughout. ALL equations, formulas, units, and symbols MUST use LaTeX delimiters. Use \\text{} for unit names. Use \\\\  for line breaks within multi-step solutions.`,
+
+  Chemistry: `You are Co-Cher's chemistry specialist for Singapore schools (O-Level / A-Level curriculum).
+
+Generate a well-structured chemistry lesson with:
+
+## [Lesson Title]
+
+### Learning Intentions
+(What students will understand)
+
+### Key Concepts
+Define concepts using proper LaTeX notation:
+- Chemical equations: $$\\text{2H}_2 + \\text{O}_2 \\rightarrow \\text{2H}_2\\text{O}$$
+- Equilibrium: $$K_c = \\frac{[\\text{C}]^c[\\text{D}]^d}{[\\text{A}]^a[\\text{B}]^b}$$
+- Use subscripts/superscripts: $\\text{H}_2\\text{SO}_4$, $\\text{Fe}^{3+}$
+- Thermodynamics: $\\Delta H$, $\\Delta G = \\Delta H - T\\Delta S$
+
+### Worked Examples
+Show 2-3 detailed worked examples with:
+- Step-by-step calculations in LaTeX
+- Molar calculations, stoichiometry, equilibrium as relevant
+- Units carried through every step
+
+### Practice Questions
+3-5 practice questions of increasing difficulty.
+
+### Success Criteria
+Measurable outcomes using "I can..." statements.
+
+IMPORTANT: Use extensive LaTeX throughout. ALL equations, formulas, chemical symbols, and mathematical expressions MUST use LaTeX delimiters. Use \\text{} for chemical element names within equations. Use \\\\  for line breaks within multi-step solutions.`
+};
+
+/* ── Subject-specific placeholder topics ── */
+const SUBJECT_PLACEHOLDERS = {
+  Mathematics: 'e.g. Quadratic equations, Trigonometric identities...',
+  Physics: 'e.g. Newton\'s Laws, Electromagnetic induction...',
+  Chemistry: 'e.g. Mole concept, Acid-base equilibria...'
+};
 
 /* ── Pre-built example: Intro to Differentiation ── */
 const EXAMPLE_LESSON = `## Introduction to Differentiation
@@ -74,15 +175,19 @@ $$\\frac{dy}{dx} = 5u^4 \\cdot 3 = 15(3x + 1)^4$$
 export function render(container) {
   let outputText = '';
   let isGenerating = false;
+  let currentSubject = 'Mathematics';
+  let currentTopic = '';
+  let currentLevel = '';
 
   function renderView() {
+    const placeholder = SUBJECT_PLACEHOLDERS[currentSubject] || SUBJECT_PLACEHOLDERS.Mathematics;
     container.innerHTML = `
       <style>
         .ms-scroll { overflow-y: auto; height: 100%; }
         .ms-container { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
         .ms-header h1 { font-size: 1.5rem; font-weight: 800; margin: 0 0 4px; color: var(--ink); letter-spacing: -0.02em; }
         .ms-header p { font-size: 0.8125rem; color: var(--ink-muted); margin: 0 0 20px; }
-        .ms-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+        .ms-form { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
         @media (max-width: 600px) { .ms-form { grid-template-columns: 1fr; } }
         .ms-form .full { grid-column: 1 / -1; }
         .ms-form label { display: block; font-size: 0.6875rem; font-weight: 600; color: var(--ink-secondary); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -113,19 +218,32 @@ export function render(container) {
       <div class="ms-scroll">
         <div class="ms-container">
           <div class="ms-header">
-            <h1>Math Sandbox</h1>
-            <p>Design a math lesson with beautifully typeset equations. LaTeX renders automatically.</p>
+            <h1>Formula Lab</h1>
+            <p>Generate beautifully typeset STEM lessons. LaTeX renders automatically for equations, formulas, and symbols.</p>
           </div>
 
           <div class="ms-form">
             <div>
+              <label for="ms-subject">Subject</label>
+              <select id="ms-subject" class="input" style="width:100%;box-sizing:border-box;">
+                <option ${currentSubject === 'Mathematics' ? 'selected' : ''}>Mathematics</option>
+                <option ${currentSubject === 'Physics' ? 'selected' : ''}>Physics</option>
+                <option ${currentSubject === 'Chemistry' ? 'selected' : ''}>Chemistry</option>
+              </select>
+            </div>
+            <div>
               <label for="ms-topic">Topic</label>
-              <input id="ms-topic" class="input" type="text" value="Introduction to Differentiation" placeholder="e.g. Quadratic equations, Trigonometric identities..." style="width:100%;box-sizing:border-box;">
+              <input id="ms-topic" class="input" type="text" value="${currentTopic || 'Introduction to Differentiation'}" placeholder="${placeholder}" style="width:100%;box-sizing:border-box;">
             </div>
             <div>
               <label for="ms-level">Level</label>
               <select id="ms-level" class="input" style="width:100%;box-sizing:border-box;">
-                <option>Sec 3</option><option>Sec 4</option><option>JC 1</option><option selected>JC 2</option>
+                <option ${currentLevel === 'Sec 1' ? 'selected' : ''}>Sec 1</option>
+                <option ${currentLevel === 'Sec 2' ? 'selected' : ''}>Sec 2</option>
+                <option ${currentLevel === 'Sec 3' ? 'selected' : ''}>Sec 3</option>
+                <option ${currentLevel === 'Sec 4' ? 'selected' : ''}>Sec 4</option>
+                <option ${currentLevel === 'JC 1' ? 'selected' : ''}>JC 1</option>
+                <option ${currentLevel === 'JC 2' || !currentLevel ? 'selected' : ''}>JC 2</option>
               </select>
             </div>
             <div class="full">
@@ -141,16 +259,17 @@ export function render(container) {
 
           <div class="ms-actions" style="margin-top: 12px;">
             <button id="ms-generate-btn" class="btn btn-primary" ${isGenerating ? 'disabled' : ''}>
-              ${isGenerating ? '<span class="ms-spinner"></span>Generating...' : 'Generate Math Lesson'}
+              ${isGenerating ? '<span class="ms-spinner"></span>Generating...' : 'Generate Lesson'}
             </button>
             <button id="ms-example-btn" class="btn btn-ghost">Load Example (Differentiation)</button>
+            ${outputText ? '<button id="ms-save-btn" class="btn btn-secondary">Save to Lesson Planner</button>' : ''}
           </div>
 
-          <!-- Math Scanner -->
+          <!-- Equation Scanner -->
           <div style="margin-bottom:20px;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--bg-card);">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="3"/></svg>
-              <span style="font-weight:700;font-size:0.9375rem;color:var(--ink);">Math Scanner</span>
+              <span style="font-weight:700;font-size:0.9375rem;color:var(--ink);">Equation Scanner</span>
               <span style="font-size:0.6875rem;color:var(--ink-faint);background:var(--surface-hover);padding:1px 8px;border-radius:999px;">beta</span>
             </div>
             <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:12px;line-height:1.5;">
@@ -182,7 +301,7 @@ export function render(container) {
             ` : `
               <div class="ms-empty">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                <p>Generate a math lesson or load the example to see LaTeX in action.</p>
+                <p>Generate a lesson or load the example to see LaTeX in action.</p>
               </div>
             `}
           </div>
@@ -198,10 +317,22 @@ export function render(container) {
     container.querySelector('#ms-generate-btn').addEventListener('click', generateLesson);
     container.querySelector('#ms-example-btn').addEventListener('click', () => {
       outputText = EXAMPLE_LESSON;
+      currentSubject = 'Mathematics';
+      currentTopic = 'Introduction to Differentiation';
       renderView();
     });
 
-    // Math Scanner events
+    // Subject selector updates placeholder
+    container.querySelector('#ms-subject')?.addEventListener('change', (e) => {
+      currentSubject = e.target.value;
+      const topicInput = container.querySelector('#ms-topic');
+      if (topicInput) topicInput.placeholder = SUBJECT_PLACEHOLDERS[currentSubject] || '';
+    });
+
+    // Save to Lesson Planner
+    container.querySelector('#ms-save-btn')?.addEventListener('click', saveToLessonPlanner);
+
+    // Equation Scanner events
     const scannerFile = container.querySelector('#ms-scanner-file');
     const scannerPreview = container.querySelector('#ms-scanner-preview');
     const scannerImg = container.querySelector('#ms-scanner-img');
@@ -236,8 +367,9 @@ export function render(container) {
             { type: 'image', source: { type: 'base64', media_type: scannerBase64.match(/data:(.*?);/)?.[1] || 'image/png', data: scannerBase64.split(',')[1] } }
           ]
         }], {
-          trackLabel: 'mathScanner',
-          systemPrompt: 'You are a math OCR specialist. Extract equations from images and return them as clean LaTeX. Use $...$ for inline and $$...$$ for display math. Reproduce all steps and working shown.',
+          trackLabel: 'equationScanner',
+          trackDetail: currentSubject,
+          systemPrompt: 'You are an equation OCR specialist. Extract equations from images and return them as clean LaTeX. Use $...$ for inline and $$...$$ for display math. Reproduce all steps and working shown.',
           temperature: 0.2, maxTokens: 2048
         });
 
@@ -269,6 +401,7 @@ export function render(container) {
   }
 
   async function generateLesson() {
+    const subject = container.querySelector('#ms-subject').value;
     const topic = container.querySelector('#ms-topic').value.trim();
     const level = container.querySelector('#ms-level').value;
     const focus = container.querySelector('#ms-focus').value.trim();
@@ -278,42 +411,19 @@ export function render(container) {
       return;
     }
 
+    currentSubject = subject;
+    currentTopic = topic;
+    currentLevel = level;
     isGenerating = true;
     renderView();
 
     try {
       const text = await sendChat(
-        [{ role: 'user', content: `Create a math lesson on "${topic}" for ${level} students.${focus ? ` Focus: ${focus}` : ''}\n\nInclude worked examples with step-by-step solutions. Use LaTeX notation: $...$ for inline math and $$...$$ for display equations.` }],
+        [{ role: 'user', content: `Create a ${subject.toLowerCase()} lesson on "${topic}" for ${level} students.${focus ? ` Focus: ${focus}` : ''}\n\nInclude worked examples with step-by-step solutions. Use LaTeX notation: $...$ for inline math and $$...$$ for display equations.` }],
         {
-          systemPrompt: `You are Co-Cher's mathematics specialist for Singapore schools (O-Level / A-Level curriculum).
-
-Generate a well-structured math lesson with:
-
-## [Lesson Title]
-
-### Learning Intentions
-(What students will understand)
-
-### Key Concepts
-Define core concepts using proper LaTeX notation:
-- Use $...$ for inline expressions like $f(x) = x^2$
-- Use $$...$$ for display equations like $$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$
-- Use \\frac{}{} for fractions, \\sqrt{} for roots, \\sum, \\int, \\lim etc.
-
-### Worked Examples
-Show 2-3 detailed worked examples with step-by-step LaTeX derivations.
-Each step should be on its own display line.
-
-### Practice Questions
-3-5 practice questions of increasing difficulty.
-For questions involving calculus, use proper notation like $\\frac{dy}{dx}$.
-
-### Success Criteria
-Measurable outcomes using "I can..." statements.
-
-IMPORTANT: Use extensive LaTeX throughout. Every equation, expression, and mathematical symbol should use LaTeX delimiters. Do NOT use plain text for math — always use $ or $$ delimiters. Use \\\\  for line breaks within multi-step solutions.`,
-          trackLabel: 'mathLessonGenerate',
-          trackDetail: [topic, level].filter(Boolean).join(' · '),
+          systemPrompt: SUBJECT_PROMPTS[subject] || SUBJECT_PROMPTS.Mathematics,
+          trackLabel: 'formulaLabGenerate',
+          trackDetail: [subject, topic, level].filter(Boolean).join(' · '),
           temperature: 0.6,
           maxTokens: 3072
         }
@@ -321,12 +431,38 @@ IMPORTANT: Use extensive LaTeX throughout. Every equation, expression, and mathe
 
       outputText = text;
     } catch (err) {
-      console.error('Math lesson generation error:', err);
+      console.error('Formula Lab generation error:', err);
       showToast(`Generation failed: ${err.message}`, 'danger');
     } finally {
       isGenerating = false;
       renderView();
     }
+  }
+
+  function saveToLessonPlanner() {
+    if (!outputText) return;
+
+    const topic = currentTopic || 'Untitled Lesson';
+    const subject = currentSubject || 'Mathematics';
+    const level = currentLevel || '';
+
+    // Extract title from generated content (first ## heading) or use topic
+    const titleMatch = outputText.match(/^##\s+(.+)$/m);
+    const title = titleMatch ? titleMatch[1].trim() : `${subject}: ${topic}`;
+
+    const lesson = Store.addLesson({
+      title,
+      status: 'draft',
+      chatHistory: [
+        { role: 'user', content: `Create a ${subject.toLowerCase()} lesson on "${topic}" for ${level} students.` },
+        { role: 'assistant', content: outputText }
+      ],
+      plan: outputText,
+      objectives: topic
+    });
+
+    trackEvent('feature', 'formula_lab_save', subject, [topic, level].filter(Boolean).join(' '));
+    showToast(`Saved as "${title}" — open it in Lesson Planner to continue refining.`, 'success');
   }
 
   renderView();

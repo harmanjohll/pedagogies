@@ -1857,6 +1857,8 @@ For each GROW stage, provide:
 Make them concrete, empowering, and suitable for student self-reflection journals or exit tickets.`;
 
       const text = await sendChat([{ role: 'user', content: prompt }], {
+        trackLabel: 'generateGROW',
+        trackDetail: topic || '',
         systemPrompt: 'You are a metacognition specialist for Singapore secondary schools using Beatty\'s GROW by reflecting framework. Generate empowering student self-reflection prompts.',
         temperature: 0.6, maxTokens: 4096
       });
@@ -1908,6 +1910,7 @@ For each ACT stage, provide:
 Make them empowering, non-defensive, and suitable for student self-reflection after receiving teacher or peer feedback.`;
 
       const text = await sendChat([{ role: 'user', content: prompt }], {
+        trackLabel: 'generateACT',
         systemPrompt: 'You are a metacognition specialist for Singapore secondary schools using Beatty\'s ACT on Feedback framework. Generate empowering student self-reflection prompts that help learners process and act on feedback.',
         temperature: 0.6, maxTokens: 4096
       });
@@ -1992,6 +1995,7 @@ ${contextStr ? `Additional context: ${contextStr}` : ''}
 Format each as a numbered question. Make them concrete, student-friendly, and appropriate for 13-17 year olds.`;
 
       const text = await sendChat([{ role: 'user', content: prompt }], {
+        trackLabel: 'generateMetacognitive',
         systemPrompt: 'You are a metacognition specialist for Singapore schools. Generate clear, practical reflection prompts.',
         temperature: 0.6, maxTokens: 1024
       });
@@ -2243,6 +2247,8 @@ function wireAfLEvents(container) {
         role: 'user',
         content: `Generate Learning Intentions and Success Criteria for: ${topicStr}\n${context ? `\nContext: ${context}` : ''}\n\nFormat:\n**Learning Intention:** We are learning to...\n\n**Success Criteria:**\n- I can...\n- I can...\n- I can...\n\nAlso suggest 2 formative check questions a teacher could ask during the lesson.`
       }], {
+        trackLabel: 'generateLISC_inline',
+        trackDetail: topicStr.slice(0, 40),
         systemPrompt: 'You are a Visible Learning specialist for Singapore secondary schools. Generate clear, student-friendly LISC aligned to Singapore MOE curriculum.',
         temperature: 0.5, maxTokens: 1024
       });
@@ -2310,6 +2316,8 @@ function wireAfLEvents(container) {
         role: 'user',
         content: `Generate a short exit ticket (2-3 questions) for this lesson topic: ${topic}\n${context ? `\nContext: ${context}` : ''}\n\nRequirements:\n- 2-3 quick questions that take students ~3 minutes total\n- Mix of recall and application\n- Include a brief self-reflection prompt (e.g. "Rate your confidence 1-5")\n- Format clearly with question numbers\n- Include suggested answers for the teacher`
       }], {
+        trackLabel: 'generateExitTicket_inline',
+        trackDetail: topic.slice(0, 40),
         systemPrompt: 'You are a formative assessment specialist for Singapore secondary schools. Generate concise, effective exit ticket questions that give teachers immediate insight into student understanding.',
         temperature: 0.5, maxTokens: 1024
       });
