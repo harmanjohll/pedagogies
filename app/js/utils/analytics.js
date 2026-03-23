@@ -82,7 +82,7 @@ export function trackEvent(category, action, label, detail) {
   let email = '';
   try {
     const u = JSON.parse(localStorage.getItem('cocher_current_user') || 'null');
-    if (u) { user = u.name || ''; email = u.email || ''; }
+    if (u) { user = u.preferredName || u.name || ''; email = u.email || ''; }
   } catch { /* ignore */ }
 
   _queue.push({ timestamp: Date.now(), user, email, category, action, label: label || '', detail: detail || '', sessionId: getSessionId() });

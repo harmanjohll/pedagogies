@@ -8,7 +8,7 @@ import { Store } from '../state.js';
 import { validateApiKey, AVAILABLE_MODELS } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
-import { getCurrentUser, clearCurrentUser } from '../components/login.js';
+import { getCurrentUser, clearCurrentUser, getPreferredName, setPreferredName, guessFirstName } from '../components/login.js';
 import { EEE_REGISTRY, PEDAGOGY_APPROACHES, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks } from './lesson-planner.js';
 import { startTour, resetTour } from '../components/spotlight-tour.js';
 import { trackEvent, analyticsEnabled, setAnalyticsEnabled } from '../utils/analytics.js';
@@ -462,9 +462,19 @@ export function render(container) {
         <!-- Account -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Account</h3>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.5;">
             ${getCurrentUser() ? `Signed in as <strong style="color: var(--ink);">${getCurrentUser().name}</strong>` : 'Not signed in'}
           </p>
+          ${getCurrentUser() ? `
+          <div style="margin-bottom: var(--sp-4);">
+            <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 4px; color: var(--ink-secondary);">Preferred Name</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="text" id="pref-name-setting" class="input" value="${getPreferredName() || guessFirstName(getCurrentUser().name)}" style="flex:1; max-width: 200px;" />
+              <button class="btn btn-ghost btn-sm" id="pref-name-save">Update</button>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--ink-faint); margin-top: 4px;">How Co-Cher greets you on the dashboard.</p>
+          </div>
+          ` : ''}
           <button class="btn btn-ghost btn-sm" id="sign-out-btn" style="color: var(--danger);">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign Out
@@ -1008,6 +1018,15 @@ export function render(container) {
       Store.clearAllData();
       showToast('All data cleared.', 'danger');
       render(container);
+    }
+  });
+
+  // Preferred name
+  container.querySelector('#pref-name-save')?.addEventListener('click', () => {
+    const val = container.querySelector('#pref-name-setting')?.value?.trim();
+    if (val) {
+      setPreferredName(val);
+      showToast(`We'll call you ${val}.`, 'success');
     }
   });
 

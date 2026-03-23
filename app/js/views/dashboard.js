@@ -8,7 +8,7 @@
 
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
-import { getCurrentUser } from '../components/login.js';
+import { getCurrentUser, getPreferredName, guessFirstName } from '../components/login.js';
 import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
 
 /*
@@ -106,18 +106,12 @@ function getGreeting() {
 }
 
 function getFirstName() {
+  // Prefer user-chosen preferred name, fall back to guessing from full name
+  const preferred = getPreferredName();
+  if (preferred) return preferred;
   const user = getCurrentUser();
   if (!user || !user.name) return null;
-  const parts = user.name.trim().split(/\s+/);
-  // Skip salutation prefixes (MR, MS, MDM, MRS, DR, PROF) to get the actual first name
-  const salutations = new Set(['MR', 'MS', 'MDM', 'MRS', 'DR', 'PROF', 'MISS']);
-  let nameStart = 0;
-  if (parts.length > 1 && salutations.has(parts[0].toUpperCase())) {
-    nameStart = 1;
-  }
-  const firstName = parts[nameStart] || parts[0];
-  // Title-case: "FABIAN" → "Fabian"
-  return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+  return guessFirstName(user.name);
 }
 
 /* ── Curated quotes — one per day, rotated by period ── */
