@@ -457,6 +457,43 @@ export function render(container) {
             <span class="toggle-track"></span>
             <span class="toggle-label">Dark Mode</span>
           </label>
+
+          <div style="margin-top: var(--sp-5);">
+            <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 8px; color: var(--ink-secondary);">Colour Palette</label>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;" id="palette-picker">
+              ${[
+                { id: '', label: 'Co-Cher Blue', color: '#3b82f6' },
+                { id: 'raffles', label: 'Raffles Green', color: '#059669' },
+                { id: 'hci', label: 'HCI Crimson', color: '#dc2626' },
+                { id: 'njc', label: 'NJC Purple', color: '#7c3aed' },
+                { id: 'sunset', label: 'Sunset', color: '#ea580c' },
+                { id: 'rose', label: 'Rose', color: '#e11d48' },
+                { id: 'teal', label: 'Teal', color: '#0d9488' },
+                { id: 'slate', label: 'Slate', color: '#475569' }
+              ].map(p => {
+                const active = (Store.get('palette') || '') === p.id;
+                return `
+                  <button class="palette-swatch" data-palette="${p.id}" title="${p.label}" style="
+                    display: flex; flex-direction: column; align-items: center; gap: 4px;
+                    padding: 8px 4px; border-radius: 10px; cursor: pointer;
+                    border: 2px solid ${active ? p.color : 'transparent'};
+                    background: ${active ? 'var(--surface-hover)' : 'transparent'};
+                    transition: border-color 0.15s, background 0.15s;
+                  ">
+                    <div style="
+                      width: 32px; height: 32px; border-radius: 50%;
+                      background: ${p.color};
+                      box-shadow: ${active ? '0 0 0 3px var(--bg-card), 0 0 0 5px ' + p.color : '0 1px 3px rgba(0,0,0,0.15)'};
+                      transition: box-shadow 0.15s;
+                    "></div>
+                    <span style="font-size: 0.6875rem; color: var(--ink-muted); font-weight: ${active ? '600' : '400'}; white-space: nowrap;">
+                      ${p.label}
+                    </span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
         </div>
 
         <!-- Account -->
@@ -801,6 +838,21 @@ export function render(container) {
     const dark = e.target.checked;
     Store.set('darkMode', dark);
     document.documentElement.classList.toggle('dark', dark);
+  });
+
+  // Colour palette picker
+  container.querySelector('#palette-picker')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.palette-swatch');
+    if (!btn) return;
+    const id = btn.dataset.palette;
+    // Remove all palette classes
+    document.documentElement.className = document.documentElement.className
+      .replace(/\bpalette-\S+/g, '').trim();
+    if (id) {
+      document.documentElement.classList.add(`palette-${id}`);
+    }
+    Store.set('palette', id);
+    render(container); // re-render to update active state
   });
 
   // EEE marketplace — save, filter, card visual updates

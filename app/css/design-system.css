@@ -131,6 +131,62 @@
   --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2);
 }
 
+/* ═══════════ Colour Palettes ═══════════ */
+/* Default (Co-Cher Blue) uses :root values — no class needed */
+
+/* Singapore School-Inspired */
+
+.palette-raffles {
+  --accent: #059669; --accent-light: #d1fae5; --accent-dark: #047857; --accent-hover: #0a7c5a;
+  --brand-gradient: linear-gradient(135deg, #064e3b 0%, #059669 45%, #34d399 100%);
+  --shadow-glow: 0 0 24px rgba(5,150,105,0.12);
+}
+.dark.palette-raffles { --accent-light: #064e3b; }
+
+.palette-hci {
+  --accent: #dc2626; --accent-light: #fee2e2; --accent-dark: #b91c1c; --accent-hover: #c52222;
+  --brand-gradient: linear-gradient(135deg, #7f1d1d 0%, #dc2626 45%, #f87171 100%);
+  --shadow-glow: 0 0 24px rgba(220,38,38,0.12);
+}
+.dark.palette-hci { --accent-light: #4c0519; }
+
+.palette-njc {
+  --accent: #7c3aed; --accent-light: #ede9fe; --accent-dark: #6d28d9; --accent-hover: #6e35d0;
+  --brand-gradient: linear-gradient(135deg, #3b0764 0%, #7c3aed 45%, #a78bfa 100%);
+  --shadow-glow: 0 0 24px rgba(124,58,237,0.12);
+}
+.dark.palette-njc { --accent-light: #2e1065; }
+
+/* Flat UI / Modern */
+
+.palette-sunset {
+  --accent: #ea580c; --accent-light: #ffedd5; --accent-dark: #c2410c; --accent-hover: #d54f0b;
+  --brand-gradient: linear-gradient(135deg, #7c2d12 0%, #ea580c 45%, #fb923c 100%);
+  --shadow-glow: 0 0 24px rgba(234,88,12,0.12);
+}
+.dark.palette-sunset { --accent-light: #431407; }
+
+.palette-rose {
+  --accent: #e11d48; --accent-light: #ffe4e6; --accent-dark: #be123c; --accent-hover: #c91a40;
+  --brand-gradient: linear-gradient(135deg, #881337 0%, #e11d48 45%, #fb7185 100%);
+  --shadow-glow: 0 0 24px rgba(225,29,72,0.12);
+}
+.dark.palette-rose { --accent-light: #4c0519; }
+
+.palette-teal {
+  --accent: #0d9488; --accent-light: #ccfbf1; --accent-dark: #0f766e; --accent-hover: #0c857a;
+  --brand-gradient: linear-gradient(135deg, #134e4a 0%, #0d9488 45%, #2dd4bf 100%);
+  --shadow-glow: 0 0 24px rgba(13,148,136,0.12);
+}
+.dark.palette-teal { --accent-light: #042f2e; }
+
+.palette-slate {
+  --accent: #475569; --accent-light: #e2e8f0; --accent-dark: #334155; --accent-hover: #3d4a5c;
+  --brand-gradient: linear-gradient(135deg, #1e293b 0%, #475569 45%, #94a3b8 100%);
+  --shadow-glow: 0 0 24px rgba(71,85,105,0.12);
+}
+.dark.palette-slate { --accent-light: #1e293b; }
+
 /* ═══════════ Reset & Base ═══════════ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
