@@ -462,10 +462,10 @@ export function render(container) {
             <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 8px; color: var(--ink-secondary);">Colour Palette</label>
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;" id="palette-picker">
               ${[
-                { id: '', label: 'Co-Cher Blue', color: '#3b82f6' },
-                { id: 'raffles', label: 'Raffles Green', color: '#059669' },
-                { id: 'hci', label: 'HCI Crimson', color: '#dc2626' },
-                { id: 'njc', label: 'NJC Purple', color: '#7c3aed' },
+                { id: '', label: 'Ocean', color: '#3b82f6' },
+                { id: 'emerald', label: 'Emerald', color: '#059669' },
+                { id: 'crimson', label: 'Crimson', color: '#dc2626' },
+                { id: 'violet', label: 'Violet', color: '#7c3aed' },
                 { id: 'sunset', label: 'Sunset', color: '#ea580c' },
                 { id: 'rose', label: 'Rose', color: '#e11d48' },
                 { id: 'teal', label: 'Teal', color: '#0d9488' },
