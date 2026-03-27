@@ -616,7 +616,9 @@ function renderSparkline(history, key, color, width = 100, height = 28) {
     const cx = i * step;
     const cy = height - ((v - min) / range) * (height - 4) - 2;
     const date = new Date(timestamps[i]).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
-    return `<circle cx="${cx}" cy="${cy}" r="6" fill="transparent" stroke="none" data-tip="${key.toUpperCase()}: ${v} (${date})"/>
+    const dimInfo = E21CC_DIMS.find(d => d.key === key);
+    const tipLabel = dimInfo ? dimInfo.short : key;
+    return `<circle cx="${cx}" cy="${cy}" r="6" fill="transparent" stroke="none" data-tip="${tipLabel}: ${v} (${date})"/>
             <circle cx="${cx}" cy="${cy}" r="2" fill="${color}" opacity="0" class="hover-dot"/>`;
   }).join('');
 
