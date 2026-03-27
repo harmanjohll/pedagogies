@@ -968,7 +968,7 @@ const EXEMPLAR_LESSONS = [
     title: 'Chemical Bonding — Ionic & Covalent',
     classKey: 0, // links to 4A Pure Chemistry
     status: 'ready',
-    e21ccFocus: ['cait', 'cci'],
+    e21ccFocus: ['criticalThinking', 'communication'],
     objectives: 'Students will explain ionic and covalent bonding using electron transfer/sharing models, draw dot-and-cross diagrams, and relate bonding type to physical properties.',
     chatHistory: [
       { role: 'user', content: 'Plan a lesson on chemical bonding for Sec 4 Pure Chemistry. Cover ionic and covalent bonding, dot-and-cross diagrams, and the properties of ionic vs covalent compounds. I want to use a POE (Predict-Observe-Explain) approach for the demo and include group work.' },
@@ -1056,7 +1056,7 @@ By the end of this lesson, students will be able to:
     title: 'Kinematics — Speed, Velocity & Graphs',
     classKey: 1, // links to 4B Combined Science
     status: 'ready',
-    e21ccFocus: ['cait', 'cci'],
+    e21ccFocus: ['criticalThinking', 'collaboration'],
     objectives: 'Students will distinguish between speed and velocity, interpret and sketch distance-time and velocity-time graphs, and calculate acceleration from graphs and equations.',
     chatHistory: [
       { role: 'user', content: 'Plan a lesson on kinematics for Sec 4 Combined Science. Cover speed vs velocity, d-t and v-t graphs, and calculating acceleration. I want hands-on data collection and graph interpretation.' },
@@ -1149,7 +1149,7 @@ By the end of this lesson, students will be able to:
     title: 'Integration \u2014 Area Under a Curve',
     classKey: 2, // links to 4C Mathematics
     status: 'ready',
-    e21ccFocus: ['cait'],
+    e21ccFocus: ['criticalThinking'],
     objectives: 'Students will understand integration as the reverse of differentiation, evaluate definite integrals of polynomial functions, and interpret the definite integral as the area under a curve.',
     chatHistory: [
       { role: 'user', content: 'Plan a Sec 4 A-Math lesson on integration. Focus on definite integrals and area under a curve. I want students to build intuition through graphing before moving to algebraic methods. Include LaTeX-formatted worked examples.' },
