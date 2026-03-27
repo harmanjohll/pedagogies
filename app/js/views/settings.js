@@ -524,14 +524,18 @@ export function render(container) {
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7; font-style: italic;">
             Dear Cher,
           </p>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7;">
-            Co-Cher is designed and built to be your assistant \u2014 your co-pilot. Designed for Singapore teachers, Co-Cher supports lesson design, classroom enactment, assessment, admin operations, and professional growth in one place.
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7; font-style: italic;">
+            Co-Cher is designed and built to be your assistant or co-pilot. Designed for Singapore Teachers, Co-Cher supports lesson design, classroom enactment, assessment, admin operations, and professional growth in one place.
           </p>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7;">
-            Grounded in our <strong style="color: var(--ink);">STP</strong> with intentional fronting of <strong style="color: var(--ink);">EdTech</strong>, <strong style="color: var(--ink);">E21CC</strong>, and various constructs and concepts in learning, Co-Cher aims to pull various knowledge bases together \u2014 including research and data \u2014 to support you in weaving multiple pieces together and curate what matters most when intentionally designing and enacting purposeful learning experiences for your students.
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7; font-style: italic;">
+            Grounded in our STP with intentional fronting of EdTech, E21CC, and various constructs and concepts in learning, Co-Cher aims to pull various knowledge bases together, including research and data, to support you in weaving multiple pieces together and curate what matters most when intentionally designing and enacting purposeful learning experiences for your students.
           </p>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); line-height: 1.7;">
-            Created by a teacher, for teachers. \u2014 <strong style="color: var(--ink);">Harman</strong>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-2); line-height: 1.7; font-style: italic;">
+            Created by teachers, for teachers.
+          </p>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); line-height: 1.7; font-style: italic;">
+            Warmly,<br/>
+            <strong style="color: var(--ink);">Harman</strong>
           </p>
         </div>
 
