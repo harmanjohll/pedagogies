@@ -176,9 +176,12 @@ const NAMES = [
 function randomE21CC() {
   // Wide spread (15–95) so trial classes have diverse profiles for grouping
   return {
-    cait: 15 + Math.floor(Math.random() * 81),
-    cci:  15 + Math.floor(Math.random() * 81),
-    cgc:  15 + Math.floor(Math.random() * 81)
+    criticalThinking: 15 + Math.floor(Math.random() * 81),
+    creativeThinking: 15 + Math.floor(Math.random() * 81),
+    communication: 15 + Math.floor(Math.random() * 81),
+    collaboration: 15 + Math.floor(Math.random() * 81),
+    socialConnectedness: 15 + Math.floor(Math.random() * 81),
+    selfRegulation: 15 + Math.floor(Math.random() * 81),
   };
 }
 

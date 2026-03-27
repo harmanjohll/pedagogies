@@ -425,6 +425,7 @@ body.resizing-panels .resize-handle {
   justify-content: center;
   z-index: 1000;
   padding: var(--sp-6);
+  overflow-y: auto;
 }
 
 .welcome-card {
@@ -436,6 +437,8 @@ body.resizing-panels .resize-handle {
   text-align: center;
   box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.3);
   animation: scaleIn 0.5s var(--ease) both;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
 }
 
 .dark .welcome-card {

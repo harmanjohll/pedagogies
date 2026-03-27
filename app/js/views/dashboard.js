@@ -336,26 +336,26 @@ function buildStatusBanner(teacherRow) {
         ? `Up next: P${upNext.p} — ${upNext.classCode} in ${upNext.room} at ${formatTime(periodStartTimes[upNext.p])}`
         : 'This is your last lesson today';
       return `
-        <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent,#4361ee),#6366f1);color:#fff;display:flex;align-items:center;gap:var(--sp-4);">
+        <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:var(--accent-light);border-left:4px solid var(--accent);display:flex;align-items:center;gap:var(--sp-4);">
           <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
           <div>
-            <div style="font-size:0.8125rem;opacity:0.85;">Now teaching</div>
-            <div style="font-size:1.125rem;font-weight:700;">P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room}</div>
-            <div style="font-size:0.8125rem;opacity:0.85;margin-top:2px;">${label}</div>
+            <div style="font-size:0.8125rem;color:var(--ink-muted);">Now teaching</div>
+            <div style="font-size:1.125rem;font-weight:700;color:var(--ink);">P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room}</div>
+            <div style="font-size:0.8125rem;color:var(--ink-muted);margin-top:2px;">${label}</div>
           </div>
         </div>`;
     } else {
       const startTime = formatTime(periodStartTimes[nextLesson.p]);
       return `
-        <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent,#4361ee),#6366f1);color:#fff;display:flex;align-items:center;gap:var(--sp-4);">
+        <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:var(--warning-light, rgba(245,158,11,0.1));border-left:4px solid var(--warning);display:flex;align-items:center;gap:var(--sp-4);">
           <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
           <div>
-            <div style="font-size:0.8125rem;opacity:0.85;">Next lesson</div>
-            <div style="font-size:1.125rem;font-weight:700;">P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room} at ${startTime}</div>
+            <div style="font-size:0.8125rem;color:var(--ink-muted);">Next lesson</div>
+            <div style="font-size:1.125rem;font-weight:700;color:var(--ink);">P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room} at ${startTime}</div>
           </div>
         </div>`;
     }
@@ -409,14 +409,17 @@ function buildTTScheduleCard(teacherRow) {
   }
 
   // Build period pills
+  const nextPeriod = period !== null ? allPeriods.find(s => s.p > period) : null;
   const periodPills = allPeriods.map(s => {
     const isCurrent = period === s.p;
+    const isNext = nextPeriod && s.p === nextPeriod.p;
     const isPast = period !== null && s.p < period;
     const bg = isCurrent ? 'var(--accent)' : isPast ? 'var(--bg-subtle)' : 'var(--surface)';
     const color = isCurrent ? '#fff' : isPast ? 'var(--ink-faint)' : 'var(--ink)';
-    const border = isCurrent ? 'var(--accent)' : 'var(--border)';
+    const borderStyle = isCurrent ? '1px solid var(--accent)' : isNext ? '1.5px solid var(--accent)' : '1px solid var(--border)';
     const textDec = isPast ? 'line-through' : 'none';
-    return `<div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1px solid ${border};background:${bg};color:${color};font-size:0.75rem;text-decoration:${textDec};">
+    const anim = isNext ? 'animation:pulse-soft 2s ease-in-out infinite;' : '';
+    return `<div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:${borderStyle};background:${bg};color:${color};font-size:0.75rem;text-decoration:${textDec};${anim}">
       <span style="font-weight:700;">P${s.p}</span>
       <span>${s.classCode}</span>
     </div>`;
@@ -524,27 +527,33 @@ function buildSuggestions(classes, lessons, events) {
   }
 
   // E21CC weak area to focus on
+  const DASH_DIMS = [
+    { key: 'criticalThinking', label: 'Critical Thinking' },
+    { key: 'creativeThinking', label: 'Creative Thinking' },
+    { key: 'communication', label: 'Communication' },
+    { key: 'collaboration', label: 'Collaboration' },
+    { key: 'socialConnectedness', label: 'Social Connectedness' },
+    { key: 'selfRegulation', label: 'Self-Regulation' },
+  ];
   if (classes.length > 0) {
-    let totals = { cait: 0, cci: 0, cgc: 0 }, count = 0;
+    const totals = {}; DASH_DIMS.forEach(d => { totals[d.key] = 0; }); let count = 0;
     classes.forEach(cls => (cls.students || []).forEach(s => {
       if (s.e21cc) {
-        totals.cait += s.e21cc.cait || 0;
-        totals.cci += s.e21cc.cci || 0;
-        totals.cgc += s.e21cc.cgc || 0;
+        DASH_DIMS.forEach(d => { totals[d.key] += s.e21cc[d.key] || 0; });
         count++;
       }
     }));
     if (count > 0) {
-      const avgs = { cait: totals.cait / count, cci: totals.cci / count, cgc: totals.cgc / count };
+      const avgs = {}; DASH_DIMS.forEach(d => { avgs[d.key] = totals[d.key] / count; });
       const weakest = Object.entries(avgs).sort((a, b) => a[1] - b[1])[0];
-      const names = { cait: 'CAIT (Critical & Inventive Thinking)', cci: 'CCI (Communication & Collaboration)', cgc: 'CGC (Civic & Global Citizenship)' };
+      const dimLabel = DASH_DIMS.find(d => d.key === weakest[0])?.label || weakest[0];
       if (weakest[1] < 60) {
         suggestions.push({
           icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>`,
           color: 'var(--success)',
           bg: 'var(--success-light)',
-          title: `Boost ${weakest[0].toUpperCase()} across your classes`,
-          desc: `${names[weakest[0]]} avg: ${Math.round(weakest[1])}/100`,
+          title: `Boost ${dimLabel} across your classes`,
+          desc: `${dimLabel} avg: ${Math.round(weakest[1])}/100`,
           action: () => navigate('/lesson-planner')
         });
       }
@@ -583,23 +592,30 @@ function buildStudentSpotlight(classes) {
   if (classes.length === 0) return '';
   const THRESHOLD = 50; // flag students below this E21CC average
 
+  const SPOT_DIMS = [
+    { key: 'criticalThinking', short: 'CT', color: '#6366f1' },
+    { key: 'creativeThinking', short: 'CrT', color: '#8b5cf6' },
+    { key: 'communication', short: 'Com', color: '#0ea5e9' },
+    { key: 'collaboration', short: 'Col', color: '#06b6d4' },
+    { key: 'socialConnectedness', short: 'SC', color: '#10b981' },
+    { key: 'selfRegulation', short: 'SR', color: '#f59e0b' },
+  ];
   const flagged = [];
   classes.forEach(cls => {
     if (!cls.students?.length) return;
     cls.students.forEach(st => {
-      const cait = st.cait ?? st.e21cc_cait ?? 0;
-      const cci = st.cci ?? st.e21cc_cci ?? 0;
-      const cgc = st.cgc ?? st.e21cc_cgc ?? 0;
-      const avg = Math.round((cait + cci + cgc) / 3);
-      const lowest = Math.min(cait, cci, cgc);
-      const lowestLabel = lowest === cait ? 'CAIT' : lowest === cci ? 'CCI' : 'CGC';
+      const scores = SPOT_DIMS.map(d => st.e21cc?.[d.key] || 0);
+      const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      const lowest = Math.min(...scores);
+      const lowestIdx = scores.indexOf(lowest);
+      const lowestLabel = SPOT_DIMS[lowestIdx]?.short || '?';
       if (avg < THRESHOLD || lowest < 40) {
         flagged.push({
           name: st.name,
           className: cls.name,
           classId: cls.id,
           avg,
-          cait, cci, cgc,
+          scores,
           lowest, lowestLabel,
           suggestion: lowest < 40
             ? `Needs support in ${lowestLabel} (${lowest}%). Consider scaffolding or differentiated tasks.`
@@ -637,27 +653,13 @@ function buildStudentSpotlight(classes) {
               </div>
             </div>
             <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-2);">
-              <div style="flex:1;text-align:center;">
-                <div style="font-size:0.5625rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;">CAIT</div>
+              ${SPOT_DIMS.map((d, i) => `<div style="flex:1;text-align:center;">
+                <div style="font-size:0.5625rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;">${d.short}</div>
                 <div style="height:4px;background:var(--bg-subtle);border-radius:2px;overflow:hidden;margin-top:2px;">
-                  <div style="width:${st.cait}%;height:100%;background:var(--e21cc-cait,#6366f1);border-radius:2px;"></div>
+                  <div style="width:${st.scores[i]}%;height:100%;background:${d.color};border-radius:2px;"></div>
                 </div>
-                <div style="font-size:0.625rem;color:var(--ink-muted);margin-top:1px;">${st.cait}%</div>
-              </div>
-              <div style="flex:1;text-align:center;">
-                <div style="font-size:0.5625rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;">CCI</div>
-                <div style="height:4px;background:var(--bg-subtle);border-radius:2px;overflow:hidden;margin-top:2px;">
-                  <div style="width:${st.cci}%;height:100%;background:var(--e21cc-cci,#06b6d4);border-radius:2px;"></div>
-                </div>
-                <div style="font-size:0.625rem;color:var(--ink-muted);margin-top:1px;">${st.cci}%</div>
-              </div>
-              <div style="flex:1;text-align:center;">
-                <div style="font-size:0.5625rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;">CGC</div>
-                <div style="height:4px;background:var(--bg-subtle);border-radius:2px;overflow:hidden;margin-top:2px;">
-                  <div style="width:${st.cgc}%;height:100%;background:var(--e21cc-cgc,#22c55e);border-radius:2px;"></div>
-                </div>
-                <div style="font-size:0.625rem;color:var(--ink-muted);margin-top:1px;">${st.cgc}%</div>
-              </div>
+                <div style="font-size:0.625rem;color:var(--ink-muted);margin-top:1px;">${st.scores[i]}%</div>
+              </div>`).join('')}
             </div>
             <div style="font-size:0.75rem;color:var(--ink-secondary);background:var(--bg-subtle);padding:var(--sp-2) var(--sp-3);border-radius:var(--radius-md);line-height:1.4;">
               ${st.suggestion}
@@ -669,29 +671,38 @@ function buildStudentSpotlight(classes) {
 }
 
 function renderInsights(classes, lessons) {
-  let totalCait = 0, totalCci = 0, totalCgc = 0, count = 0;
+  const INS_DIMS = [
+    { key: 'criticalThinking',    short: 'CT',  color: '#6366f1' },
+    { key: 'creativeThinking',    short: 'CrT', color: '#8b5cf6' },
+    { key: 'communication',       short: 'Com', color: '#0ea5e9' },
+    { key: 'collaboration',       short: 'Col', color: '#06b6d4' },
+    { key: 'socialConnectedness', short: 'SC',  color: '#10b981' },
+    { key: 'selfRegulation',     short: 'SR',  color: '#f59e0b' },
+  ];
+
+  const totals = {}; INS_DIMS.forEach(d => { totals[d.key] = 0; }); let count = 0;
   classes.forEach(cls => {
     (cls.students || []).forEach(s => {
       if (s.e21cc) {
-        totalCait += s.e21cc.cait || 0;
-        totalCci += s.e21cc.cci || 0;
-        totalCgc += s.e21cc.cgc || 0;
+        INS_DIMS.forEach(d => { totals[d.key] += s.e21cc[d.key] || 0; });
         count++;
       }
     });
   });
 
-  const avgCait = count > 0 ? Math.round(totalCait / count) : 0;
-  const avgCci = count > 0 ? Math.round(totalCci / count) : 0;
-  const avgCgc = count > 0 ? Math.round(totalCgc / count) : 0;
+  const dimAvgs = INS_DIMS.map(d => ({
+    ...d,
+    avg: count > 0 ? Math.round(totals[d.key] / count) : 0
+  }));
 
   const barColor = (val) => val >= 65 ? 'var(--success)' : val >= 45 ? 'var(--warning)' : 'var(--danger)';
 
-  const focusCounts = { cait: 0, cci: 0, cgc: 0 };
+  const focusCounts = {};
+  INS_DIMS.forEach(d => { focusCounts[d.key] = 0; });
   lessons.forEach(l => {
     (l.e21ccFocus || []).forEach(f => { if (focusCounts[f] !== undefined) focusCounts[f]++; });
   });
-  const totalFocus = focusCounts.cait + focusCounts.cci + focusCounts.cgc;
+  const totalFocus = INS_DIMS.reduce((s, d) => s + focusCounts[d.key], 0);
 
   let strongest = null, weakest = null, maxAvg = -1, minAvg = 101;
   classes.forEach(cls => {
@@ -699,7 +710,7 @@ function renderInsights(classes, lessons) {
     if (students.length === 0) return;
     const avg = students.reduce((s, st) => {
       const e = st.e21cc || {};
-      return s + ((e.cait || 0) + (e.cci || 0) + (e.cgc || 0)) / 3;
+      return s + INS_DIMS.reduce((sum, d) => sum + (e[d.key] || 0), 0) / INS_DIMS.length;
     }, 0) / students.length;
     if (avg > maxAvg) { maxAvg = avg; strongest = cls; }
     if (avg < minAvg) { minAvg = avg; weakest = cls; }
@@ -715,33 +726,17 @@ function renderInsights(classes, lessons) {
         <div class="card" style="padding:var(--sp-5) var(--sp-6);">
           <div style="font-size:0.8125rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-4);">E21CC Averages (All Students)</div>
           <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+            ${dimAvgs.map(d => `
             <div>
               <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px;">
-                <span style="font-weight:600;color:var(--ink);">CAIT</span>
-                <span style="color:var(--ink-muted);">${avgCait}/100</span>
+                <span style="font-weight:600;color:var(--ink);">${d.short}</span>
+                <span style="color:var(--ink-muted);">${d.avg}/100</span>
               </div>
               <div style="height:8px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;">
-                <div style="width:${avgCait}%;height:100%;background:${barColor(avgCait)};border-radius:var(--radius-full);transition:width 0.6s;"></div>
+                <div style="width:${d.avg}%;height:100%;background:${barColor(d.avg)};border-radius:var(--radius-full);transition:width 0.6s;"></div>
               </div>
             </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px;">
-                <span style="font-weight:600;color:var(--ink);">CCI</span>
-                <span style="color:var(--ink-muted);">${avgCci}/100</span>
-              </div>
-              <div style="height:8px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;">
-                <div style="width:${avgCci}%;height:100%;background:${barColor(avgCci)};border-radius:var(--radius-full);transition:width 0.6s;"></div>
-              </div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px;">
-                <span style="font-weight:600;color:var(--ink);">CGC</span>
-                <span style="color:var(--ink-muted);">${avgCgc}/100</span>
-              </div>
-              <div style="height:8px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;">
-                <div style="width:${avgCgc}%;height:100%;background:${barColor(avgCgc)};border-radius:var(--radius-full);transition:width 0.6s;"></div>
-              </div>
-            </div>
+            `).join('')}
           </div>
         </div>
 
@@ -759,7 +754,7 @@ function renderInsights(classes, lessons) {
             </div>` : ''}
             ${totalFocus > 0 ? `<div style="display:flex;align-items:center;gap:var(--sp-2);">
               <span style="color:var(--accent);font-size:1rem;">&#9679;</span>
-              <span style="color:var(--ink-secondary);">Lesson focus: CAIT (${focusCounts.cait}), CCI (${focusCounts.cci}), CGC (${focusCounts.cgc})</span>
+              <span style="color:var(--ink-secondary);">Lesson focus: ${INS_DIMS.map(d => `${d.short} (${focusCounts[d.key]})`).join(', ')}</span>
             </div>` : ''}
             <div style="display:flex;align-items:center;gap:var(--sp-2);">
               <span style="color:var(--ink-faint);font-size:1rem;">&#9679;</span>

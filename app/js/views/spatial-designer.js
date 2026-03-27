@@ -2061,7 +2061,7 @@ export function render(container) {
       data: {
         labels: METRIC_LABELS,
         datasets: [{
-          label: 'Effectiveness', data: [50, 50, 50, 50, 50, 50],
+          label: 'Effectiveness', data: [0, 0, 0, 0, 0, 0],
           fill: true, backgroundColor: datasetBG, borderColor: datasetBorder,
           pointBackgroundColor: datasetBorder, pointBorderColor: '#fff',
           pointHoverBackgroundColor: '#fff', pointHoverBorderColor: datasetBorder,
@@ -2094,6 +2094,32 @@ export function render(container) {
   /* ══════ Metrics calculation ══════ */
   function updateMetrics() {
     const items = [...layoutRoot.querySelectorAll('g[data-id]')];
+
+    // Empty room — collapse chart to origin
+    if (items.length === 0) {
+      const scores = [0, 0, 0, 0, 0, 0];
+      if (radarChart) { radarChart.data.datasets[0].data = scores; radarChart.update(); }
+      const summaryEl = container.querySelector('#score-summary');
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-2);">
+            <span style="font-weight:600;color:var(--ink);">Overall: 0/100</span>
+            <span>Add items to begin</span>
+          </div>
+          ${METRIC_LABELS.map(label => `<div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:3px;">
+            <span style="width:70px;font-size:0.6875rem;color:var(--ink-muted);text-align:right;flex-shrink:0;">${label}</span>
+            <div style="flex:1;height:6px;background:var(--bg-subtle);border-radius:3px;overflow:hidden;">
+              <div style="width:0%;height:100%;background:var(--border);border-radius:3px;transition:width 0.4s;"></div>
+            </div>
+            <span style="width:24px;font-size:0.6875rem;color:var(--ink-faint);text-align:right;">0</span>
+          </div>`).join('')}
+        `;
+      }
+      const recsEl = container.querySelector('#recommendations');
+      if (recsEl) recsEl.innerHTML = '<p style="font-size:0.75rem;color:var(--ink-faint);text-align:center;">Place furniture to see recommendations.</p>';
+      return;
+    }
+
     const desks = items.filter(g => {
       const id = g.getAttribute('data-id');
       return /desk_/.test(id) || id === 'chair';

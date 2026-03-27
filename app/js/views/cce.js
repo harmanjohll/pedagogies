@@ -212,6 +212,8 @@ ${contentArea.framework ? `\nContent-area framework: ${contentArea.framework}` :
 ### Teacher Notes
 [Background info, sensitive handling tips, extension activities, useful resources]
 
+Reference real-world events and issues that Singapore students would recognise. Use general knowledge of current affairs rather than specific dated articles. If referencing a scenario, make it realistic and timeless rather than tied to a specific date.
+
 Make the lesson feel authentic to Singapore's multicultural context. Use local examples, reference Singaporean values and norms, and ensure age-appropriateness for the specified level.`;
 }
 

@@ -7,6 +7,7 @@
 import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
+import { sendChat } from '../api.js';
 
 /* ── LEAPS 2.0 Domains ── */
 const LEAPS_DOMAINS = [
@@ -72,6 +73,36 @@ const CCA_CATEGORIES = [
   { key: 'clubs', label: 'Clubs & Societies', color: '#3b82f6' },
 ];
 
+const DEFAULT_E21CC_MAPPING = {
+  sports: ['collaboration', 'selfRegulation', 'criticalThinking'],
+  performing: ['creativeThinking', 'communication', 'collaboration'],
+  uniformed: ['selfRegulation', 'socialConnectedness', 'collaboration'],
+  clubs: ['criticalThinking', 'communication', 'creativeThinking'],
+};
+
+const E21CC_DIM_META = {
+  criticalThinking: { label: 'Critical Thinking', color: '#6366f1' },
+  creativeThinking: { label: 'Creative Thinking', color: '#8b5cf6' },
+  communication: { label: 'Communication', color: '#0ea5e9' },
+  collaboration: { label: 'Collaboration', color: '#06b6d4' },
+  socialConnectedness: { label: 'Social Connectedness', color: '#10b981' },
+  selfRegulation: { label: 'Self-Regulation', color: '#f59e0b' },
+};
+
+const DEFAULT_SAFETY = {
+  sports: ['Hydration check', 'Warm-up / cool-down', 'Weather check (haze/rain/lightning)', 'First aid kit ready', 'Emergency contacts available'],
+  performing: ['Equipment inspection', 'Proper warm-up (vocal/physical)', 'Volume levels safe', 'Ventilation adequate'],
+  uniformed: ['Parade ground safety', 'Equipment check', 'Weather check for outdoor activities', 'Buddy system for field exercises', 'First aid kit ready'],
+  clubs: ['Lab/equipment safety briefing', 'Electrical safety (robotics/infocomm)', 'Supervision ratio adequate'],
+};
+
+function getCCAReminders() {
+  try { return JSON.parse(localStorage.getItem('cocher_cca_reminders') || '[]'); } catch { return []; }
+}
+function saveCCAReminders(list) {
+  localStorage.setItem('cocher_cca_reminders', JSON.stringify(list));
+}
+
 const CCA_STYLES = `
   .cca-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
   .dark .cca-card { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); }
@@ -111,6 +142,21 @@ const CCA_STYLES = `
   .leaps-grade-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
   .leaps-grade-value { font-size: 1.5rem; font-weight: 800; }
   .leaps-grade-desc { font-size: 0.75rem; color: var(--ink-muted); margin-top: 4px; }
+
+  .cca-expand-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border, #e2e5ea); display: none; }
+  .cca-expand-section.visible { display: block; }
+  .cca-action-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .cca-action-btn { font-size: 0.6875rem; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border, #e2e5ea); background: none; color: var(--ink-muted); cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; }
+  .cca-action-btn:hover { background: var(--accent-light, rgba(67,97,238,0.08)); color: var(--accent, #4361ee); border-color: var(--accent, #4361ee); }
+  .cca-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.6875rem; font-weight: 600; margin-right: 4px; margin-bottom: 4px; }
+  .cca-checklist-item { display: flex; align-items: center; gap: 6px; padding: 4px 0; font-size: 0.8125rem; color: var(--ink-muted); }
+  .cca-checklist-item input[type="checkbox"] { accent-color: var(--accent); }
+  .cca-reminders-bar { background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+  .dark .cca-reminders-bar { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); }
+  .cca-reminder-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 0.8125rem; border-bottom: 1px solid var(--border-light, #f0f0f4); }
+  .cca-reminder-item:last-child { border-bottom: none; }
+  .cca-training-output { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--bg-subtle, #f8f9fa); font-size: 0.8125rem; line-height: 1.6; color: var(--ink-muted); }
+  .dark .cca-training-output { background: var(--bg-subtle, #16161e); }
 `;
 
 function escHtml(str) {
@@ -191,6 +237,29 @@ function renderCCAList(content, ccaList) {
         </button>
       </div>
 
+      <!-- Reminders -->
+      <div class="cca-reminders-bar">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-weight:600;font-size:0.875rem;color:var(--ink);">Reminders</div>
+          <button class="btn btn-ghost btn-sm" id="add-reminder-btn" style="font-size:0.75rem;">+ Add</button>
+        </div>
+        <div id="reminders-list">
+          ${(() => {
+            const reminders = getCCAReminders().filter(r => !r.completed).sort((a, b) => new Date(a.date) - new Date(b.date));
+            return reminders.length === 0
+              ? '<div style="font-size:0.8125rem;color:var(--ink-faint);text-align:center;padding:8px;">No reminders yet.</div>'
+              : reminders.map(r => `
+                <div class="cca-reminder-item">
+                  <input type="checkbox" class="reminder-complete-cb" data-rid="${r.id}" style="accent-color:var(--accent);" />
+                  <span style="flex:1;color:var(--ink);">${escHtml(r.text)}</span>
+                  <span style="font-size:0.75rem;color:var(--ink-faint);">${r.date ? new Date(r.date).toLocaleDateString('en-SG', {day:'numeric',month:'short'}) : ''}</span>
+                  <button class="btn btn-ghost btn-sm reminder-delete-btn" data-rid="${r.id}" style="padding:2px 6px;font-size:0.6875rem;color:var(--danger);">×</button>
+                </div>
+              `).join('');
+          })()}
+        </div>
+      </div>
+
       ${ccaList.length === 0 ? `
         <div style="text-align:center;padding:40px 20px;color:var(--ink-muted);">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" style="margin-bottom:12px;">
@@ -212,14 +281,60 @@ function renderCCAList(content, ccaList) {
         <div id="cca-items">
           ${ccaList.map(cca => {
             const cat = CCA_CATEGORIES.find(c => c.key === cca.category) || CCA_CATEGORIES[3];
+            const e21ccKeys = cca.e21ccMapping || DEFAULT_E21CC_MAPPING[cca.category] || [];
+            const safetyItems = cca.safetyChecklist || DEFAULT_SAFETY[cca.category] || [];
             return `
-              <div class="cca-list-item" data-id="${cca.id}" data-cat="${cca.category}">
-                <div class="cca-cat-dot" style="background:${cat.color};"></div>
-                <div class="cca-list-name">${escHtml(cca.name)}</div>
-                <div class="cca-list-cat">${cat.label}</div>
-                <div class="cca-list-actions">
-                  <button class="btn btn-secondary btn-sm cca-edit-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;">Edit</button>
-                  <button class="btn btn-secondary btn-sm cca-delete-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;color:var(--danger,#ef4444);">Delete</button>
+              <div class="cca-list-item" data-id="${cca.id}" data-cat="${cca.category}" style="flex-direction:column;align-items:stretch;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div class="cca-cat-dot" style="background:${cat.color};"></div>
+                  <div class="cca-list-name">${escHtml(cca.name)}</div>
+                  <div class="cca-list-cat">${cat.label}</div>
+                  <div class="cca-list-actions">
+                    <button class="btn btn-secondary btn-sm cca-edit-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;">Edit</button>
+                    <button class="btn btn-secondary btn-sm cca-delete-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;color:var(--danger,#ef4444);">Delete</button>
+                  </div>
+                </div>
+                <!-- E21CC badges -->
+                <div style="margin-top:8px;">
+                  ${e21ccKeys.map(k => {
+                    const meta = E21CC_DIM_META[k];
+                    return meta ? `<span class="cca-badge" style="background:${meta.color}15;color:${meta.color};">${meta.label}</span>` : '';
+                  }).join('')}
+                </div>
+                <!-- Action row -->
+                <div class="cca-action-row">
+                  <button class="cca-action-btn" data-action="safety" data-cca="${cca.id}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Safety
+                  </button>
+                  <button class="cca-action-btn" data-action="training" data-cca="${cca.id}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    Suggest Training
+                  </button>
+                  <button class="cca-action-btn" data-action="notes" data-cca="${cca.id}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Notes
+                  </button>
+                </div>
+                <!-- Safety section -->
+                <div class="cca-expand-section" id="safety-${cca.id}">
+                  <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Safety Checklist</div>
+                  ${safetyItems.map((item, idx) => `
+                    <div class="cca-checklist-item">
+                      <input type="checkbox" class="cca-safety-cb" data-cca="${cca.id}" data-idx="${idx}" />
+                      <span>${escHtml(item)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+                <!-- Training section -->
+                <div class="cca-expand-section" id="training-${cca.id}">
+                  <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Training Suggestions</div>
+                  <div class="cca-training-output" id="training-output-${cca.id}">Click "Suggest Training" to get AI-generated session ideas for ${escHtml(cca.name)}.</div>
+                </div>
+                <!-- Notes section -->
+                <div class="cca-expand-section" id="notes-${cca.id}">
+                  <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Development Notes</div>
+                  <textarea class="input cca-notes-area" data-cca="${cca.id}" rows="3" placeholder="Observations, milestones, areas for growth..." style="width:100%;font-size:0.8125rem;resize:vertical;">${escHtml(cca.notes || '')}</textarea>
                 </div>
               </div>
             `;
@@ -283,6 +398,86 @@ function renderCCAList(content, ccaList) {
       saveCCAList(list);
       showToast('CCA deleted');
       renderCCAList(content, list);
+    });
+  });
+
+  // Toggle expandable sections
+  content.querySelectorAll('.cca-action-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const action = btn.dataset.action;
+      const ccaId = btn.dataset.cca;
+      const section = content.querySelector(`#${action}-${ccaId}`);
+      if (section) section.classList.toggle('visible');
+    });
+  });
+
+  // Training suggestions (AI-powered)
+  content.querySelectorAll('[data-action="training"]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const ccaId = btn.dataset.cca;
+      const list = getCCAList();
+      const cca = list.find(c => c.id === ccaId);
+      if (!cca) return;
+      const cat = CCA_CATEGORIES.find(c => c.key === cca.category);
+      const outputEl = content.querySelector(`#training-output-${ccaId}`);
+      if (!outputEl || outputEl.dataset.loaded === 'true') return;
+
+      outputEl.innerHTML = '<em>Generating suggestions...</em>';
+      try {
+        const text = await sendChat(
+          [{ role: 'user', content: `Suggest a training session plan for a secondary school ${cat?.label || 'CCA'} CCA called "${cca.name}". Include: warm-up routine (5-10 min), main activity structure (30-40 min), cool-down/debrief (5-10 min), and 2-3 skill progression ideas. Keep it concise and practical.` }],
+          { trackLabel: 'ccaTraining', temperature: 0.7, maxTokens: 1024 }
+        );
+        outputEl.innerHTML = text.replace(/\n/g, '<br/>');
+        outputEl.dataset.loaded = 'true';
+      } catch (err) {
+        outputEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}. Check your API key in Settings.</span>`;
+      }
+    });
+  });
+
+  // Save notes on blur
+  content.querySelectorAll('.cca-notes-area').forEach(textarea => {
+    textarea.addEventListener('blur', () => {
+      const ccaId = textarea.dataset.cca;
+      const list = getCCAList();
+      const cca = list.find(c => c.id === ccaId);
+      if (cca) {
+        cca.notes = textarea.value;
+        saveCCAList(list);
+      }
+    });
+  });
+
+  // Add reminder
+  content.querySelector('#add-reminder-btn')?.addEventListener('click', () => {
+    const text = prompt('Reminder text:');
+    if (!text) return;
+    const date = prompt('Date (YYYY-MM-DD, or leave blank):');
+    const reminders = getCCAReminders();
+    reminders.push({ id: generateId(), text, date: date || '', completed: false });
+    saveCCAReminders(reminders);
+    renderCCAList(content, getCCAList());
+  });
+
+  // Complete reminder
+  content.querySelectorAll('.reminder-complete-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const reminders = getCCAReminders();
+      const r = reminders.find(rem => rem.id === cb.dataset.rid);
+      if (r) r.completed = true;
+      saveCCAReminders(reminders);
+      renderCCAList(content, getCCAList());
+    });
+  });
+
+  // Delete reminder
+  content.querySelectorAll('.reminder-delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const reminders = getCCAReminders().filter(r => r.id !== btn.dataset.rid);
+      saveCCAReminders(reminders);
+      renderCCAList(content, getCCAList());
     });
   });
 }

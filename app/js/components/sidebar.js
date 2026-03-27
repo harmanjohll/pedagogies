@@ -53,7 +53,6 @@ const SANDBOX_LABELS = [
   'The Lab',
   'Eksperimen',
   'Sandbox',
-  'Co-Cher+',
   'Masak-Masak',
 ];
 const SANDBOX_SECTION_KEY = '__sandbox__';
@@ -158,7 +157,7 @@ function buildNavItems() {
     { id: '/knowledge', icon: 'knowledge', label: 'Knowledge Bases', section: 'Growth' },
     { id: '/my-growth', icon: 'myGrowth', label: 'My Learning' },
     { id: '/autopilot', icon: 'autopilot', label: 'Co-Cher+ (beta)', section: SANDBOX_SECTION_KEY, sectionDisplay: _sandboxLabel },
-    { id: '/math-sandbox', icon: 'mathSandbox', label: 'Formula Lab' },
+    { id: '/math-sandbox', icon: 'mathSandbox', label: 'Formula Lab (beta)' },
     { id: '/admin', icon: 'admin', label: 'Admin One-Stop', section: 'Operations' }
   ];
 

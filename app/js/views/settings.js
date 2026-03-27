@@ -518,6 +518,23 @@ export function render(container) {
           </button>
         </div>
 
+        <!-- School Profile -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-3); color: var(--ink);">School Profile</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            Your school's values will be woven naturally into lesson plans and activities when contextually appropriate.
+          </p>
+          <div style="margin-bottom: var(--sp-4);">
+            <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.03em;">School Name</label>
+            <input id="school-name-setting" class="input" type="text" placeholder="e.g. Bukit Panjang Government High School" style="width: 100%; box-sizing: border-box;" value="${(Store.getSchoolProfile?.() || {}).name || ''}" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.03em;">School Values</label>
+            <input id="school-values-setting" class="input" type="text" placeholder="e.g. Integrity, Resilience, Compassion, Excellence" style="width: 100%; box-sizing: border-box;" value="${(Store.getSchoolProfile?.() || {}).values || ''}" />
+            <p style="font-size: 0.75rem; color: var(--ink-faint); margin-top: var(--sp-1);">Separate multiple values with commas.</p>
+          </div>
+        </div>
+
         <!-- About -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-3); color: var(--ink);">About Co-Cher</h3>
@@ -1018,6 +1035,11 @@ export function render(container) {
 
     Store.set('apiKey', newKey);
     Store.set('model', newModel);
+
+    const schoolName = container.querySelector('#school-name-setting')?.value?.trim() || '';
+    const schoolValues = container.querySelector('#school-values-setting')?.value?.trim() || '';
+    Store.setSchoolProfile({ name: schoolName, values: schoolValues });
+
     showToast('Settings saved!', 'success');
 
     // Update key status
