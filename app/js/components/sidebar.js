@@ -227,7 +227,7 @@ export function renderSidebar(container) {
     <a class="sidebar-brand" href="#/" style="text-decoration:none;cursor:pointer;">
       <div class="sidebar-brand-icon">C</div>
       <div class="sidebar-brand-text">
-        <div class="sidebar-brand-name">Co-Cher <span style="font-size:0.5em;font-weight:400;color:var(--ink-faint);opacity:0.7;vertical-align:middle;">by Harman Johll</span></div>
+        <div class="sidebar-brand-name">Co-Cher</div>
         <div class="sidebar-brand-tagline">Your Co-Teaching Assistant</div>
       </div>
     </a>

@@ -34,6 +34,86 @@ const PERSONA_BADGE_COLORS = [
   '#ec4899', '#14b8a6', '#f97316', '#3b82f6', '#a855f7', '#84cc16'
 ];
 
+/* ── Feedback Focus Frames ── */
+
+const FEEDBACK_FRAMES = [
+  {
+    id: 'stp',
+    label: 'STP-Aligned',
+    color: '#3b82f6',
+    desc: 'Feedback organised under the 4 areas of the Singapore Teaching Practice',
+    promptBlock: `Organise your feedback under the four areas of the Singapore Teaching Practice (STP):
+
+### Area 1 — Lesson Preparation
+Did the teacher demonstrate understanding of learners, set clear objectives, and plan resources effectively?
+
+### Area 2 — Lesson Enactment
+Evaluate teaching actions, interaction patterns, and classroom discourse quality.
+
+### Area 3 — Monitoring & Feedback
+How well did the teacher use formative assessment, provide effective feedback, and offer differentiated support?
+
+### Area 4 — Positive Learning Culture
+Was the environment safe and supportive? Were routines clear? Was student agency encouraged?`
+  },
+  {
+    id: 'grow_coaching',
+    label: 'GROW Coaching',
+    color: '#10b981',
+    desc: 'Whitmore\'s Goal → Reality → Options → Will structure for teacher development',
+    promptBlock: `Structure your feedback using the GROW coaching model (Whitmore). NOTE: This is the coaching GROW (Goal, Reality, Options, Will) — NOT Beatty's GROW for student metacognition.
+
+### Goal
+What was the teacher trying to achieve in this lesson? How clearly was the learning intent communicated?
+
+### Reality
+What actually happened during the rehearsal? Describe specific moments — what went well and what fell short of the goal.
+
+### Options
+What alternative approaches, strategies, or techniques could the teacher consider? Offer 3-4 concrete options.
+
+### Will
+What specific, actionable next steps should the teacher commit to before the real lesson? Frame these as commitments, not suggestions.`
+  },
+  {
+    id: 'grow_reflection',
+    label: 'Beatty\'s GROW Reflection',
+    color: '#8b5cf6',
+    desc: 'Self-reflection using Gift, Rise, Own, Watch — metacognition applied to your own practice',
+    promptBlock: `Add a personal reflection section using Beatty's GROW by Reflecting framework. NOTE: This is Beatty's GROW for metacognition (Gift, Rise, Own, Watch) — NOT Whitmore's coaching GROW.
+
+### Teacher Self-Reflection (GROW by Reflecting)
+Frame these as prompts the teacher can use to reflect on their own practice:
+
+**G — Gift yourself success**: What did you do well in this rehearsal? Identify 1-2 specific strengths to celebrate.
+
+**R — Rise above one challenge**: What was the hardest moment? How might you handle it differently next time?
+
+**O — Own your knowledge**: What have you learned about your own teaching from this rehearsal?
+
+**W — Watch what comes next**: What is one thing you will focus on improving before the real lesson?`
+  },
+  {
+    id: 'hattie',
+    label: 'Hattie\'s Visible Learning',
+    color: '#f59e0b',
+    desc: 'Feedback referencing effect sizes and high-impact teaching strategies',
+    promptBlock: `Frame your feedback through the lens of Hattie's Visible Learning research. Reference effect sizes where relevant:
+
+### High-Impact Strategies Observed
+Which high-effect-size strategies did the teacher employ? (e.g. Teacher Clarity d=0.75, Feedback d=0.70, Metacognitive Strategies d=0.60, Questioning d=0.48)
+
+### Impact Potential
+Based on the rehearsal, which strategies have the greatest potential to lift student achievement? Rate the teacher's use of:
+- **Teacher clarity** — Were objectives and success criteria visible?
+- **Feedback quality** — Was feedback timely, specific, and actionable?
+- **Scaffolding** — Was there appropriate challenge with support?
+
+### Suggestions (Evidence-Based)
+Recommend 3-4 adjustments grounded in Visible Learning research, citing the relevant strategy and its effect size.`
+  },
+];
+
 /* ── State ── */
 
 let selectedLessonId = null;
@@ -46,6 +126,8 @@ let apiMessages = [];     // messages array sent to Anthropic API
 let isGenerating = false;
 let debriefContent = null;
 let assignedStudents = []; // { name, persona, color }
+let selectedFeedbackFrames = ['stp']; // default to STP
+let customFeedbackFocus = ''; // free-text "Other" focus
 
 /* ── API ── */
 
@@ -139,32 +221,49 @@ function buildDebriefPrompt() {
     return `${m.name ? `[${m.name}]` : 'STUDENT'}: ${m.text}`;
   }).join('\n');
 
-  return `You are an experienced instructional coach reviewing a teacher's rehearsal of a lesson delivery. Analyse the following transcript of a simulated classroom rehearsal and provide structured, constructive feedback.
+  // Build framework-specific sections based on teacher's selections
+  const frameSections = selectedFeedbackFrames
+    .map(id => FEEDBACK_FRAMES.find(f => f.id === id))
+    .filter(Boolean)
+    .map(f => f.promptBlock)
+    .join('\n\n');
 
-## Rehearsal Transcript
-${transcript}
+  // Custom focus from "Other"
+  const customSection = customFeedbackFocus
+    ? `\n\n### Custom Focus\nThe teacher has specifically asked for feedback on: ${customFeedbackFocus}\nProvide targeted observations and suggestions for this area.`
+    : '';
 
-## Provide feedback in the following sections:
-
+  // Fallback if nothing selected
+  const fallbackSection = (!frameSections && !customFeedbackFocus) ? `
 ### Questioning Breadth
-Did the teacher engage different students? Were questions distributed, or did the teacher only interact with volunteers? Rate and comment.
+Did the teacher engage different students? Were questions distributed, or did the teacher only interact with volunteers?
 
 ### Pacing Assessment
 Was the delivery too fast, too slow, or well-paced? Were there awkward silences or rushed transitions?
 
 ### Differentiation Quality
-Did the teacher adapt their language or approach for different learners (e.g., scaffolding for struggling students, extending for high achievers, supporting ESL learners)?
+Did the teacher adapt their language or approach for different learners?
 
 ### Misconception Handling
-If students showed misconceptions, how did the teacher address them? Were corrections clear and supportive?
+If students showed misconceptions, how did the teacher address them?` : '';
+
+  return `You are an experienced instructional coach reviewing a teacher's rehearsal of a lesson delivery. Analyse the following transcript of a simulated classroom rehearsal and provide structured, constructive feedback.
+
+## Rehearsal Transcript
+${transcript}
+
+## Feedback Framework
+${frameSections}${fallbackSection}${customSection}
+
+## Always Include
 
 ### Strengths
-What did the teacher do well? Highlight 2-3 specific moments.
+What did the teacher do well? Highlight 2-3 specific moments from the transcript.
 
 ### Suggestions for Improvement
 Provide 3-4 actionable suggestions the teacher can implement before teaching the real lesson.
 
-Format your response using markdown headers (###) for each section. Be encouraging but honest.`;
+Format your response using markdown headers (###) for each section. Be encouraging but honest. Where multiple frameworks are selected, organise clearly under each framework heading before the Strengths and Suggestions sections.`;
 }
 
 /* ── Parse Student Responses ── */
@@ -224,6 +323,8 @@ export function render(container) {
   isGenerating = false;
   debriefContent = null;
   assignedStudents = [];
+  selectedFeedbackFrames = ['stp'];
+  customFeedbackFocus = '';
 
   renderView(container);
 
@@ -237,6 +338,8 @@ export function render(container) {
     isGenerating = false;
     debriefContent = null;
     assignedStudents = [];
+    selectedFeedbackFrames = ['stp'];
+    customFeedbackFocus = '';
   };
 }
 
@@ -419,6 +522,53 @@ function renderSetupInterface(container, eligibleLessons, classes) {
               Start Rehearsal
             </button>
           </div>
+
+          <!-- Step 3: Feedback Focus -->
+          <div class="card" style="margin-bottom: var(--sp-6);">
+            <div style="display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4);">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.875rem; flex-shrink: 0;">3</div>
+              <div>
+                <h3 style="font-size: 1rem; font-weight: 600; color: var(--ink); margin: 0;">Feedback Focus</h3>
+                <p style="font-size: 0.8125rem; color: var(--ink-muted); margin: 0;">Choose how you'd like your debrief feedback framed</p>
+              </div>
+            </div>
+
+            <div style="display: grid; gap: var(--sp-3); margin-bottom: var(--sp-4);">
+              ${FEEDBACK_FRAMES.map(f => `
+                <label style="display: flex; align-items: flex-start; gap: var(--sp-3); cursor: pointer; padding: var(--sp-3); border-radius: 8px; border: 1px solid var(--border); transition: background 0.15s; background: ${selectedFeedbackFrames.includes(f.id) ? 'var(--accent-light)' : 'transparent'};">
+                  <input type="checkbox" class="rh-feedback-frame-cb" value="${f.id}" ${selectedFeedbackFrames.includes(f.id) ? 'checked' : ''}
+                    style="accent-color: var(--accent); margin-top: 2px; flex-shrink: 0;" />
+                  <div>
+                    <div style="font-size: 0.875rem; font-weight: 600; color: var(--ink);">
+                      <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${f.color}; margin-right: 6px;"></span>
+                      ${escHtml(f.label)}
+                    </div>
+                    <div style="font-size: 0.8125rem; color: var(--ink-muted); margin-top: 2px;">${escHtml(f.desc)}</div>
+                  </div>
+                </label>
+              `).join('')}
+
+              <!-- Other / custom focus -->
+              <label style="display: flex; align-items: flex-start; gap: var(--sp-3); cursor: pointer; padding: var(--sp-3); border-radius: 8px; border: 1px solid var(--border); transition: background 0.15s; background: ${customFeedbackFocus ? 'var(--accent-light)' : 'transparent'};">
+                <input type="checkbox" id="rh-feedback-other-cb" ${customFeedbackFocus ? 'checked' : ''}
+                  style="accent-color: var(--accent); margin-top: 2px; flex-shrink: 0;" />
+                <div style="flex: 1;">
+                  <div style="font-size: 0.875rem; font-weight: 600; color: var(--ink);">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #6b7280; margin-right: 6px;"></span>
+                    Other
+                  </div>
+                  <div style="font-size: 0.8125rem; color: var(--ink-muted); margin-top: 2px;">Specify your own feedback focus</div>
+                  <textarea id="rh-feedback-other-text" class="input" rows="2"
+                    placeholder="e.g. Focus on my use of ICT, or how I managed transitions between activities..."
+                    style="margin-top: var(--sp-2); font-size: 0.8125rem; resize: vertical; width: 100%; display: ${customFeedbackFocus ? 'block' : 'none'};">${escHtml(customFeedbackFocus)}</textarea>
+                </div>
+              </label>
+            </div>
+
+            <p style="font-size: 0.75rem; color: var(--ink-faint); line-height: 1.5; margin: 0;">
+              Select one or more frames. Your debrief will be structured around the selected focus areas.
+            </p>
+          </div>
         ` : ''}
       </div>
     </div>
@@ -458,6 +608,34 @@ function renderSetupInterface(container, eligibleLessons, classes) {
       }
     });
   });
+
+  // Event: feedback frame checkboxes
+  container.querySelectorAll('.rh-feedback-frame-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) {
+        if (!selectedFeedbackFrames.includes(cb.value)) selectedFeedbackFrames.push(cb.value);
+      } else {
+        selectedFeedbackFrames = selectedFeedbackFrames.filter(f => f !== cb.value);
+      }
+      const label = cb.closest('label');
+      if (label) label.style.background = cb.checked ? 'var(--accent-light)' : 'transparent';
+    });
+  });
+
+  // Event: "Other" feedback focus
+  const otherCb = container.querySelector('#rh-feedback-other-cb');
+  const otherText = container.querySelector('#rh-feedback-other-text');
+  if (otherCb && otherText) {
+    otherCb.addEventListener('change', () => {
+      otherText.style.display = otherCb.checked ? 'block' : 'none';
+      if (!otherCb.checked) customFeedbackFocus = '';
+      const label = otherCb.closest('label');
+      if (label) label.style.background = otherCb.checked ? 'var(--accent-light)' : 'transparent';
+    });
+    otherText.addEventListener('input', () => {
+      customFeedbackFocus = otherText.value;
+    });
+  }
 
   // Event: start rehearsal
   const startBtn = container.querySelector('#rh-start-btn');
@@ -872,6 +1050,18 @@ function renderDebrief(content) {
   // Parse markdown-like content into HTML
   const htmlContent = simpleMarkdownToHtml(content);
 
+  // Build frame badges
+  const usedFrames = selectedFeedbackFrames
+    .map(id => FEEDBACK_FRAMES.find(f => f.id === id))
+    .filter(Boolean);
+  const frameBadges = usedFrames.map(f =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:0.75rem;font-weight:600;background:rgba(${f.id === 'stp' ? '59,130,246' : f.id === 'grow_coaching' ? '16,185,129' : f.id === 'grow_reflection' ? '139,92,246' : '245,158,11'},0.12);color:${f.color};">` +
+    `<span style="width:6px;height:6px;border-radius:50%;background:${f.color};"></span>${escHtml(f.label)}</span>`
+  ).join('');
+  const customBadge = customFeedbackFocus
+    ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:0.75rem;font-weight:600;background:rgba(107,114,128,0.12);color:#6b7280;"><span style="width:6px;height:6px;border-radius:50%;background:#6b7280;"></span>Custom</span>`
+    : '';
+
   return `
     <div style="margin-top: var(--sp-4);">
       <div style="display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-4);">
@@ -880,6 +1070,12 @@ function renderDebrief(content) {
         </svg>
         <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--ink); margin: 0;">Rehearsal Debrief</h3>
       </div>
+
+      ${(frameBadges || customBadge) ? `
+        <div style="display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3);">
+          ${frameBadges}${customBadge}
+        </div>
+      ` : ''}
 
       <div class="card" style="padding: var(--sp-5);">
         <div style="font-size: 0.875rem; line-height: 1.7; color: var(--ink);" class="rh-debrief-content">
