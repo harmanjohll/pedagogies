@@ -520,16 +520,18 @@ export function render(container) {
 
         <!-- About -->
         <div class="card" style="margin-bottom: var(--sp-6);">
-          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">About Co-Cher</h3>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.6;">
-            <strong style="color: var(--ink);">Co-Cher</strong> \u2014 your co-teaching assistant. Designed for Singapore educators, Co-Cher supports lesson design, classroom enactment, assessment, admin operations, and professional growth in one place.
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-3); color: var(--ink);">About Co-Cher</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7; font-style: italic;">
+            Dear Cher,
           </p>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.6;">
-            Grounded in the <strong style="color: var(--ink);">Singapore Teaching Practice</strong>, <strong style="color: var(--ink);">E21CC</strong>, and <strong style="color: var(--ink);">EdTech Masterplan 2030</strong>. Powered by Hattie\u2019s Visible Learning, Bloom\u2019s Taxonomy, GROW coaching, and Schraw & Dennison\u2019s metacognitive frameworks.
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7;">
+            Co-Cher is designed and built to be your assistant \u2014 your co-pilot. Designed for Singapore teachers, Co-Cher supports lesson design, classroom enactment, assessment, admin operations, and professional growth in one place.
           </p>
-          <p style="font-size: 0.75rem; color: var(--ink-faint); line-height: 1.5;">
-            Created by <strong style="color: var(--ink-muted);">Harman Johll</strong><br />
-            Built with care for the teaching fraternity.
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7;">
+            Grounded in our <strong style="color: var(--ink);">STP</strong> with intentional fronting of <strong style="color: var(--ink);">EdTech</strong>, <strong style="color: var(--ink);">E21CC</strong>, and various constructs and concepts in learning, Co-Cher aims to pull various knowledge bases together \u2014 including research and data \u2014 to support you in weaving multiple pieces together and curate what matters most when intentionally designing and enacting purposeful learning experiences for your students.
+          </p>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); line-height: 1.7;">
+            Created by a teacher, for teachers. \u2014 <strong style="color: var(--ink);">Harman</strong>
           </p>
         </div>
 

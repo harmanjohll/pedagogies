@@ -1328,12 +1328,6 @@ export function renderAaL(container) {
           <!-- Circular GROW Diagram (matched to reference: G top-right, R right, O bottom, W left) -->
           <div style="display:flex;justify-content:center;margin-bottom:20px;">
             <svg viewBox="0 0 380 380" width="320" height="320" style="max-width:100%;">
-              <defs>
-                <marker id="arwG" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#f59e0b"/></marker>
-                <marker id="arwR" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#f59e0b"/></marker>
-                <marker id="arwO" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#10b981"/></marker>
-                <marker id="arwW" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#8b5cf6"/></marker>
-              </defs>
 
               <!-- Outer circle border -->
               <circle cx="190" cy="190" r="150" fill="none" stroke="#10b981" stroke-width="2.5"/>
@@ -1354,34 +1348,29 @@ export function renderAaL(container) {
 
               <!-- Centre circle -->
               <circle cx="190" cy="190" r="50" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
-              <text x="190" y="184" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink,#374151)">Believe</text>
-              <text x="190" y="200" text-anchor="middle" font-size="11" font-weight="700" fill="var(--ink,#374151)">you can</text>
+              <text x="190" y="184" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink,#374151)">Believe</text>
+              <text x="190" y="200" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink,#374151)">you can</text>
 
-              <!-- Clockwise arrows along the outer edge -->
-              <path d="M215,44 Q265,28 310,60" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#arwG)"/>
-              <path d="M344,215 Q352,265 325,310" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#arwR)"/>
-              <path d="M165,344 Q115,352 65,325" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#arwO)"/>
-              <path d="M36,165 Q28,115 55,65" fill="none" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arwW)"/>
 
               <!-- G label (top-right quadrant) -->
-              <text x="270" y="100" text-anchor="middle" font-size="22" font-weight="800" fill="#f59e0b">G</text>
-              <text x="270" y="116" text-anchor="middle" font-size="8" font-weight="600" fill="#f59e0b" font-style="italic">Gift yourself</text>
-              <text x="270" y="127" text-anchor="middle" font-size="8" font-weight="600" fill="#f59e0b" font-style="italic">success</text>
+              <text x="270" y="100" text-anchor="middle" font-size="26" font-weight="800" fill="#f59e0b">G</text>
+              <text x="270" y="116" text-anchor="middle" font-size="10" font-weight="600" fill="#f59e0b" font-style="italic">Gift yourself</text>
+              <text x="270" y="127" text-anchor="middle" font-size="10" font-weight="600" fill="#f59e0b" font-style="italic">success</text>
 
               <!-- R label (bottom-right quadrant) -->
-              <text x="270" y="265" text-anchor="middle" font-size="22" font-weight="800" fill="#f59e0b">R</text>
-              <text x="270" y="281" text-anchor="middle" font-size="8" font-weight="600" fill="#f59e0b" font-style="italic">Rise above</text>
-              <text x="270" y="292" text-anchor="middle" font-size="8" font-weight="600" fill="#f59e0b" font-style="italic">with small steps</text>
+              <text x="270" y="265" text-anchor="middle" font-size="26" font-weight="800" fill="#f59e0b">R</text>
+              <text x="270" y="281" text-anchor="middle" font-size="10" font-weight="600" fill="#f59e0b" font-style="italic">Rise above</text>
+              <text x="270" y="292" text-anchor="middle" font-size="10" font-weight="600" fill="#f59e0b" font-style="italic">with small steps</text>
 
               <!-- O label (bottom-left quadrant) -->
-              <text x="110" y="265" text-anchor="middle" font-size="22" font-weight="800" fill="#10b981">O</text>
-              <text x="110" y="281" text-anchor="middle" font-size="8" font-weight="600" fill="#10b981" font-style="italic">Own your</text>
-              <text x="110" y="292" text-anchor="middle" font-size="8" font-weight="600" fill="#10b981" font-style="italic">knowledge</text>
+              <text x="110" y="265" text-anchor="middle" font-size="26" font-weight="800" fill="#10b981">O</text>
+              <text x="110" y="281" text-anchor="middle" font-size="10" font-weight="600" fill="#10b981" font-style="italic">Own your</text>
+              <text x="110" y="292" text-anchor="middle" font-size="10" font-weight="600" fill="#10b981" font-style="italic">knowledge</text>
 
               <!-- W label (top-left quadrant) -->
-              <text x="110" y="100" text-anchor="middle" font-size="22" font-weight="800" fill="#8b5cf6">W</text>
-              <text x="110" y="116" text-anchor="middle" font-size="8" font-weight="600" fill="#8b5cf6" font-style="italic">Watch for what</text>
-              <text x="110" y="127" text-anchor="middle" font-size="8" font-weight="600" fill="#8b5cf6" font-style="italic">comes next</text>
+              <text x="110" y="100" text-anchor="middle" font-size="26" font-weight="800" fill="#8b5cf6">W</text>
+              <text x="110" y="116" text-anchor="middle" font-size="10" font-weight="600" fill="#8b5cf6" font-style="italic">Watch for what</text>
+              <text x="110" y="127" text-anchor="middle" font-size="10" font-weight="600" fill="#8b5cf6" font-style="italic">comes next</text>
             </svg>
           </div>
 
@@ -1390,7 +1379,7 @@ export function renderAaL(container) {
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #f59e0b;background:rgba(245,158,11,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-g" title="Click to see what G looks like when enacted">
               <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">G \u2014 Gift yourself success</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Celebrate what you <em>do</em> understand. Recognise your strengths before focusing on gaps.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
+              <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cWhat is one thing I understand?\u201d<br/>
                 <strong>Go deeper:</strong> \u201cHow would I teach this to a friend?\u201d
               </div>
@@ -1398,7 +1387,7 @@ export function renderAaL(container) {
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #f59e0b;background:rgba(245,158,11,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-r" title="Click to see what R looks like when enacted">
               <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">R \u2014 Rise above with small steps</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Identify what you don\u2019t yet understand and plan a small, achievable step to improve.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
+              <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cWhat do I not yet understand?\u201d<br/>
                 <strong>Go deeper:</strong> \u201cWhat will I do to improve?\u201d
               </div>
@@ -1406,7 +1395,7 @@ export function renderAaL(container) {
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #10b981;background:rgba(16,185,129,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-o" title="Click to see what O looks like when enacted">
               <div style="font-weight:700;font-size:0.9375rem;color:#10b981;margin-bottom:4px;">O \u2014 Own your knowledge</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Make learning yours by connecting it to real life and sharing it with others.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
+              <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cWhat is one real-life example?\u201d<br/>
                 <strong>Go deeper:</strong> \u201cHow have I shared this with someone?\u201d
               </div>
@@ -1414,7 +1403,7 @@ export function renderAaL(container) {
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #8b5cf6;background:rgba(139,92,246,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-w" title="Click to see what W looks like when enacted">
               <div style="font-weight:700;font-size:0.9375rem;color:#8b5cf6;margin-bottom:4px;">W \u2014 Watch for what comes next</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Look ahead. Activate prior knowledge about the next topic so you arrive prepared.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
+              <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cWhat do I already know about the next topic?\u201d<br/>
                 <strong>Go deeper:</strong> \u201cWhat is coming up and how can I prepare?\u201d
               </div>
@@ -1554,14 +1543,14 @@ export function renderAaL(container) {
               <path d="M30,220 A190,190 0 0,1 220,30" fill="none" stroke="#f59e0b" stroke-width="2"/>
 
               <!-- Outer ring labels (positioned at midpoints of each quadrant arc) -->
-              <text x="345" y="100" text-anchor="middle" font-size="17" font-weight="800" fill="#3b82f6">GROW</text>
-              <text x="345" y="115" text-anchor="middle" font-size="7.5" fill="#3b82f6" font-weight="500" font-style="italic">Reflect on learning</text>
-              <text x="345" y="350" text-anchor="middle" font-size="17" font-weight="800" fill="#ef4444">ACT</text>
-              <text x="345" y="365" text-anchor="middle" font-size="7.5" fill="#ef4444" font-weight="500" font-style="italic">Act on feedback</text>
-              <text x="95" y="350" text-anchor="middle" font-size="17" font-weight="800" fill="#10b981">MAP</text>
-              <text x="95" y="365" text-anchor="middle" font-size="7.5" fill="#10b981" font-weight="500" font-style="italic">Map your progress</text>
-              <text x="95" y="100" text-anchor="middle" font-size="17" font-weight="800" fill="#f59e0b">ASK</text>
-              <text x="95" y="115" text-anchor="middle" font-size="7.5" fill="#f59e0b" font-weight="500" font-style="italic">Ask for help</text>
+              <text x="350" y="88" text-anchor="middle" font-size="20" font-weight="800" fill="#3b82f6">GROW</text>
+              <text x="350" y="105" text-anchor="middle" font-size="9.5" fill="#3b82f6" font-weight="500" font-style="italic">Reflect on learning</text>
+              <text x="350" y="352" text-anchor="middle" font-size="20" font-weight="800" fill="#ef4444">ACT</text>
+              <text x="350" y="369" text-anchor="middle" font-size="9.5" fill="#ef4444" font-weight="500" font-style="italic">Act on feedback</text>
+              <text x="90" y="352" text-anchor="middle" font-size="20" font-weight="800" fill="#10b981">MAP</text>
+              <text x="90" y="369" text-anchor="middle" font-size="9.5" fill="#10b981" font-weight="500" font-style="italic">Map your progress</text>
+              <text x="90" y="88" text-anchor="middle" font-size="20" font-weight="800" fill="#f59e0b">ASK</text>
+              <text x="90" y="105" text-anchor="middle" font-size="9.5" fill="#f59e0b" font-weight="500" font-style="italic">Ask for help</text>
 
               <!-- Inner ring band (Prepare / Participate / Process) -->
               <!-- Inner ring background -->
@@ -1580,21 +1569,21 @@ export function renderAaL(container) {
               <path d="M124.7,275 A110,110 0 0,1 220,110" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
 
               <!-- Inner labels (positioned along the bands, rotated to follow the curve) -->
-              <text x="280" y="168" text-anchor="middle" font-size="12" font-weight="700" fill="#6366f1" transform="rotate(30,280,168)">Prepare</text>
-              <text x="220" y="310" text-anchor="middle" font-size="12" font-weight="700" fill="#ec4899">Participate</text>
-              <text x="158" y="168" text-anchor="middle" font-size="12" font-weight="700" fill="#14b8a6" transform="rotate(-30,158,168)">Process</text>
+              <text x="280" y="168" text-anchor="middle" font-size="14" font-weight="700" fill="#6366f1" transform="rotate(30,280,168)">Prepare</text>
+              <text x="220" y="310" text-anchor="middle" font-size="14" font-weight="700" fill="#ec4899">Participate</text>
+              <text x="158" y="168" text-anchor="middle" font-size="14" font-weight="700" fill="#14b8a6" transform="rotate(-30,158,168)">Process</text>
 
               <!-- Centre circle -->
               <circle cx="220" cy="220" r="55" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
-              <text x="220" y="215" text-anchor="middle" font-size="11" font-weight="800" fill="var(--ink,#374151)">Proactive</text>
-              <text x="220" y="232" text-anchor="middle" font-size="11" font-weight="800" fill="var(--ink,#374151)">Learner</text>
+              <text x="220" y="215" text-anchor="middle" font-size="13" font-weight="800" fill="var(--ink,#374151)">Proactive</text>
+              <text x="220" y="232" text-anchor="middle" font-size="13" font-weight="800" fill="var(--ink,#374151)">Learner</text>
             </svg>
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div>
               <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Outer Ring \u2014 Learning Practices</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
+              <div style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;">
                 <span style="color:#3b82f6;font-weight:600;">GROW</span> \u2014 Reflect on what you know and don\u2019t know<br/>
                 <span style="color:#ef4444;font-weight:600;">ACT</span> \u2014 Process and act on feedback received<br/>
                 <span style="color:#10b981;font-weight:600;">MAP</span> \u2014 Track your progress against goals<br/>
@@ -1604,7 +1593,7 @@ export function renderAaL(container) {
             </div>
             <div>
               <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Inner Ring \u2014 Learner Behaviours</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
+              <div style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;">
                 <span style="color:#6366f1;font-weight:600;">Prepare</span> \u2014 Get ready for learning before class<br/>
                 <span style="color:#ec4899;font-weight:600;">Participate</span> \u2014 Engage actively during lessons<br/>
                 <span style="color:#14b8a6;font-weight:600;">Process</span> \u2014 Make sense of learning after class

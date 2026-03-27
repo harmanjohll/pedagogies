@@ -708,8 +708,9 @@ export function render(container) {
           background: var(--bg-card, #fff);
           border: 2px dashed var(--border, #d0d5dd);
           border-radius: 12px;
-          padding: 28px;
+          padding: 0;
           transition: border-color 0.2s;
+          overflow: hidden;
         }
         .sim-byo-card:hover { border-color: #4361ee; }
         .dark .sim-byo-card {
@@ -717,6 +718,86 @@ export function render(container) {
           border-color: var(--border, #3e3e4e);
         }
         .dark .sim-byo-card:hover { border-color: #4361ee; }
+        .sim-byo-header {
+          padding: 20px 24px 16px;
+          border-bottom: 1px solid var(--border-light, #f0f0f4);
+        }
+        .dark .sim-byo-header { border-bottom-color: var(--border, #3e3e4e); }
+        .sim-byo-panels {
+          display: flex;
+          min-height: 480px;
+        }
+        .sim-byo-left {
+          width: 300px;
+          flex-shrink: 0;
+          padding: 20px;
+          overflow-y: auto;
+          border-right: 1px solid var(--border-light, #f0f0f4);
+        }
+        .dark .sim-byo-left { border-right-color: var(--border, #3e3e4e); }
+        .sim-byo-centre {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          min-width: 0;
+          position: relative;
+        }
+        .sim-byo-right {
+          width: 260px;
+          flex-shrink: 0;
+          padding: 20px;
+          overflow-y: auto;
+          border-left: 1px solid var(--border-light, #f0f0f4);
+          font-size: 0.8125rem;
+          color: var(--ink-muted, #777);
+          line-height: 1.6;
+        }
+        .dark .sim-byo-right { border-left-color: var(--border, #3e3e4e); }
+        .sim-byo-right h4 {
+          font-size: 0.8125rem;
+          font-weight: 700;
+          color: var(--ink, #1a1a2e);
+          margin: 0 0 6px;
+        }
+        .dark .sim-byo-right h4 { color: var(--ink, #e8e8f0); }
+        .sim-byo-right ul {
+          margin: 0 0 14px;
+          padding-left: 16px;
+        }
+        .sim-byo-right ul li {
+          margin-bottom: 4px;
+        }
+        .sim-byo-placeholder {
+          text-align: center;
+          color: var(--ink-faint, #aaa);
+          max-width: 320px;
+        }
+        .sim-byo-placeholder svg {
+          margin-bottom: 12px;
+          opacity: 0.5;
+        }
+        .sim-byo-placeholder p {
+          font-size: 0.875rem;
+          line-height: 1.6;
+        }
+        @media (max-width: 900px) {
+          .sim-byo-panels {
+            flex-direction: column;
+            min-height: auto;
+          }
+          .sim-byo-left, .sim-byo-right {
+            width: 100%;
+            border-right: none;
+            border-left: none;
+            border-bottom: 1px solid var(--border-light, #f0f0f4);
+          }
+          .sim-byo-centre {
+            min-height: 300px;
+          }
+        }
         .sim-byo-title {
           font-size: 1.25rem;
           font-weight: 700;
@@ -987,84 +1068,116 @@ export function render(container) {
           <hr class="sim-section-divider" />
 
           <div class="sim-byo-card" id="sim-byo">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4361ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-              <div class="sim-byo-title">Build Your Own Simulation</div>
-            </div>
-            <div class="sim-byo-desc">Configure the parameters below, then let AI generate an interactive simulation for your lesson.</div>
-
-            <!-- Scaffolded parameters -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-              <div class="sim-byo-field">
-                <label class="sim-byo-label">Subject</label>
-                <select id="byo-subject" class="sim-byo-select">
-                  <option value="">Select...</option>
-                  <option value="Physics">Physics</option>
-                  <option value="Chemistry">Chemistry</option>
-                  <option value="Biology">Biology</option>
-                  <option value="Mathematics">Mathematics</option>
-                  <option value="Geography">Geography</option>
-                  <option value="Other">Other</option>
-                </select>
+            <div class="sim-byo-header">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4361ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                <div class="sim-byo-title">Build Your Own Simulation</div>
               </div>
-              <div class="sim-byo-field">
-                <label class="sim-byo-label">Level</label>
-                <select id="byo-level" class="sim-byo-select">
-                  <option value="">Select...</option>
-                  <option value="Lower Secondary">Lower Secondary</option>
-                  <option value="Upper Secondary">Upper Secondary</option>
-                  <option value="JC / Pre-U">JC / Pre-U</option>
-                </select>
+              <div class="sim-byo-desc" style="margin-bottom:0;">Configure using the form on the left. Preview appears in the centre once generated.</div>
+            </div>
+
+            <div class="sim-byo-panels">
+              <!-- LEFT PANEL: Structured form -->
+              <div class="sim-byo-left">
+                <div class="sim-byo-field" style="margin-bottom:12px;">
+                  <label class="sim-byo-label">Subject</label>
+                  <select id="byo-subject" class="sim-byo-select">
+                    <option value="">Select...</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Geography">Geography</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div class="sim-byo-field" style="margin-bottom:12px;">
+                  <label class="sim-byo-label">Level</label>
+                  <select id="byo-level" class="sim-byo-select">
+                    <option value="">Select...</option>
+                    <option value="Lower Secondary">Lower Secondary</option>
+                    <option value="Upper Secondary">Upper Secondary</option>
+                    <option value="JC / Pre-U">JC / Pre-U</option>
+                  </select>
+                </div>
+                <div class="sim-byo-field" style="margin-bottom:12px;">
+                  <label class="sim-byo-label">Topic</label>
+                  <select id="byo-topic-select" class="sim-byo-select">
+                    <option value="">Select a subject first...</option>
+                  </select>
+                </div>
+                <div id="byo-other-topic-wrap" class="sim-byo-field" style="margin-bottom:12px;display:none;">
+                  <label class="sim-byo-label">Your Topic</label>
+                  <input type="text" id="byo-other-topic" class="sim-byo-input" placeholder="Enter your topic..." />
+                </div>
+                <div class="sim-byo-field" style="margin-bottom:12px;">
+                  <label class="sim-byo-label">Simulation Type</label>
+                  <select id="byo-type" class="sim-byo-select">
+                    <option value="">Select...</option>
+                    <option value="virtual-lab">Virtual Lab Practical</option>
+                    <option value="interactive-model">Interactive Model / Diagram</option>
+                    <option value="data-collection">Data Collection &amp; Graphing</option>
+                    <option value="guided-exploration">Guided Exploration</option>
+                    <option value="sandbox">Free-play Sandbox</option>
+                  </select>
+                </div>
+                <div class="sim-byo-field" style="margin-bottom:12px;">
+                  <label class="sim-byo-label">Learning Objective</label>
+                  <input type="text" id="byo-topic" class="sim-byo-input" placeholder="e.g. Show how changing flux produces EMF" />
+                </div>
+                <div class="sim-byo-field" style="margin-bottom:12px;">
+                  <label class="sim-byo-label">Key Variables / Parameters</label>
+                  <input type="text" id="byo-variables" class="sim-byo-input" placeholder="e.g. coil turns, magnet speed" />
+                </div>
+                <div class="sim-byo-field" style="margin-bottom:14px;">
+                  <label class="sim-byo-label">Additional Instructions <span style="font-weight:400;opacity:0.6;">(optional)</span></label>
+                  <textarea class="sim-byo-textarea" id="sim-prompt" rows="2" placeholder="Apparatus, colour scheme, data table format..."></textarea>
+                </div>
+                <button class="sim-generate-btn" id="sim-generate-btn" style="width:100%;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                  Generate Simulation
+                </button>
+                <div id="sim-loading" style="display:none;" class="sim-loading">
+                  <div class="sim-spinner"></div>
+                  <span>Generating...</span>
+                </div>
               </div>
-            </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-              <div class="sim-byo-field">
-                <label class="sim-byo-label">Topic</label>
-                <select id="byo-topic-select" class="sim-byo-select">
-                  <option value="">Select a subject first...</option>
-                </select>
+              <!-- CENTRE PANEL: Preview / placeholder -->
+              <div class="sim-byo-centre" id="sim-byo-preview">
+                <div class="sim-byo-placeholder">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                  <p>Configure your simulation on the left, then click <strong>Generate</strong>.<br/>Your interactive simulation will appear here.</p>
+                </div>
               </div>
-              <div class="sim-byo-field">
-                <label class="sim-byo-label">Simulation Type</label>
-                <select id="byo-type" class="sim-byo-select">
-                  <option value="">Select...</option>
-                  <option value="virtual-lab">Virtual Lab Practical</option>
-                  <option value="interactive-model">Interactive Model / Diagram</option>
-                  <option value="data-collection">Data Collection &amp; Graphing</option>
-                  <option value="guided-exploration">Guided Exploration</option>
-                  <option value="sandbox">Free-play Sandbox</option>
-                </select>
+
+              <!-- RIGHT PANEL: Tips & guidance -->
+              <div class="sim-byo-right">
+                <h4>Tips for a Great Simulation</h4>
+                <ul>
+                  <li>Be specific with your <strong>learning objective</strong> — "Investigate how temperature affects enzyme activity" is better than "enzymes".</li>
+                  <li>List the <strong>key variables</strong> students should manipulate (independent) and observe (dependent).</li>
+                  <li>Mention any <strong>apparatus</strong> you want drawn (e.g., beaker, thermometer, circuit board).</li>
+                </ul>
+
+                <h4>Simulation Types</h4>
+                <ul>
+                  <li><strong>Virtual Lab</strong> — Mimics a hands-on practical with apparatus, readings, and data collection.</li>
+                  <li><strong>Interactive Model</strong> — Visual diagram students can manipulate (e.g., cell structure, wave properties).</li>
+                  <li><strong>Data Collection</strong> — Focused on graphing and recording observations from variables.</li>
+                  <li><strong>Guided Exploration</strong> — Step-by-step walkthrough with embedded questions.</li>
+                  <li><strong>Free-play Sandbox</strong> — Open-ended environment for experimentation.</li>
+                </ul>
+
+                <h4>After Generating</h4>
+                <ul>
+                  <li>Your simulation will appear in the centre panel and auto-launch in full view.</li>
+                  <li>Saved simulations appear below under "Your Generated Simulations".</li>
+                  <li>You can regenerate with tweaked instructions anytime.</li>
+                </ul>
               </div>
-            </div>
-
-            <div id="byo-other-topic-wrap" class="sim-byo-field" style="margin-bottom:14px;display:none;">
-              <label class="sim-byo-label">Your Topic</label>
-              <input type="text" id="byo-other-topic" class="sim-byo-input" placeholder="Enter your topic and learning objective..." />
-            </div>
-
-            <div class="sim-byo-field" style="margin-bottom:14px;">
-              <label class="sim-byo-label">Learning Objective</label>
-              <input type="text" id="byo-topic" class="sim-byo-input" placeholder="e.g. Show how changing flux produces EMF" />
-            </div>
-
-            <div class="sim-byo-field" style="margin-bottom:14px;">
-              <label class="sim-byo-label">Key Variables / Parameters to Include</label>
-              <input type="text" id="byo-variables" class="sim-byo-input" placeholder="e.g. coil turns, magnet speed, field strength" />
-            </div>
-
-            <div class="sim-byo-field" style="margin-bottom:14px;">
-              <label class="sim-byo-label">Additional Instructions <span style="font-weight:400;opacity:0.6;">(optional)</span></label>
-              <textarea class="sim-byo-textarea" id="sim-prompt" rows="3" placeholder="Any other details: specific apparatus, colour scheme, data table format, guided questions..."></textarea>
-            </div>
-
-            <button class="sim-generate-btn" id="sim-generate-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              Generate Simulation
-            </button>
-            <div id="sim-loading" style="display:none;" class="sim-loading">
-              <div class="sim-spinner"></div>
-              <span>Generating your simulation... This may take a moment.</span>
             </div>
           </div>
 
