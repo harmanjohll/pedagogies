@@ -73,13 +73,6 @@ const CCA_CATEGORIES = [
   { key: 'clubs', label: 'Clubs & Societies', color: '#3b82f6' },
 ];
 
-const DEFAULT_E21CC_MAPPING = {
-  sports: ['collaboration', 'selfRegulation', 'criticalThinking'],
-  performing: ['creativeThinking', 'communication', 'collaboration'],
-  uniformed: ['selfRegulation', 'socialConnectedness', 'collaboration'],
-  clubs: ['criticalThinking', 'communication', 'creativeThinking'],
-};
-
 const E21CC_DIM_META = {
   criticalThinking: { label: 'Critical Thinking', color: '#6366f1' },
   creativeThinking: { label: 'Creative Thinking', color: '#8b5cf6' },
@@ -242,7 +235,6 @@ export function render(container) {
 }
 
 function renderCCAItem(cca, cat) {
-  const e21ccKeys = cca.e21ccMapping || DEFAULT_E21CC_MAPPING[cca.category] || [];
   const safetyItems = cca.safetyChecklist || DEFAULT_SAFETY[cca.category] || [];
   return `
     <div class="cca-list-item" data-id="${cca.id}" data-cat="${cca.category}" style="flex-direction:column;align-items:stretch;">
@@ -253,13 +245,6 @@ function renderCCAItem(cca, cat) {
           <button class="btn btn-secondary btn-sm cca-edit-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;">Edit</button>
           <button class="btn btn-secondary btn-sm cca-delete-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;color:var(--danger,#ef4444);">Delete</button>
         </div>
-      </div>
-      <!-- E21CC badges -->
-      <div style="margin-top:8px;">
-        ${e21ccKeys.map(k => {
-          const meta = E21CC_DIM_META[k];
-          return meta ? `<span class="cca-badge" style="background:${meta.color}15;color:${meta.color};">${meta.label}</span>` : '';
-        }).join('')}
       </div>
       <!-- Action row -->
       <div class="cca-action-row">
@@ -289,7 +274,20 @@ function renderCCAItem(cca, cat) {
       <!-- Training section -->
       <div class="cca-expand-section" id="training-${cca.id}">
         <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Training Suggestions</div>
-        <div class="cca-training-output" id="training-output-${cca.id}">Click "Suggest Training" to get AI-generated session ideas for ${escHtml(cca.name)}.</div>
+        <div class="cca-training-config" id="training-config-${cca.id}" style="margin-top:8px;">
+          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:6px;">What E21CC focus for this session?</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+            ${Object.entries(E21CC_DIM_META).map(([key, meta]) =>
+              `<label style="display:flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.75rem;cursor:pointer;color:var(--ink-muted);transition:all 0.15s;">
+                <input type="checkbox" class="training-e21cc-cb" value="${key}" style="accent-color:${meta.color};" />
+                ${meta.label}
+              </label>`
+            ).join('')}
+          </div>
+          <p style="font-size:0.75rem;color:var(--ink-faint);margin:0 0 8px;">Select 1-2 competencies to focus on. All CCAs can develop any competency — it depends on enactment.</p>
+          <button class="btn btn-sm btn-primary cca-generate-training-btn" data-cca="${cca.id}">Generate Training Plan</button>
+        </div>
+        <div class="cca-training-output" id="training-output-${cca.id}" style="display:none;"></div>
       </div>
       <!-- Notes section -->
       <div class="cca-expand-section" id="notes-${cca.id}">
@@ -373,27 +371,49 @@ function bindExpandedAreaListeners(content, area) {
     });
   });
 
-  // Training suggestions (AI-powered)
-  area.querySelectorAll('[data-action="training"]').forEach(btn => {
+  // Training suggestions (AI-powered) — Generate button inside config form
+  area.querySelectorAll('.cca-generate-training-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
       const ccaId = btn.dataset.cca;
       const list = getCCAList();
       const cca = list.find(c => c.id === ccaId);
       if (!cca) return;
       const cat = CCA_CATEGORIES.find(c => c.key === cca.category);
+      const config = content.querySelector(`#training-config-${ccaId}`);
       const outputEl = content.querySelector(`#training-output-${ccaId}`);
-      if (!outputEl || outputEl.dataset.loaded === 'true') return;
+      if (!outputEl) return;
 
+      const selectedE21CC = [...config.querySelectorAll('.training-e21cc-cb:checked')].map(cb => {
+        const meta = E21CC_DIM_META[cb.value];
+        return meta ? meta.label : cb.value;
+      });
+
+      const e21ccContext = selectedE21CC.length > 0
+        ? `\n\nE21CC Focus: Intentionally develop ${selectedE21CC.join(' and ')} through the session design. Explain HOW each activity builds this competency.`
+        : '';
+
+      config.style.display = 'none';
+      outputEl.style.display = '';
       outputEl.innerHTML = '<em>Generating suggestions...</em>';
       try {
         const text = await sendChat(
-          [{ role: 'user', content: `Suggest a training session plan for a secondary school ${cat?.label || 'CCA'} CCA called "${cca.name}". Include: warm-up routine (5-10 min), main activity structure (30-40 min), cool-down/debrief (5-10 min), and 2-3 skill progression ideas. Keep it concise and practical.` }],
-          { trackLabel: 'ccaTraining', temperature: 0.7, maxTokens: 1024 }
+          [{ role: 'user', content: `Design a detailed training session for a secondary school ${cat?.label || 'CCA'} CCA called "${cca.name}".
+
+Structure:
+1. **Warm-Up** (5-10 min): Specific activities, not generic "stretching"
+2. **Main Training** (30-40 min): Detailed drills/activities with progressions. For each activity explain the setup, execution, and what to watch for.
+3. **Cool-Down & Debrief** (5-10 min): Recovery activities + structured reflection
+4. **Skill Progressions**: 2-3 specific skills to build over multiple sessions
+5. **Safety Reminders**: Context-specific safety points for this session${e21ccContext}
+
+Be specific to ${cca.name}. Use real drill names and techniques. This should read like a session plan a CCA teacher-in-charge can follow directly.` }],
+          { trackLabel: 'ccaTraining', temperature: 0.6, maxTokens: 2048 }
         );
         outputEl.innerHTML = renderCCAMarkdown(text);
-        outputEl.dataset.loaded = 'true';
       } catch (err) {
         outputEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}. Check your API key in Settings.</span>`;
+        config.style.display = '';
       }
     });
   });
