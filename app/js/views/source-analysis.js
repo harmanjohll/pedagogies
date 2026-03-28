@@ -517,7 +517,7 @@ export function render(container) {
         <div style="margin-bottom:8px;">
           <span class="sa-subject-tag" style="background:${subjectColor(item.subject)};">${esc(item.subject)}</span>
           ${item.framework ? `<span class="sa-framework-tag">${esc(frameworkLabel(item.framework))}</span>` : ''}
-          <span class="sa-badge" style="background:#f3f4f6;color:#374151;">${item.source === 'ai' ? 'AI Generated' : 'Manual'}</span>
+          <span class="sa-badge" style="background:var(--bg-subtle, #f3f4f6);color:var(--ink-secondary, #374151);">${item.source === 'ai' ? 'AI Generated' : 'Manual'}</span>
         </div>
         <div class="sa-expanded-title">${esc(item.title)}</div>
         <div class="sa-expanded-meta">
@@ -534,7 +534,7 @@ export function render(container) {
             <div class="sa-source-header">
               ${sourceTypeIcon(src.type)}
               <span class="sa-source-title">Source ${String.fromCharCode(65 + i)}: ${esc(src.title)}</span>
-              <span class="sa-badge" style="background:#f3f4f6;color:#374151;">${esc(src.type)}</span>
+              <span class="sa-badge" style="background:var(--bg-subtle, #f3f4f6);color:var(--ink-secondary, #374151);">${esc(src.type)}</span>
             </div>
             ${src.provenance ? `<div class="sa-source-provenance">${esc(src.provenance)}</div>` : ''}
             <div class="sa-source-content">${esc(src.content)}</div>
@@ -733,7 +733,7 @@ export function render(container) {
         <div style="margin-bottom:8px;">
           <span class="sa-subject-tag" style="background:${subjectColor(p.subject)};">${esc(p.subject)}</span>
           ${p.framework ? `<span class="sa-framework-tag">${esc(frameworkLabel(p.framework))}</span>` : ''}
-          <span class="sa-badge" style="background:#f3f4f6;color:#374151;">${esc(p.level)}</span>
+          <span class="sa-badge" style="background:var(--bg-subtle, #f3f4f6);color:var(--ink-secondary, #374151);">${esc(p.level)}</span>
         </div>
 
         <div class="sa-section-label">Sources</div>
@@ -742,7 +742,7 @@ export function render(container) {
             <div class="sa-source-header">
               ${sourceTypeIcon(src.type)}
               <span class="sa-source-title">Source ${String.fromCharCode(65 + i)}: ${esc(src.title)}</span>
-              <span class="sa-badge" style="background:#f3f4f6;color:#374151;">${esc(src.type)}</span>
+              <span class="sa-badge" style="background:var(--bg-subtle, #f3f4f6);color:var(--ink-secondary, #374151);">${esc(src.type)}</span>
             </div>
             ${src.provenance ? `<div class="sa-source-provenance">${esc(src.provenance)}</div>` : ''}
             <div class="sa-source-content">${esc(src.content)}</div>

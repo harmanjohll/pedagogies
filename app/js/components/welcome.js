@@ -21,21 +21,21 @@ export function renderWelcome(onComplete) {
           color: #fff; font-weight: 700; font-size: 1.25rem;
           box-shadow: 0 4px 16px rgba(0,12,83,0.3);
         ">C</div>
-        <h1 style="font-size: 2rem; font-weight: 700; color: #000C53; margin: 0 0 6px; letter-spacing: -0.02em;">
+        <h1 style="font-size: 2rem; font-weight: 700; color: var(--ink, #000C53); margin: 0 0 6px; letter-spacing: -0.02em;">
           Co-Cher
         </h1>
-        <p style="color: #64748b; font-size: 0.9375rem; margin: 0 0 16px;">
+        <p style="color: var(--ink-muted, #64748b); font-size: 0.9375rem; margin: 0 0 16px;">
           Your AI-powered lesson design companion
         </p>
         <span style="
-          display: inline-block; background: #eef2ff; color: #4338ca;
+          display: inline-block; background: var(--accent-light, #eef2ff); color: var(--accent, #4338ca);
           padding: 5px 14px; border-radius: 999px; font-size: 0.8rem; font-weight: 500;
         ">Built for Singapore Educators</span>
       </div>
 
       <div id="welcome-step" style="text-align: left;">
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; color: #334155;">
+          <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; color: var(--ink-secondary, #334155);">
             Gemini API Key
           </label>
           <div style="position: relative;">
@@ -49,7 +49,7 @@ export function renderWelcome(onComplete) {
                 border: 1.5px solid #e2e8f0; border-radius: 12px;
                 font-size: 0.9rem; font-family: inherit;
                 outline: none; transition: border-color 0.2s, box-shadow 0.2s;
-                background: #f8fafc; color: #0f172a; box-sizing: border-box;
+                background: var(--bg-subtle, #f8fafc); color: var(--ink, #0f172a); box-sizing: border-box;
               "
               onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px #dbeafe';"
               onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none';"
@@ -69,14 +69,14 @@ export function renderWelcome(onComplete) {
         </div>
 
         <div style="margin-bottom: 24px;">
-          <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; color: #334155;">
+          <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; color: var(--ink-secondary, #334155);">
             Model
           </label>
           <select id="welcome-model" style="
             width: 100%; padding: 10px 32px 10px 12px;
             border: 1.5px solid #e2e8f0; border-radius: 12px;
             font-size: 0.875rem; font-family: inherit;
-            background: #f8fafc; color: #0f172a; outline: none;
+            background: var(--bg-subtle, #f8fafc); color: var(--ink, #0f172a); outline: none;
             appearance: none; cursor: pointer; box-sizing: border-box;
             background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%2764748b%27 stroke-width=%272%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E');
             background-repeat: no-repeat; background-position: right 10px center;
@@ -90,7 +90,7 @@ export function renderWelcome(onComplete) {
         </div>
 
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; color: #334155;">
+          <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 8px; color: var(--ink-secondary, #334155);">
             What matters most to you this year?
           </label>
           <p style="font-size: 0.75rem; color: #94a3b8; margin: 0 0 10px; line-height: 1.4;">
@@ -112,8 +112,8 @@ export function renderWelcome(onComplete) {
               <label class="ped-priority-chip" style="
                 display: flex; align-items: center; gap: 6px;
                 padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 10px;
-                font-size: 0.8125rem; color: #475569; cursor: pointer;
-                transition: all 0.15s; background: #fff;
+                font-size: 0.8125rem; color: var(--ink-secondary, #475569); cursor: pointer;
+                transition: all 0.15s; background: var(--bg-card, #fff);
               ">
                 <input type="checkbox" class="ped-priority-cb" value="${p.id}" style="accent-color: #4361ee;" />
                 <span>${p.icon}</span> ${p.label}
