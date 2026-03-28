@@ -297,6 +297,118 @@ function renderCCAItem(cca, cat) {
   `;
 }
 
+/* ── Simple markdown renderer for training output ── */
+function renderCCAMarkdown(md) {
+  if (!md) return '';
+  let html = escHtml(md);
+  // Headers
+  html = html.replace(/^### (.+)$/gm, '<h4 style="font-size:0.875rem;font-weight:700;margin:0.8em 0 0.3em;">$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3 style="font-size:0.9375rem;font-weight:700;margin:1em 0 0.4em;">$1</h3>');
+  html = html.replace(/^# (.+)$/gm, '<h3 style="font-size:1rem;font-weight:700;margin:1em 0 0.4em;">$1</h3>');
+  // Bold and italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Unordered lists
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul style="padding-left:1.5em;margin:0.3em 0;">$1</ul>');
+  // Ordered lists
+  html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+  // Paragraphs
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  html = '<p>' + html + '</p>';
+  html = html.replace(/<p>\s*<\/p>/g, '');
+  html = html.replace(/<p>\s*(<h[1-4]>)/g, '$1');
+  html = html.replace(/(<\/h[1-4]>)\s*<\/p>/g, '$1');
+  html = html.replace(/<p>\s*(<ul)/g, '$1');
+  html = html.replace(/(<\/ul>)\s*<\/p>/g, '$1');
+  return html;
+}
+
+/* ── Bind event listeners for CCA items inside expanded area ── */
+function bindExpandedAreaListeners(content, area) {
+  // Per-category add buttons
+  area.querySelectorAll('[data-add-to]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showCCAForm(content, null, btn.dataset.addTo);
+    });
+  });
+
+  // Edit
+  area.querySelectorAll('.cca-edit-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const list = getCCAList();
+      const cca = list.find(c => c.id === btn.dataset.id);
+      if (cca) showCCAForm(content, cca);
+    });
+  });
+
+  // Delete
+  area.querySelectorAll('.cca-delete-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const ok = await confirmDialog('Delete this CCA?', 'This action cannot be undone.');
+      if (!ok) return;
+      const list = getCCAList().filter(c => c.id !== btn.dataset.id);
+      saveCCAList(list);
+      showToast('CCA deleted');
+      renderCCAList(content, list);
+    });
+  });
+
+  // Toggle expandable sections
+  area.querySelectorAll('.cca-action-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const action = btn.dataset.action;
+      const ccaId = btn.dataset.cca;
+      const section = content.querySelector(`#${action}-${ccaId}`);
+      if (section) section.classList.toggle('visible');
+    });
+  });
+
+  // Training suggestions (AI-powered)
+  area.querySelectorAll('[data-action="training"]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const ccaId = btn.dataset.cca;
+      const list = getCCAList();
+      const cca = list.find(c => c.id === ccaId);
+      if (!cca) return;
+      const cat = CCA_CATEGORIES.find(c => c.key === cca.category);
+      const outputEl = content.querySelector(`#training-output-${ccaId}`);
+      if (!outputEl || outputEl.dataset.loaded === 'true') return;
+
+      outputEl.innerHTML = '<em>Generating suggestions...</em>';
+      try {
+        const text = await sendChat(
+          [{ role: 'user', content: `Suggest a training session plan for a secondary school ${cat?.label || 'CCA'} CCA called "${cca.name}". Include: warm-up routine (5-10 min), main activity structure (30-40 min), cool-down/debrief (5-10 min), and 2-3 skill progression ideas. Keep it concise and practical.` }],
+          { trackLabel: 'ccaTraining', temperature: 0.7, maxTokens: 1024 }
+        );
+        outputEl.innerHTML = renderCCAMarkdown(text);
+        outputEl.dataset.loaded = 'true';
+      } catch (err) {
+        outputEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}. Check your API key in Settings.</span>`;
+      }
+    });
+  });
+
+  // Save notes on blur
+  area.querySelectorAll('.cca-notes-area').forEach(textarea => {
+    textarea.addEventListener('blur', () => {
+      const ccaId = textarea.dataset.cca;
+      const list = getCCAList();
+      const cca = list.find(c => c.id === ccaId);
+      if (cca) {
+        cca.notes = textarea.value;
+        saveCCAList(list);
+      }
+    });
+  });
+}
+
 function renderCCAList(content, ccaList) {
   content.innerHTML = `
     <div class="cca-card">
@@ -400,77 +512,7 @@ function renderCCAList(content, ccaList) {
     });
   });
 
-  // Edit
-  content.querySelectorAll('.cca-edit-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const list = getCCAList();
-      const cca = list.find(c => c.id === btn.dataset.id);
-      if (cca) showCCAForm(content, cca);
-    });
-  });
-
-  // Delete
-  content.querySelectorAll('.cca-delete-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const ok = await confirmDialog('Delete this CCA?', 'This action cannot be undone.');
-      if (!ok) return;
-      const list = getCCAList().filter(c => c.id !== btn.dataset.id);
-      saveCCAList(list);
-      showToast('CCA deleted');
-      renderCCAList(content, list);
-    });
-  });
-
-  // Toggle expandable sections
-  content.querySelectorAll('.cca-action-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const action = btn.dataset.action;
-      const ccaId = btn.dataset.cca;
-      const section = content.querySelector(`#${action}-${ccaId}`);
-      if (section) section.classList.toggle('visible');
-    });
-  });
-
-  // Training suggestions (AI-powered)
-  content.querySelectorAll('[data-action="training"]').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const ccaId = btn.dataset.cca;
-      const list = getCCAList();
-      const cca = list.find(c => c.id === ccaId);
-      if (!cca) return;
-      const cat = CCA_CATEGORIES.find(c => c.key === cca.category);
-      const outputEl = content.querySelector(`#training-output-${ccaId}`);
-      if (!outputEl || outputEl.dataset.loaded === 'true') return;
-
-      outputEl.innerHTML = '<em>Generating suggestions...</em>';
-      try {
-        const text = await sendChat(
-          [{ role: 'user', content: `Suggest a training session plan for a secondary school ${cat?.label || 'CCA'} CCA called "${cca.name}". Include: warm-up routine (5-10 min), main activity structure (30-40 min), cool-down/debrief (5-10 min), and 2-3 skill progression ideas. Keep it concise and practical.` }],
-          { trackLabel: 'ccaTraining', temperature: 0.7, maxTokens: 1024 }
-        );
-        outputEl.innerHTML = text.replace(/\n/g, '<br/>');
-        outputEl.dataset.loaded = 'true';
-      } catch (err) {
-        outputEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}. Check your API key in Settings.</span>`;
-      }
-    });
-  });
-
-  // Save notes on blur
-  content.querySelectorAll('.cca-notes-area').forEach(textarea => {
-    textarea.addEventListener('blur', () => {
-      const ccaId = textarea.dataset.cca;
-      const list = getCCAList();
-      const cca = list.find(c => c.id === ccaId);
-      if (cca) {
-        cca.notes = textarea.value;
-        saveCCAList(list);
-      }
-    });
-  });
+  // (CCA item listeners are now bound via bindExpandedAreaListeners when a category is selected)
 
   // Add reminder
   content.querySelector('#add-reminder-btn')?.addEventListener('click', () => {

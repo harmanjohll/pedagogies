@@ -389,54 +389,55 @@ function buildSeatPlanVisual(text) {
 
   if (groups.length === 0) return '';
 
-  // Layout configuration
-  const W = 600, H = 320;
-  const DESK_W = 80, DESK_H = 50;
-  const colors = ['#4361ee', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6'];
-
-  // Position groups in a grid
+  // Layout configuration — dynamic sizing based on group count
   const totalGroups = groups.length;
   const cols = Math.min(totalGroups, 4);
   const rows = Math.ceil(totalGroups / cols);
-  const cellW = W / cols;
-  const cellH = (H - 40) / rows; // reserve 40px for teacher area
+  const DESK_W = 110, DESK_H = 64;
+  const CELL_PAD_X = 16, CELL_PAD_Y = 20;
+  const cellW = DESK_W + CELL_PAD_X * 2;
+  const cellH = DESK_H + CELL_PAD_Y * 2 + 14; // 14 for group label above
+  const W = cellW * cols + 24;  // 24 for outer padding
+  const H = 44 + cellH * rows;  // 44 for teacher area
+  const colors = ['#4361ee', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6'];
 
   let desks = '';
   groups.forEach((g, idx) => {
     const col = idx % cols;
     const row = Math.floor(idx / cols);
-    const cx = cellW * col + cellW / 2;
-    const cy = 40 + cellH * row + cellH / 2;
+    const cx = 12 + cellW * col + cellW / 2;
+    const cy = 44 + cellH * row + CELL_PAD_Y + 14 + DESK_H / 2;
     const color = colors[idx % colors.length];
 
-    // Draw desk rectangle
-    desks += `<rect x="${cx - DESK_W / 2}" y="${cy - DESK_H / 2}" width="${DESK_W}" height="${DESK_H}" rx="6" fill="${color}15" stroke="${color}" stroke-width="1.5"/>`;
+    // Draw desk rectangle with softer fill and border
+    desks += `<rect x="${cx - DESK_W / 2}" y="${cy - DESK_H / 2}" width="${DESK_W}" height="${DESK_H}" rx="8" fill="${color}10" stroke="${color}" stroke-width="1" opacity="0.85"/>`;
 
-    // Group label
-    desks += `<text x="${cx}" y="${cy - DESK_H / 2 - 6}" text-anchor="middle" font-size="9" font-weight="700" fill="${color}">Group ${g.num}</text>`;
+    // Group label above desk
+    desks += `<text x="${cx}" y="${cy - DESK_H / 2 - 6}" text-anchor="middle" font-size="9" font-weight="700" fill="${color}" opacity="0.9">Group ${g.num}</text>`;
 
-    // Student names inside/around the desk
-    const maxShow = Math.min(g.members.length, 5);
-    const nameStart = cy - (maxShow - 1) * 7;
+    // Student names inside the desk with proper padding
+    const maxShow = Math.min(g.members.length, 4);
+    const lineH = 13;
+    const nameStart = cy - ((maxShow - 1) * lineH) / 2;
     for (let i = 0; i < maxShow; i++) {
-      const name = g.members[i].length > 14 ? g.members[i].slice(0, 12) + '..' : g.members[i];
-      desks += `<text x="${cx}" y="${nameStart + i * 14}" text-anchor="middle" font-size="8" fill="var(--ink,#334155)">${esc(name)}</text>`;
+      const name = g.members[i].length > 16 ? g.members[i].slice(0, 14) + '..' : g.members[i];
+      desks += `<text x="${cx}" y="${nameStart + i * lineH}" text-anchor="middle" font-size="9" fill="var(--ink,#334155)">${esc(name)}</text>`;
     }
     if (g.members.length > maxShow) {
-      desks += `<text x="${cx}" y="${nameStart + maxShow * 14}" text-anchor="middle" font-size="7" fill="var(--ink-faint,#94a3b8)">+${g.members.length - maxShow} more</text>`;
+      desks += `<text x="${cx}" y="${nameStart + maxShow * lineH}" text-anchor="middle" font-size="8" fill="var(--ink-faint,#94a3b8)">+${g.members.length - maxShow} more</text>`;
     }
   });
 
   // Teacher position at top
   const teacherArea = `
-    <rect x="${W / 2 - 40}" y="4" width="80" height="22" rx="4" fill="var(--accent,#4361ee)" opacity="0.15" stroke="var(--accent,#4361ee)" stroke-width="1"/>
-    <text x="${W / 2}" y="19" text-anchor="middle" font-size="9" font-weight="600" fill="var(--accent,#4361ee)">Teacher</text>
+    <rect x="${W / 2 - 44}" y="6" width="88" height="24" rx="6" fill="var(--accent,#4361ee)" opacity="0.1" stroke="var(--accent,#4361ee)" stroke-width="1" stroke-opacity="0.4"/>
+    <text x="${W / 2}" y="22" text-anchor="middle" font-size="9" font-weight="600" fill="var(--accent,#4361ee)">Teacher</text>
   `;
 
   return `
-    <div style="padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-bottom:1px solid var(--border-light);">
-      <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);margin-bottom:var(--sp-2);">Classroom View</div>
-      <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;background:var(--bg,#fff);border-radius:8px;border:1px solid var(--border-light);">
+    <div style="padding:var(--sp-4);background:var(--bg-subtle);border-bottom:1px solid var(--border-light);">
+      <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);margin-bottom:var(--sp-3);">Classroom View</div>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;background:var(--bg,#fff);border-radius:10px;border:1px solid var(--border-light);overflow:hidden;">
         ${teacherArea}
         ${desks}
       </svg>
