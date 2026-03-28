@@ -71,7 +71,7 @@ export const EEE_REGISTRY = {
   // === ENACTMENT ENHANCEMENTS (teacher chooses) ===
   // type: 'tool' = Teaching Tool (interactive, run in class)
   // type: 'resource' = Lesson Resource (display/distribute in class)
-  youtubeVideos:  { label: 'YouTube Curation',   cat: 'enactment', type: 'resource', desc: 'Curated video recommendations with preview tiles', subjects: ['all'], pedagogy: ['engagement', 'edtech', 'direct'] },
+  youtubeVideos:  { label: 'YouTube Curation',   cat: 'core', type: 'resource', desc: 'Curated video recommendations with preview tiles', subjects: ['all'], pedagogy: ['engagement', 'edtech', 'direct'] },
   simulations:    { label: 'Simulations & Models', cat: 'enactment', type: 'tool', desc: 'Interactive sims: PhET, GeoGebra, built-in practicals', subjects: ['Science', 'Chemistry', 'Physics', 'Biology', 'Mathematics', 'Geography'], pedagogy: ['inquiry', 'edtech', 'engagement'] },
   worksheet:      { label: 'Worksheet / Handout', cat: 'enactment', type: 'resource', desc: 'Print-ready student worksheets with mixed question types', subjects: ['all'], pedagogy: ['differentiation', 'assessment', 'direct'] },
   externalLinks:  { label: 'External Resources', cat: 'enactment', type: 'resource', desc: 'Curated links to SLS, MOE resources, and open platforms', subjects: ['all'], pedagogy: ['edtech', 'inquiry'] },
