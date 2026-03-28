@@ -362,23 +362,41 @@ function renderCCAList(content, ccaList) {
   // Add CCA button (global)
   content.querySelector('#add-cca-btn')?.addEventListener('click', () => showCCAForm(content, null));
 
-  // Category accordion toggle
-  content.querySelectorAll('.cca-cat-header').forEach(header => {
-    header.addEventListener('click', () => {
-      const card = header.closest('.cca-category-card');
-      const body = card.querySelector('.cca-cat-body');
-      const chevron = header.querySelector('.cca-chevron');
-      const isOpen = body.style.display !== 'none';
-      body.style.display = isOpen ? 'none' : 'block';
-      chevron.classList.toggle('open', !isOpen);
-    });
-  });
+  // Category grid click — expand below the grid
+  let selectedCatKey = null;
+  content.querySelectorAll('.cca-category-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const catKey = card.dataset.cat;
+      const expandedArea = content.querySelector('#cca-expanded-area');
+      const allCards = content.querySelectorAll('.cca-category-card');
 
-  // Per-category add buttons
-  content.querySelectorAll('[data-add-to]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      showCCAForm(content, null, btn.dataset.addTo);
+      if (selectedCatKey === catKey) {
+        // Collapse
+        selectedCatKey = null;
+        allCards.forEach(c => { c.classList.remove('selected'); c.querySelector('.cca-chevron')?.classList.remove('open'); });
+        expandedArea.innerHTML = '';
+        return;
+      }
+
+      selectedCatKey = catKey;
+      allCards.forEach(c => { c.classList.remove('selected'); c.querySelector('.cca-chevron')?.classList.remove('open'); });
+      card.classList.add('selected');
+      card.querySelector('.cca-chevron')?.classList.add('open');
+
+      const cat = CCA_CATEGORIES.find(c => c.key === catKey);
+      const ccasInCategory = getCCAList().filter(c => c.category === catKey);
+      expandedArea.innerHTML = `
+        <div class="cca-card" style="border-left:4px solid ${cat.color};">
+          <div style="font-weight:700;font-size:0.9375rem;color:var(--ink);margin-bottom:12px;">${cat.label}</div>
+          ${ccasInCategory.length === 0
+            ? '<div style="font-size:0.8125rem;color:var(--ink-faint);text-align:center;padding:12px 0;">No CCAs in this category yet.</div>'
+            : ccasInCategory.map(cca => renderCCAItem(cca, cat)).join('')}
+          <button class="btn btn-ghost btn-sm" data-add-to="${cat.key}" style="margin-top: 8px;">+ Add ${cat.label.split(' ')[0]} CCA</button>
+        </div>
+      `;
+
+      // Re-bind expanded area event listeners
+      bindExpandedAreaListeners(content, expandedArea);
     });
   });
 

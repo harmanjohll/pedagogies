@@ -382,7 +382,7 @@ export function renderDetail(container, { id }) {
               datasets: [{
                 label: student.name,
                 data: scores,
-                backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                backgroundColor: 'rgba(99, 102, 241, 0.25)',
                 borderColor: '#6366f1',
                 borderWidth: 2,
                 pointBackgroundColor: E21CC_DIMS.map(d => d.color),
@@ -394,8 +394,27 @@ export function renderDetail(container, { id }) {
             options: {
               responsive: true,
               maintainAspectRatio: true,
-              scales: { r: { beginAtZero: true, min: 0, max: 4, ticks: { stepSize: 1, font: { size: 10 }, callback: (v) => { const labels = ['','Dev','App','Ext','Lead']; return labels[v] || v; } }, pointLabels: { font: { size: 11 } } } },
-              plugins: { legend: { position: 'bottom' } }
+              scales: {
+                r: {
+                  beginAtZero: true,
+                  min: 0,
+                  max: 4,
+                  ticks: {
+                    stepSize: 1,
+                    font: { size: 10 },
+                    callback: (val) => ['', 'Dev', 'App', 'Ext', 'Lead'][val] || '',
+                    backdropColor: 'transparent',
+                  },
+                  grid: {
+                    color: document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                  },
+                  angleLines: {
+                    color: document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                  },
+                  pointLabels: { font: { size: 11, weight: '600' }, color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#374151' }
+                }
+              },
+              plugins: { legend: { display: false } }
             }
           });
         }
@@ -580,6 +599,20 @@ function renderStudentsTab(cls) {
       </div>
       <div style="max-width:400px;margin:0 auto;">
         <canvas id="e21cc-radar-canvas" width="400" height="400"></canvas>
+      </div>
+      <div style="display:flex;justify-content:center;gap:16px;margin-top:12px;font-size:0.75rem;">
+        <span style="display:flex;align-items:center;gap:4px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></span> Developing (1)
+        </span>
+        <span style="display:flex;align-items:center;gap:4px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;"></span> Applying (2)
+        </span>
+        <span style="display:flex;align-items:center;gap:4px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:#10b981;"></span> Extending (3)
+        </span>
+        <span style="display:flex;align-items:center;gap:4px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:#8b5cf6;"></span> Leading (4)
+        </span>
       </div>
     </div>`;
 }
