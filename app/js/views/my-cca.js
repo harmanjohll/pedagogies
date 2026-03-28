@@ -150,7 +150,7 @@ const CCA_STYLES = `
   .leaps-grade-value { font-size: 1.5rem; font-weight: 800; }
   .leaps-grade-desc { font-size: 0.75rem; color: var(--ink-muted); margin-top: 4px; }
 
-  .cca-expand-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border, #e2e5ea); display: none; }
+  .cca-expand-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border, #e2e5ea); display: none; overflow: visible; }
   .cca-expand-section.visible { display: block; }
   .cca-action-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
   .cca-action-btn { font-size: 0.6875rem; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border, #e2e5ea); background: none; color: var(--ink-muted); cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; }
@@ -162,7 +162,10 @@ const CCA_STYLES = `
   .dark .cca-reminders-bar { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); }
   .cca-reminder-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 0.8125rem; border-bottom: 1px solid var(--border-light, #f0f0f4); }
   .cca-reminder-item:last-child { border-bottom: none; }
-  .cca-training-output { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--bg-subtle, #f8f9fa); font-size: 0.8125rem; line-height: 1.6; color: var(--ink-muted); }
+  .cca-training-output { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--bg-subtle, #f8f9fa); font-size: 0.8125rem; line-height: 1.6; color: var(--ink-muted); word-break: break-word; overflow-wrap: break-word; overflow-y: auto; }
+  .cca-training-output h3, .cca-training-output h4 { color: var(--ink); }
+  .cca-training-output ul { padding-left: 1.5em; }
+  .cca-training-output li { margin-bottom: 2px; }
   .dark .cca-training-output { background: var(--bg-subtle, #16161e); }
 
   .cca-category-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s; cursor: pointer; }

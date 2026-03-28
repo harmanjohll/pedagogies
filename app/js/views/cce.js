@@ -8,7 +8,7 @@
 import { Store, generateId } from '../state.js';
 import { sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
-import { confirmDialog } from '../components/modals.js';
+import { confirmDialog, openModal } from '../components/modals.js';
 import { processLatex } from '../utils/latex.js';
 
 /* ── Module-level state ── */
@@ -389,7 +389,6 @@ export function render(container) {
           border: 1px solid var(--border-light);
           background: var(--bg, #fff);
           padding: var(--sp-3, 12px) var(--sp-4, 16px);
-          cursor: pointer;
           transition: box-shadow 0.15s, transform 0.15s;
         }
         .cce-lib-card:hover {
@@ -552,27 +551,24 @@ export function render(container) {
               return `<div class="cce-empty">No saved discussions for ${area.label} yet. Generate one above!</div>`;
             }
             return `<div class="cce-library-grid">
-              ${filtered.map(d => `
-                <div class="cce-lib-card" data-discussion-id="${d.id}">
-                  <h4>${escapeHTML(d.title)}</h4>
-                  <div class="cce-lib-meta">
-                    <span class="cce-badge" style="background:${area.color}22;color:${area.color};">${d.contentArea}</span>
-                    ${d.bigIdea ? `<span class="cce-badge" style="background:var(--accent-light);color:var(--accent);">${escapeHTML(d.bigIdea)}</span>` : ''}
-                    ${d.values ? d.values.split(',').slice(0, 3).map(v =>
-                      `<span class="cce-tag" style="font-size:0.625rem;">${escapeHTML(v.trim())}</span>`
-                    ).join('') : ''}
+              ${filtered.map(d => {
+                const areaColor = area.color;
+                return `
+                <div class="cce-lib-card" data-id="${d.id}">
+                  <div style="font-weight:700;font-size:0.9375rem;color:var(--ink);margin-bottom:6px;">${escapeHTML(d.title)}</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                    <span class="cce-badge" style="background:${areaColor};color:#fff;font-size:0.6875rem;">${d.contentArea || 'NE'}</span>
+                    ${d.bigIdea ? `<span class="cce-badge" style="background:var(--accent-light);color:var(--accent);font-size:0.6875rem;">${escapeHTML(d.bigIdea)}</span>` : ''}
                   </div>
-                  <div class="cce-lib-footer">
-                    <span>${d.level || ''} ${d.format ? '· ' + d.format : ''}</span>
-                    <span>${new Date(d.createdAt).toLocaleDateString()}</span>
+                  <div style="font-size:0.75rem;color:var(--ink-secondary,#666);">
+                    ${d.level || ''} · ${d.format || ''} · ${new Date(d.createdAt).toLocaleDateString('en-SG', {day:'numeric',month:'short',year:'numeric'})}
                   </div>
-                  <div class="cce-expanded-content" id="cce-exp-${d.id}">${renderMarkdown(d.content || '')}</div>
-                  <div style="display:flex;gap:6px;margin-top:8px;">
-                    <button class="btn btn-ghost cce-view-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;">View</button>
-                    <button class="btn btn-ghost cce-delete-btn" data-id="${d.id}" style="font-size:0.75rem;padding:4px 10px;color:var(--danger);">Delete</button>
+                  <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button class="btn btn-sm btn-primary cce-view-btn" data-id="${d.id}">View</button>
+                    <button class="btn btn-sm btn-ghost cce-delete-btn" data-id="${d.id}" style="color:var(--danger);">Delete</button>
                   </div>
                 </div>
-              `).join('')}
+              `; }).join('')}
             </div>`;
           })()}
         </div>
@@ -814,16 +810,19 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
       });
     }
 
-    // View / expand discussion cards
+    // View discussion in modal
     container.querySelectorAll('.cce-view-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
-        const expEl = container.querySelector(`#cce-exp-${id}`);
-        if (expEl) {
-          const isVisible = expEl.classList.toggle('visible');
-          btn.textContent = isVisible ? 'Collapse' : 'View';
-        }
+        const discussion = getSavedDiscussions().find(d => d.id === id);
+        if (!discussion) return;
+        openModal({
+          title: discussion.title || 'Discussion',
+          width: 720,
+          body: `<div style="font-size:0.875rem;line-height:1.7;color:var(--ink);">${renderMarkdown(discussion.content || '')}</div>`,
+          footer: `<button class="btn btn-secondary" data-action="cancel">Close</button>`
+        });
       });
     });
 
