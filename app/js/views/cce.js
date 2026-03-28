@@ -183,43 +183,29 @@ Self → Family → School → Community → Nation → The World
 The current content area is: **${contentArea.label} (${contentArea.id})**
 ${contentArea.framework ? `\nContent-area framework: ${contentArea.framework}` : ''}
 
-## Output Format (use markdown)
+## Output Format
+Be sharp and concise. Use bullet points. Give options where possible.
 
 ### Lesson Overview
-- **Topic**: [topic]
-- **Big Idea**: [Identity / Relationships / Choices]
-- **R3ICH Values**: [relevant values]
-- **Content Area**: ${contentArea.id} — ${contentArea.label}
-- **SEL Competency**: [relevant competency]
-- **NE Disposition**: [relevant disposition, if applicable]
-- **Level**: [student level]
-- **Discussion Format**: [format used]
+Big Idea | Values | SEL | Content Area | Level | Format (one line each, as bullets)
 
-### Opening Activity (5-10 min)
-[Engaging hook — scenario, video prompt, picture, news headline, or story to spark interest]
+### Hook Options (pick 2-3)
+Short, punchy openers — 1-2 sentences each. Scenario, video prompt, news headline, or provocative question.
 
-### Core Discussion (20-25 min)
-**Scenario:**
-[A realistic, age-appropriate scenario grounded in Singaporean context]
+### Scenario (150 words max)
+Realistic, age-appropriate, Singapore context. Just the scenario — no analysis.
 
-**Guiding Questions:**
-1. [Question that explores different perspectives]
-2. [Question that connects to personal experience]
-3. [Question that requires ethical reasoning]
-4. [Question that encourages action/commitment]
+### Guiding Questions (4)
+Numbered. Each question scaffolded: perspectives → personal → ethical → action.
 
-**Facilitation Notes:**
-[Tips for using the selected discussion format effectively]
+### Facilitation Tips
+3-4 bullets for the selected discussion format. Practical, not theoretical.
 
-### Reflection & Closure (5-10 min)
-[Reflection activity — journal prompt, exit ticket, or commitment card]
+### Reflection Prompt
+One journal/exit ticket prompt. One commitment prompt. 2-3 sentences total.
 
 ### Teacher Notes
-[Background info, sensitive handling tips, extension activities, useful resources]
-
-Reference real-world events and issues that Singapore students would recognise. Use general knowledge of current affairs rather than specific dated articles. If referencing a scenario, make it realistic and timeless rather than tied to a specific date.
-
-Make the lesson feel authentic to Singapore's multicultural context. Use local examples, reference Singaporean values and norms, and ensure age-appropriateness for the specified level.`;
+Bullets only: background context, sensitive handling tips, 2-3 extension ideas.`;
 }
 
 /* ── Render ── */
@@ -890,7 +876,30 @@ function escapeHTML(str) {
 /* ── Utility: simple markdown to HTML ── */
 function renderMarkdown(md) {
   if (!md) return '';
-  let html = escapeHTML(md);
+
+  // Extract links before escaping
+  const linkPlaceholders = [];
+  let processed = md.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
+    const idx = linkPlaceholders.length;
+    linkPlaceholders.push({ label, url });
+    return `%%LINK_${idx}%%`;
+  });
+
+  let html = escapeHTML(processed);
+
+  // Restore links with proper HTML
+  html = html.replace(/%%LINK_(\d+)%%/g, (_, idx) => {
+    const { label, url } = linkPlaceholders[parseInt(idx)];
+    // YouTube search tile
+    const ytSearch = url.match(/youtube\.com\/results\?search_query=/);
+    if (ytSearch) {
+      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border,#e2e5ea);border-radius:8px;text-decoration:none;color:var(--ink);font-size:0.8125rem;margin:4px 0;background:var(--bg-card,#fff);">` +
+        `<svg width="16" height="16" viewBox="0 0 24 24" fill="#dc2626"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98" fill="#fff"/></svg>` +
+        `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(label)}</span>` +
+        `<span style="font-size:0.6875rem;color:#dc2626;white-space:nowrap;">Search →</span></a>`;
+    }
+    return `<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">${escapeHTML(label)}</a>`;
+  });
 
   // Headers
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');

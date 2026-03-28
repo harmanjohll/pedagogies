@@ -64,7 +64,7 @@ Align with the 4 areas: Lesson Preparation, Lesson Enactment, Monitoring & Feedb
 4. Offer 2-3 options when the teacher needs to make a design decision
 5. Think about the whole lesson experience — how students feel, move, interact, and learn
 6. Consider spatial design: sightlines, mobility, flexibility, grouping modes
-7. Keep responses focused and concise — teachers are busy professionals
+7. Be sharp and concise. Lead with options and actionable items. Use bullet points over paragraphs. Teachers need clarity, not essays
 8. Use markdown formatting for clarity (headers, bullets, bold)
 9. When relevant, suggest how a lesson could be framed through different curriculum orientations (Scholar-Academic, Learner-Centred, Social Efficiency, Social Reconstructivist) — but only if it adds value, not as a checklist
 10. For CCE lessons, always connect to the Big Ideas (Identity, Relationships, Choices) and relevant R3ICH values
@@ -1096,7 +1096,7 @@ CCE assessment is process-focused, not product-focused. Look for:
 
 Create content that is culturally relevant to Singapore students. Handle sensitive topics (race, religion, identity, mental health) with care and age-appropriateness.`,
     temperature: 0.7,
-    maxTokens: 4096
+    maxTokens: 2048
   });
 }
 

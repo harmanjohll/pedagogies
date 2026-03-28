@@ -347,47 +347,48 @@ export function renderDetail(container, { id }) {
           barViewBtn.style.fontWeight = '';
           if (tableWrap) tableWrap.style.display = 'none';
           if (radarContainer) radarContainer.style.display = 'block';
-          // Build radar chart
-          const canvas = container.querySelector('#e21cc-radar-canvas');
-          if (canvas && typeof Chart !== 'undefined') {
-            if (radarChart) radarChart.destroy();
-            const avgs = E21CC_DIMS.map(d =>
-              students.length > 0 ? Math.round(students.reduce((s, st) => s + (st.e21cc?.[d.key] || 0), 0) / students.length) : 0
-            );
-            radarChart = new Chart(canvas, {
-              type: 'radar',
-              data: {
-                labels: E21CC_DIMS.map(d => d.label),
-                datasets: [{
-                  label: 'Class Average',
-                  data: avgs,
-                  backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                  borderColor: '#6366f1',
-                  borderWidth: 2,
-                  pointBackgroundColor: E21CC_DIMS.map(d => d.color),
-                  pointBorderColor: '#fff',
-                  pointBorderWidth: 1,
-                  pointRadius: 4,
-                }]
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                  r: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: { stepSize: 20, font: { size: 10 } },
-                    pointLabels: { font: { size: 11 } }
-                  }
-                },
-                plugins: {
-                  legend: { position: 'bottom' }
-                }
-              }
-            });
-          }
+          buildStudentRadar();
         });
+
+        function buildStudentRadar() {
+          const canvas = container.querySelector('#e21cc-radar-canvas');
+          const select = container.querySelector('#radar-student-select');
+          if (!canvas || !select || typeof Chart === 'undefined' || students.length === 0) return;
+          const idx = parseInt(select.value) || 0;
+          const student = students[idx];
+          if (!student) return;
+          if (radarChart) radarChart.destroy();
+          const scores = E21CC_DIMS.map(d => student.e21cc?.[d.key] || 0);
+          radarChart = new Chart(canvas, {
+            type: 'radar',
+            data: {
+              labels: E21CC_DIMS.map(d => d.label),
+              datasets: [{
+                label: student.name,
+                data: scores,
+                backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                borderColor: '#6366f1',
+                borderWidth: 2,
+                pointBackgroundColor: E21CC_DIMS.map(d => d.color),
+                pointBorderColor: '#fff',
+                pointBorderWidth: 1,
+                pointRadius: 5,
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              scales: { r: { beginAtZero: true, max: 100, ticks: { stepSize: 20, font: { size: 10 } }, pointLabels: { font: { size: 11 } } } },
+              plugins: { legend: { position: 'bottom' } }
+            }
+          });
+        }
+
+        // Wire student dropdown change
+        const radarSelect = container.querySelector('#radar-student-select');
+        if (radarSelect) {
+          radarSelect.addEventListener('change', buildStudentRadar);
+        }
 
         barViewBtn.addEventListener('click', () => {
           barViewBtn.classList.remove('btn-ghost');
@@ -555,7 +556,14 @@ function renderStudentsTab(cls) {
       <button class="btn btn-ghost btn-sm" id="radar-view-btn">Radar view</button>
     </div>
     <div id="radar-chart-container" style="display:none;margin-top:var(--sp-4);">
-      <canvas id="e21cc-radar-canvas" width="400" height="400"></canvas>
+      <div style="margin-bottom:var(--sp-3);">
+        <select class="input" id="radar-student-select" style="max-width:280px;">
+          ${students.map((s, i) => `<option value="${i}">${escapeHtml(s.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div style="max-width:400px;margin:0 auto;">
+        <canvas id="e21cc-radar-canvas" width="400" height="400"></canvas>
+      </div>
     </div>`;
 }
 
