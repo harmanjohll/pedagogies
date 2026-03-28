@@ -1348,6 +1348,26 @@ export function seedPdIfNeeded() {
   localStorage.setItem(PD_SEED_KEY, '1');
 }
 
+export function seedCCAIfNeeded() {
+  const CCA_SEED_KEY = 'cocher_cca_seeded';
+  if (localStorage.getItem(CCA_SEED_KEY)) return;
+  const existing = JSON.parse(localStorage.getItem('cocher_cca_list') || '[]');
+  if (existing.length > 0) {
+    localStorage.setItem(CCA_SEED_KEY, '1');
+    return;
+  }
+
+  const sampleCCAs = [
+    { id: generateId(), name: 'Basketball', category: 'sports', createdAt: Date.now() - 86400000 * 30 },
+    { id: generateId(), name: 'Concert Band', category: 'performing', createdAt: Date.now() - 86400000 * 28 },
+    { id: generateId(), name: 'National Cadet Corps (NCC)', category: 'uniformed', createdAt: Date.now() - 86400000 * 25 },
+    { id: generateId(), name: 'Robotics Club', category: 'clubs', createdAt: Date.now() - 86400000 * 20 },
+  ];
+
+  localStorage.setItem('cocher_cca_list', JSON.stringify(sampleCCAs));
+  localStorage.setItem(CCA_SEED_KEY, '1');
+}
+
 /* ══════════ Exemplar Lesson Plans ══════════ */
 
 const LESSON_SEED_KEY = 'cocher_lessons_seeded';
