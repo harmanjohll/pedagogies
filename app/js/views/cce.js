@@ -668,6 +668,8 @@ export function render(container) {
     container.querySelectorAll('.cce-tab').forEach(btn => {
       btn.addEventListener('click', () => {
         activeTab = btn.dataset.tab;
+        cceIncludeYouTube = false;
+        cceNewsSources = [];
         renderView();
       });
     });
