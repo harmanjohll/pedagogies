@@ -526,11 +526,11 @@ export function render(container) {
           </p>
           <div style="margin-bottom: var(--sp-4);">
             <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.03em;">School Name</label>
-            <input id="school-name-setting" class="input" type="text" placeholder="e.g. Bukit Panjang Government High School" style="width: 100%; box-sizing: border-box;" value="${(Store.getSchoolProfile?.() || {}).name || ''}" />
+            <input id="school-name-setting" class="input" type="text" placeholder="e.g. Beatty Secondary School" style="width: 100%; box-sizing: border-box;" value="${(Store.getSchoolProfile?.() || {}).name || ''}" />
           </div>
           <div>
             <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.03em;">School Values</label>
-            <input id="school-values-setting" class="input" type="text" placeholder="e.g. Integrity, Resilience, Compassion, Excellence" style="width: 100%; box-sizing: border-box;" value="${(Store.getSchoolProfile?.() || {}).values || ''}" />
+            <input id="school-values-setting" class="input" type="text" placeholder="e.g. Respect, Responsibility, Resilience, Integrity, Care, Harmony" style="width: 100%; box-sizing: border-box;" value="${(Store.getSchoolProfile?.() || {}).values || ''}" />
             <p style="font-size: 0.75rem; color: var(--ink-faint); margin-top: var(--sp-1);">Separate multiple values with commas.</p>
           </div>
         </div>
