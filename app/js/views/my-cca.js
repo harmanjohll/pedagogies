@@ -371,27 +371,49 @@ function bindExpandedAreaListeners(content, area) {
     });
   });
 
-  // Training suggestions (AI-powered)
-  area.querySelectorAll('[data-action="training"]').forEach(btn => {
+  // Training suggestions (AI-powered) — Generate button inside config form
+  area.querySelectorAll('.cca-generate-training-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
       const ccaId = btn.dataset.cca;
       const list = getCCAList();
       const cca = list.find(c => c.id === ccaId);
       if (!cca) return;
       const cat = CCA_CATEGORIES.find(c => c.key === cca.category);
+      const config = content.querySelector(`#training-config-${ccaId}`);
       const outputEl = content.querySelector(`#training-output-${ccaId}`);
-      if (!outputEl || outputEl.dataset.loaded === 'true') return;
+      if (!outputEl) return;
 
+      const selectedE21CC = [...config.querySelectorAll('.training-e21cc-cb:checked')].map(cb => {
+        const meta = E21CC_DIM_META[cb.value];
+        return meta ? meta.label : cb.value;
+      });
+
+      const e21ccContext = selectedE21CC.length > 0
+        ? `\n\nE21CC Focus: Intentionally develop ${selectedE21CC.join(' and ')} through the session design. Explain HOW each activity builds this competency.`
+        : '';
+
+      config.style.display = 'none';
+      outputEl.style.display = '';
       outputEl.innerHTML = '<em>Generating suggestions...</em>';
       try {
         const text = await sendChat(
-          [{ role: 'user', content: `Suggest a training session plan for a secondary school ${cat?.label || 'CCA'} CCA called "${cca.name}". Include: warm-up routine (5-10 min), main activity structure (30-40 min), cool-down/debrief (5-10 min), and 2-3 skill progression ideas. Keep it concise and practical.` }],
-          { trackLabel: 'ccaTraining', temperature: 0.7, maxTokens: 1024 }
+          [{ role: 'user', content: `Design a detailed training session for a secondary school ${cat?.label || 'CCA'} CCA called "${cca.name}".
+
+Structure:
+1. **Warm-Up** (5-10 min): Specific activities, not generic "stretching"
+2. **Main Training** (30-40 min): Detailed drills/activities with progressions. For each activity explain the setup, execution, and what to watch for.
+3. **Cool-Down & Debrief** (5-10 min): Recovery activities + structured reflection
+4. **Skill Progressions**: 2-3 specific skills to build over multiple sessions
+5. **Safety Reminders**: Context-specific safety points for this session${e21ccContext}
+
+Be specific to ${cca.name}. Use real drill names and techniques. This should read like a session plan a CCA teacher-in-charge can follow directly.` }],
+          { trackLabel: 'ccaTraining', temperature: 0.6, maxTokens: 2048 }
         );
         outputEl.innerHTML = renderCCAMarkdown(text);
-        outputEl.dataset.loaded = 'true';
       } catch (err) {
         outputEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}. Check your API key in Settings.</span>`;
+        config.style.display = '';
       }
     });
   });
