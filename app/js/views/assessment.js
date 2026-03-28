@@ -1353,24 +1353,24 @@ export function renderAaL(container) {
 
 
               <!-- G label (top-right quadrant) -->
-              <text x="270" y="100" text-anchor="middle" font-size="26" font-weight="800" fill="#f59e0b">G</text>
-              <text x="270" y="116" text-anchor="middle" font-size="10" font-weight="600" fill="#f59e0b" font-style="italic">Gift yourself</text>
-              <text x="270" y="127" text-anchor="middle" font-size="10" font-weight="600" fill="#f59e0b" font-style="italic">success</text>
+              <text x="265" y="108" text-anchor="middle" font-size="26" font-weight="800" fill="#f59e0b">G</text>
+              <text x="265" y="124" text-anchor="middle" font-size="11" font-weight="600" fill="#f59e0b" font-style="italic">Gift yourself</text>
+              <text x="265" y="136" text-anchor="middle" font-size="11" font-weight="600" fill="#f59e0b" font-style="italic">success</text>
 
               <!-- R label (bottom-right quadrant) -->
-              <text x="270" y="265" text-anchor="middle" font-size="26" font-weight="800" fill="#f59e0b">R</text>
-              <text x="270" y="281" text-anchor="middle" font-size="10" font-weight="600" fill="#f59e0b" font-style="italic">Rise above</text>
-              <text x="270" y="292" text-anchor="middle" font-size="10" font-weight="600" fill="#f59e0b" font-style="italic">with small steps</text>
+              <text x="265" y="272" text-anchor="middle" font-size="26" font-weight="800" fill="#f59e0b">R</text>
+              <text x="265" y="288" text-anchor="middle" font-size="11" font-weight="600" fill="#f59e0b" font-style="italic">Rise above</text>
+              <text x="265" y="300" text-anchor="middle" font-size="11" font-weight="600" fill="#f59e0b" font-style="italic">with small steps</text>
 
               <!-- O label (bottom-left quadrant) -->
-              <text x="110" y="265" text-anchor="middle" font-size="26" font-weight="800" fill="#10b981">O</text>
-              <text x="110" y="281" text-anchor="middle" font-size="10" font-weight="600" fill="#10b981" font-style="italic">Own your</text>
-              <text x="110" y="292" text-anchor="middle" font-size="10" font-weight="600" fill="#10b981" font-style="italic">knowledge</text>
+              <text x="115" y="272" text-anchor="middle" font-size="26" font-weight="800" fill="#10b981">O</text>
+              <text x="115" y="288" text-anchor="middle" font-size="11" font-weight="600" fill="#10b981" font-style="italic">Own your</text>
+              <text x="115" y="300" text-anchor="middle" font-size="11" font-weight="600" fill="#10b981" font-style="italic">knowledge</text>
 
               <!-- W label (top-left quadrant) -->
-              <text x="110" y="100" text-anchor="middle" font-size="26" font-weight="800" fill="#8b5cf6">W</text>
-              <text x="110" y="116" text-anchor="middle" font-size="10" font-weight="600" fill="#8b5cf6" font-style="italic">Watch for what</text>
-              <text x="110" y="127" text-anchor="middle" font-size="10" font-weight="600" fill="#8b5cf6" font-style="italic">comes next</text>
+              <text x="115" y="108" text-anchor="middle" font-size="26" font-weight="800" fill="#8b5cf6">W</text>
+              <text x="115" y="124" text-anchor="middle" font-size="11" font-weight="600" fill="#8b5cf6" font-style="italic">Watch for what</text>
+              <text x="115" y="136" text-anchor="middle" font-size="11" font-weight="600" fill="#8b5cf6" font-style="italic">comes next</text>
             </svg>
           </div>
 
@@ -1543,14 +1543,14 @@ export function renderAaL(container) {
               <path d="M30,220 A190,190 0 0,1 220,30" fill="none" stroke="#f59e0b" stroke-width="2"/>
 
               <!-- Outer ring labels (positioned at midpoints of each quadrant arc) -->
-              <text x="350" y="88" text-anchor="middle" font-size="20" font-weight="800" fill="#3b82f6">GROW</text>
-              <text x="350" y="105" text-anchor="middle" font-size="9.5" fill="#3b82f6" font-weight="500" font-style="italic">Reflect on learning</text>
-              <text x="350" y="352" text-anchor="middle" font-size="20" font-weight="800" fill="#ef4444">ACT</text>
-              <text x="350" y="369" text-anchor="middle" font-size="9.5" fill="#ef4444" font-weight="500" font-style="italic">Act on feedback</text>
-              <text x="90" y="352" text-anchor="middle" font-size="20" font-weight="800" fill="#10b981">MAP</text>
-              <text x="90" y="369" text-anchor="middle" font-size="9.5" fill="#10b981" font-weight="500" font-style="italic">Map your progress</text>
-              <text x="90" y="88" text-anchor="middle" font-size="20" font-weight="800" fill="#f59e0b">ASK</text>
-              <text x="90" y="105" text-anchor="middle" font-size="9.5" fill="#f59e0b" font-weight="500" font-style="italic">Ask for help</text>
+              <text x="336" y="104" text-anchor="middle" font-size="22" font-weight="800" fill="#3b82f6">GROW</text>
+              <text x="336" y="121" text-anchor="middle" font-size="11" fill="#3b82f6" font-weight="500" font-style="italic">Reflect on learning</text>
+              <text x="336" y="336" text-anchor="middle" font-size="22" font-weight="800" fill="#ef4444">ACT</text>
+              <text x="336" y="353" text-anchor="middle" font-size="11" fill="#ef4444" font-weight="500" font-style="italic">Act on feedback</text>
+              <text x="104" y="336" text-anchor="middle" font-size="22" font-weight="800" fill="#10b981">MAP</text>
+              <text x="104" y="353" text-anchor="middle" font-size="11" fill="#10b981" font-weight="500" font-style="italic">Map your progress</text>
+              <text x="104" y="104" text-anchor="middle" font-size="22" font-weight="800" fill="#f59e0b">ASK</text>
+              <text x="104" y="121" text-anchor="middle" font-size="11" fill="#f59e0b" font-weight="500" font-style="italic">Ask for help</text>
 
               <!-- Inner ring band (Prepare / Participate / Process) -->
               <!-- Inner ring background -->
