@@ -218,7 +218,7 @@ export function render(container) {
       <div class="ms-scroll">
         <div class="ms-container">
           <div class="ms-header">
-            <h1>Formula Lab</h1>
+            <h1>Formula Lab <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.5625rem;font-weight:700;background:var(--warning-light,rgba(245,158,11,0.15));color:var(--warning,#f59e0b);margin-left:6px;vertical-align:middle;letter-spacing:0.04em;">BETA</span></h1>
             <p>Generate beautifully typeset STEM lessons. LaTeX renders automatically for equations, formulas, and symbols.</p>
           </div>
 

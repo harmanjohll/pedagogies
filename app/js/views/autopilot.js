@@ -522,6 +522,10 @@ export function render(container) {
   let params = {};
 
   function renderView() {
+    // Preserve scroll position across re-renders
+    const prevScroll = container.querySelector('.ap-scroll');
+    const savedScrollTop = prevScroll ? prevScroll.scrollTop : 0;
+
     container.innerHTML = `
       <style>
         .ap-scroll { overflow-y: auto; height: 100%; }
@@ -771,6 +775,10 @@ export function render(container) {
         ` : ''}
       </div>
     `;
+
+    // Restore scroll position after re-render
+    const newScroll = container.querySelector('.ap-scroll');
+    if (newScroll && savedScrollTop) newScroll.scrollTop = savedScrollTop;
 
     /* ── Wire events ── */
 

@@ -32,6 +32,7 @@ const DEFAULT_STATE = {
   model: localStorage.getItem('cocher_model') || 'gemini-2.5-flash',
   darkMode: localStorage.getItem('cocher_dark_mode') === 'true',
   palette: localStorage.getItem('cocher_palette') || '',
+  schoolProfile: { name: '', values: '' },
   classes: [],
   lessons: [],
   chatHistory: [],
@@ -120,6 +121,7 @@ export const Store = {
       sourceLibrary: _state.sourceLibrary || [],
       departmentSchemes: _state.departmentSchemes || [],
       assessmentBlueprints: _state.assessmentBlueprints || [],
+      schoolProfile: _state.schoolProfile || { name: '', values: '' },
       onboardingComplete: _state.onboardingComplete || false,
       recentActivity: _state.recentActivity
     });
@@ -128,6 +130,18 @@ export const Store = {
     localStorage.setItem('cocher_model', _state.model || 'gemini-2.5-flash');
     localStorage.setItem('cocher_dark_mode', _state.darkMode ? 'true' : 'false');
     localStorage.setItem('cocher_palette', _state.palette || '');
+  },
+
+  /* ══════════ School Profile ══════════ */
+
+  getSchoolProfile() {
+    return _state.schoolProfile || { name: '', values: '' };
+  },
+
+  setSchoolProfile(profile) {
+    _state.schoolProfile = profile;
+    this._persist();
+    this._notify();
   },
 
   /* ══════════ Classes CRUD ══════════ */
@@ -180,7 +194,7 @@ export const Store = {
     const student = {
       id: generateId(),
       name: data.name || 'Student',
-      e21cc: { cait: 50, cci: 50, cgc: 50, ...(data.e21cc || {}) },
+      e21cc: { criticalThinking: 50, creativeThinking: 50, communication: 50, collaboration: 50, socialConnectedness: 50, selfRegulation: 50, ...(data.e21cc || {}) },
       createdAt: Date.now()
     };
     this.updateClass(classId, {
@@ -199,7 +213,7 @@ export const Store = {
       // Record E21CC history when scores change
       if (data.e21cc) {
         const history = [...(s.e21ccHistory || [])];
-        history.push({ ts: Date.now(), cait: data.e21cc.cait, cci: data.e21cc.cci, cgc: data.e21cc.cgc });
+        history.push({ ts: Date.now(), ...data.e21cc });
         if (history.length > 20) history.splice(0, history.length - 20);
         updated.e21ccHistory = history;
       }
@@ -274,6 +288,7 @@ export const Store = {
       plan: data.plan || '',
       spatialLayout: data.spatialLayout || null,
       objectives: data.objectives || '',
+      lessonHook: data.lessonHook || '',
       e21ccFocus: data.e21ccFocus || [],
       attachedResources: data.attachedResources || [],
       reflection: '',

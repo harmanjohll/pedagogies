@@ -11,6 +11,15 @@ import { showToast } from '../components/toast.js';
 import { summarizeNotes, suggestGrouping, sendChat } from '../api.js';
 import { renderMd } from '../utils/latex.js';
 
+const E21CC_DIMS = [
+  { key: 'criticalThinking',    label: 'Critical Thinking',     short: 'CT',  color: '#6366f1' },
+  { key: 'creativeThinking',    label: 'Creative Thinking',     short: 'CrT', color: '#8b5cf6' },
+  { key: 'communication',       label: 'Communication',         short: 'Com', color: '#0ea5e9' },
+  { key: 'collaboration',       label: 'Collaboration',         short: 'Col', color: '#06b6d4' },
+  { key: 'socialConnectedness', label: 'Social Connectedness',  short: 'SC',  color: '#10b981' },
+  { key: 'selfRegulation',     label: 'Self-Regulation',       short: 'SR',  color: '#f59e0b' },
+];
+
 /* ═══════════ Classes List ═══════════ */
 
 export function renderList(container) {
@@ -44,9 +53,10 @@ export function renderList(container) {
             ${classes.map(cls => {
               const studentCount = cls.students?.length || 0;
               const noteCount = cls.notes?.length || 0;
-              const avgCait = studentCount > 0 ? Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cait || 0), 0) / studentCount) : 0;
-              const avgCci = studentCount > 0 ? Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cci || 0), 0) / studentCount) : 0;
-              const avgCgc = studentCount > 0 ? Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cgc || 0), 0) / studentCount) : 0;
+              const dimAvgs = E21CC_DIMS.map(d => ({
+                ...d,
+                avg: studentCount > 0 ? Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.[d.key] || 0), 0) / studentCount) : 0
+              }));
 
               return `
                 <div class="card card-hover card-interactive card-accent-top" data-class-id="${cls.id}">
@@ -63,21 +73,13 @@ export function renderList(container) {
                     </div>
                     ${studentCount > 0 ? `
                       <div class="e21cc-bars">
+                        ${dimAvgs.map(d => `
                         <div class="e21cc-bar">
-                          <span class="e21cc-bar-label" style="color: var(--e21cc-cait);">CAIT</span>
-                          <div class="e21cc-bar-track"><div class="e21cc-bar-fill" style="width:${avgCait}%; background: var(--e21cc-cait);"></div></div>
-                          <span class="e21cc-bar-value">${avgCait}</span>
+                          <span class="e21cc-bar-label" style="color: ${d.color};">${d.short}</span>
+                          <div class="e21cc-bar-track"><div class="e21cc-bar-fill" style="width:${d.avg}%; background: ${d.color};"></div></div>
+                          <span class="e21cc-bar-value">${d.avg}</span>
                         </div>
-                        <div class="e21cc-bar">
-                          <span class="e21cc-bar-label" style="color: var(--e21cc-cci);">CCI</span>
-                          <div class="e21cc-bar-track"><div class="e21cc-bar-fill" style="width:${avgCci}%; background: var(--e21cc-cci);"></div></div>
-                          <span class="e21cc-bar-value">${avgCci}</span>
-                        </div>
-                        <div class="e21cc-bar">
-                          <span class="e21cc-bar-label" style="color: var(--e21cc-cgc);">CGC</span>
-                          <div class="e21cc-bar-track"><div class="e21cc-bar-fill" style="width:${avgCgc}%; background: var(--e21cc-cgc);"></div></div>
-                          <span class="e21cc-bar-value">${avgCgc}</span>
-                        </div>
+                        `).join('')}
                       </div>
                     ` : `
                       <p style="font-size: 0.8125rem; color: var(--ink-faint); font-style: italic;">Add students to see E21CC overview</p>
@@ -329,6 +331,74 @@ export function renderDetail(container, { id }) {
           if (student) showEditE21CCModal(id, student, renderInner);
         });
       });
+
+      // Radar chart toggle
+      let radarChart = null;
+      const barViewBtn = container.querySelector('#bar-view-btn');
+      const radarViewBtn = container.querySelector('#radar-view-btn');
+      const radarContainer = container.querySelector('#radar-chart-container');
+      const tableWrap = container.querySelector('.table-wrap');
+
+      if (radarViewBtn && barViewBtn) {
+        radarViewBtn.addEventListener('click', () => {
+          radarViewBtn.classList.remove('btn-ghost');
+          radarViewBtn.style.fontWeight = '600';
+          barViewBtn.classList.add('btn-ghost');
+          barViewBtn.style.fontWeight = '';
+          if (tableWrap) tableWrap.style.display = 'none';
+          if (radarContainer) radarContainer.style.display = 'block';
+          // Build radar chart
+          const canvas = container.querySelector('#e21cc-radar-canvas');
+          if (canvas && typeof Chart !== 'undefined') {
+            if (radarChart) radarChart.destroy();
+            const avgs = E21CC_DIMS.map(d =>
+              students.length > 0 ? Math.round(students.reduce((s, st) => s + (st.e21cc?.[d.key] || 0), 0) / students.length) : 0
+            );
+            radarChart = new Chart(canvas, {
+              type: 'radar',
+              data: {
+                labels: E21CC_DIMS.map(d => d.label),
+                datasets: [{
+                  label: 'Class Average',
+                  data: avgs,
+                  backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                  borderColor: '#6366f1',
+                  borderWidth: 2,
+                  pointBackgroundColor: E21CC_DIMS.map(d => d.color),
+                  pointBorderColor: '#fff',
+                  pointBorderWidth: 1,
+                  pointRadius: 4,
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                  r: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { stepSize: 20, font: { size: 10 } },
+                    pointLabels: { font: { size: 11 } }
+                  }
+                },
+                plugins: {
+                  legend: { position: 'bottom' }
+                }
+              }
+            });
+          }
+        });
+
+        barViewBtn.addEventListener('click', () => {
+          barViewBtn.classList.remove('btn-ghost');
+          barViewBtn.style.fontWeight = '600';
+          radarViewBtn.classList.add('btn-ghost');
+          radarViewBtn.style.fontWeight = '';
+          if (tableWrap) tableWrap.style.display = '';
+          if (radarContainer) radarContainer.style.display = 'none';
+          if (radarChart) { radarChart.destroy(); radarChart = null; }
+        });
+      }
     }
 
     // Notes tab handlers
@@ -392,9 +462,10 @@ export function renderDetail(container, { id }) {
           const h = s.e21ccHistory, latest = h[h.length - 1], first = h[0];
           return `<tr>
             <td>${escapeHtml(s.name)}</td>
-            <td>${latest.cait} (${latest.cait - first.cait >= 0 ? '+' : ''}${latest.cait - first.cait})</td>
-            <td>${latest.cci} (${latest.cci - first.cci >= 0 ? '+' : ''}${latest.cci - first.cci})</td>
-            <td>${latest.cgc} (${latest.cgc - first.cgc >= 0 ? '+' : ''}${latest.cgc - first.cgc})</td>
+            ${E21CC_DIMS.map(d => {
+              const diff = (latest[d.key] || 0) - (first[d.key] || 0);
+              return `<td>${latest[d.key] || 0} (${diff >= 0 ? '+' : ''}${diff})</td>`;
+            }).join('')}
             <td>${h.length}</td>
           </tr>`;
         }).join('');
@@ -407,7 +478,7 @@ export function renderDetail(container, { id }) {
           <body>
             <h1>${escapeHtml(fc.name)} — E21CC Trends Report</h1>
             <p style="font-size:12px;color:#64748b;">${fc.level || ''} ${fc.subject || ''} &middot; ${sts.length} students &middot; ${new Date().toLocaleDateString('en-SG')}</p>
-            <table><thead><tr><th>Student</th><th>CAIT</th><th>CCI</th><th>CGC</th><th>Updates</th></tr></thead><tbody>${rows || '<tr><td colspan="5">No trend data</td></tr>'}</tbody></table>
+            <table><thead><tr><th>Student</th>${E21CC_DIMS.map(d => `<th>${d.short}</th>`).join('')}<th>Updates</th></tr></thead><tbody>${rows || `<tr><td colspan="${E21CC_DIMS.length + 2}">No trend data</td></tr>`}</tbody></table>
             <p style="color:#94a3b8;font-size:11px;margin-top:32px;">Exported from Co-Cher</p>
           </body></html>`);
         pw.document.close();
@@ -446,9 +517,7 @@ function renderStudentsTab(cls) {
         <thead>
           <tr>
             <th>Name</th>
-            <th>CAIT</th>
-            <th>CCI</th>
-            <th>CGC</th>
+            ${E21CC_DIMS.map(d => `<th>${d.short}</th>`).join('')}
             <th style="width: 120px; text-align: right;">Actions</th>
           </tr>
         </thead>
@@ -461,30 +530,16 @@ function renderStudentsTab(cls) {
                   <span style="font-weight: 500;">${s.name}</span>
                 </div>
               </td>
+              ${E21CC_DIMS.map(d => `
               <td>
                 <div style="display: flex; align-items: center; gap: var(--sp-2);">
                   <div style="width: 48px; height: 6px; background: var(--bg-subtle); border-radius: 3px; overflow: hidden;">
-                    <div style="width: ${s.e21cc?.cait || 0}%; height: 100%; background: var(--e21cc-cait); border-radius: 3px;"></div>
+                    <div style="width: ${s.e21cc?.[d.key] || 0}%; height: 100%; background: ${d.color}; border-radius: 3px;"></div>
                   </div>
-                  <span style="font-size: 0.75rem; color: var(--ink-muted); width: 24px;">${s.e21cc?.cait || 0}</span>
+                  <span style="font-size: 0.75rem; color: var(--ink-muted); width: 24px;">${s.e21cc?.[d.key] || 0}</span>
                 </div>
               </td>
-              <td>
-                <div style="display: flex; align-items: center; gap: var(--sp-2);">
-                  <div style="width: 48px; height: 6px; background: var(--bg-subtle); border-radius: 3px; overflow: hidden;">
-                    <div style="width: ${s.e21cc?.cci || 0}%; height: 100%; background: var(--e21cc-cci); border-radius: 3px;"></div>
-                  </div>
-                  <span style="font-size: 0.75rem; color: var(--ink-muted); width: 24px;">${s.e21cc?.cci || 0}</span>
-                </div>
-              </td>
-              <td>
-                <div style="display: flex; align-items: center; gap: var(--sp-2);">
-                  <div style="width: 48px; height: 6px; background: var(--bg-subtle); border-radius: 3px; overflow: hidden;">
-                    <div style="width: ${s.e21cc?.cgc || 0}%; height: 100%; background: var(--e21cc-cgc); border-radius: 3px;"></div>
-                  </div>
-                  <span style="font-size: 0.75rem; color: var(--ink-muted); width: 24px;">${s.e21cc?.cgc || 0}</span>
-                </div>
-              </td>
+              `).join('')}
               <td style="text-align: right;">
                 <button class="btn btn-ghost btn-sm e21cc-edit-btn" data-student-id="${s.id}" style="font-size: 0.75rem;">Edit E21CC</button>
                 <button class="btn btn-ghost btn-sm remove-student-btn" data-student-id="${s.id}" style="color: var(--danger); font-size: 0.75rem;">Remove</button>
@@ -493,6 +548,14 @@ function renderStudentsTab(cls) {
           `).join('')}
         </tbody>
       </table>
+    </div>
+    <div style="margin-top:var(--sp-4);display:flex;align-items:center;gap:var(--sp-3);">
+      <span style="font-size:0.8125rem;font-weight:500;color:var(--ink-muted);">View:</span>
+      <button class="btn btn-sm" id="bar-view-btn" style="font-weight:600;">Bar view</button>
+      <button class="btn btn-ghost btn-sm" id="radar-view-btn">Radar view</button>
+    </div>
+    <div id="radar-chart-container" style="display:none;margin-top:var(--sp-4);">
+      <canvas id="e21cc-radar-canvas" width="400" height="400"></canvas>
     </div>`;
 }
 
@@ -553,7 +616,9 @@ function renderSparkline(history, key, color, width = 100, height = 28) {
     const cx = i * step;
     const cy = height - ((v - min) / range) * (height - 4) - 2;
     const date = new Date(timestamps[i]).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
-    return `<circle cx="${cx}" cy="${cy}" r="6" fill="transparent" stroke="none" data-tip="${key.toUpperCase()}: ${v} (${date})"/>
+    const dimInfo = E21CC_DIMS.find(d => d.key === key);
+    const tipLabel = dimInfo ? dimInfo.short : key;
+    return `<circle cx="${cx}" cy="${cy}" r="6" fill="transparent" stroke="none" data-tip="${tipLabel}: ${v} (${date})"/>
             <circle cx="${cx}" cy="${cy}" r="2" fill="${color}" opacity="0" class="hover-dot"/>`;
   }).join('');
 
@@ -608,18 +673,20 @@ function renderTrendsTab(cls) {
   // Class-level averages over time
   const allTimestamps = [...new Set(withHistory.flatMap(s => s.e21ccHistory.map(h => h.ts)))].sort();
   const classHistory = allTimestamps.map(ts => {
-    let cait = 0, cci = 0, cgc = 0, count = 0;
+    const sums = {};
+    E21CC_DIMS.forEach(d => { sums[d.key] = 0; });
+    let count = 0;
     students.forEach(s => {
       const snapshot = (s.e21ccHistory || []).filter(h => h.ts <= ts);
       if (snapshot.length > 0) {
         const latest = snapshot[snapshot.length - 1];
-        cait += latest.cait || 0;
-        cci += latest.cci || 0;
-        cgc += latest.cgc || 0;
+        E21CC_DIMS.forEach(d => { sums[d.key] += latest[d.key] || 0; });
         count++;
       }
     });
-    return { ts, cait: count ? Math.round(cait / count) : 0, cci: count ? Math.round(cci / count) : 0, cgc: count ? Math.round(cgc / count) : 0 };
+    const entry = { ts };
+    E21CC_DIMS.forEach(d => { entry[d.key] = count ? Math.round(sums[d.key] / count) : 0; });
+    return entry;
   });
 
   return `
@@ -633,18 +700,12 @@ function renderTrendsTab(cls) {
     <div class="card" style="margin-bottom:var(--sp-6);">
       <h4 style="font-size:0.9375rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-3);">Class Average Trends</h4>
       <div style="display:flex;gap:var(--sp-6);flex-wrap:wrap;">
+        ${E21CC_DIMS.map(d => `
         <div>
-          <span style="font-size:0.75rem;font-weight:600;color:var(--e21cc-cait);">CAIT</span>
-          ${renderSparkline(classHistory, 'cait', 'var(--e21cc-cait)', 120, 32)}
+          <span style="font-size:0.75rem;font-weight:600;color:${d.color};">${d.short}</span>
+          ${renderSparkline(classHistory, d.key, d.color, 120, 32)}
         </div>
-        <div>
-          <span style="font-size:0.75rem;font-weight:600;color:var(--e21cc-cci);">CCI</span>
-          ${renderSparkline(classHistory, 'cci', 'var(--e21cc-cci)', 120, 32)}
-        </div>
-        <div>
-          <span style="font-size:0.75rem;font-weight:600;color:var(--e21cc-cgc);">CGC</span>
-          ${renderSparkline(classHistory, 'cgc', 'var(--e21cc-cgc)', 120, 32)}
-        </div>
+        `).join('')}
       </div>
     </div>
 
@@ -654,9 +715,7 @@ function renderTrendsTab(cls) {
         <thead>
           <tr>
             <th>Student</th>
-            <th>CAIT Trend</th>
-            <th>CCI Trend</th>
-            <th>CGC Trend</th>
+            ${E21CC_DIMS.map(d => `<th>${d.short} Trend</th>`).join('')}
             <th style="width:80px;text-align:right;">Updates</th>
           </tr>
         </thead>
@@ -669,9 +728,7 @@ function renderTrendsTab(cls) {
                   <span style="font-weight:500;">${s.name}</span>
                 </div>
               </td>
-              <td>${renderSparkline(s.e21ccHistory, 'cait', 'var(--e21cc-cait)', 80, 24)}</td>
-              <td>${renderSparkline(s.e21ccHistory, 'cci', 'var(--e21cc-cci)', 80, 24)}</td>
-              <td>${renderSparkline(s.e21ccHistory, 'cgc', 'var(--e21cc-cgc)', 80, 24)}</td>
+              ${E21CC_DIMS.map(d => `<td>${renderSparkline(s.e21ccHistory, d.key, d.color, 80, 24)}</td>`).join('')}
               <td style="text-align:right;font-size:0.75rem;color:var(--ink-muted);">${s.e21ccHistory.length}</td>
             </tr>
           `).join('')}
@@ -771,27 +828,15 @@ function showEditE21CCModal(classId, student, onUpdate) {
       <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-2); line-height: 1.5;">
         Adjust competency levels (0–100) based on your observations and assessments.
       </p>
+      ${E21CC_DIMS.map(d => `
       <div class="input-group">
-        <label class="input-label" style="color: var(--e21cc-cait);">CAIT — Critical, Adaptive & Inventive Thinking</label>
+        <label class="input-label" style="color: ${d.color};">${d.label}</label>
         <div style="display: flex; align-items: center; gap: var(--sp-3);">
-          <input type="range" id="e21cc-cait" min="0" max="100" value="${student.e21cc?.cait || 50}" style="flex:1;" />
-          <span id="e21cc-cait-val" style="width: 32px; text-align: right; font-weight: 600; font-size: 0.875rem;">${student.e21cc?.cait || 50}</span>
+          <input type="range" id="e21cc-${d.key}" min="0" max="100" value="${student.e21cc?.[d.key] || 50}" style="flex:1;" />
+          <span id="e21cc-${d.key}-val" style="width: 32px; text-align: right; font-weight: 600; font-size: 0.875rem;">${student.e21cc?.[d.key] || 50}</span>
         </div>
       </div>
-      <div class="input-group">
-        <label class="input-label" style="color: var(--e21cc-cci);">CCI — Communication, Collaboration & Information</label>
-        <div style="display: flex; align-items: center; gap: var(--sp-3);">
-          <input type="range" id="e21cc-cci" min="0" max="100" value="${student.e21cc?.cci || 50}" style="flex:1;" />
-          <span id="e21cc-cci-val" style="width: 32px; text-align: right; font-weight: 600; font-size: 0.875rem;">${student.e21cc?.cci || 50}</span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label class="input-label" style="color: var(--e21cc-cgc);">CGC — Civic, Global & Cross-cultural Literacy</label>
-        <div style="display: flex; align-items: center; gap: var(--sp-3);">
-          <input type="range" id="e21cc-cgc" min="0" max="100" value="${student.e21cc?.cgc || 50}" style="flex:1;" />
-          <span id="e21cc-cgc-val" style="width: 32px; text-align: right; font-weight: 600; font-size: 0.875rem;">${student.e21cc?.cgc || 50}</span>
-        </div>
-      </div>
+      `).join('')}
     `,
     footer: `
       <button class="btn btn-secondary" data-action="cancel">Cancel</button>
@@ -800,7 +845,7 @@ function showEditE21CCModal(classId, student, onUpdate) {
   });
 
   // Live update values
-  ['cait', 'cci', 'cgc'].forEach(key => {
+  E21CC_DIMS.map(d => d.key).forEach(key => {
     const slider = backdrop.querySelector(`#e21cc-${key}`);
     const valSpan = backdrop.querySelector(`#e21cc-${key}-val`);
     slider?.addEventListener('input', () => { valSpan.textContent = slider.value; });
@@ -808,13 +853,9 @@ function showEditE21CCModal(classId, student, onUpdate) {
 
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
   backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
-    Store.updateStudent(classId, student.id, {
-      e21cc: {
-        cait: parseInt(backdrop.querySelector('#e21cc-cait').value),
-        cci: parseInt(backdrop.querySelector('#e21cc-cci').value),
-        cgc: parseInt(backdrop.querySelector('#e21cc-cgc').value)
-      }
-    });
+    const e21cc = {};
+    E21CC_DIMS.forEach(d => { e21cc[d.key] = parseInt(backdrop.querySelector(`#e21cc-${d.key}`).value); });
+    Store.updateStudent(classId, student.id, { e21cc });
     showToast('E21CC updated', 'success');
     close();
     onUpdate();
@@ -837,27 +878,15 @@ function showBatchE21CCModal(classId, onUpdate) {
         <label class="input-label">Activity / Reason</label>
         <input class="input" id="batch-reason" placeholder="e.g. Group project on climate change" />
       </div>
+      ${E21CC_DIMS.map(d => `
       <div class="input-group">
-        <label class="input-label" style="color:var(--e21cc-cait);">CAIT Adjustment</label>
+        <label class="input-label" style="color:${d.color};">${d.label} Adjustment</label>
         <div style="display:flex;align-items:center;gap:var(--sp-3);">
-          <input type="range" id="batch-cait" min="-20" max="20" value="0" style="flex:1;" />
-          <span id="batch-cait-val" style="width:40px;text-align:right;font-weight:600;font-size:0.875rem;">0</span>
+          <input type="range" id="batch-${d.key}" min="-20" max="20" value="0" style="flex:1;" />
+          <span id="batch-${d.key}-val" style="width:40px;text-align:right;font-weight:600;font-size:0.875rem;">0</span>
         </div>
       </div>
-      <div class="input-group">
-        <label class="input-label" style="color:var(--e21cc-cci);">CCI Adjustment</label>
-        <div style="display:flex;align-items:center;gap:var(--sp-3);">
-          <input type="range" id="batch-cci" min="-20" max="20" value="0" style="flex:1;" />
-          <span id="batch-cci-val" style="width:40px;text-align:right;font-weight:600;font-size:0.875rem;">0</span>
-        </div>
-      </div>
-      <div class="input-group">
-        <label class="input-label" style="color:var(--e21cc-cgc);">CGC Adjustment</label>
-        <div style="display:flex;align-items:center;gap:var(--sp-3);">
-          <input type="range" id="batch-cgc" min="-20" max="20" value="0" style="flex:1;" />
-          <span id="batch-cgc-val" style="width:40px;text-align:right;font-weight:600;font-size:0.875rem;">0</span>
-        </div>
-      </div>
+      `).join('')}
       <div style="background:var(--bg-subtle);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-md);font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">
         This will adjust <strong>${cls.students.length} students</strong>. Values are clamped between 0–100.
       </div>
@@ -869,7 +898,7 @@ function showBatchE21CCModal(classId, onUpdate) {
   });
 
   // Live update values
-  ['cait', 'cci', 'cgc'].forEach(key => {
+  E21CC_DIMS.map(d => d.key).forEach(key => {
     const slider = backdrop.querySelector(`#batch-${key}`);
     const valSpan = backdrop.querySelector(`#batch-${key}-val`);
     slider?.addEventListener('input', () => {
@@ -880,11 +909,10 @@ function showBatchE21CCModal(classId, onUpdate) {
 
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
   backdrop.querySelector('[data-action="apply"]').addEventListener('click', () => {
-    const dCait = parseInt(backdrop.querySelector('#batch-cait').value);
-    const dCci = parseInt(backdrop.querySelector('#batch-cci').value);
-    const dCgc = parseInt(backdrop.querySelector('#batch-cgc').value);
+    const deltas = {};
+    E21CC_DIMS.forEach(d => { deltas[d.key] = parseInt(backdrop.querySelector(`#batch-${d.key}`).value); });
 
-    if (dCait === 0 && dCci === 0 && dCgc === 0) {
+    if (E21CC_DIMS.every(d => deltas[d.key] === 0)) {
       showToast('No changes to apply.', 'danger');
       return;
     }
@@ -893,10 +921,8 @@ function showBatchE21CCModal(classId, onUpdate) {
     const freshCls = Store.getClass(classId);
     const now = Date.now();
     const updatedStudents = (freshCls.students || []).map(s => {
-      const newE21cc = {
-        cait: clamp((s.e21cc?.cait || 50) + dCait),
-        cci: clamp((s.e21cc?.cci || 50) + dCci),
-        cgc: clamp((s.e21cc?.cgc || 50) + dCgc)
+      const newE21cc = {};
+      E21CC_DIMS.forEach(d => { newE21cc[d.key] = clamp((s.e21cc?.[d.key] || 50) + deltas[d.key]); });
       };
       const history = [...(s.e21ccHistory || [])];
       history.push({ ts: now, ...newE21cc });
@@ -982,14 +1008,14 @@ function showGroupingModal(classId) {
     let sorted;
     if (method === 'mixed') {
       sorted = students.sort((a, b) => {
-        const sa = ((a.e21cc?.cait || 0) + (a.e21cc?.cci || 0) + (a.e21cc?.cgc || 0));
-        const sb = ((b.e21cc?.cait || 0) + (b.e21cc?.cci || 0) + (b.e21cc?.cgc || 0));
+        const sa = E21CC_DIMS.reduce((sum, d) => sum + (a.e21cc?.[d.key] || 0), 0);
+        const sb = E21CC_DIMS.reduce((sum, d) => sum + (b.e21cc?.[d.key] || 0), 0);
         return sb - sa;
       });
     } else if (method === 'similar') {
       sorted = students.sort((a, b) => {
-        const sa = ((a.e21cc?.cait || 0) + (a.e21cc?.cci || 0) + (a.e21cc?.cgc || 0));
-        const sb = ((b.e21cc?.cait || 0) + (b.e21cc?.cci || 0) + (b.e21cc?.cgc || 0));
+        const sa = E21CC_DIMS.reduce((sum, d) => sum + (a.e21cc?.[d.key] || 0), 0);
+        const sb = E21CC_DIMS.reduce((sum, d) => sum + (b.e21cc?.[d.key] || 0), 0);
         return sb - sa;
       });
     } else {

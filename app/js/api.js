@@ -68,6 +68,7 @@ Align with the 4 areas: Lesson Preparation, Lesson Enactment, Monitoring & Feedb
 8. Use markdown formatting for clarity (headers, bullets, bold)
 9. When relevant, suggest how a lesson could be framed through different curriculum orientations (Scholar-Academic, Learner-Centred, Social Efficiency, Social Reconstructivist) — but only if it adds value, not as a checklist
 10. For CCE lessons, always connect to the Big Ideas (Identity, Relationships, Choices) and relevant R3ICH values
+11. Every lesson plan MUST begin with a real-world lesson hook — a compelling opener that connects the topic to students' lives. Frame it as a provocative question: "What if I told you...", "Did you ever wonder...", "Why do you think...". Root the hook in real-world context or application. This is the first thing students hear
 
 Respond conversationally. Help the teacher think through their lesson experience holistically.`;
 
@@ -80,9 +81,18 @@ export async function sendChat(messages, options = {}) {
     throw new Error('No API key configured. Please add your Gemini API key in Settings.');
   }
 
-  const systemPrompt = options.systemPrompt || SYSTEM_PROMPT;
+  let systemPrompt = options.systemPrompt || SYSTEM_PROMPT;
   const temperature = options.temperature ?? 0.8;
   const maxTokens = options.maxTokens ?? 4096;
+
+  // Inject school profile into system prompt when available
+  const schoolProfile = Store.getSchoolProfile?.() || {};
+  if (schoolProfile.values) {
+    systemPrompt += `\n\nThe teacher's school values are: ${schoolProfile.values}. Where these values naturally align with the lesson content, weave them in subtly. Do NOT force or contrive connections — only reference school values when the context genuinely supports it.`;
+  }
+  if (schoolProfile.name) {
+    systemPrompt += `\nThe teacher's school is: ${schoolProfile.name}.`;
+  }
 
   let body;
 
