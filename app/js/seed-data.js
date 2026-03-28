@@ -926,6 +926,395 @@ Resources
 - AST Networked Learning Communities — seek out TBL practitioners`
       }
     ]
+  },
+
+  /* ── Folder 4: Differentiated Instruction ── */
+  {
+    name: 'Differentiated Instruction (DI)',
+    category: 'course',
+    description: 'Tomlinson\'s differentiation framework — adapting content, process, and product to meet diverse learner needs.',
+    tags: ['differentiation', 'scaffolding', 'student-centred', 'mixed ability', 'UDL'],
+    materials: [
+      {
+        title: 'Understanding DI — Principles & Models',
+        type: 'note',
+        content: `Understanding Differentiated Instruction — Principles & Models
+================================================================
+
+What Is Differentiated Instruction?
+-----------------------------------
+Carol Ann Tomlinson defines Differentiated Instruction (DI) as a teaching philosophy that proactively plans for students' differences so that all learners can access the curriculum. It is NOT about creating 30 different lesson plans — it is about designing flexible pathways within a single lesson.
+
+The Three Elements of Differentiation
+---------------------------------------
+1. **Content** — WHAT students learn
+   - Vary the complexity of material (e.g., tiered readings at different Lexile levels)
+   - Offer choice in topics within a theme
+   - Use multiple representations: text, video, diagram, manipulatives
+
+2. **Process** — HOW students learn
+   - Vary the activities: structured worksheets for some, open-ended investigations for others
+   - Adjust pacing: extension tasks for fast finishers, guided practice for those who need more time
+   - Offer different modes: independent, paired, group work
+
+3. **Product** — HOW students demonstrate learning
+   - Allow choice: essay, presentation, infographic, video, model
+   - Vary complexity: some students explain, others evaluate or create
+   - Use rubrics that account for different product types
+
+Three Student Characteristics That Drive DI
+--------------------------------------------
+- **Readiness** — Current knowledge and skill level. Not the same as "ability" — readiness changes with each topic.
+- **Interest** — What motivates and engages the student. Tapping into interests increases effort and retention.
+- **Learning Profile** — How a student learns best: visual/auditory/kinesthetic, working alone vs. in groups, cultural background, language proficiency.
+
+Connection to Universal Design for Learning (UDL)
+---------------------------------------------------
+UDL (CAST framework) aligns closely with DI through its three principles:
+- Multiple means of **Engagement** (the "why" of learning)
+- Multiple means of **Representation** (the "what")
+- Multiple means of **Action & Expression** (the "how")
+
+In Singapore's mixed-ability classrooms — especially with Subject-Based Banding (SBB) — DI is essential. A single class may include students across G1, G2, and G3 levels.
+
+Why DI Matters
+--------------
+- Hattie's meta-analysis: Differentiation strategies contribute to effect sizes of 0.46–0.71 depending on implementation
+- Students who feel the work is "just right" (Vygotsky's Zone of Proximal Development) are more engaged and learn faster
+- DI reduces behavioural issues — bored students and overwhelmed students both act out
+- Aligns with STP Area 3 (Differentiated Support) and MOE's emphasis on student-centred learning`
+      },
+      {
+        title: 'DI Strategies for the Classroom',
+        type: 'note',
+        content: `DI Strategies for the Classroom
+=================================
+
+Practical Strategies for Differentiated Instruction
+----------------------------------------------------
+
+### 1. Tiered Tasks (3 Levels)
+Design the same core task at three complexity levels:
+- **Foundation** — Guided steps, sentence starters, fewer variables
+- **Standard** — The "grade-level" task most students attempt
+- **Extension** — Open-ended, requires synthesis or evaluation
+
+Example (Sec 2 Science — Forces): All students investigate friction, but Foundation students use a structured data table and guided questions, Standard students design their own investigation with partial scaffolding, Extension students must predict outcomes using Newton's laws before testing.
+
+### 2. Choice Boards (Tic-Tac-Toe / Menu)
+A 3×3 grid of activities. Students choose 3 in a row (or a set number). Each square targets the same learning objective but via different modalities or complexities.
+
+### 3. Flexible Grouping
+Rotate grouping strategies across lessons:
+- **Readiness groups** — Homogeneous, for targeted instruction
+- **Interest groups** — Heterogeneous, students choose based on topic preference
+- **Random groups** — For routine collaborative tasks
+- **Mixed-ability groups** — Stronger students support peers (Vygotsky's MKO)
+
+### 4. Anchor Activities
+Pre-planned, meaningful tasks for students who finish early:
+- Extension problems, reading corners, journal prompts, peer tutoring
+- Must be curriculum-aligned, not just "busy work"
+
+### 5. Learning Menus / Playlists
+A structured set of must-do and may-do tasks:
+- **Appetiser** (warm-up, all students)
+- **Main Course** (core learning, tiered)
+- **Dessert** (extension/enrichment, choice)
+
+### 6. Exit Ticket Sorting
+Use exit tickets at the end of Lesson 1 to sort students for Lesson 2:
+- "Got it" → Extension group
+- "Almost" → Standard group
+- "Not yet" → Re-teach group
+
+### 7. RAFT Activities
+**R**ole — **A**udience — **F**ormat — **T**opic
+Students take on different roles and produce different products, all addressing the same content.
+
+### 8. Cubing
+A physical or digital cube with different tasks on each face (describe, compare, associate, analyse, apply, argue for/against). Roll to get your task. Different cubes for different readiness levels.
+
+### 9. Think-Dots
+Six tasks on cards, each aligned to a dot on a die. Students roll and complete the corresponding task. Like cubing but card-based.
+
+### 10. Scaffolded Note-Taking
+Provide different levels of note scaffolding:
+- Full guided notes (fill-in-the-blank) for Foundation
+- Partial notes (key headings + some blanks) for Standard
+- Cornell notes template (independent) for Extension
+
+Quick Implementation Tip
+-------------------------
+Start with ONE strategy. Master it before adding another. Tiered tasks and exit ticket sorting are the easiest entry points for most Singapore teachers.`
+      },
+      {
+        title: 'DI in Singapore — STP & E21CC Alignment',
+        type: 'note',
+        content: `DI in Singapore — STP & E21CC Alignment
+==========================================
+
+STP Alignment
+--------------
+Differentiated Instruction maps directly to the Singapore Teaching Practice:
+
+**Area 1 — Lesson Preparation**
+- Understanding learners: DI starts with knowing your students' readiness, interests, and profiles
+- Clear objectives: Same learning goal for all, different pathways to get there
+
+**Area 3 — Monitoring & Feedback**
+- Formative assessment: Exit tickets, observations, and conversations inform differentiation decisions
+- Differentiated support: The heart of DI — providing the right level of challenge and scaffold
+- Effective feedback: Tailored to each student's current position relative to the goal
+
+**Area 4 — Positive Learning Culture**
+- Student agency: Choice boards and learning menus give students ownership
+- Safe environment: DI normalises different paces and approaches — "different, not less"
+
+Managing Mixed-Ability Classes in Singapore
+--------------------------------------------
+With Subject-Based Banding (SBB) and Full Subject-Based Banding (FSBB), classes are increasingly diverse:
+
+1. **Know your spread** — Use diagnostic assessments early to understand the range
+2. **Start with 2 tiers, not 3** — Foundation and Standard. Add Extension when comfortable
+3. **Use existing data** — SLS analytics, class tests, teacher observations
+4. **Leverage peer support** — Singapore students respond well to structured peer learning
+5. **Communicate with parents** — Explain that differentiation means personalised support, not lower standards
+
+E21CC Alignment
+----------------
+- **Critical Thinking (CAIT)** — Tiered tasks at Extension level require analysis and evaluation
+- **Creative Thinking (CAIT)** — Choice boards encourage creative expression
+- **Communication (CCI)** — RAFT activities develop communication through varied formats
+- **Collaboration (CCI)** — Flexible grouping builds collaborative skills across different configurations
+- **Social Connectedness (CGC)** — Mixed-ability groups foster empathy and peer support
+- **Self-Regulation** — Learning menus develop self-management and goal-setting skills
+
+Common Pitfalls
+----------------
+- Differentiating quantity instead of quality (more of the same ≠ differentiation)
+- Labelling students permanently ("the weak group") — readiness changes!
+- Over-differentiating — trying to personalise everything at once leads to burnout
+- Neglecting the middle — focusing only on the extremes
+
+Getting Started — 5 Steps
+---------------------------
+1. Choose ONE upcoming lesson
+2. Identify the learning objective
+3. Design a tiered task (Foundation + Standard)
+4. Use an exit ticket to inform next steps
+5. Reflect: What worked? What would you adjust?
+
+Resources
+----------
+- Tomlinson, C.A. — "How to Differentiate Instruction in Academically Diverse Classrooms"
+- NIE Singapore — Professional development courses on differentiation
+- STP Guide — Area 3: Differentiated Support
+- AST resources on inclusive pedagogy`
+      }
+    ]
+  },
+
+  /* ── Folder 5: Formative Assessment Practices ── */
+  {
+    name: 'Formative Assessment Practices',
+    category: 'pedagogy',
+    description: 'Evidence-informed Assessment for Learning (AfL) strategies — checking for understanding, providing feedback, and adjusting instruction in real time.',
+    tags: ['formative assessment', 'AfL', 'feedback', 'Hattie', 'checking for understanding'],
+    materials: [
+      {
+        title: 'What is Formative Assessment? — Foundations',
+        type: 'note',
+        content: `What is Formative Assessment? — Foundations
+=============================================
+
+Defining Formative Assessment
+------------------------------
+Formative assessment is any assessment activity that provides information to be used as feedback to modify teaching and learning. It is assessment FOR learning, not assessment OF learning.
+
+The landmark research of **Black & Wiliam (1998)** — *Inside the Black Box* — showed that formative assessment produces significant learning gains, particularly for lower-achieving students. Their review of 250+ studies found effect sizes of 0.4 to 0.7.
+
+**Hattie's Visible Learning** effect sizes:
+- Feedback: **d = 0.70** (well above the 0.40 "hinge point")
+- Formative evaluation: **d = 0.48**
+- Teacher clarity (linked to formative assessment): **d = 0.75**
+- Metacognitive strategies (enabled by formative assessment): **d = 0.60**
+
+The Five Key Strategies (Wiliam & Leahy)
+------------------------------------------
+Dylan Wiliam identified five core strategies that underpin effective formative assessment:
+
+1. **Clarifying, sharing, and understanding learning intentions and success criteria**
+   - Students need to know WHERE they are going
+   - Use WALT (We Are Learning To...) and WILF (What I'm Looking For...)
+   - Share exemplars and rubrics BEFORE the task
+
+2. **Engineering effective discussions, tasks, and activities that elicit evidence of learning**
+   - Design questions and tasks that reveal understanding (not just recall)
+   - Use hinge questions at critical decision points in the lesson
+   - "All-student response" techniques (mini-whiteboards, polls)
+
+3. **Providing feedback that moves learners forward**
+   - Feedback should be specific, actionable, and timely
+   - Focus on the task and process, not the person
+   - The best feedback tells students what to DO next, not just what went wrong
+
+4. **Activating students as learning resources for one another**
+   - Peer assessment and feedback
+   - Structured peer teaching
+   - Collaborative error analysis
+
+5. **Activating students as owners of their own learning**
+   - Self-assessment against success criteria
+   - Goal-setting and reflection
+   - Metacognitive prompts (connects to Beatty's GROW framework)
+
+Formative vs. Summative Assessment
+------------------------------------
+| Aspect | Formative | Summative |
+|--------|-----------|-----------|
+| Purpose | Improve learning | Measure learning |
+| Timing | During instruction | After instruction |
+| Stakes | Low/no stakes | High stakes |
+| Feedback | Immediate, actionable | Delayed, evaluative |
+| Who uses it | Teacher AND student | Teacher, school, system |
+
+Common Misconceptions
+-----------------------
+- "Formative assessment = mini tests" — NO. It is any activity that provides feedback, including observations, discussions, and questioning.
+- "It takes too long" — Many techniques take 1-2 minutes (exit tickets, thumbs up/down)
+- "It's only for weak students" — Formative assessment benefits ALL learners by making thinking visible
+- "Marking = feedback" — Written marks/grades often shut down learning. Comments without grades are more effective (Butler, 1988).`
+      },
+      {
+        title: 'Formative Assessment Techniques',
+        type: 'note',
+        content: `Formative Assessment Techniques
+==================================
+
+Practical Techniques for Checking Understanding
+-------------------------------------------------
+
+### Before the Lesson (Activating Prior Knowledge)
+1. **KWL Chart** — What I Know / Want to know / Learned. Quick pre-assessment of starting points.
+2. **Prediction Tasks** — "Before we start, predict what will happen when..." Reveals prior conceptions.
+
+### During the Lesson (Monitoring Understanding)
+3. **Mini-Whiteboards** — All students write answers simultaneously. Instant whole-class visibility. The single most powerful low-tech formative tool.
+
+4. **Think-Pair-Share** — Individual thinking → pair discussion → whole-class sharing. Gives ALL students processing time, not just the fast hand-raisers.
+
+5. **Traffic Light Cards** — Green (I understand), Amber (I'm unsure), Red (I'm lost). Students display during teaching. Instant gauge of the room.
+
+6. **Hinge Questions** — A carefully designed multiple-choice question at a critical point in the lesson. Each wrong answer reveals a specific misconception. If >80% get it right, move on. If not, re-teach.
+
+7. **Cold Calling / No-Hands-Up** — Call on students randomly (use lollipop sticks or a random name generator). Keeps everyone accountable. Combine with think time (3-5 seconds).
+
+8. **Thumbs Up/Down/Sideways** — Quick check: "Show me how confident you are." Fast but surface-level.
+
+9. **Muddiest Point** — "What is the ONE thing you are most confused about right now?" Quick written response mid-lesson.
+
+10. **Pause-and-Reflect** — Every 10-15 minutes, pause: "Turn to your partner and summarise what we have covered so far." Identifies gaps in real time.
+
+### After the Lesson (Evaluating Understanding)
+11. **Exit Tickets** — 1-2 questions on a slip of paper (or digital: Google Forms, SLS). Done in the last 3 minutes. Sort into 3 piles for next lesson planning.
+
+12. **3-2-1 Summariser** — 3 things I learned / 2 things I found interesting / 1 question I still have.
+
+13. **Two Stars and a Wish** — Peer assessment: identify 2 strengths and 1 area for improvement.
+
+14. **Gallery Walk + Sticky Notes** — Students display work around the room. Peers rotate and leave feedback on sticky notes.
+
+15. **Self-Assessment Checklists** — Students rate themselves against success criteria before submission. Develops metacognition.
+
+### Digital Tools for Formative Assessment
+- **Padlet** — Collaborative wall for responses, visible to whole class
+- **Mentimeter** — Live polls, word clouds, quizzes
+- **Google Forms** — Auto-graded quizzes with instant feedback
+- **SLS (Student Learning Space)** — Built-in formative assessment tools
+- **Kahoot / Quizizz** — Gamified quizzes (use sparingly — engagement ≠ learning)
+
+Quick Decision Guide
+---------------------
+- Need a quick pulse check? → Thumbs / Traffic lights
+- Need to see specific answers? → Mini-whiteboards / Hinge questions
+- Need to inform tomorrow's lesson? → Exit tickets
+- Need students to reflect? → 3-2-1 / Self-assessment
+- Need peer input? → Two Stars and a Wish / Gallery Walk`
+      },
+      {
+        title: 'Building an AfL Culture — E21CC & STP Links',
+        type: 'note',
+        content: `Building an AfL Culture — E21CC & STP Links
+==============================================
+
+STP Alignment
+--------------
+Formative assessment is deeply embedded in the Singapore Teaching Practice:
+
+**Area 2 — Lesson Enactment**
+- Interaction patterns: Questioning techniques (cold calling, hinge questions) create productive classroom discourse
+- Classroom discourse: Think-Pair-Share and structured discussions make thinking visible
+
+**Area 3 — Monitoring & Feedback**
+- Formative assessment: The entire framework maps here — exit tickets, mini-whiteboards, observations
+- Effective feedback: Specific, timely, and forward-looking (Wiliam's Strategy 3)
+- Differentiated support: Formative data enables responsive differentiation (exit ticket sorting → tiered groups)
+
+**Area 4 — Positive Learning Culture**
+- Safe environment: Low-stakes assessment reduces anxiety and encourages risk-taking
+- Student agency: Self-assessment and peer feedback develop learner autonomy
+
+Building Student Self-Assessment Habits
+-----------------------------------------
+1. **Model it first** — Show students how YOU would assess a piece of work against success criteria
+2. **Use exemplars** — "Here is a strong example and a weaker example. What makes them different?"
+3. **Start with peer assessment** — It is easier to assess someone else's work before your own
+4. **Gradually release** — Move from teacher-led → peer → self over a term
+5. **Make it routine** — Build self-assessment into every lesson or weekly cycle
+
+Peer Feedback Protocols
+-------------------------
+- **TAG Feedback** — Tell something good / Ask a question / Give a suggestion
+- **Warm & Cool Feedback** — Warm: what works well / Cool: what could be improved
+- **Critical Friends** — Structured protocol: Present → Clarify → Feedback → Reflect
+- **Gallery Walk Feedback** — Written, anonymous feedback on sticky notes during gallery walks
+
+E21CC Alignment
+----------------
+- **Critical Thinking** — Self-assessment requires evaluative thinking against criteria
+- **Creative Thinking** — Open-ended formative tasks (muddiest point, predictions) encourage creative responses
+- **Communication** — Think-Pair-Share, peer feedback, and class discussions develop communication skills
+- **Collaboration** — Peer assessment and collaborative error analysis build teamwork
+- **Social Connectedness** — A low-stakes, feedback-rich culture builds trust and belonging
+- **Self-Regulation** — Self-assessment checklists and goal-setting develop metacognitive self-regulation (connects directly to Beatty's GROW framework and Schraw & Dennison's MAI)
+
+Practical Tips for Implementation
+-----------------------------------
+1. Start with exit tickets — easiest entry point, highest impact
+2. Use no-hands-up from Day 1 of the term — set the expectation early
+3. Invest in a class set of mini-whiteboards (or laminated A4 sheets)
+4. Give comments WITHOUT grades initially — grades shut down learning (Butler, 1988)
+5. Build 5 minutes of reflection into every lesson — it is not wasted time
+6. Share your formative data with students — make the learning visible
+
+Common Mistakes to Avoid
+--------------------------
+- Using formative assessment data for grading (defeats the purpose)
+- Asking "Does everyone understand?" (useless — students say yes reflexively)
+- Over-relying on digital tools (low-tech often works better)
+- Collecting data but not acting on it — formative assessment is only formative if it changes what happens next
+
+Resources
+----------
+- Black, P. & Wiliam, D. (1998) — "Inside the Black Box"
+- Wiliam, D. & Leahy, S. (2015) — "Embedding Formative Assessment"
+- Hattie, J. (2009) — "Visible Learning"
+- EEF Guidance Report — "Teacher Feedback to Improve Pupil Learning"
+- NIE Singapore — Assessment Literacy professional development programmes
+- STP Guide — Area 3: Monitoring & Feedback`
+      }
+    ]
   }
 ];
 
