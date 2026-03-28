@@ -73,13 +73,6 @@ const CCA_CATEGORIES = [
   { key: 'clubs', label: 'Clubs & Societies', color: '#3b82f6' },
 ];
 
-const DEFAULT_E21CC_MAPPING = {
-  sports: ['collaboration', 'selfRegulation', 'criticalThinking'],
-  performing: ['creativeThinking', 'communication', 'collaboration'],
-  uniformed: ['selfRegulation', 'socialConnectedness', 'collaboration'],
-  clubs: ['criticalThinking', 'communication', 'creativeThinking'],
-};
-
 const E21CC_DIM_META = {
   criticalThinking: { label: 'Critical Thinking', color: '#6366f1' },
   creativeThinking: { label: 'Creative Thinking', color: '#8b5cf6' },
@@ -242,7 +235,6 @@ export function render(container) {
 }
 
 function renderCCAItem(cca, cat) {
-  const e21ccKeys = cca.e21ccMapping || DEFAULT_E21CC_MAPPING[cca.category] || [];
   const safetyItems = cca.safetyChecklist || DEFAULT_SAFETY[cca.category] || [];
   return `
     <div class="cca-list-item" data-id="${cca.id}" data-cat="${cca.category}" style="flex-direction:column;align-items:stretch;">
@@ -253,13 +245,6 @@ function renderCCAItem(cca, cat) {
           <button class="btn btn-secondary btn-sm cca-edit-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;">Edit</button>
           <button class="btn btn-secondary btn-sm cca-delete-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;color:var(--danger,#ef4444);">Delete</button>
         </div>
-      </div>
-      <!-- E21CC badges -->
-      <div style="margin-top:8px;">
-        ${e21ccKeys.map(k => {
-          const meta = E21CC_DIM_META[k];
-          return meta ? `<span class="cca-badge" style="background:${meta.color}15;color:${meta.color};">${meta.label}</span>` : '';
-        }).join('')}
       </div>
       <!-- Action row -->
       <div class="cca-action-row">
@@ -289,7 +274,20 @@ function renderCCAItem(cca, cat) {
       <!-- Training section -->
       <div class="cca-expand-section" id="training-${cca.id}">
         <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Training Suggestions</div>
-        <div class="cca-training-output" id="training-output-${cca.id}">Click "Suggest Training" to get AI-generated session ideas for ${escHtml(cca.name)}.</div>
+        <div class="cca-training-config" id="training-config-${cca.id}" style="margin-top:8px;">
+          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:6px;">What E21CC focus for this session?</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+            ${Object.entries(E21CC_DIM_META).map(([key, meta]) =>
+              `<label style="display:flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.75rem;cursor:pointer;color:var(--ink-muted);transition:all 0.15s;">
+                <input type="checkbox" class="training-e21cc-cb" value="${key}" style="accent-color:${meta.color};" />
+                ${meta.label}
+              </label>`
+            ).join('')}
+          </div>
+          <p style="font-size:0.75rem;color:var(--ink-faint);margin:0 0 8px;">Select 1-2 competencies to focus on. All CCAs can develop any competency — it depends on enactment.</p>
+          <button class="btn btn-sm btn-primary cca-generate-training-btn" data-cca="${cca.id}">Generate Training Plan</button>
+        </div>
+        <div class="cca-training-output" id="training-output-${cca.id}" style="display:none;"></div>
       </div>
       <!-- Notes section -->
       <div class="cca-expand-section" id="notes-${cca.id}">
