@@ -480,8 +480,12 @@ export function renderDetail(container, { id }) {
           return `<tr>
             <td>${escapeHtml(s.name)}</td>
             ${E21CC_DIMS.map(d => {
-              const diff = (latest[d.key] || 0) - (first[d.key] || 0);
-              return `<td>${latest[d.key] || 0} (${diff >= 0 ? '+' : ''}${diff})</td>`;
+              const latestVal = typeof latest[d.key] === 'string' ? latest[d.key] : 'developing';
+              const firstVal = typeof first[d.key] === 'string' ? first[d.key] : 'developing';
+              const latestMeta = levelMeta(latestVal);
+              const firstMeta = levelMeta(firstVal);
+              const diff = latestMeta.value - firstMeta.value;
+              return `<td>${latestMeta.short} (${diff >= 0 ? '+' : ''}${diff})</td>`;
             }).join('')}
             <td>${h.length}</td>
           </tr>`;
@@ -619,9 +623,12 @@ function renderNotesTab(cls) {
 let _sparkId = 0;
 function renderSparkline(history, key, color, width = 100, height = 28) {
   if (!history || history.length < 2) return `<span style="font-size:0.6875rem;color:var(--ink-faint);">Not enough data</span>`;
-  const vals = history.map(h => h[key] || 0);
+  const vals = history.map(h => {
+    const raw = h[key];
+    return typeof raw === 'string' ? levelToValue(raw) : (raw || 1);
+  });
   const timestamps = history.map(h => h.ts);
-  const min = Math.min(...vals), max = Math.max(...vals);
+  const min = 1, max = 4;
   const range = max - min || 1;
   const step = width / (vals.length - 1);
   const points = vals.map((v, i) => `${i * step},${height - ((v - min) / range) * (height - 4) - 2}`).join(' ');
@@ -639,10 +646,12 @@ function renderSparkline(history, key, color, width = 100, height = 28) {
     const date = new Date(timestamps[i]).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
     const dimInfo = E21CC_DIMS.find(d => d.key === key);
     const tipLabel = dimInfo ? dimInfo.short : key;
-    return `<circle cx="${cx}" cy="${cy}" r="6" fill="transparent" stroke="none" data-tip="${tipLabel}: ${v} (${date})"/>
+    const lvLabel = (E21CC_LEVELS.find(l => l.value === v) || E21CC_LEVELS[0]).short;
+    return `<circle cx="${cx}" cy="${cy}" r="6" fill="transparent" stroke="none" data-tip="${tipLabel}: ${lvLabel} (${date})"/>
             <circle cx="${cx}" cy="${cy}" r="2" fill="${color}" opacity="0" class="hover-dot"/>`;
   }).join('');
 
+  const lastMeta = E21CC_LEVELS.find(l => l.value === last) || E21CC_LEVELS[0];
   return `
     <div style="display:flex;align-items:center;gap:var(--sp-2);position:relative;" id="${sid}">
       <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;overflow:visible;">
@@ -691,7 +700,7 @@ function renderTrendsTab(cls) {
       </div>`;
   }
 
-  // Class-level averages over time
+  // Class-level averages over time (using numeric values 1-4 for sparkline)
   const allTimestamps = [...new Set(withHistory.flatMap(s => s.e21ccHistory.map(h => h.ts)))].sort();
   const classHistory = allTimestamps.map(ts => {
     const sums = {};
@@ -701,12 +710,15 @@ function renderTrendsTab(cls) {
       const snapshot = (s.e21ccHistory || []).filter(h => h.ts <= ts);
       if (snapshot.length > 0) {
         const latest = snapshot[snapshot.length - 1];
-        E21CC_DIMS.forEach(d => { sums[d.key] += latest[d.key] || 0; });
+        E21CC_DIMS.forEach(d => {
+          const raw = latest[d.key];
+          sums[d.key] += typeof raw === 'string' ? levelToValue(raw) : (raw || 1);
+        });
         count++;
       }
     });
     const entry = { ts };
-    E21CC_DIMS.forEach(d => { entry[d.key] = count ? Math.round(sums[d.key] / count) : 0; });
+    E21CC_DIMS.forEach(d => { entry[d.key] = count ? Math.round(sums[d.key] / count) : 1; });
     return entry;
   });
 
@@ -843,21 +855,32 @@ function showAddStudentModal(classId, onUpdate) {
 }
 
 function showEditE21CCModal(classId, student, onUpdate) {
+  const currentLevels = student.e21cc || {};
   const { backdrop, close } = openModal({
     title: `E21CC — ${student.name}`,
+    width: 520,
     body: `
       <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-2); line-height: 1.5;">
-        Adjust competency levels (0–100) based on your observations and assessments.
+        Set competency levels based on your observations and assessments.
       </p>
       ${E21CC_DIMS.map(d => `
       <div class="input-group">
         <label class="input-label" style="color: ${d.color};">${d.label}</label>
-        <div style="display: flex; align-items: center; gap: var(--sp-3);">
-          <input type="range" id="e21cc-${d.key}" min="0" max="100" value="${student.e21cc?.[d.key] || 50}" style="flex:1;" />
-          <span id="e21cc-${d.key}-val" style="width: 32px; text-align: right; font-weight: 600; font-size: 0.875rem;">${student.e21cc?.[d.key] || 50}</span>
+        <div style="display:flex;gap:var(--sp-2);">
+          ${E21CC_LEVELS.map(lv => {
+            const checked = (currentLevels[d.key] || 'developing') === lv.key;
+            return `<label style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px 4px;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;border:2px solid ${checked ? lv.color : 'var(--border)'};background:${checked ? lv.color + '15' : 'transparent'};color:${checked ? lv.color : 'var(--ink-muted)'};transition:all 0.15s;">
+              <input type="radio" name="e21cc-${d.key}" value="${lv.key}" ${checked ? 'checked' : ''} style="display:none;" />
+              ${lv.short}
+            </label>`;
+          }).join('')}
         </div>
       </div>
       `).join('')}
+      <div class="input-group" style="margin-top:var(--sp-4);">
+        <label class="input-label">Observation Note (optional)</label>
+        <textarea class="input" id="e21cc-observation" rows="3" placeholder="Brief note about this student's competency development..." style="resize:vertical;"></textarea>
+      </div>
     `,
     footer: `
       <button class="btn btn-secondary" data-action="cancel">Cancel</button>
@@ -865,18 +888,46 @@ function showEditE21CCModal(classId, student, onUpdate) {
     `
   });
 
-  // Live update values
-  E21CC_DIMS.map(d => d.key).forEach(key => {
-    const slider = backdrop.querySelector(`#e21cc-${key}`);
-    const valSpan = backdrop.querySelector(`#e21cc-${key}-val`);
-    slider?.addEventListener('input', () => { valSpan.textContent = slider.value; });
+  // Style radio pills on change
+  backdrop.querySelectorAll('input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const group = backdrop.querySelectorAll(`input[name="${radio.name}"]`);
+      group.forEach(r => {
+        const label = r.closest('label');
+        const lv = E21CC_LEVELS.find(l => l.key === r.value);
+        if (r.checked) {
+          label.style.borderColor = lv.color;
+          label.style.background = lv.color + '15';
+          label.style.color = lv.color;
+        } else {
+          label.style.borderColor = 'var(--border)';
+          label.style.background = 'transparent';
+          label.style.color = 'var(--ink-muted)';
+        }
+      });
+    });
   });
 
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
   backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
     const e21cc = {};
-    E21CC_DIMS.forEach(d => { e21cc[d.key] = parseInt(backdrop.querySelector(`#e21cc-${d.key}`).value); });
-    Store.updateStudent(classId, student.id, { e21cc });
+    E21CC_DIMS.forEach(d => {
+      const checked = backdrop.querySelector(`input[name="e21cc-${d.key}"]:checked`);
+      e21cc[d.key] = checked ? checked.value : (currentLevels[d.key] || 'developing');
+    });
+    // Build observation if note provided
+    const noteText = backdrop.querySelector('#e21cc-observation').value.trim();
+    const updateData = { e21cc };
+    if (noteText) {
+      const changedDims = E21CC_DIMS.filter(d => e21cc[d.key] !== (currentLevels[d.key] || 'developing')).map(d => d.key);
+      updateData.observations = [{
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        text: noteText,
+        tags: changedDims.length > 0 ? changedDims : E21CC_DIMS.map(d => d.key),
+        ts: Date.now()
+      }];
+    }
+    Store.updateStudent(classId, student.id, updateData);
     showToast('E21CC updated', 'success');
     close();
     onUpdate();
@@ -893,7 +944,7 @@ function showBatchE21CCModal(classId, onUpdate) {
     width: 560,
     body: `
       <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">
-        Adjust all students by the same amount. Use this after a class activity to shift competency levels up or down.
+        Set a level for each dimension to apply to all students. Choose "(No change)" to skip a dimension.
       </p>
       <div class="input-group">
         <label class="input-label">Activity / Reason</label>
@@ -901,15 +952,15 @@ function showBatchE21CCModal(classId, onUpdate) {
       </div>
       ${E21CC_DIMS.map(d => `
       <div class="input-group">
-        <label class="input-label" style="color:${d.color};">${d.label} Adjustment</label>
-        <div style="display:flex;align-items:center;gap:var(--sp-3);">
-          <input type="range" id="batch-${d.key}" min="-20" max="20" value="0" style="flex:1;" />
-          <span id="batch-${d.key}-val" style="width:40px;text-align:right;font-weight:600;font-size:0.875rem;">0</span>
-        </div>
+        <label class="input-label" style="color:${d.color};">${d.label}</label>
+        <select class="input" id="batch-${d.key}">
+          <option value="">(No change)</option>
+          ${E21CC_LEVELS.map(lv => `<option value="${lv.key}">${lv.label}</option>`).join('')}
+        </select>
       </div>
       `).join('')}
       <div style="background:var(--bg-subtle);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-md);font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">
-        This will adjust <strong>${cls.students.length} students</strong>. Values are clamped between 0–100.
+        This will update <strong>${cls.students.length} students</strong> for any dimensions where a level is selected.
       </div>
     `,
     footer: `
@@ -918,32 +969,27 @@ function showBatchE21CCModal(classId, onUpdate) {
     `
   });
 
-  // Live update values
-  E21CC_DIMS.map(d => d.key).forEach(key => {
-    const slider = backdrop.querySelector(`#batch-${key}`);
-    const valSpan = backdrop.querySelector(`#batch-${key}-val`);
-    slider?.addEventListener('input', () => {
-      const v = parseInt(slider.value);
-      valSpan.textContent = (v > 0 ? '+' : '') + v;
-    });
-  });
-
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
   backdrop.querySelector('[data-action="apply"]').addEventListener('click', () => {
-    const deltas = {};
-    E21CC_DIMS.forEach(d => { deltas[d.key] = parseInt(backdrop.querySelector(`#batch-${d.key}`).value); });
+    const newLevels = {};
+    E21CC_DIMS.forEach(d => {
+      const val = backdrop.querySelector(`#batch-${d.key}`).value;
+      if (val) newLevels[d.key] = val;
+    });
 
-    if (E21CC_DIMS.every(d => deltas[d.key] === 0)) {
+    if (Object.keys(newLevels).length === 0) {
       showToast('No changes to apply.', 'danger');
       return;
     }
 
-    const clamp = (v) => Math.max(0, Math.min(100, v));
     const freshCls = Store.getClass(classId);
     const now = Date.now();
     const updatedStudents = (freshCls.students || []).map(s => {
-      const newE21cc = {};
-      E21CC_DIMS.forEach(d => { newE21cc[d.key] = clamp((s.e21cc?.[d.key] || 50) + deltas[d.key]); });
+      const newE21cc = { ...(s.e21cc || {}) };
+      E21CC_DIMS.forEach(d => {
+        if (newLevels[d.key]) newE21cc[d.key] = newLevels[d.key];
+        else if (!newE21cc[d.key]) newE21cc[d.key] = 'developing';
+      });
       const history = [...(s.e21ccHistory || [])];
       history.push({ ts: now, ...newE21cc });
       if (history.length > 20) history.splice(0, history.length - 20);
