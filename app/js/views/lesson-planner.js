@@ -794,7 +794,7 @@ const AI_TOOLS = [
   { id: 'ai-differentiation-btn', label: 'Differentiate', icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>', color: '', cat: 'planning', eee: 'differentiation' },
   { id: 'ai-discussion-btn', label: 'Discussion', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>', color: '', cat: 'planning', eee: 'discussionPrompts' },
   // Enactment Enhancements (filtered by EEE selection)
-  { id: 'ai-youtube-btn', label: 'YouTube', icon: '<polygon points="5 3 19 12 5 21 5 3"/>', color: '#ff0000', cat: 'enactment', eee: 'youtubeVideos' },
+  { id: 'ai-youtube-btn', label: 'YouTube', icon: '<polygon points="5 3 19 12 5 21 5 3"/>', color: '#ff0000', cat: 'core', eee: 'youtubeVideos' },
   { id: 'ai-simulations-btn', label: 'Simulations', icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>', color: '#8b5cf6', cat: 'enactment', eee: 'simulations' },
   { id: 'ai-worksheet-btn', label: 'Worksheet', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>', color: '', cat: 'enactment', eee: 'worksheet' },
   { id: 'ai-external-btn', label: 'Resources', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>', color: '', cat: 'enactment', eee: 'externalLinks' },
@@ -2042,22 +2042,22 @@ Examples: Math↔Science (graphs, measurement), English↔History (source analys
     const simCategories = 'Physics: pendulum, waves, specific-heat, electromagnets, lenses, density; Chemistry: titration, qualitative-analysis, electrolysis, rates-of-reaction, gas-tests, salts, chromatography; Biology: photosynthesis, diffusion, osmosis, enzyme-activity, microscopy, food-tests; Interactive: molecular-viewer, molecular-builder, particle-dynamics, design-process, kitchen-layout, stave-notation, rhythm-tool';
 
     try {
-      const result = await sendChat([{ role: 'user', content: `Based on this lesson plan:\n\n${planText}\n\nSubject: ${cls.subject || 'General'}, Level: ${cls.level || 'Secondary'}
+      const result = await sendChat([{ role: 'user', content: `Lesson plan:\n\n${planText}\n\nSubject: ${cls.subject || 'General'}, Level: ${cls.level || 'Secondary'}
 
-AVAILABLE RESOURCES:
-- Knowledge Base uploads: ${kbTitles || 'None uploaded'}
+Available resources:
+- Knowledge Base: ${kbTitles || 'None uploaded'}
 - Stimulus Library: ${stimTitles || 'None saved'}
 - Built-in Simulations: ${simCategories}
 
-Recommend the most relevant resources for this lesson:
-1. Which built-in simulations would enhance this lesson? (Only recommend if genuinely relevant)
-2. Which Knowledge Base items might be useful? (Match by topic, not just subject)
-3. Which external resources (SLS, MOE, open platforms) would complement the lesson?
-4. Suggest any stimulus material ideas if none exist yet
-
-Be specific and practical. Only recommend what truly fits this lesson.` }], {
+Recommend the top 3-5 resources for this lesson. Be specific about WHEN and HOW to use each one.` }], {
         trackLabel: 'resourceRecommender',
-        systemPrompt: 'You are a Singapore teaching resource specialist. Recommend specific, relevant resources that enhance lesson delivery. Be selective — quality over quantity. Format with clear sections and brief explanations of why each resource is relevant.',
+        systemPrompt: `You are a Singapore teaching resource curator. Your job is to recommend the TOP 3-5 most impactful resources for this specific lesson. Be surgical — each recommendation must have:
+1. Resource name and type (simulation, video, worksheet, external tool)
+2. WHEN to use it in the lesson (e.g., "Use during the Explore phase, ~15 min in")
+3. HOW to set it up (1-2 sentences of practical setup instructions)
+4. WHY it matters (1 sentence connecting to the lesson objective)
+
+Format each as a card-like block with clear headers. No fluff, no catalogs.`,
         temperature: 0.5, maxTokens: 2048
       });
       setComponent('resourceRec', result, cls.subject || 'Resources');

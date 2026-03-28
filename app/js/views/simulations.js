@@ -252,17 +252,28 @@ function openOverlay(container, title, opts) {
   `;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'flex:1;border:none;width:100%;background:#1e1f2b;';
+  iframe.style.cssText = 'flex:1;border:none;width:100%;height:100%;background:#1e1f2b;';
   if (opts.src) iframe.src = opts.src;
   else if (opts.srcdoc) iframe.srcdoc = opts.srcdoc;
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
 
-  // Inject layout overrides into labsim simulations after load
+  // Inject responsive CSS + layout overrides into simulations after load
   iframe.addEventListener('load', () => {
     try {
-      const doc = iframe.contentDocument;
-      if (!doc || !doc.querySelector('.practical-layout')) return;
-      injectSimLayoutOverrides(doc);
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      // Responsive base styles for all sim iframes
+      const style = doc.createElement('style');
+      style.textContent = `
+        body { margin: 0; overflow-x: hidden; width: 100%; }
+        * { box-sizing: border-box; }
+        canvas { max-width: 100%; height: auto !important; }
+        .guide-panel, .data-panel, [class*="panel"] { min-width: 0; overflow-wrap: break-word; }
+      `;
+      doc.head.appendChild(style);
+      // Additional layout overrides for labsim practicals
+      if (doc.querySelector('.practical-layout')) {
+        injectSimLayoutOverrides(doc);
+      }
     } catch (e) { /* cross-origin or sandbox restriction */ }
   });
 
