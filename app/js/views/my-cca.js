@@ -150,7 +150,7 @@ const CCA_STYLES = `
   .leaps-grade-value { font-size: 1.5rem; font-weight: 800; }
   .leaps-grade-desc { font-size: 0.75rem; color: var(--ink-muted); margin-top: 4px; }
 
-  .cca-expand-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border, #e2e5ea); display: none; }
+  .cca-expand-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border, #e2e5ea); display: none; overflow: visible; }
   .cca-expand-section.visible { display: block; }
   .cca-action-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
   .cca-action-btn { font-size: 0.6875rem; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border, #e2e5ea); background: none; color: var(--ink-muted); cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; }
@@ -162,12 +162,17 @@ const CCA_STYLES = `
   .dark .cca-reminders-bar { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); }
   .cca-reminder-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 0.8125rem; border-bottom: 1px solid var(--border-light, #f0f0f4); }
   .cca-reminder-item:last-child { border-bottom: none; }
-  .cca-training-output { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--bg-subtle, #f8f9fa); font-size: 0.8125rem; line-height: 1.6; color: var(--ink-muted); }
+  .cca-training-output { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--bg-subtle, #f8f9fa); font-size: 0.8125rem; line-height: 1.6; color: var(--ink-muted); word-break: break-word; overflow-wrap: break-word; overflow-y: auto; }
+  .cca-training-output h3, .cca-training-output h4 { color: var(--ink); }
+  .cca-training-output ul { padding-left: 1.5em; }
+  .cca-training-output li { margin-bottom: 2px; }
   .dark .cca-training-output { background: var(--bg-subtle, #16161e); }
 
-  .cca-category-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s; }
+  .cca-category-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s; cursor: pointer; }
   .cca-category-card:hover { box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.06)); }
+  .cca-category-card.selected { border-color: var(--accent); box-shadow: var(--shadow-md); }
   .dark .cca-category-card { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); }
+  .dark .cca-category-card.selected { border-color: var(--accent); }
   .cca-chevron { transition: transform 0.2s; }
   .cca-chevron.open { transform: rotate(180deg); }
 `;
@@ -295,6 +300,118 @@ function renderCCAItem(cca, cat) {
   `;
 }
 
+/* ── Simple markdown renderer for training output ── */
+function renderCCAMarkdown(md) {
+  if (!md) return '';
+  let html = escHtml(md);
+  // Headers
+  html = html.replace(/^### (.+)$/gm, '<h4 style="font-size:0.875rem;font-weight:700;margin:0.8em 0 0.3em;">$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3 style="font-size:0.9375rem;font-weight:700;margin:1em 0 0.4em;">$1</h3>');
+  html = html.replace(/^# (.+)$/gm, '<h3 style="font-size:1rem;font-weight:700;margin:1em 0 0.4em;">$1</h3>');
+  // Bold and italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Unordered lists
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul style="padding-left:1.5em;margin:0.3em 0;">$1</ul>');
+  // Ordered lists
+  html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+  // Paragraphs
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  html = '<p>' + html + '</p>';
+  html = html.replace(/<p>\s*<\/p>/g, '');
+  html = html.replace(/<p>\s*(<h[1-4]>)/g, '$1');
+  html = html.replace(/(<\/h[1-4]>)\s*<\/p>/g, '$1');
+  html = html.replace(/<p>\s*(<ul)/g, '$1');
+  html = html.replace(/(<\/ul>)\s*<\/p>/g, '$1');
+  return html;
+}
+
+/* ── Bind event listeners for CCA items inside expanded area ── */
+function bindExpandedAreaListeners(content, area) {
+  // Per-category add buttons
+  area.querySelectorAll('[data-add-to]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showCCAForm(content, null, btn.dataset.addTo);
+    });
+  });
+
+  // Edit
+  area.querySelectorAll('.cca-edit-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const list = getCCAList();
+      const cca = list.find(c => c.id === btn.dataset.id);
+      if (cca) showCCAForm(content, cca);
+    });
+  });
+
+  // Delete
+  area.querySelectorAll('.cca-delete-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const ok = await confirmDialog('Delete this CCA?', 'This action cannot be undone.');
+      if (!ok) return;
+      const list = getCCAList().filter(c => c.id !== btn.dataset.id);
+      saveCCAList(list);
+      showToast('CCA deleted');
+      renderCCAList(content, list);
+    });
+  });
+
+  // Toggle expandable sections
+  area.querySelectorAll('.cca-action-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const action = btn.dataset.action;
+      const ccaId = btn.dataset.cca;
+      const section = content.querySelector(`#${action}-${ccaId}`);
+      if (section) section.classList.toggle('visible');
+    });
+  });
+
+  // Training suggestions (AI-powered)
+  area.querySelectorAll('[data-action="training"]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const ccaId = btn.dataset.cca;
+      const list = getCCAList();
+      const cca = list.find(c => c.id === ccaId);
+      if (!cca) return;
+      const cat = CCA_CATEGORIES.find(c => c.key === cca.category);
+      const outputEl = content.querySelector(`#training-output-${ccaId}`);
+      if (!outputEl || outputEl.dataset.loaded === 'true') return;
+
+      outputEl.innerHTML = '<em>Generating suggestions...</em>';
+      try {
+        const text = await sendChat(
+          [{ role: 'user', content: `Suggest a training session plan for a secondary school ${cat?.label || 'CCA'} CCA called "${cca.name}". Include: warm-up routine (5-10 min), main activity structure (30-40 min), cool-down/debrief (5-10 min), and 2-3 skill progression ideas. Keep it concise and practical.` }],
+          { trackLabel: 'ccaTraining', temperature: 0.7, maxTokens: 1024 }
+        );
+        outputEl.innerHTML = renderCCAMarkdown(text);
+        outputEl.dataset.loaded = 'true';
+      } catch (err) {
+        outputEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}. Check your API key in Settings.</span>`;
+      }
+    });
+  });
+
+  // Save notes on blur
+  area.querySelectorAll('.cca-notes-area').forEach(textarea => {
+    textarea.addEventListener('blur', () => {
+      const ccaId = textarea.dataset.cca;
+      const list = getCCAList();
+      const cca = list.find(c => c.id === ccaId);
+      if (cca) {
+        cca.notes = textarea.value;
+        saveCCAList(list);
+      }
+    });
+  });
+}
+
 function renderCCAList(content, ccaList) {
   content.innerHTML = `
     <div class="cca-card">
@@ -333,127 +450,72 @@ function renderCCAList(content, ccaList) {
       </div>
     </div>
 
-    <!-- Category Accordion Cards -->
-    ${CCA_CATEGORIES.map(cat => {
-      const ccasInCategory = ccaList.filter(c => c.category === cat.key);
-      const count = ccasInCategory.length;
-      return `
-        <div class="cca-category-card" data-cat="${cat.key}" style="border-left: 4px solid ${cat.color};">
-          <div class="cca-cat-header" style="cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 16px;">
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: ${cat.color}12; color: ${cat.color}; display: flex; align-items: center; justify-content: center;">
-              ${CCA_CAT_ICONS[cat.key] || ''}
+    <!-- Category Grid (2x2) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      ${CCA_CATEGORIES.map(cat => {
+        const ccasInCategory = ccaList.filter(c => c.category === cat.key);
+        const count = ccasInCategory.length;
+        return `
+          <div class="cca-category-card" data-cat="${cat.key}" style="border-left: 4px solid ${cat.color};">
+            <div class="cca-cat-header" style="display: flex; align-items: center; gap: 12px; padding: 16px;">
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: ${cat.color}12; color: ${cat.color}; display: flex; align-items: center; justify-content: center;">
+                ${CCA_CAT_ICONS[cat.key] || ''}
+              </div>
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 0.9375rem; color: var(--ink);">${cat.label}</div>
+                <div style="font-size: 0.8125rem; color: var(--ink-muted);">${count} CCA${count !== 1 ? 's' : ''}</div>
+              </div>
+              <svg class="cca-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div style="flex: 1;">
-              <div style="font-weight: 700; font-size: 0.9375rem; color: var(--ink);">${cat.label}</div>
-              <div style="font-size: 0.8125rem; color: var(--ink-muted);">${count} CCA${count !== 1 ? 's' : ''}</div>
-            </div>
-            <svg class="cca-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
-          <div class="cca-cat-body" style="display: none; padding: 0 16px 16px;">
-            ${ccasInCategory.length === 0
-              ? '<div style="font-size:0.8125rem;color:var(--ink-faint);text-align:center;padding:12px 0;">No CCAs in this category yet.</div>'
-              : ccasInCategory.map(cca => renderCCAItem(cca, cat)).join('')}
-            <button class="btn btn-ghost btn-sm" data-add-to="${cat.key}" style="margin-top: 8px;">+ Add ${cat.label.split(' ')[0]} CCA</button>
-          </div>
-        </div>
-      `;
-    }).join('')}
+        `;
+      }).join('')}
+    </div>
+    <div id="cca-expanded-area"></div>
   `;
 
   // Add CCA button (global)
   content.querySelector('#add-cca-btn')?.addEventListener('click', () => showCCAForm(content, null));
 
-  // Category accordion toggle
-  content.querySelectorAll('.cca-cat-header').forEach(header => {
-    header.addEventListener('click', () => {
-      const card = header.closest('.cca-category-card');
-      const body = card.querySelector('.cca-cat-body');
-      const chevron = header.querySelector('.cca-chevron');
-      const isOpen = body.style.display !== 'none';
-      body.style.display = isOpen ? 'none' : 'block';
-      chevron.classList.toggle('open', !isOpen);
-    });
-  });
+  // Category grid click — expand below the grid
+  let selectedCatKey = null;
+  content.querySelectorAll('.cca-category-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const catKey = card.dataset.cat;
+      const expandedArea = content.querySelector('#cca-expanded-area');
+      const allCards = content.querySelectorAll('.cca-category-card');
 
-  // Per-category add buttons
-  content.querySelectorAll('[data-add-to]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      showCCAForm(content, null, btn.dataset.addTo);
-    });
-  });
-
-  // Edit
-  content.querySelectorAll('.cca-edit-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const list = getCCAList();
-      const cca = list.find(c => c.id === btn.dataset.id);
-      if (cca) showCCAForm(content, cca);
-    });
-  });
-
-  // Delete
-  content.querySelectorAll('.cca-delete-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const ok = await confirmDialog('Delete this CCA?', 'This action cannot be undone.');
-      if (!ok) return;
-      const list = getCCAList().filter(c => c.id !== btn.dataset.id);
-      saveCCAList(list);
-      showToast('CCA deleted');
-      renderCCAList(content, list);
-    });
-  });
-
-  // Toggle expandable sections
-  content.querySelectorAll('.cca-action-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const action = btn.dataset.action;
-      const ccaId = btn.dataset.cca;
-      const section = content.querySelector(`#${action}-${ccaId}`);
-      if (section) section.classList.toggle('visible');
-    });
-  });
-
-  // Training suggestions (AI-powered)
-  content.querySelectorAll('[data-action="training"]').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const ccaId = btn.dataset.cca;
-      const list = getCCAList();
-      const cca = list.find(c => c.id === ccaId);
-      if (!cca) return;
-      const cat = CCA_CATEGORIES.find(c => c.key === cca.category);
-      const outputEl = content.querySelector(`#training-output-${ccaId}`);
-      if (!outputEl || outputEl.dataset.loaded === 'true') return;
-
-      outputEl.innerHTML = '<em>Generating suggestions...</em>';
-      try {
-        const text = await sendChat(
-          [{ role: 'user', content: `Suggest a training session plan for a secondary school ${cat?.label || 'CCA'} CCA called "${cca.name}". Include: warm-up routine (5-10 min), main activity structure (30-40 min), cool-down/debrief (5-10 min), and 2-3 skill progression ideas. Keep it concise and practical.` }],
-          { trackLabel: 'ccaTraining', temperature: 0.7, maxTokens: 1024 }
-        );
-        outputEl.innerHTML = text.replace(/\n/g, '<br/>');
-        outputEl.dataset.loaded = 'true';
-      } catch (err) {
-        outputEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}. Check your API key in Settings.</span>`;
+      if (selectedCatKey === catKey) {
+        // Collapse
+        selectedCatKey = null;
+        allCards.forEach(c => { c.classList.remove('selected'); c.querySelector('.cca-chevron')?.classList.remove('open'); });
+        expandedArea.innerHTML = '';
+        return;
       }
+
+      selectedCatKey = catKey;
+      allCards.forEach(c => { c.classList.remove('selected'); c.querySelector('.cca-chevron')?.classList.remove('open'); });
+      card.classList.add('selected');
+      card.querySelector('.cca-chevron')?.classList.add('open');
+
+      const cat = CCA_CATEGORIES.find(c => c.key === catKey);
+      const ccasInCategory = getCCAList().filter(c => c.category === catKey);
+      expandedArea.innerHTML = `
+        <div class="cca-card" style="border-left:4px solid ${cat.color};">
+          <div style="font-weight:700;font-size:0.9375rem;color:var(--ink);margin-bottom:12px;">${cat.label}</div>
+          ${ccasInCategory.length === 0
+            ? '<div style="font-size:0.8125rem;color:var(--ink-faint);text-align:center;padding:12px 0;">No CCAs in this category yet.</div>'
+            : ccasInCategory.map(cca => renderCCAItem(cca, cat)).join('')}
+          <button class="btn btn-ghost btn-sm" data-add-to="${cat.key}" style="margin-top: 8px;">+ Add ${cat.label.split(' ')[0]} CCA</button>
+        </div>
+      `;
+
+      // Re-bind expanded area event listeners
+      bindExpandedAreaListeners(content, expandedArea);
     });
   });
 
-  // Save notes on blur
-  content.querySelectorAll('.cca-notes-area').forEach(textarea => {
-    textarea.addEventListener('blur', () => {
-      const ccaId = textarea.dataset.cca;
-      const list = getCCAList();
-      const cca = list.find(c => c.id === ccaId);
-      if (cca) {
-        cca.notes = textarea.value;
-        saveCCAList(list);
-      }
-    });
-  });
+  // (CCA item listeners are now bound via bindExpandedAreaListeners when a category is selected)
 
   // Add reminder
   content.querySelector('#add-reminder-btn')?.addEventListener('click', () => {
