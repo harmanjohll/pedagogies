@@ -96,6 +96,13 @@ const DEFAULT_SAFETY = {
   clubs: ['Lab/equipment safety briefing', 'Electrical safety (robotics/infocomm)', 'Supervision ratio adequate'],
 };
 
+const CCA_CAT_ICONS = {
+  sports: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
+  performing: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+  uniformed: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  clubs: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v4"/><path d="M12 18v4"/><circle cx="12" cy="12" r="4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>`,
+};
+
 function getCCAReminders() {
   try { return JSON.parse(localStorage.getItem('cocher_cca_reminders') || '[]'); } catch { return []; }
 }
@@ -157,6 +164,12 @@ const CCA_STYLES = `
   .cca-reminder-item:last-child { border-bottom: none; }
   .cca-training-output { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--bg-subtle, #f8f9fa); font-size: 0.8125rem; line-height: 1.6; color: var(--ink-muted); }
   .dark .cca-training-output { background: var(--bg-subtle, #16161e); }
+
+  .cca-category-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s; }
+  .cca-category-card:hover { box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.06)); }
+  .dark .cca-category-card { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); }
+  .cca-chevron { transition: transform 0.2s; }
+  .cca-chevron.open { transform: rotate(180deg); }
 `;
 
 function escHtml(str) {
@@ -223,6 +236,65 @@ export function render(container) {
   }
 }
 
+function renderCCAItem(cca, cat) {
+  const e21ccKeys = cca.e21ccMapping || DEFAULT_E21CC_MAPPING[cca.category] || [];
+  const safetyItems = cca.safetyChecklist || DEFAULT_SAFETY[cca.category] || [];
+  return `
+    <div class="cca-list-item" data-id="${cca.id}" data-cat="${cca.category}" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="cca-cat-dot" style="background:${cat.color};"></div>
+        <div class="cca-list-name">${escHtml(cca.name)}</div>
+        <div class="cca-list-actions">
+          <button class="btn btn-secondary btn-sm cca-edit-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;">Edit</button>
+          <button class="btn btn-secondary btn-sm cca-delete-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;color:var(--danger,#ef4444);">Delete</button>
+        </div>
+      </div>
+      <!-- E21CC badges -->
+      <div style="margin-top:8px;">
+        ${e21ccKeys.map(k => {
+          const meta = E21CC_DIM_META[k];
+          return meta ? `<span class="cca-badge" style="background:${meta.color}15;color:${meta.color};">${meta.label}</span>` : '';
+        }).join('')}
+      </div>
+      <!-- Action row -->
+      <div class="cca-action-row">
+        <button class="cca-action-btn" data-action="safety" data-cca="${cca.id}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Safety
+        </button>
+        <button class="cca-action-btn" data-action="training" data-cca="${cca.id}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Suggest Training
+        </button>
+        <button class="cca-action-btn" data-action="notes" data-cca="${cca.id}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Notes
+        </button>
+      </div>
+      <!-- Safety section -->
+      <div class="cca-expand-section" id="safety-${cca.id}">
+        <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Safety Checklist</div>
+        ${safetyItems.map((item, idx) => `
+          <div class="cca-checklist-item">
+            <input type="checkbox" class="cca-safety-cb" data-cca="${cca.id}" data-idx="${idx}" />
+            <span>${escHtml(item)}</span>
+          </div>
+        `).join('')}
+      </div>
+      <!-- Training section -->
+      <div class="cca-expand-section" id="training-${cca.id}">
+        <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Training Suggestions</div>
+        <div class="cca-training-output" id="training-output-${cca.id}">Click "Suggest Training" to get AI-generated session ideas for ${escHtml(cca.name)}.</div>
+      </div>
+      <!-- Notes section -->
+      <div class="cca-expand-section" id="notes-${cca.id}">
+        <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Development Notes</div>
+        <textarea class="input cca-notes-area" data-cca="${cca.id}" rows="3" placeholder="Observations, milestones, areas for growth..." style="width:100%;font-size:0.8125rem;resize:vertical;">${escHtml(cca.notes || '')}</textarea>
+      </div>
+    </div>
+  `;
+}
+
 function renderCCAList(content, ccaList) {
   content.innerHTML = `
     <div class="cca-card">
@@ -259,122 +331,55 @@ function renderCCAList(content, ccaList) {
           })()}
         </div>
       </div>
-
-      ${ccaList.length === 0 ? `
-        <div style="text-align:center;padding:40px 20px;color:var(--ink-muted);">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" style="margin-bottom:12px;">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          <div style="font-size:0.875rem;font-weight:600;margin-bottom:4px;">No CCAs added yet</div>
-          <div style="font-size:0.8125rem;">Click "Add CCA" to start building your school's CCA list.</div>
-        </div>
-      ` : `
-        <!-- Category filter -->
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm cca-filter active" data-filter="all" style="font-size:0.75rem;">All (${ccaList.length})</button>
-          ${CCA_CATEGORIES.map(cat => {
-            const count = ccaList.filter(c => c.category === cat.key).length;
-            return count > 0 ? `<button class="btn btn-secondary btn-sm cca-filter" data-filter="${cat.key}" style="font-size:0.75rem;">${cat.label} (${count})</button>` : '';
-          }).join('')}
-        </div>
-
-        <div id="cca-items">
-          ${ccaList.map(cca => {
-            const cat = CCA_CATEGORIES.find(c => c.key === cca.category) || CCA_CATEGORIES[3];
-            const e21ccKeys = cca.e21ccMapping || DEFAULT_E21CC_MAPPING[cca.category] || [];
-            const safetyItems = cca.safetyChecklist || DEFAULT_SAFETY[cca.category] || [];
-            return `
-              <div class="cca-list-item" data-id="${cca.id}" data-cat="${cca.category}" style="flex-direction:column;align-items:stretch;">
-                <div style="display:flex;align-items:center;gap:12px;">
-                  <div class="cca-cat-dot" style="background:${cat.color};"></div>
-                  <div class="cca-list-name">${escHtml(cca.name)}</div>
-                  <div class="cca-list-cat">${cat.label}</div>
-                  <div class="cca-list-actions">
-                    <button class="btn btn-secondary btn-sm cca-edit-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;">Edit</button>
-                    <button class="btn btn-secondary btn-sm cca-delete-btn" data-id="${cca.id}" style="padding:4px 8px;font-size:0.6875rem;color:var(--danger,#ef4444);">Delete</button>
-                  </div>
-                </div>
-                <!-- E21CC badges -->
-                <div style="margin-top:8px;">
-                  ${e21ccKeys.map(k => {
-                    const meta = E21CC_DIM_META[k];
-                    return meta ? `<span class="cca-badge" style="background:${meta.color}15;color:${meta.color};">${meta.label}</span>` : '';
-                  }).join('')}
-                </div>
-                <!-- Action row -->
-                <div class="cca-action-row">
-                  <button class="cca-action-btn" data-action="safety" data-cca="${cca.id}">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    Safety
-                  </button>
-                  <button class="cca-action-btn" data-action="training" data-cca="${cca.id}">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                    Suggest Training
-                  </button>
-                  <button class="cca-action-btn" data-action="notes" data-cca="${cca.id}">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    Notes
-                  </button>
-                </div>
-                <!-- Safety section -->
-                <div class="cca-expand-section" id="safety-${cca.id}">
-                  <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Safety Checklist</div>
-                  ${safetyItems.map((item, idx) => `
-                    <div class="cca-checklist-item">
-                      <input type="checkbox" class="cca-safety-cb" data-cca="${cca.id}" data-idx="${idx}" />
-                      <span>${escHtml(item)}</span>
-                    </div>
-                  `).join('')}
-                </div>
-                <!-- Training section -->
-                <div class="cca-expand-section" id="training-${cca.id}">
-                  <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Training Suggestions</div>
-                  <div class="cca-training-output" id="training-output-${cca.id}">Click "Suggest Training" to get AI-generated session ideas for ${escHtml(cca.name)}.</div>
-                </div>
-                <!-- Notes section -->
-                <div class="cca-expand-section" id="notes-${cca.id}">
-                  <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:8px;">Development Notes</div>
-                  <textarea class="input cca-notes-area" data-cca="${cca.id}" rows="3" placeholder="Observations, milestones, areas for growth..." style="width:100%;font-size:0.8125rem;resize:vertical;">${escHtml(cca.notes || '')}</textarea>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `}
     </div>
 
-    <!-- CCA Overview -->
-    <div class="cca-card">
-      <div class="cca-section-title">CCA Categories</div>
-      <div class="cca-section-desc">Singapore secondary schools organise CCAs into four main categories.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        ${CCA_CATEGORIES.map(cat => `
-          <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid ${cat.color};">
-            <div style="font-weight:700;font-size:0.875rem;color:${cat.color};margin-bottom:4px;">${cat.label}</div>
-            <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">
-              ${cat.key === 'sports' ? 'Basketball, Football, Badminton, Track & Field, Swimming, etc.' :
-                cat.key === 'performing' ? 'Band, Choir, Dance, Drama, Art Club, Chinese Orchestra, etc.' :
-                cat.key === 'uniformed' ? 'NCC, NPCC, Scouts, Girl Guides, St John Brigade, Red Cross, etc.' :
-                'Robotics, Debate, Media Club, Environmental Club, Infocomm, etc.'}
+    <!-- Category Accordion Cards -->
+    ${CCA_CATEGORIES.map(cat => {
+      const ccasInCategory = ccaList.filter(c => c.category === cat.key);
+      const count = ccasInCategory.length;
+      return `
+        <div class="cca-category-card" data-cat="${cat.key}" style="border-left: 4px solid ${cat.color};">
+          <div class="cca-cat-header" style="cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 16px;">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: ${cat.color}12; color: ${cat.color}; display: flex; align-items: center; justify-content: center;">
+              ${CCA_CAT_ICONS[cat.key] || ''}
             </div>
+            <div style="flex: 1;">
+              <div style="font-weight: 700; font-size: 0.9375rem; color: var(--ink);">${cat.label}</div>
+              <div style="font-size: 0.8125rem; color: var(--ink-muted);">${count} CCA${count !== 1 ? 's' : ''}</div>
+            </div>
+            <svg class="cca-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
-        `).join('')}
-      </div>
-    </div>
+          <div class="cca-cat-body" style="display: none; padding: 0 16px 16px;">
+            ${ccasInCategory.length === 0
+              ? '<div style="font-size:0.8125rem;color:var(--ink-faint);text-align:center;padding:12px 0;">No CCAs in this category yet.</div>'
+              : ccasInCategory.map(cca => renderCCAItem(cca, cat)).join('')}
+            <button class="btn btn-ghost btn-sm" data-add-to="${cat.key}" style="margin-top: 8px;">+ Add ${cat.label.split(' ')[0]} CCA</button>
+          </div>
+        </div>
+      `;
+    }).join('')}
   `;
 
-  // Add CCA button
+  // Add CCA button (global)
   content.querySelector('#add-cca-btn')?.addEventListener('click', () => showCCAForm(content, null));
 
-  // Filter
-  content.querySelectorAll('.cca-filter').forEach(btn => {
-    btn.addEventListener('click', () => {
-      content.querySelectorAll('.cca-filter').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const filter = btn.dataset.filter;
-      content.querySelectorAll('.cca-list-item').forEach(item => {
-        item.style.display = (filter === 'all' || item.dataset.cat === filter) ? '' : 'none';
-      });
+  // Category accordion toggle
+  content.querySelectorAll('.cca-cat-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const card = header.closest('.cca-category-card');
+      const body = card.querySelector('.cca-cat-body');
+      const chevron = header.querySelector('.cca-chevron');
+      const isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : 'block';
+      chevron.classList.toggle('open', !isOpen);
+    });
+  });
+
+  // Per-category add buttons
+  content.querySelectorAll('[data-add-to]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showCCAForm(content, null, btn.dataset.addTo);
     });
   });
 
@@ -482,7 +487,7 @@ function renderCCAList(content, ccaList) {
   });
 }
 
-function showCCAForm(content, existing) {
+function showCCAForm(content, existing, prefilledCategory) {
   const formId = 'cca-form-overlay';
   let overlay = content.querySelector('#' + formId);
   if (overlay) overlay.remove();
@@ -500,7 +505,7 @@ function showCCAForm(content, existing) {
       <div style="margin-bottom:16px;">
         <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Category</label>
         <select id="cca-cat-input" class="input" style="width:100%;">
-          ${CCA_CATEGORIES.map(cat => `<option value="${cat.key}" ${existing && existing.category === cat.key ? 'selected' : ''}>${cat.label}</option>`).join('')}
+          ${CCA_CATEGORIES.map(cat => `<option value="${cat.key}" ${existing ? (existing.category === cat.key ? 'selected' : '') : (prefilledCategory === cat.key ? 'selected' : '')}>${cat.label}</option>`).join('')}
         </select>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">

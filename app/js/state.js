@@ -75,13 +75,23 @@ if (!_state.apiKey && localStorage.getItem('cocher_api_key')) {
   if (dirty) saveToStorage({ ..._state });
 })();
 
-// Migrate old E21CC format (cait/cci/cgc) to new 6-dimension format
+// Migrate old E21CC format — handles both legacy cait/cci/cgc keys AND numeric 0-100 scores → rubric levels
 (function migrateE21CCScores() {
   const classes = _state.classes || [];
   let migrated = false;
+  const numToLevel = (v) => {
+    if (typeof v === 'string') return v; // already migrated
+    if (v <= 25) return 'developing';
+    if (v <= 50) return 'applying';
+    if (v <= 75) return 'extending';
+    return 'leading';
+  };
+  const DIMS = ['criticalThinking','creativeThinking','communication','collaboration','socialConnectedness','selfRegulation'];
   classes.forEach(cls => {
     (cls.students || []).forEach(s => {
-      if (s.e21cc && ('cait' in s.e21cc) && !('criticalThinking' in s.e21cc)) {
+      if (!s.e21cc) return;
+      // Step 1: migrate legacy cait/cci/cgc keys to 6-dimension format
+      if (('cait' in s.e21cc) && !('criticalThinking' in s.e21cc)) {
         const old = s.e21cc;
         s.e21cc = {
           criticalThinking: old.cait || 50,
@@ -92,6 +102,20 @@ if (!_state.apiKey && localStorage.getItem('cocher_api_key')) {
           selfRegulation: 50
         };
         migrated = true;
+      }
+      // Step 2: migrate numeric scores to rubric levels
+      const needsLevelMigration = DIMS.some(k => typeof s.e21cc[k] === 'number');
+      if (needsLevelMigration) {
+        DIMS.forEach(k => { s.e21cc[k] = numToLevel(s.e21cc[k] ?? 50); });
+        migrated = true;
+      }
+      // Step 3: migrate numeric e21ccHistory entries to levels
+      if (s.e21ccHistory) {
+        s.e21ccHistory = s.e21ccHistory.map(h => {
+          const entry = { ...h };
+          DIMS.forEach(k => { if (typeof entry[k] === 'number') entry[k] = numToLevel(entry[k]); });
+          return entry;
+        });
       }
     });
   });
@@ -219,7 +243,16 @@ export const Store = {
     const student = {
       id: generateId(),
       name: data.name || 'Student',
-      e21cc: { criticalThinking: 50, creativeThinking: 50, communication: 50, collaboration: 50, socialConnectedness: 50, selfRegulation: 50, ...(data.e21cc || {}) },
+      e21cc: {
+        criticalThinking: 'developing',
+        creativeThinking: 'developing',
+        communication: 'developing',
+        collaboration: 'developing',
+        socialConnectedness: 'developing',
+        selfRegulation: 'developing',
+        ...(data.e21cc || {})
+      },
+      observations: data.observations || [],
       createdAt: Date.now()
     };
     this.updateClass(classId, {
@@ -235,12 +268,16 @@ export const Store = {
     const students = cls.students.map(s => {
       if (s.id !== studentId) return s;
       const updated = { ...s, ...data };
-      // Record E21CC history when scores change
+      // Record E21CC history when levels change
       if (data.e21cc) {
         const history = [...(s.e21ccHistory || [])];
         history.push({ ts: Date.now(), ...data.e21cc });
         if (history.length > 20) history.splice(0, history.length - 20);
         updated.e21ccHistory = history;
+      }
+      // Append observations if provided
+      if (data.observations) {
+        updated.observations = [...(s.observations || []), ...data.observations];
       }
       return updated;
     });

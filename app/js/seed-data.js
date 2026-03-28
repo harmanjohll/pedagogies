@@ -174,14 +174,15 @@ const NAMES = [
 ];
 
 function randomE21CC() {
-  // Wide spread (15–95) so trial classes have diverse profiles for grouping
+  const levels = ['developing', 'applying', 'extending', 'leading'];
+  const pick = () => levels[Math.floor(Math.random() * levels.length)];
   return {
-    criticalThinking: 15 + Math.floor(Math.random() * 81),
-    creativeThinking: 15 + Math.floor(Math.random() * 81),
-    communication: 15 + Math.floor(Math.random() * 81),
-    collaboration: 15 + Math.floor(Math.random() * 81),
-    socialConnectedness: 15 + Math.floor(Math.random() * 81),
-    selfRegulation: 15 + Math.floor(Math.random() * 81),
+    criticalThinking: pick(),
+    creativeThinking: pick(),
+    communication: pick(),
+    collaboration: pick(),
+    socialConnectedness: pick(),
+    selfRegulation: pick(),
   };
 }
 

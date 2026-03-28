@@ -535,11 +535,12 @@ function buildSuggestions(classes, lessons, events) {
     { key: 'socialConnectedness', label: 'Social Connectedness' },
     { key: 'selfRegulation', label: 'Self-Regulation' },
   ];
+  const _lvVal = (lv) => ({ developing: 1, applying: 2, extending: 3, leading: 4 }[lv] || 1);
   if (classes.length > 0) {
     const totals = {}; DASH_DIMS.forEach(d => { totals[d.key] = 0; }); let count = 0;
     classes.forEach(cls => (cls.students || []).forEach(s => {
       if (s.e21cc) {
-        DASH_DIMS.forEach(d => { totals[d.key] += s.e21cc[d.key] || 0; });
+        DASH_DIMS.forEach(d => { totals[d.key] += _lvVal(s.e21cc[d.key]); });
         count++;
       }
     }));
@@ -547,13 +548,13 @@ function buildSuggestions(classes, lessons, events) {
       const avgs = {}; DASH_DIMS.forEach(d => { avgs[d.key] = totals[d.key] / count; });
       const weakest = Object.entries(avgs).sort((a, b) => a[1] - b[1])[0];
       const dimLabel = DASH_DIMS.find(d => d.key === weakest[0])?.label || weakest[0];
-      if (weakest[1] < 60) {
+      if (weakest[1] < 2.5) {
         suggestions.push({
           icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>`,
           color: 'var(--success)',
           bg: 'var(--success-light)',
           title: `Boost ${dimLabel} across your classes`,
-          desc: `${dimLabel} avg: ${Math.round(weakest[1])}/100`,
+          desc: `${dimLabel} — mostly Developing/Applying`,
           action: () => navigate('/lesson-planner')
         });
       }
@@ -590,7 +591,6 @@ function buildSuggestions(classes, lessons, events) {
 /* ── Student Spotlight Widget ── */
 function buildStudentSpotlight(classes) {
   if (classes.length === 0) return '';
-  const THRESHOLD = 50; // flag students below this E21CC average
 
   const SPOT_DIMS = [
     { key: 'criticalThinking', short: 'CT', color: '#6366f1' },
@@ -600,26 +600,39 @@ function buildStudentSpotlight(classes) {
     { key: 'socialConnectedness', short: 'SC', color: '#10b981' },
     { key: 'selfRegulation', short: 'SR', color: '#f59e0b' },
   ];
+  const _spotLvVal = (lv) => ({ developing: 1, applying: 2, extending: 3, leading: 4 }[lv] || 1);
+  const _spotLvMeta = (lv) => {
+    const levels = [
+      { key: 'developing', short: 'Dev', color: '#f59e0b' },
+      { key: 'applying', short: 'App', color: '#3b82f6' },
+      { key: 'extending', short: 'Ext', color: '#10b981' },
+      { key: 'leading', short: 'Lead', color: '#8b5cf6' },
+    ];
+    return levels.find(l => l.key === lv) || levels[0];
+  };
   const flagged = [];
   classes.forEach(cls => {
     if (!cls.students?.length) return;
     cls.students.forEach(st => {
-      const scores = SPOT_DIMS.map(d => st.e21cc?.[d.key] || 0);
-      const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-      const lowest = Math.min(...scores);
-      const lowestIdx = scores.indexOf(lowest);
+      const levels = SPOT_DIMS.map(d => st.e21cc?.[d.key] || 'developing');
+      const values = levels.map(l => _spotLvVal(l));
+      const avgVal = Math.round(values.reduce((a, b) => a + b, 0) * 10 / values.length) / 10;
+      const lowestVal = Math.min(...values);
+      const lowestIdx = values.indexOf(lowestVal);
       const lowestLabel = SPOT_DIMS[lowestIdx]?.short || '?';
-      if (avg < THRESHOLD || lowest < 40) {
+      const lowestLevel = levels[lowestIdx];
+      // Flag students with avg below Applying (2) or any dimension at Developing
+      if (avgVal < 2 || lowestVal <= 1) {
         flagged.push({
           name: st.name,
           className: cls.name,
           classId: cls.id,
-          avg,
-          scores,
-          lowest, lowestLabel,
-          suggestion: lowest < 40
-            ? `Needs support in ${lowestLabel} (${lowest}%). Consider scaffolding or differentiated tasks.`
-            : `Overall E21CC below ${THRESHOLD}%. Review across all competencies.`
+          avgVal,
+          levels,
+          lowestVal, lowestLabel, lowestLevel,
+          suggestion: lowestVal <= 1
+            ? `Needs support in ${lowestLabel} (Developing). Consider scaffolding or differentiated tasks.`
+            : `Overall E21CC mostly at Developing level. Review across all competencies.`
         });
       }
     });
@@ -632,14 +645,14 @@ function buildStudentSpotlight(classes) {
     </div>`;
   }
 
-  // Sort by avg ascending (most needy first), take top 5
-  flagged.sort((a, b) => a.avg - b.avg);
+  // Sort by avgVal ascending (most needy first), take top 5
+  flagged.sort((a, b) => a.avgVal - b.avgVal);
   const shown = flagged.slice(0, 5);
 
   return `
     <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
       ${shown.map(st => {
-        const barColor = st.avg < 30 ? 'var(--danger,#ef4444)' : st.avg < THRESHOLD ? 'var(--warning,#f59e0b)' : 'var(--success,#22c55e)';
+        const avgColor = st.avgVal < 1.5 ? 'var(--danger,#ef4444)' : st.avgVal < 2.5 ? 'var(--warning,#f59e0b)' : 'var(--success,#22c55e)';
         return `
           <div class="card card-hover card-interactive spotlight-student" data-class-id="${st.classId}" style="padding:var(--sp-3) var(--sp-4);">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-2);">
@@ -647,19 +660,15 @@ function buildStudentSpotlight(classes) {
                 <div style="font-weight:600;font-size:0.875rem;color:var(--ink);">${st.name}</div>
                 <div style="font-size:0.6875rem;color:var(--ink-muted);">${st.className}</div>
               </div>
-              <div style="text-align:right;">
-                <div style="font-weight:700;font-size:1rem;color:${barColor};">${st.avg}%</div>
-                <div style="font-size:0.625rem;color:var(--ink-faint);">E21CC avg</div>
-              </div>
             </div>
             <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-2);">
-              ${SPOT_DIMS.map((d, i) => `<div style="flex:1;text-align:center;">
-                <div style="font-size:0.5625rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;">${d.short}</div>
-                <div style="height:4px;background:var(--bg-subtle);border-radius:2px;overflow:hidden;margin-top:2px;">
-                  <div style="width:${st.scores[i]}%;height:100%;background:${d.color};border-radius:2px;"></div>
-                </div>
-                <div style="font-size:0.625rem;color:var(--ink-muted);margin-top:1px;">${st.scores[i]}%</div>
-              </div>`).join('')}
+              ${SPOT_DIMS.map((d, i) => {
+                const meta = _spotLvMeta(st.levels[i]);
+                return `<div style="flex:1;text-align:center;">
+                  <div style="font-size:0.5625rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;">${d.short}</div>
+                  <span style="display:inline-block;margin-top:2px;padding:1px 4px;border-radius:3px;font-size:0.5625rem;font-weight:600;background:${meta.color}15;color:${meta.color};">${meta.short}</span>
+                </div>`;
+              }).join('')}
             </div>
             <div style="font-size:0.75rem;color:var(--ink-secondary);background:var(--bg-subtle);padding:var(--sp-2) var(--sp-3);border-radius:var(--radius-md);line-height:1.4;">
               ${st.suggestion}
@@ -680,22 +689,39 @@ function renderInsights(classes, lessons) {
     { key: 'selfRegulation',     short: 'SR',  color: '#f59e0b' },
   ];
 
-  const totals = {}; INS_DIMS.forEach(d => { totals[d.key] = 0; }); let count = 0;
+  const _insLvMeta = (lv) => {
+    const levels = [
+      { key: 'developing', short: 'Dev', color: '#f59e0b' },
+      { key: 'applying', short: 'App', color: '#3b82f6' },
+      { key: 'extending', short: 'Ext', color: '#10b981' },
+      { key: 'leading', short: 'Lead', color: '#8b5cf6' },
+    ];
+    return levels.find(l => l.key === lv) || levels[0];
+  };
+  const _insLvVal = (lv) => ({ developing: 1, applying: 2, extending: 3, leading: 4 }[lv] || 1);
+
+  // Count level distribution per dimension
+  const distributions = {};
+  INS_DIMS.forEach(d => { distributions[d.key] = { developing: 0, applying: 0, extending: 0, leading: 0 }; });
+  let count = 0;
   classes.forEach(cls => {
     (cls.students || []).forEach(s => {
       if (s.e21cc) {
-        INS_DIMS.forEach(d => { totals[d.key] += s.e21cc[d.key] || 0; });
+        INS_DIMS.forEach(d => {
+          const lv = s.e21cc[d.key] || 'developing';
+          distributions[d.key][lv] = (distributions[d.key][lv] || 0) + 1;
+        });
         count++;
       }
     });
   });
 
-  const dimAvgs = INS_DIMS.map(d => ({
-    ...d,
-    avg: count > 0 ? Math.round(totals[d.key] / count) : 0
-  }));
-
-  const barColor = (val) => val >= 65 ? 'var(--success)' : val >= 45 ? 'var(--warning)' : 'var(--danger)';
+  // Find most common level per dimension
+  const dimModes = INS_DIMS.map(d => {
+    const dist = distributions[d.key];
+    const mode = Object.entries(dist).sort((a, b) => b[1] - a[1])[0];
+    return { ...d, mode: mode[0], dist };
+  });
 
   const focusCounts = {};
   INS_DIMS.forEach(d => { focusCounts[d.key] = 0; });
@@ -704,17 +730,19 @@ function renderInsights(classes, lessons) {
   });
   const totalFocus = INS_DIMS.reduce((s, d) => s + focusCounts[d.key], 0);
 
-  let strongest = null, weakest = null, maxAvg = -1, minAvg = 101;
+  let strongest = null, weakest = null, maxAvg = -1, minAvg = 5;
   classes.forEach(cls => {
     const students = cls.students || [];
     if (students.length === 0) return;
     const avg = students.reduce((s, st) => {
       const e = st.e21cc || {};
-      return s + INS_DIMS.reduce((sum, d) => sum + (e[d.key] || 0), 0) / INS_DIMS.length;
+      return s + INS_DIMS.reduce((sum, d) => sum + _insLvVal(e[d.key] || 'developing'), 0) / INS_DIMS.length;
     }, 0) / students.length;
     if (avg > maxAvg) { maxAvg = avg; strongest = cls; }
     if (avg < minAvg) { minAvg = avg; weakest = cls; }
   });
+
+  const _lvLabels = { developing: 'Developing', applying: 'Applying', extending: 'Extending', leading: 'Leading' };
 
   return `
     <div style="margin-bottom:var(--sp-8);">
@@ -722,21 +750,22 @@ function renderInsights(classes, lessons) {
         <h2 class="section-title" style="font-size:1.125rem;">Teaching Insights</h2>
       </div>
       <div class="grid-2 stagger">
-        <!-- E21CC Overview -->
+        <!-- E21CC Level Distribution -->
         <div class="card" style="padding:var(--sp-5) var(--sp-6);">
-          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-4);">E21CC Averages (All Students)</div>
+          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-4);">E21CC Levels (All Students)</div>
           <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
-            ${dimAvgs.map(d => `
+            ${dimModes.map(d => {
+              const meta = _insLvMeta(d.mode);
+              const dist = d.dist;
+              return `
             <div>
               <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px;">
                 <span style="font-weight:600;color:var(--ink);">${d.short}</span>
-                <span style="color:var(--ink-muted);">${d.avg}/100</span>
+                <span style="padding:1px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${meta.color}15;color:${meta.color};">${meta.short}</span>
               </div>
-              <div style="height:8px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;">
-                <div style="width:${d.avg}%;height:100%;background:${barColor(d.avg)};border-radius:var(--radius-full);transition:width 0.6s;"></div>
-              </div>
-            </div>
-            `).join('')}
+              <div style="font-size:0.625rem;color:var(--ink-muted);">${dist.developing} Dev, ${dist.applying} App, ${dist.extending} Ext, ${dist.leading} Lead</div>
+            </div>`;
+            }).join('')}
           </div>
         </div>
 
@@ -746,11 +775,11 @@ function renderInsights(classes, lessons) {
           <div style="display:flex;flex-direction:column;gap:var(--sp-3);font-size:0.8125rem;">
             ${strongest ? `<div style="display:flex;align-items:center;gap:var(--sp-2);">
               <span style="color:var(--success);font-size:1rem;">&#9650;</span>
-              <span style="color:var(--ink-secondary);"><strong>${strongest.name}</strong> has the highest overall E21CC average (${Math.round(maxAvg)})</span>
+              <span style="color:var(--ink-secondary);"><strong>${strongest.name}</strong> has the highest overall E21CC levels</span>
             </div>` : ''}
             ${weakest && weakest !== strongest ? `<div style="display:flex;align-items:center;gap:var(--sp-2);">
               <span style="color:var(--warning);font-size:1rem;">&#9660;</span>
-              <span style="color:var(--ink-secondary);"><strong>${weakest.name}</strong> could benefit from more E21CC focus (avg: ${Math.round(minAvg)})</span>
+              <span style="color:var(--ink-secondary);"><strong>${weakest.name}</strong> could benefit from more E21CC focus</span>
             </div>` : ''}
             ${totalFocus > 0 ? `<div style="display:flex;align-items:center;gap:var(--sp-2);">
               <span style="color:var(--accent);font-size:1rem;">&#9679;</span>
