@@ -923,7 +923,6 @@ function showBatchE21CCModal(classId, onUpdate) {
     const updatedStudents = (freshCls.students || []).map(s => {
       const newE21cc = {};
       E21CC_DIMS.forEach(d => { newE21cc[d.key] = clamp((s.e21cc?.[d.key] || 50) + deltas[d.key]); });
-      };
       const history = [...(s.e21ccHistory || [])];
       history.push({ ts: now, ...newE21cc });
       if (history.length > 20) history.splice(0, history.length - 20);
