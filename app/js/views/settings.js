@@ -530,7 +530,7 @@ export function render(container) {
           </div>
           <div>
             <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.03em;">School Values</label>
-            <input id="school-values-setting" class="input" type="text" placeholder="e.g. Respect, Responsibility, Resilience, Integrity, Care, Harmony" style="width: 100%; box-sizing: border-box;" value="${(Store.getSchoolProfile?.() || {}).values || ''}" />
+            <input id="school-values-setting" class="input" type="text" placeholder="e.g. Discipline, Resilience, Empathy, Adaptability, Mindfulness" style="width: 100%; box-sizing: border-box;" value="${(Store.getSchoolProfile?.() || {}).values || ''}" />
             <p style="font-size: 0.75rem; color: var(--ink-faint); margin-top: var(--sp-1);">Separate multiple values with commas.</p>
           </div>
         </div>
