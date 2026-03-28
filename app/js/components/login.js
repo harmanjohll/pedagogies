@@ -125,15 +125,15 @@ function showNamePrompt(overlay, teacher, onComplete) {
           color: #fff; font-weight: 700; font-size: 1.1rem;
           box-shadow: 0 4px 16px rgba(0,12,83,0.2);
         ">${guessed.charAt(0)}</div>
-        <h2 style="font-size: 1.25rem; font-weight: 700; color: #000C53; margin: 0 0 6px;">
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--ink, #000C53); margin: 0 0 6px;">
           Welcome, Cher!
         </h2>
-        <p style="color: #64748b; font-size: 0.875rem; margin: 0; line-height: 1.5;">
+        <p style="color: var(--ink-muted, #64748b); font-size: 0.875rem; margin: 0; line-height: 1.5;">
           What would you like us to call you?
         </p>
       </div>
       <div style="text-align: left;">
-        <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 6px; color: #334155;">
+        <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 6px; color: var(--ink-secondary, #334155);">
           Preferred Name
         </label>
         <input
@@ -144,7 +144,7 @@ function showNamePrompt(overlay, teacher, onComplete) {
             width: 100%; padding: 12px 14px;
             border: 1.5px solid #e2e8f0; border-radius: 12px;
             font-size: 0.9rem; font-family: inherit;
-            background: #f8fafc; color: #0f172a; outline: none;
+            background: var(--bg-subtle, #f8fafc); color: var(--ink, #0f172a); outline: none;
             box-sizing: border-box;
             transition: border-color 0.2s, box-shadow 0.2s;
             margin-bottom: 6px;
@@ -203,20 +203,20 @@ export async function renderLogin(onComplete) {
           color: #fff; font-weight: 700; font-size: 1.25rem;
           box-shadow: 0 4px 16px rgba(0,12,83,0.3);
         ">C</div>
-        <h1 style="font-size: 2rem; font-weight: 700; color: #000C53; margin: 0 0 6px; letter-spacing: -0.02em;">
+        <h1 style="font-size: 2rem; font-weight: 700; color: var(--ink, #000C53); margin: 0 0 6px; letter-spacing: -0.02em;">
           Co-Cher
         </h1>
-        <p style="color: #64748b; font-size: 0.9375rem; margin: 0 0 16px;">
+        <p style="color: var(--ink-muted, #64748b); font-size: 0.9375rem; margin: 0 0 16px;">
           Your Co-Teaching Assistant
         </p>
         <span style="
-          display: inline-block; background: #eef2ff; color: #4338ca;
+          display: inline-block; background: var(--accent-light, #eef2ff); color: var(--accent, #4338ca);
           padding: 5px 14px; border-radius: 999px; font-size: 0.8rem; font-weight: 500;
         ">Built for Singapore Educators</span>
       </div>
 
       <div style="text-align: left;">
-        <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; color: #334155;">
+        <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; color: var(--ink-secondary, #334155);">
           Email
         </label>
         <input
@@ -228,7 +228,7 @@ export async function renderLogin(onComplete) {
             width: 100%; padding: 12px 14px;
             border: 1.5px solid #e2e8f0; border-radius: 12px;
             font-size: 0.9rem; font-family: inherit;
-            background: #f8fafc; color: #0f172a; outline: none;
+            background: var(--bg-subtle, #f8fafc); color: var(--ink, #0f172a); outline: none;
             box-sizing: border-box;
             transition: border-color 0.2s, box-shadow 0.2s;
             margin-bottom: 8px;

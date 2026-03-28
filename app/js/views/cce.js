@@ -11,6 +11,11 @@ import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { processLatex } from '../utils/latex.js';
 
+/* ── Module-level state ── */
+
+let cceIncludeYouTube = false;
+let cceNewsSources = [];
+
 /* ── Constants ── */
 
 const STORAGE_KEY = 'cocher_cce_discussions';
@@ -507,6 +512,34 @@ export function render(container) {
                 <input id="cce-custom-format" class="input" type="text" placeholder="e.g. Socratic Seminar, Fishbowl, Philosophical Chairs..." style="width:100%;box-sizing:border-box;">
               </div>
             </div>
+            <div style="margin-bottom: var(--sp-3);">
+              <label style="display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.8125rem; color: var(--ink);">
+                <input type="checkbox" id="cce-youtube-cb" style="accent-color: var(--accent);"${cceIncludeYouTube ? ' checked' : ''} />
+                Include suggested YouTube videos as discussion starters
+              </label>
+            </div>
+            <div style="margin-bottom: var(--sp-4);">
+              <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); margin-bottom: var(--sp-2); text-transform: uppercase; letter-spacing: 0.03em;">
+                Suggest material from news sources <span style="font-weight: 400; text-transform: none; letter-spacing: 0;">(optional)</span>
+              </label>
+              <div style="display: flex; flex-wrap: wrap; gap: var(--sp-2);" id="cce-news-sources">
+                ${['The Straits Times', 'CNA', 'TODAY', 'BBC', 'CNN', 'Reuters'].map(src => {
+                  const isActive = cceNewsSources.includes(src);
+                  return `<button type="button" class="cce-news-chip" data-source="${src}" style="
+                    padding: 5px 14px;
+                    border-radius: 20px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    border: 1.5px solid ${isActive ? 'var(--accent)' : 'var(--border-light)'};
+                    background: ${isActive ? 'var(--accent)' : 'var(--bg, #fff)'};
+                    color: ${isActive ? '#fff' : 'var(--ink-secondary, #666)'};
+                    transition: all 0.15s ease;
+                    font-family: inherit;
+                  ">${src}</button>`;
+                }).join('')}
+              </div>
+            </div>
             <button id="cce-generate-btn" class="btn btn-primary" style="width:100%;">Generate Discussion</button>
             <div id="cce-loading" class="cce-loading">
               <div class="cce-spinner"></div>
@@ -635,6 +668,8 @@ export function render(container) {
     container.querySelectorAll('.cce-tab').forEach(btn => {
       btn.addEventListener('click', () => {
         activeTab = btn.dataset.tab;
+        cceIncludeYouTube = false;
+        cceNewsSources = [];
         renderView();
       });
     });
@@ -644,6 +679,33 @@ export function render(container) {
     const customFormatWrap = container.querySelector('#cce-custom-format-wrap');
     formatSelect.addEventListener('change', () => {
       customFormatWrap.style.display = formatSelect.value === 'Others' ? '' : 'none';
+    });
+
+    // YouTube checkbox
+    const youtubeCb = container.querySelector('#cce-youtube-cb');
+    if (youtubeCb) {
+      youtubeCb.addEventListener('change', () => {
+        cceIncludeYouTube = youtubeCb.checked;
+      });
+    }
+
+    // News source chips
+    container.querySelectorAll('.cce-news-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const src = chip.dataset.source;
+        const idx = cceNewsSources.indexOf(src);
+        if (idx >= 0) {
+          cceNewsSources.splice(idx, 1);
+          chip.style.border = '1.5px solid var(--border-light)';
+          chip.style.background = 'var(--bg, #fff)';
+          chip.style.color = 'var(--ink-secondary, #666)';
+        } else {
+          cceNewsSources.push(src);
+          chip.style.border = '1.5px solid var(--accent)';
+          chip.style.background = 'var(--accent)';
+          chip.style.color = '#fff';
+        }
+      });
     });
 
     // Generate discussion
@@ -673,13 +735,21 @@ export function render(container) {
 
       try {
         const systemPrompt = buildSystemPrompt(area);
-        const userMessage = `Create a CCE discussion lesson for the following:
+        let userMessage = `Create a CCE discussion lesson for the following:
 - **Content Area**: ${area.id} — ${area.label}
 - **Topic/Issue**: ${topic}
 - **Level**: ${level}
 - **Discussion Format**: ${format}
 
 Design an engaging, age-appropriate lesson that connects to the CCE2021 framework. Use the ${format} facilitation strategy.`;
+
+        if (cceIncludeYouTube) {
+          userMessage += `\n\nInclude 2-3 suggested YouTube videos relevant to this discussion topic. Format each as: [Video Title](https://www.youtube.com/results?search_query=ENCODED_QUERY). Choose videos from reputable educational channels (CNA Insider, TED-Ed, Channel NewsAsia, The Straits Times).`;
+        }
+
+        if (cceNewsSources.length > 0) {
+          userMessage += `\n\nReference or suggest discussion material from these news outlets where relevant: ${cceNewsSources.join(', ')}. Frame scenarios around real issues these outlets would cover. Where possible, suggest specific search terms teachers can use to find relevant articles on these platforms.`;
+        }
 
         const text = await sendChat(
           [{ role: 'user', content: userMessage }],

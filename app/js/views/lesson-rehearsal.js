@@ -514,13 +514,6 @@ function renderSetupInterface(container, eligibleLessons, classes) {
               </div>
             </div>
 
-            <!-- Start button -->
-            <button class="btn btn-primary" id="rh-start-btn" style="width: 100%; padding: 0.75rem; font-size: 1rem;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-right: 8px; vertical-align: -3px;">
-                <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
-              </svg>
-              Start Rehearsal
-            </button>
           </div>
 
           <!-- Step 3: Feedback Focus -->
@@ -569,6 +562,14 @@ function renderSetupInterface(container, eligibleLessons, classes) {
               Select one or more frames. Your debrief will be structured around the selected focus areas.
             </p>
           </div>
+
+          <!-- Start button (after all setup steps) -->
+          <button class="btn btn-primary" id="rh-start-btn" style="width: 100%; padding: 0.75rem; font-size: 1rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="margin-right: 8px; vertical-align: -3px;">
+              <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
+            </svg>
+            Start Rehearsal
+          </button>
         ` : ''}
       </div>
     </div>

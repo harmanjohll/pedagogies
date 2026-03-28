@@ -75,6 +75,31 @@ if (!_state.apiKey && localStorage.getItem('cocher_api_key')) {
   if (dirty) saveToStorage({ ..._state });
 })();
 
+// Migrate old E21CC format (cait/cci/cgc) to new 6-dimension format
+(function migrateE21CCScores() {
+  const classes = _state.classes || [];
+  let migrated = false;
+  classes.forEach(cls => {
+    (cls.students || []).forEach(s => {
+      if (s.e21cc && ('cait' in s.e21cc) && !('criticalThinking' in s.e21cc)) {
+        const old = s.e21cc;
+        s.e21cc = {
+          criticalThinking: old.cait || 50,
+          creativeThinking: old.cait || 50,
+          communication: old.cci || 50,
+          collaboration: old.cci || 50,
+          socialConnectedness: old.cgc || 50,
+          selfRegulation: 50
+        };
+        migrated = true;
+      }
+    });
+  });
+  if (migrated) {
+    saveToStorage({ ..._state });
+  }
+})();
+
 export const Store = {
   /* ── Read ── */
   get(key) {
