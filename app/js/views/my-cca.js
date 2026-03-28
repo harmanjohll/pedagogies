@@ -398,19 +398,46 @@ function bindExpandedAreaListeners(content, area) {
       outputEl.innerHTML = '<em>Generating suggestions...</em>';
       try {
         const text = await sendChat(
-          [{ role: 'user', content: `Design a detailed training session for a secondary school ${cat?.label || 'CCA'} CCA called "${cca.name}".
+          [{ role: 'user', content: `You are an experienced CCA teacher-in-charge in a Singapore secondary school. Design a practical, ready-to-use training session plan for "${cca.name}" (${cat?.label || 'CCA'}).
 
-Structure:
-1. **Warm-Up** (5-10 min): Specific activities, not generic "stretching"
-2. **Main Training** (30-40 min): Detailed drills/activities with progressions. For each activity explain the setup, execution, and what to watch for.
-3. **Cool-Down & Debrief** (5-10 min): Recovery activities + structured reflection
-4. **Skill Progressions**: 2-3 specific skills to build over multiple sessions
-5. **Safety Reminders**: Context-specific safety points for this session${e21ccContext}
+Format as a clean session plan:
 
-Be specific to ${cca.name}. Use real drill names and techniques. This should read like a session plan a CCA teacher-in-charge can follow directly.` }],
-          { trackLabel: 'ccaTraining', temperature: 0.6, maxTokens: 2048 }
+## Session Plan: ${cca.name}
+
+### Warm-Up (5-10 min)
+- Name each activity. Describe setup and execution in 1-2 sentences.
+
+### Main Session (30-40 min)
+- 2-3 specific drills or activities. For each: name, setup, execution, coaching points.
+- Include progressions (easier → harder) so the teacher can adjust on the fly.
+
+### Cool-Down & Reflection (5-10 min)
+- Physical cool-down + a short structured debrief (e.g., "Name one thing you improved today").
+
+### Skill Focus (for this term)
+- 2-3 skills to develop over multiple sessions, with brief milestones.
+
+### Safety
+- 3-4 bullet points specific to this session.${e21ccContext}
+
+Use real drill names and techniques specific to ${cca.name}. Be direct and practical — this is a working document, not an essay. Complete the entire plan without cutting short.` }],
+          { trackLabel: 'ccaTraining', temperature: 0.6, maxTokens: 4096 }
         );
-        outputEl.innerHTML = renderCCAMarkdown(text);
+        outputEl.innerHTML = renderCCAMarkdown(text) +
+          `<div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn btn-ghost btn-sm cca-regenerate-btn" data-cca="${ccaId}" style="font-size:0.75rem;">Regenerate</button>
+            <button class="btn btn-ghost btn-sm cca-copy-training-btn" data-cca="${ccaId}" style="font-size:0.75rem;">Copy</button>
+          </div>`;
+        // Wire regenerate
+        outputEl.querySelector('.cca-regenerate-btn')?.addEventListener('click', () => {
+          config.style.display = '';
+          outputEl.style.display = 'none';
+          outputEl.innerHTML = '';
+        });
+        // Wire copy
+        outputEl.querySelector('.cca-copy-training-btn')?.addEventListener('click', () => {
+          navigator.clipboard?.writeText(text).then(() => showToast('Copied!', 'success'));
+        });
       } catch (err) {
         outputEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}. Check your API key in Settings.</span>`;
         config.style.display = '';
