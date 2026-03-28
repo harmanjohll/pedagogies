@@ -165,9 +165,11 @@ const CCA_STYLES = `
   .cca-training-output { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--bg-subtle, #f8f9fa); font-size: 0.8125rem; line-height: 1.6; color: var(--ink-muted); }
   .dark .cca-training-output { background: var(--bg-subtle, #16161e); }
 
-  .cca-category-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s; }
+  .cca-category-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s; cursor: pointer; }
   .cca-category-card:hover { box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.06)); }
+  .cca-category-card.selected { border-color: var(--accent); box-shadow: var(--shadow-md); }
   .dark .cca-category-card { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); }
+  .dark .cca-category-card.selected { border-color: var(--accent); }
   .cca-chevron { transition: transform 0.2s; }
   .cca-chevron.open { transform: rotate(180deg); }
 `;
@@ -333,31 +335,28 @@ function renderCCAList(content, ccaList) {
       </div>
     </div>
 
-    <!-- Category Accordion Cards -->
-    ${CCA_CATEGORIES.map(cat => {
-      const ccasInCategory = ccaList.filter(c => c.category === cat.key);
-      const count = ccasInCategory.length;
-      return `
-        <div class="cca-category-card" data-cat="${cat.key}" style="border-left: 4px solid ${cat.color};">
-          <div class="cca-cat-header" style="cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 16px;">
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: ${cat.color}12; color: ${cat.color}; display: flex; align-items: center; justify-content: center;">
-              ${CCA_CAT_ICONS[cat.key] || ''}
+    <!-- Category Grid (2x2) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      ${CCA_CATEGORIES.map(cat => {
+        const ccasInCategory = ccaList.filter(c => c.category === cat.key);
+        const count = ccasInCategory.length;
+        return `
+          <div class="cca-category-card" data-cat="${cat.key}" style="border-left: 4px solid ${cat.color};">
+            <div class="cca-cat-header" style="display: flex; align-items: center; gap: 12px; padding: 16px;">
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: ${cat.color}12; color: ${cat.color}; display: flex; align-items: center; justify-content: center;">
+                ${CCA_CAT_ICONS[cat.key] || ''}
+              </div>
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 0.9375rem; color: var(--ink);">${cat.label}</div>
+                <div style="font-size: 0.8125rem; color: var(--ink-muted);">${count} CCA${count !== 1 ? 's' : ''}</div>
+              </div>
+              <svg class="cca-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div style="flex: 1;">
-              <div style="font-weight: 700; font-size: 0.9375rem; color: var(--ink);">${cat.label}</div>
-              <div style="font-size: 0.8125rem; color: var(--ink-muted);">${count} CCA${count !== 1 ? 's' : ''}</div>
-            </div>
-            <svg class="cca-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
-          <div class="cca-cat-body" style="display: none; padding: 0 16px 16px;">
-            ${ccasInCategory.length === 0
-              ? '<div style="font-size:0.8125rem;color:var(--ink-faint);text-align:center;padding:12px 0;">No CCAs in this category yet.</div>'
-              : ccasInCategory.map(cca => renderCCAItem(cca, cat)).join('')}
-            <button class="btn btn-ghost btn-sm" data-add-to="${cat.key}" style="margin-top: 8px;">+ Add ${cat.label.split(' ')[0]} CCA</button>
-          </div>
-        </div>
-      `;
-    }).join('')}
+        `;
+      }).join('')}
+    </div>
+    <div id="cca-expanded-area"></div>
   `;
 
   // Add CCA button (global)

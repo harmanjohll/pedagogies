@@ -1030,7 +1030,7 @@ export function render(container) {
       <!-- Plan Column -->
       <div class="lp-plan-col" style="background:var(--bg);">
         <div style="flex:1;overflow-y:auto;padding:var(--sp-6);">
-          <div style="max-width:680px;margin:0 auto;width:100%;box-sizing:border-box;">
+          <div style="max-width:100%;margin:0 auto;width:100%;box-sizing:border-box;">
             <!-- Header -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-6);flex-wrap:wrap;gap:var(--sp-2);">
               <div style="display:flex;align-items:center;gap:var(--sp-2);">
@@ -2042,22 +2042,29 @@ Examples: Math↔Science (graphs, measurement), English↔History (source analys
     const simCategories = 'Physics: pendulum, waves, specific-heat, electromagnets, lenses, density; Chemistry: titration, qualitative-analysis, electrolysis, rates-of-reaction, gas-tests, salts, chromatography; Biology: photosynthesis, diffusion, osmosis, enzyme-activity, microscopy, food-tests; Interactive: molecular-viewer, molecular-builder, particle-dynamics, design-process, kitchen-layout, stave-notation, rhythm-tool';
 
     try {
-      const result = await sendChat([{ role: 'user', content: `Lesson plan:\n\n${planText}\n\nSubject: ${cls.subject || 'General'}, Level: ${cls.level || 'Secondary'}
+      const result = await sendChat([{ role: 'user', content: `Based on this lesson plan:
+${planText}
 
-Available resources:
-- Knowledge Base: ${kbTitles || 'None uploaded'}
-- Stimulus Library: ${stimTitles || 'None saved'}
-- Built-in Simulations: ${simCategories}
+Subject: ${cls.subject || 'General'}, Level: ${cls.level || 'Secondary'}
 
-Recommend the top 3-5 resources for this lesson. Be specific about WHEN and HOW to use each one.` }], {
+AVAILABLE RESOURCES (ONLY recommend from these):
+${kbTitles ? '- Knowledge Base: ' + kbTitles : '- Knowledge Base: None uploaded'}
+${stimTitles ? '- Stimulus Library: ' + stimTitles : '- Stimulus Library: None saved'}
+- Built-in Simulations (use exact IDs): ${simCategories}
+
+Recommend the top 3-5 that genuinely fit. Use exact resource names/IDs from above. Do NOT invent resources that aren't in the lists.` }], {
         trackLabel: 'resourceRecommender',
-        systemPrompt: `You are a Singapore teaching resource curator. Your job is to recommend the TOP 3-5 most impactful resources for this specific lesson. Be surgical — each recommendation must have:
-1. Resource name and type (simulation, video, worksheet, external tool)
-2. WHEN to use it in the lesson (e.g., "Use during the Explore phase, ~15 min in")
-3. HOW to set it up (1-2 sentences of practical setup instructions)
-4. WHY it matters (1 sentence connecting to the lesson objective)
+        systemPrompt: `You are a practical Singapore teaching resource curator. CRITICAL RULES:
+1. ONLY recommend resources that ACTUALLY EXIST in the lists provided below. Do NOT invent resources.
+2. For built-in simulations, ONLY suggest ones from the exact list given — use the exact simulation ID.
+3. For each recommendation, format as:
 
-Format each as a card-like block with clear headers. No fluff, no catalogs.`,
+**[Resource Name]** — [Type: Simulation / KB Item / External Tool]
+- **When**: [Exact moment in the lesson to use it]
+- **Setup**: [1 sentence — what to prepare or click]
+- **Why**: [1 sentence — how it serves the learning objective]
+
+Maximum 3-5 recommendations. If nothing genuinely fits, say so — don't pad with irrelevant items.`,
         temperature: 0.5, maxTokens: 2048
       });
       setComponent('resourceRec', result, cls.subject || 'Resources');
