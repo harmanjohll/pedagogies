@@ -1074,14 +1074,14 @@ function showGroupingModal(classId) {
     let sorted;
     if (method === 'mixed') {
       sorted = students.sort((a, b) => {
-        const sa = E21CC_DIMS.reduce((sum, d) => sum + (a.e21cc?.[d.key] || 0), 0);
-        const sb = E21CC_DIMS.reduce((sum, d) => sum + (b.e21cc?.[d.key] || 0), 0);
+        const sa = E21CC_DIMS.reduce((sum, d) => sum + levelToValue(a.e21cc?.[d.key] || 'developing'), 0);
+        const sb = E21CC_DIMS.reduce((sum, d) => sum + levelToValue(b.e21cc?.[d.key] || 'developing'), 0);
         return sb - sa;
       });
     } else if (method === 'similar') {
       sorted = students.sort((a, b) => {
-        const sa = E21CC_DIMS.reduce((sum, d) => sum + (a.e21cc?.[d.key] || 0), 0);
-        const sb = E21CC_DIMS.reduce((sum, d) => sum + (b.e21cc?.[d.key] || 0), 0);
+        const sa = E21CC_DIMS.reduce((sum, d) => sum + levelToValue(a.e21cc?.[d.key] || 'developing'), 0);
+        const sb = E21CC_DIMS.reduce((sum, d) => sum + levelToValue(b.e21cc?.[d.key] || 'developing'), 0);
         return sb - sa;
       });
     } else {
