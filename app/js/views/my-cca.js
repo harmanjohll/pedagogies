@@ -96,6 +96,13 @@ const DEFAULT_SAFETY = {
   clubs: ['Lab/equipment safety briefing', 'Electrical safety (robotics/infocomm)', 'Supervision ratio adequate'],
 };
 
+const CCA_CAT_ICONS = {
+  sports: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
+  performing: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+  uniformed: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  clubs: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v4"/><path d="M12 18v4"/><circle cx="12" cy="12" r="4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>`,
+};
+
 function getCCAReminders() {
   try { return JSON.parse(localStorage.getItem('cocher_cca_reminders') || '[]'); } catch { return []; }
 }
@@ -157,6 +164,12 @@ const CCA_STYLES = `
   .cca-reminder-item:last-child { border-bottom: none; }
   .cca-training-output { margin-top: 10px; padding: 12px; border-radius: 8px; background: var(--bg-subtle, #f8f9fa); font-size: 0.8125rem; line-height: 1.6; color: var(--ink-muted); }
   .dark .cca-training-output { background: var(--bg-subtle, #16161e); }
+
+  .cca-category-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s; }
+  .cca-category-card:hover { box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.06)); }
+  .dark .cca-category-card { background: var(--bg-card, #1e1e2e); border-color: var(--border, #2e2e3e); }
+  .cca-chevron { transition: transform 0.2s; }
+  .cca-chevron.open { transform: rotate(180deg); }
 `;
 
 function escHtml(str) {

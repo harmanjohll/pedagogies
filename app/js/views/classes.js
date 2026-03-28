@@ -20,6 +20,16 @@ const E21CC_DIMS = [
   { key: 'selfRegulation',     label: 'Self-Regulation',       short: 'SR',  color: '#f59e0b' },
 ];
 
+const E21CC_LEVELS = [
+  { key: 'developing', label: 'Developing', short: 'Dev', color: '#f59e0b', value: 1 },
+  { key: 'applying', label: 'Applying', short: 'App', color: '#3b82f6', value: 2 },
+  { key: 'extending', label: 'Extending', short: 'Ext', color: '#10b981', value: 3 },
+  { key: 'leading', label: 'Leading', short: 'Lead', color: '#8b5cf6', value: 4 },
+];
+
+function levelToValue(level) { return E21CC_LEVELS.find(l => l.key === level)?.value || 1; }
+function levelMeta(level) { return E21CC_LEVELS.find(l => l.key === level) || E21CC_LEVELS[0]; }
+
 /* ═══════════ Classes List ═══════════ */
 
 export function renderList(container) {
@@ -53,10 +63,16 @@ export function renderList(container) {
             ${classes.map(cls => {
               const studentCount = cls.students?.length || 0;
               const noteCount = cls.notes?.length || 0;
-              const dimAvgs = E21CC_DIMS.map(d => ({
-                ...d,
-                avg: studentCount > 0 ? Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.[d.key] || 0), 0) / studentCount) : 0
-              }));
+              const dimModes = E21CC_DIMS.map(d => {
+                if (studentCount === 0) return { ...d, mode: null };
+                const counts = {};
+                cls.students.forEach(st => {
+                  const lv = st.e21cc?.[d.key] || 'developing';
+                  counts[lv] = (counts[lv] || 0) + 1;
+                });
+                const mode = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+                return { ...d, mode };
+              });
 
               return `
                 <div class="card card-hover card-interactive card-accent-top" data-class-id="${cls.id}">
@@ -72,14 +88,14 @@ export function renderList(container) {
                       <span class="badge badge-gray badge-dot">${noteCount} note${noteCount !== 1 ? 's' : ''}</span>
                     </div>
                     ${studentCount > 0 ? `
-                      <div class="e21cc-bars">
-                        ${dimAvgs.map(d => `
-                        <div class="e21cc-bar">
-                          <span class="e21cc-bar-label" style="color: ${d.color};">${d.short}</span>
-                          <div class="e21cc-bar-track"><div class="e21cc-bar-fill" style="width:${d.avg}%; background: ${d.color};"></div></div>
-                          <span class="e21cc-bar-value">${d.avg}</span>
-                        </div>
-                        `).join('')}
+                      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                        ${dimModes.map(d => {
+                          const meta = levelMeta(d.mode);
+                          return `<div style="display:flex;align-items:center;gap:4px;">
+                            <span style="font-size:0.6875rem;font-weight:600;color:${d.color};">${d.short}</span>
+                            <span style="padding:2px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${meta.color}15;color:${meta.color};">${meta.short}</span>
+                          </div>`;
+                        }).join('')}
                       </div>
                     ` : `
                       <p style="font-size: 0.8125rem; color: var(--ink-faint); font-style: italic;">Add students to see E21CC overview</p>
@@ -358,7 +374,7 @@ export function renderDetail(container, { id }) {
           const student = students[idx];
           if (!student) return;
           if (radarChart) radarChart.destroy();
-          const scores = E21CC_DIMS.map(d => student.e21cc?.[d.key] || 0);
+          const scores = E21CC_DIMS.map(d => levelToValue(student.e21cc?.[d.key] || 'developing'));
           radarChart = new Chart(canvas, {
             type: 'radar',
             data: {
@@ -378,7 +394,7 @@ export function renderDetail(container, { id }) {
             options: {
               responsive: true,
               maintainAspectRatio: true,
-              scales: { r: { beginAtZero: true, max: 100, ticks: { stepSize: 20, font: { size: 10 } }, pointLabels: { font: { size: 11 } } } },
+              scales: { r: { beginAtZero: true, min: 0, max: 4, ticks: { stepSize: 1, font: { size: 10 }, callback: (v) => { const labels = ['','Dev','App','Ext','Lead']; return labels[v] || v; } }, pointLabels: { font: { size: 11 } } } },
               plugins: { legend: { position: 'bottom' } }
             }
           });
@@ -531,16 +547,13 @@ function renderStudentsTab(cls) {
                   <span style="font-weight: 500;">${s.name}</span>
                 </div>
               </td>
-              ${E21CC_DIMS.map(d => `
+              ${E21CC_DIMS.map(d => {
+                const meta = levelMeta(s.e21cc?.[d.key] || 'developing');
+                return `
               <td>
-                <div style="display: flex; align-items: center; gap: var(--sp-2);">
-                  <div style="width: 48px; height: 6px; background: var(--bg-subtle); border-radius: 3px; overflow: hidden;">
-                    <div style="width: ${s.e21cc?.[d.key] || 0}%; height: 100%; background: ${d.color}; border-radius: 3px;"></div>
-                  </div>
-                  <span style="font-size: 0.75rem; color: var(--ink-muted); width: 24px;">${s.e21cc?.[d.key] || 0}</span>
-                </div>
-              </td>
-              `).join('')}
+                <span style="padding:2px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${meta.color}15;color:${meta.color};">${meta.short}</span>
+              </td>`;
+              }).join('')}
               <td style="text-align: right;">
                 <button class="btn btn-ghost btn-sm e21cc-edit-btn" data-student-id="${s.id}" style="font-size: 0.75rem;">Edit E21CC</button>
                 <button class="btn btn-ghost btn-sm remove-student-btn" data-student-id="${s.id}" style="color: var(--danger); font-size: 0.75rem;">Remove</button>
