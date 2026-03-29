@@ -669,15 +669,31 @@ export function render(container) {
                 <option>Literature</option><option>Art</option><option>Music</option>
                 <option>Physical Education</option><option>Character &amp; Citizenship Education</option>
                 <option>General Paper</option><option>Computing</option>
+                <option>Design &amp; Technology</option><option>Food &amp; Consumer Education</option>
+                <option>Principles of Accounts</option><option>Economics</option>
+                <option>H2 Mathematics</option><option>H2 Chemistry</option><option>H2 Physics</option><option>H2 Biology</option>
+                <option>H2 Economics</option><option>H2 History</option><option>H2 Geography</option><option>H2 Literature</option>
               </select>
             </div>
             <div>
-              <label for="ap-level">Level</label>
-              <select id="ap-level" class="input" style="width:100%;box-sizing:border-box;">
+              <label for="ap-school-type">School Type</label>
+              <select id="ap-school-type" class="input" style="width:100%;box-sizing:border-box;">
                 <option value="">Select...</option>
-                <option>Sec 1</option><option>Sec 2</option><option>Sec 3</option>
-                <option>Sec 4</option><option>Sec 5</option>
-                <option>JC 1</option><option>JC 2</option>
+                <option value="primary">Primary</option>
+                <option value="secondary">Secondary</option>
+                <option value="jc">Junior College</option>
+              </select>
+            </div>
+            <div>
+              <label for="ap-year">Year</label>
+              <select id="ap-year" class="input" style="width:100%;box-sizing:border-box;">
+                <option value="">Select school type first...</option>
+              </select>
+            </div>
+            <div>
+              <label for="ap-demand">Level of Demand</label>
+              <select id="ap-demand" class="input" style="width:100%;box-sizing:border-box;">
+                <option value="">Select year first...</option>
               </select>
             </div>
             <div class="full">
@@ -866,12 +882,55 @@ export function render(container) {
 
     // Render LaTeX in all output cards
     processLatex(container);
+
+    // Cascading level selectors
+    const schoolType = container.querySelector('#ap-school-type');
+    const yearSelect = container.querySelector('#ap-year');
+    const demandSelect = container.querySelector('#ap-demand');
+
+    if (schoolType && yearSelect && demandSelect) {
+      schoolType.addEventListener('change', () => {
+        const type = schoolType.value;
+        let years = [];
+        if (type === 'primary') years = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'];
+        else if (type === 'secondary') years = ['Sec 1', 'Sec 2', 'Sec 3', 'Sec 4', 'Sec 5'];
+        else if (type === 'jc') years = ['JC 1', 'JC 2'];
+
+        yearSelect.innerHTML = '<option value="">Select...</option>' +
+          years.map(y => `<option value="${y}">${y}</option>`).join('');
+        demandSelect.innerHTML = '<option value="">Select year first...</option>';
+      });
+
+      yearSelect.addEventListener('change', () => {
+        const type = schoolType.value;
+        const year = yearSelect.value;
+        let demands = [];
+
+        if (type === 'primary' && ['P5', 'P6'].includes(year)) {
+          demands = ['Standard', 'Foundation'];
+        } else if (type === 'secondary') {
+          demands = ['G1', 'G2', 'G3'];
+        } else if (type === 'jc') {
+          demands = ['H1', 'H2', 'H3'];
+        }
+
+        if (demands.length === 0) {
+          demandSelect.innerHTML = '<option value="">N/A</option>';
+        } else {
+          demandSelect.innerHTML = '<option value="">Select...</option>' +
+            demands.map(d => `<option value="${d}">${d}</option>`).join('');
+        }
+      });
+    }
   }
 
   /* ── Pipeline runner ── */
   async function runPipeline() {
     const subject = container.querySelector('#ap-subject').value;
-    const level = container.querySelector('#ap-level').value;
+    const level = [
+      container.querySelector('#ap-year')?.value,
+      container.querySelector('#ap-demand')?.value
+    ].filter(Boolean).join(' ');
     const topic = container.querySelector('#ap-topic').value.trim();
     const duration = container.querySelector('#ap-duration').value;
     const notes = container.querySelector('#ap-notes').value.trim();

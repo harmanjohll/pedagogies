@@ -1359,10 +1359,22 @@ export function seedCCAIfNeeded() {
   }
 
   const sampleCCAs = [
+    // Physical Sports
     { id: generateId(), name: 'Basketball', category: 'sports', createdAt: Date.now() - 86400000 * 30 },
-    { id: generateId(), name: 'Concert Band', category: 'performing', createdAt: Date.now() - 86400000 * 28 },
-    { id: generateId(), name: 'National Cadet Corps (NCC)', category: 'uniformed', createdAt: Date.now() - 86400000 * 25 },
-    { id: generateId(), name: 'Robotics Club', category: 'clubs', createdAt: Date.now() - 86400000 * 20 },
+    { id: generateId(), name: 'Track & Field', category: 'sports', createdAt: Date.now() - 86400000 * 29 },
+    { id: generateId(), name: 'Badminton', category: 'sports', createdAt: Date.now() - 86400000 * 28 },
+    // Visual & Performing Arts
+    { id: generateId(), name: 'Concert Band', category: 'performing', createdAt: Date.now() - 86400000 * 27 },
+    { id: generateId(), name: 'Chinese Dance', category: 'performing', createdAt: Date.now() - 86400000 * 26 },
+    { id: generateId(), name: 'Drama Club', category: 'performing', createdAt: Date.now() - 86400000 * 25 },
+    // Uniformed Groups
+    { id: generateId(), name: 'National Cadet Corps (NCC)', category: 'uniformed', createdAt: Date.now() - 86400000 * 24 },
+    { id: generateId(), name: 'Girl Guides', category: 'uniformed', createdAt: Date.now() - 86400000 * 23 },
+    { id: generateId(), name: 'St John Brigade', category: 'uniformed', createdAt: Date.now() - 86400000 * 22 },
+    // Clubs & Societies
+    { id: generateId(), name: 'Robotics Club', category: 'clubs', createdAt: Date.now() - 86400000 * 21 },
+    { id: generateId(), name: 'Debate Society', category: 'clubs', createdAt: Date.now() - 86400000 * 20 },
+    { id: generateId(), name: 'Environmental Club', category: 'clubs', createdAt: Date.now() - 86400000 * 19 },
   ];
 
   localStorage.setItem('cocher_cca_list', JSON.stringify(sampleCCAs));
