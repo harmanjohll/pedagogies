@@ -610,6 +610,45 @@ function md(text) {
   // Restore LaTeX placeholders (must be last, after all other placeholder restoration)
   result = result.replace(/%%LATEX_(\d+)%%/g, (_, idx) => latexPlaceholders[parseInt(idx)]);
 
+  // Flashcard rendering: detect CARD:/BACK: patterns
+  result = result.replace(/(?:CARD:\s*(.+?)(?:<br>|\n)BACK:\s*(.+?)(?:<br>|\n)---)/g, (match, term, back) => {
+    const parts = back.split('|').map(p => p.trim());
+    const def = parts[0] || '';
+    const example = parts[1] || '';
+    const wordClass = parts[2] || '';
+    return `<div class="flashcard" onclick="this.classList.toggle('flipped')" style="perspective:600px;cursor:pointer;min-height:110px;display:inline-block;width:calc(33% - 8px);vertical-align:top;margin:4px;">
+      <div style="position:relative;width:100%;min-height:110px;transition:transform 0.5s;transform-style:preserve-3d;">
+        <div style="position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);font-weight:700;font-size:0.9375rem;color:var(--ink);">${term}</div>
+        <div style="position:absolute;inset:0;backface-visibility:hidden;transform:rotateY(180deg);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10px;border-radius:10px;border:1px solid var(--accent);background:var(--accent-light);font-size:0.75rem;color:var(--ink);line-height:1.4;">
+          <div style="font-weight:600;margin-bottom:4px;">${def}</div>
+          ${example ? `<div style="font-style:italic;color:var(--ink-muted);">${example}</div>` : ''}
+          ${wordClass ? `<div style="margin-top:4px;font-size:0.625rem;color:var(--ink-faint);">${wordClass}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  // Wrap consecutive flashcards in a container
+  result = result.replace(/((?:<div class="flashcard"[^]*?<\/div>\s*<\/div>\s*<\/div>\s*)+)/g,
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;">$1</div>');
+
+  // Flashcard flip CSS (injected inline)
+  if (result.includes('class="flashcard"')) {
+    result = '<style>.flashcard.flipped > div { transform: rotateY(180deg); }</style>' + result;
+  }
+
+  // Only badge framework terms that are NOT inside HTML tags
+  const badgeFramework = (pattern, bg, color) => {
+    result = result.replace(new RegExp(`(?<!["\\/\\w-])(${pattern})(?!["\\/\\w-])`, 'g'),
+      `<span style="display:inline;padding:1px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${bg};color:${color};">$1</span>`);
+  };
+  badgeFramework('E21CC', 'rgba(99,102,241,0.12)', '#6366f1');
+  badgeFramework('CAIT|CCI|CGC', 'rgba(99,102,241,0.1)', '#6366f1');
+  badgeFramework('EdTech|SLS', 'rgba(6,182,212,0.12)', '#06b6d4');
+  badgeFramework('STP', 'rgba(16,185,129,0.12)', '#10b981');
+  badgeFramework('CCE|R3ICH', 'rgba(236,72,153,0.12)', '#ec4899');
+  badgeFramework('SEL', 'rgba(245,158,11,0.12)', '#f59e0b');
+
   return result;
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -1752,6 +1791,7 @@ export function render(container) {
             <label style="font-size:0.8125rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="vocab-include" value="cloze" checked /> Cloze Passage</label>
             <label style="font-size:0.8125rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="vocab-include" value="word-relationships" /> Word Relationships</label>
             <label style="font-size:0.8125rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="vocab-include" value="frayer-model" /> Frayer Models</label>
+            <label style="font-size:0.8125rem;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="vocab-include" value="flashcards" /> Interactive Flashcards</label>
           </div>
         </div>
         <div class="input-group">

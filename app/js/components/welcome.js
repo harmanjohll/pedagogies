@@ -6,6 +6,7 @@
 
 import { Store } from '../state.js';
 import { validateApiKey, AVAILABLE_MODELS } from '../api.js';
+import { getPreferredName, setPreferredName, getCurrentUser } from './login.js';
 
 export function renderWelcome(onComplete) {
   const overlay = document.createElement('div');
@@ -34,6 +35,19 @@ export function renderWelcome(onComplete) {
       </div>
 
       <div id="welcome-step" style="text-align: left;">
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; color: var(--ink-secondary, #334155);">
+            What should Co-Cher call you?
+          </label>
+          <input id="welcome-pref-name" type="text" class="input"
+            placeholder="e.g. Sarah, Mr Tan, Ms Lim"
+            value="${getPreferredName?.() || ''}"
+            style="width: 100%; box-sizing: border-box; background: var(--bg-subtle, #f8fafc); color: var(--ink, #0f172a);" />
+          <p style="font-size: 0.75rem; color: var(--ink-faint, #94a3b8); margin: 4px 0 0;">
+            You can change this later in Settings.
+          </p>
+        </div>
+
         <div style="margin-bottom: 20px;">
           <label style="display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 6px; color: var(--ink-secondary, #334155);">
             Gemini API Key
@@ -224,6 +238,9 @@ export function renderWelcome(onComplete) {
     Store.set('apiKey', key);
     Store.set('model', modelSelect.value);
 
+    const prefName = overlay.querySelector('#welcome-pref-name')?.value.trim();
+    if (prefName) setPreferredName(prefName);
+
     // Save pedagogical priorities
     const priorities = [...overlay.querySelectorAll('.ped-priority-cb:checked')].map(cb => cb.value);
     if (priorities.length > 0) {
@@ -237,6 +254,9 @@ export function renderWelcome(onComplete) {
   skipBtn.addEventListener('click', () => {
     Store.set('apiKeyDeferred', true);
     Store.set('model', modelSelect.value);
+
+    const prefName = overlay.querySelector('#welcome-pref-name')?.value.trim();
+    if (prefName) setPreferredName(prefName);
 
     // Save pedagogical priorities if any selected
     const priorities = [...overlay.querySelectorAll('.ped-priority-cb:checked')].map(cb => cb.value);
