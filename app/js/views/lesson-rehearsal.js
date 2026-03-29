@@ -868,6 +868,7 @@ function renderRehearsalInterface(container) {
 
   // Event: mic button (Web Speech API)
   const micBtn = container.querySelector('#rh-mic-btn');
+  const chatInput = container.querySelector('#rh-chat-input');
   if (micBtn && chatInput) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
