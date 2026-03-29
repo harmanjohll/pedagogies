@@ -70,12 +70,12 @@ const SRL_STRATEGIES = [
       Humanities: 'Model source analysis: "The date tells me this was during the Cold War, so I should consider\u2026"',
       default: 'Verbalise your decision-making process step by step so students can see how an expert thinks through the task.'
     }},
-  { title: 'KWL Chart', desc: 'What I Know / What I Want to Know / What I Learned \u2014 activates prior knowledge and sets learning goals.',
+  { title: 'KWL Chart', desc: 'What I Know / What I Want to Know / What I Learned, activating prior knowledge and setting learning goals.',
     applications: {
-      Science: 'Before a new topic (e.g., Electricity): K \u2014 "Batteries store energy", W \u2014 "How does current flow?", L \u2014 filled after experiments.',
-      Mathematics: 'Before a new chapter: K \u2014 "I know how to solve linear equations", W \u2014 "How do quadratics differ?", L \u2014 after practice.',
-      English: 'Before studying a new text: K \u2014 "I know about narrative perspective", W \u2014 "How does this author use it?", L \u2014 post-reading.',
-      Humanities: 'Before a new unit: K \u2014 "I know WWII started in 1939", W \u2014 "What caused the Pacific front?", L \u2014 after sources study.',
+      Science: 'Before a new topic (e.g., Electricity): K: "Batteries store energy", W: "How does current flow?", L: filled after experiments.',
+      Mathematics: 'Before a new chapter: K: "I know how to solve linear equations", W: "How do quadratics differ?", L: after practice.',
+      English: 'Before studying a new text: K: "I know about narrative perspective", W: "How does this author use it?", L: post-reading.',
+      Humanities: 'Before a new unit: K: "I know WWII started in 1939", W: "What caused the Pacific front?", L: after sources study.',
       default: 'Have students fill in K and W columns before the lesson, then complete L at the end to track their own learning journey.'
     }},
   { title: 'Wrapper Activity', desc: 'Brief pre- and post-task reflection (e.g., \u201cHow will I approach this?\u201d \u2192 task \u2192 \u201cWhat worked?\u201d).',
