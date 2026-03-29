@@ -61,20 +61,13 @@ let _sandboxLabel = SANDBOX_LABELS[Math.floor(Math.random() * SANDBOX_LABELS.len
 /* ── EEE-to-sidebar mapping: which EEE keys get sidebar nav items ── */
 const EEE_NAV_MAP = {
   simulations:    { route: '/simulations',      icon: 'simulations',    label: 'Simulations' },
-  youtubeVideos:  { route: '/lesson-planner',   icon: 'youtube',        label: 'YouTube Curation' },
-  worksheet:      { route: '/lesson-planner',   icon: 'worksheet',      label: 'Worksheet' },
-  externalLinks:  { route: '/lesson-planner',   icon: 'externalLinks',  label: 'External Resources' },
   stimulus:       { route: '/stimulus-material', icon: 'stimulus',       label: 'Stimulus Material' },
-  vocabulary:     { route: '/lesson-planner',   icon: 'vocabulary',     label: 'Vocabulary Builder' },
-  modelResponse:  { route: '/lesson-planner',   icon: 'modelResponse',  label: 'Model Response' },
   sourceAnalysis: { route: '/source-analysis',   icon: 'sourceAnalysis', label: 'Source Analysis' },
-  seatPlan:       { route: '/lesson-planner',   icon: 'seatPlan',       label: 'Seating Plan' },
   cceDiscussion:  { route: '/cce',              icon: 'cceDiscussion',  label: 'CCE Discussion' },
   staveNotation:  { route: '/stave-notation',    icon: 'staveNotation',  label: 'Stave Notation' },
   rhythmTool:     { route: '/rhythm-tool',      icon: 'rhythmTool',     label: 'Rhythm & Percussion' },
   artCritique:    { route: '/art-critique',     icon: 'artCritique',    label: 'Art Critique' },
   designProcess:  { route: '/design-process',   icon: 'designProcess',  label: 'Design Process' },
-  recipeBuilder:  { route: '/lesson-planner',   icon: 'recipeBuilder',  label: 'Recipe & Nutrition' },
   kitchenLayout:  { route: '/kitchen-layout',   icon: 'kitchenLayout',  label: 'Kitchen Layout' },
 };
 

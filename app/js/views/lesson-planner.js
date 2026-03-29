@@ -74,13 +74,11 @@ export const EEE_REGISTRY = {
   youtubeVideos:  { label: 'YouTube Curation',   cat: 'core', type: 'resource', desc: 'Curated video recommendations with preview tiles', subjects: ['all'], pedagogy: ['engagement', 'edtech', 'direct'] },
   simulations:    { label: 'Simulations & Models', cat: 'enactment', type: 'tool', desc: 'Interactive sims: PhET, GeoGebra, built-in practicals', subjects: ['Science', 'Chemistry', 'Physics', 'Biology', 'Mathematics', 'Geography'], pedagogy: ['inquiry', 'edtech', 'engagement'] },
   worksheet:      { label: 'Worksheet / Handout', cat: 'enactment', type: 'resource', desc: 'Print-ready student worksheets with mixed question types', subjects: ['all'], pedagogy: ['differentiation', 'assessment', 'direct'] },
-  externalLinks:  { label: 'External Resources', cat: 'enactment', type: 'resource', desc: 'Curated links to SLS, MOE resources, and open platforms', subjects: ['all'], pedagogy: ['edtech', 'inquiry'] },
   stimulus:       { label: 'Stimulus Material',  cat: 'enactment', type: 'resource', desc: 'Comprehension passages, source texts, scenario briefs', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'History', 'Social Studies', 'Geography', 'General Paper'], pedagogy: ['inquiry', 'direct', 'engagement'] },
   vocabulary:     { label: 'Vocabulary Builder', cat: 'enactment', type: 'resource', desc: 'Word walls, sentence frames, cloze passages, academic language', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'all'], pedagogy: ['differentiation', 'direct'] },
   modelResponse:  { label: 'Model Response',     cat: 'enactment', type: 'resource', desc: 'Annotated model answers showing structure & techniques', subjects: ['English', 'Chinese', 'Malay', 'Tamil', 'History', 'Social Studies', 'General Paper', 'Geography'], pedagogy: ['direct', 'assessment'] },
   sourceAnalysis: { label: 'Source Analysis',     cat: 'enactment', type: 'tool', desc: 'Structured SBQ/SEQ-style source-based questions', subjects: ['History', 'Social Studies', 'General Paper', 'Geography'], pedagogy: ['inquiry', 'assessment', 'e21cc'] },
   seatPlan:       { label: 'Seating Plan',        cat: 'enactment', type: 'tool', desc: 'AI seat assignments with visual classroom map', subjects: ['all'], pedagogy: ['collaborative', 'differentiation', 'sel'] },
-  cceDiscussion:  { label: 'CCE Discussion',      cat: 'enactment', type: 'tool', desc: 'Structured values-based discussion with CCE2021 framework', subjects: ['CCE', 'Social Studies', 'all'], pedagogy: ['cce', 'sel', 'collaborative'] },
   // === NEW TOOLS — Arts, Music, NFS, D&T ===
   staveNotation:  { label: 'Stave Notation',      cat: 'enactment', type: 'tool', desc: 'Staff notation snippets for music theory — treble/bass clef, time signatures, note values', subjects: ['Music'], pedagogy: ['direct', 'engagement'] },
   rhythmTool:     { label: 'Rhythm & Percussion',  cat: 'enactment', type: 'tool', desc: 'Interactive rhythm patterns, drum notation, and body percussion guides', subjects: ['Music'], pedagogy: ['engagement', 'collaborative'] },
@@ -90,7 +88,7 @@ export const EEE_REGISTRY = {
   kitchenLayout:  { label: 'Kitchen Layout',       cat: 'enactment', type: 'tool', desc: 'Plan kitchen workstation layout — spatial planner opens with kitchen preset', subjects: ['NFS', 'Food & Nutrition', 'FCE'], pedagogy: ['collaborative', 'engagement'] },
 };
 
-const DEFAULT_PLANNER = ['youtubeVideos', 'worksheet', 'externalLinks', 'seatPlan', 'simulations', 'stimulus', 'vocabulary', 'modelResponse', 'sourceAnalysis', 'cceDiscussion'];
+const DEFAULT_PLANNER = ['youtubeVideos', 'worksheet', 'seatPlan', 'simulations', 'stimulus', 'vocabulary', 'modelResponse', 'sourceAnalysis'];
 const DEFAULT_SIDEBAR = ['simulations'];
 
 export function getEEESelections() {
@@ -159,12 +157,10 @@ const COMPONENT_META = {
   simulations:     { label: 'Simulation Models',        color: '#8b5cf6',            icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>', order: 9 },
   worksheet:       { label: 'Worksheet / Handout',      color: 'var(--info, #3b82f6)',icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/><path d="M7 13h0.01"/>', order: 10 },
   discussionPrompts: { label: 'Discussion Prompts',     color: 'var(--warning, #f59e0b)', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15" cy="10" r="1" fill="currentColor"/>', order: 11 },
-  externalLinks:   { label: 'External Resources',       color: 'var(--success, #22c55e)', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>', order: 12 },
   stimulus:        { label: 'Stimulus Material',        color: '#0ea5e9',              icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/>', order: 13 },
   vocabulary:      { label: 'Vocabulary Builder',        color: '#06b6d4',              icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', order: 14 },
   modelResponse:   { label: 'Model Response',            color: '#d946ef',              icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>', order: 15 },
   sourceAnalysis:  { label: 'Source Analysis',           color: '#f97316',              icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>', order: 16 },
-  cceDiscussion:   { label: 'CCE Discussion',            color: '#e11d48',              icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>', order: 17 },
   staveNotation:   { label: 'Stave Notation',            color: '#7c3aed',              icon: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>', order: 18 },
   rhythmTool:      { label: 'Rhythm & Percussion',       color: '#a855f7',              icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/>', order: 19 },
   artCritique:     { label: 'Art Critique Guide',         color: '#ec4899',              icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>', order: 20 },
@@ -292,12 +288,10 @@ function renderComponents(container) {
         simulations: '#ai-simulations-btn',
         worksheet: '#ai-worksheet-btn',
         discussionPrompts: '#ai-discussion-btn',
-        externalLinks: '#ai-external-btn',
         stimulus: '#ai-stimulus-btn',
         vocabulary: '#ai-vocabulary-btn',
         modelResponse: '#ai-model-response-btn',
         sourceAnalysis: '#ai-source-analysis-btn',
-        cceDiscussion: '#ai-cce-btn',
         seatPlan: '#spatial-layout-btn',
       };
       if (toolBtnMap[key]) container.querySelector(toolBtnMap[key])?.click();
@@ -798,12 +792,10 @@ const AI_TOOLS = [
   { id: 'ai-youtube-btn', label: 'YouTube', icon: '<polygon points="5 3 19 12 5 21 5 3"/>', color: '#ff0000', cat: 'core', eee: 'youtubeVideos' },
   { id: 'ai-simulations-btn', label: 'Simulations', icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>', color: '#8b5cf6', cat: 'enactment', eee: 'simulations' },
   { id: 'ai-worksheet-btn', label: 'Worksheet', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>', color: '', cat: 'enactment', eee: 'worksheet' },
-  { id: 'ai-external-btn', label: 'Resources', icon: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>', color: '', cat: 'enactment', eee: 'externalLinks' },
   { id: 'ai-stimulus-btn', label: 'Stimulus', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/>', color: '#0ea5e9', cat: 'enactment', eee: 'stimulus' },
   { id: 'ai-vocabulary-btn', label: 'Vocabulary', icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', color: '#06b6d4', cat: 'enactment', eee: 'vocabulary' },
   { id: 'ai-model-response-btn', label: 'Model Resp.', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/>', color: '#d946ef', cat: 'enactment', eee: 'modelResponse' },
   { id: 'ai-source-analysis-btn', label: 'Source Analysis', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/>', color: '#f97316', cat: 'enactment', eee: 'sourceAnalysis' },
-  { id: 'ai-cce-btn', label: 'CCE Discussion', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>', color: '#e11d48', cat: 'enactment', eee: 'cceDiscussion' },
   { id: 'ai-stave-btn', label: 'Stave Notation', icon: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>', color: '#7c3aed', cat: 'enactment', eee: 'staveNotation' },
   { id: 'ai-rhythm-btn', label: 'Rhythm', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/>', color: '#a855f7', cat: 'enactment', eee: 'rhythmTool' },
   { id: 'ai-art-critique-btn', label: 'Art Critique', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>', color: '#ec4899', cat: 'enactment', eee: 'artCritique' },
@@ -1687,26 +1679,6 @@ export function render(container) {
     }
   });
 
-  // External Resources
-  container.querySelector('#ai-external-btn')?.addEventListener('click', async () => {
-    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
-    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
-    if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
-    const planText = aiMsgs.map(m => m.content).join('\n\n');
-    const cls = planClassContext || {};
-    const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Finding external resources...</div>';
-    resultEl.scrollIntoView({ behavior: 'smooth' });
-    try {
-      const result = await suggestExternalResources(planText, cls.subject, cls.level);
-      setComponent('externalLinks', result, cls.subject || 'Resources');
-      resultEl.innerHTML = '';
-      renderComponents(container);
-      showToast('External resources added!', 'success');
-    } catch (err) {
-      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
-    }
-  });
 
   // EEE: Stimulus Material
   container.querySelector('#ai-stimulus-btn')?.addEventListener('click', async () => {
@@ -1930,25 +1902,6 @@ export function render(container) {
     }
   });
 
-  // CCE Discussion
-  container.querySelector('#ai-cce-btn')?.addEventListener('click', async () => {
-    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
-    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
-    const planText = aiMsgs.length > 0 ? aiMsgs.map(m => m.content).join('\n\n') : 'General CCE lesson';
-    const cls = planClassContext || {};
-    const resultEl = container.querySelector('#ai-result');
-    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Generating CCE discussion plan...</div>';
-    resultEl.scrollIntoView({ behavior: 'smooth' });
-    try {
-      const result = await generateCCEDiscussion(planText, cls.level, cls.subject === 'CCE' ? '' : cls.subject);
-      setComponent('cceDiscussion', result, 'CCE2021');
-      resultEl.innerHTML = '';
-      renderComponents(container);
-      showToast('CCE discussion generated!', 'success');
-    } catch (err) {
-      resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
-    }
-  });
 
   // Share Lesson (export/import JSON)
   // Word export

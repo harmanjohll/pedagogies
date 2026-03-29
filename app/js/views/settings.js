@@ -9,7 +9,7 @@ import { validateApiKey, AVAILABLE_MODELS } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser, getPreferredName, setPreferredName, guessFirstName } from '../components/login.js';
-import { EEE_REGISTRY, PEDAGOGY_APPROACHES, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks } from './lesson-planner.js';
+import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks } from './lesson-planner.js';
 import { startTour, resetTour } from '../components/spotlight-tour.js';
 import { trackEvent, analyticsEnabled, setAnalyticsEnabled } from '../utils/analytics.js';
 
@@ -148,44 +148,8 @@ function suggestEEEsForSubjects(subjects) {
   return [...suggested];
 }
 
-/* ── Subject categories for marketplace grouping ── */
-const EEE_SUBJECT_GROUPS = [
-  { id: 'all', label: 'All Tools' },
-  { id: 'sciences', label: 'Sciences', match: ['Science', 'Chemistry', 'Physics', 'Biology', 'Geography'] },
-  { id: 'math', label: 'Mathematics', match: ['Mathematics'] },
-  { id: 'languages', label: 'Languages', match: ['English', 'Chinese', 'Malay', 'Tamil'] },
-  { id: 'humanities', label: 'Humanities', match: ['History', 'Social Studies', 'General Paper', 'Geography'] },
-  { id: 'aesthetics', label: 'Aesthetics & Technology', match: ['Art', 'Music', 'D&T', 'Design & Technology', 'NFS', 'Food & Nutrition', 'FCE'] },
-  { id: 'cce', label: 'CCE & Values', match: ['CCE', 'Social Studies'] },
-];
-
-function getToolSubjectGroup(entry) {
-  if (!entry.subjects || entry.subjects.includes('all')) return 'universal';
-  return 'subject-specific';
-}
-
-function toolMatchesGroup(entry, groupId) {
-  if (groupId === 'all') return true;
-  const group = EEE_SUBJECT_GROUPS.find(g => g.id === groupId);
-  if (!group || !group.match) return false;
-  if (!entry.subjects) return false;
-  if (entry.subjects.includes('all')) return true;
-  return entry.subjects.some(s => group.match.includes(s));
-}
-
-/* ── Pedagogy signpost text ── */
-const PEDAGOGY_SIGNPOSTS = {
-  differentiation: 'Try for differentiated practice',
-  inquiry: 'Great for inquiry-based lessons',
-  collaborative: 'Supports collaborative learning',
-  direct: 'Useful for direct instruction',
-  assessment: 'Supports assessment for learning',
-  e21cc: 'Develops 21st century competencies',
-  sel: 'Supports SEL & well-being',
-  edtech: 'Enhances EdTech integration',
-  engagement: 'Boosts student engagement',
-  cce: 'Supports CCE & values education',
-};
+/* ── Tools with dedicated pages (sidebar-navigable) ── */
+const STANDALONE_EEE_KEYS = ['simulations','stimulus','sourceAnalysis','cceDiscussion','staveNotation','rhythmTool','artCritique','designProcess','kitchenLayout'];
 
 // Build rgba tint from hex — used for card backgrounds
 function _hexToRGBA(hex, alpha) {
@@ -221,123 +185,75 @@ function buildCustomLinksHTML() {
   `).join('');
 }
 
-function buildEEEListHTML(filterGroup = 'all', pedFilter = '') {
+function buildEEEListHTML() {
   const plannerSel = getEEESelections();
   const sidebarSel = getEEESidebarSelections();
-  const entries = Object.entries(EEE_REGISTRY).filter(([, v]) => v.cat === 'enactment');
 
-  // Apply subject filter (for discovery, all tools still shown)
-  let filtered = filterGroup === 'all' ? entries : entries.filter(([, v]) => toolMatchesGroup(v, filterGroup));
-
-  // Apply pedagogy filter — highlight matching, but show all
-  const pedMatches = new Set();
-  if (pedFilter) {
-    filtered.forEach(([key, v]) => {
-      if (v.pedagogy && v.pedagogy.includes(pedFilter)) pedMatches.add(key);
-    });
-    // Sort: matching tools first
-    filtered = [...filtered].sort((a, b) => {
-      const aMatch = pedMatches.has(a[0]) ? 0 : 1;
-      const bMatch = pedMatches.has(b[0]) ? 0 : 1;
-      return aMatch - bMatch;
-    });
-  }
-
-  // Subject filter tabs — pill style using CSS classes
-  let html = `<div style="margin-bottom:14px;">
-    <div class="mkt-section-label">Browse by Subject</div>
-    <div style="display:flex;flex-wrap:wrap;gap:5px;">
-      ${EEE_SUBJECT_GROUPS.map(g => {
-        const isAct = filterGroup === g.id;
-        return `<button class="pill eee-filter-btn${isAct ? ' active' : ''}" data-filter="${g.id}">${g.label}</button>`;
-      }).join('')}
-    </div>
-  </div>`;
-
-  // Pedagogy filter row — pill style using CSS classes
-  html += `<div style="margin-bottom:14px;">
-    <div class="mkt-section-label">Filter by Pedagogical Approach</div>
-    <div style="display:flex;flex-wrap:wrap;gap:5px;">
-      <button class="pill eee-ped-btn${!pedFilter ? ' active-indigo' : ''}" data-ped="">All</button>
-      ${PEDAGOGY_APPROACHES.map(p => {
-        const isAct = pedFilter === p.id;
-        return `<button class="pill eee-ped-btn${isAct ? ' active-indigo' : ''}" data-ped="${p.id}">${p.label}</button>`;
-      }).join('')}
-    </div>
-  </div>`;
-
-  // Select/deselect all row
-  html += `<div class="mkt-select-bar">
-    <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);">Select / Deselect All</div>
-    <div style="display:flex;gap:16px;">
-      <label><input type="checkbox" id="eee-sidebar-all" ${sidebarSel.length === entries.length ? 'checked' : ''} /> Sidebar</label>
-      <label><input type="checkbox" id="eee-planner-all" ${plannerSel.length >= entries.length ? 'checked' : ''} /> Planner</label>
-    </div>
-  </div>`;
-
-  // Marketplace card grid — 3-4 columns
-  html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">`;
-  filtered.forEach(([key, v]) => {
-    const inPlanner = plannerSel.includes(key);
-    const inSidebar = sidebarSel.includes(key);
-    const isActive = inPlanner || inSidebar;
+  // Split enactment tools into planner-only vs standalone (dedicated page)
+  const plannerTools = [];  // no dedicated page — toggle in planner toolbar
+  const standaloneTools = []; // have dedicated pages — toggle in sidebar
+  Object.entries(EEE_REGISTRY).filter(([, v]) => v.cat === 'enactment').forEach(([key, v]) => {
     const meta = COMPONENT_META_SETTINGS[key];
-    const color = meta?.color || 'var(--accent)';
-    const isPedMatch = pedFilter && pedMatches.has(key);
-    const dimmed = pedFilter && !pedMatches.has(key);
-
-    // Sub-type badge — using CSS classes
-    const typeBadge = v.type === 'tool'
-      ? `<span class="micro-badge micro-badge-tool">Teaching Tool</span>`
-      : `<span class="micro-badge micro-badge-resource">Lesson Resource</span>`;
-
-    // Subject tags — using CSS classes
-    const subjectTags = (v.subjects || [])
-      .filter(s => s !== 'all')
-      .slice(0, 4)
-      .map(s => `<span class="subject-tag">${s}</span>`)
-      .join('');
-    const allTag = (v.subjects || []).includes('all')
-      ? `<span class="micro-badge micro-badge-all">All Subjects</span>`
-      : '';
-
-    // Pedagogy signpost
-    let signpost = '';
-    if (v.pedagogy && v.pedagogy.length > 0) {
-      const signpostKey = pedFilter && v.pedagogy.includes(pedFilter) ? pedFilter : v.pedagogy[0];
-      signpost = `<div class="mkt-signpost">${PEDAGOGY_SIGNPOSTS[signpostKey] || ''}</div>`;
+    if (STANDALONE_EEE_KEYS.includes(key)) {
+      standaloneTools.push({ key, ...v, color: meta?.color || 'var(--accent)', icon: meta?.icon || '<circle cx="12" cy="12" r="10"/>' });
+    } else {
+      plannerTools.push({ key, ...v });
     }
-
-    // Card classes & dynamic accent styles
-    const cardClasses = `mkt-card eee-marketplace-card${isActive ? ' active' : ''}${dimmed ? ' dimmed' : ''}${isPedMatch ? ' ped-match' : ''}`;
-    const accentStyles = isActive
-      ? `border-left-color:${color};border-color:${_hexToRGBA(color, 0.5)};background:${_hexToRGBA(color, 0.06)};`
-      : '';
-
-    html += `
-    <div class="${cardClasses}" data-eee="${key}" style="${accentStyles}">
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
-        <div class="mkt-icon" style="background:${isActive ? color : _hexToRGBA(color, 0.1)};color:${isActive ? '#fff' : color};">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${meta?.icon || '<circle cx="12" cy="12" r="10"/>'}</svg>
-        </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:2px;line-height:1.3;">${v.label}</div>
-          <div style="font-size:0.6875rem;color:var(--ink-muted);line-height:1.4;">${v.desc}</div>
-          ${signpost}
-        </div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">${typeBadge}${allTag}${subjectTags}</div>
-      <div class="mkt-footer">
-        <label>
-          <input type="checkbox" class="eee-planner-toggle" data-eee="${key}" ${inPlanner ? 'checked' : ''} /> Planner
-        </label>
-        <label>
-          <input type="checkbox" class="eee-sidebar-toggle" data-eee="${key}" ${inSidebar ? 'checked' : ''} /> Sidebar
-        </label>
-      </div>
-    </div>`;
   });
-  html += `</div>`;
+
+  // Core tools
+  const coreTools = Object.entries(EEE_REGISTRY).filter(([, v]) => v.cat === 'core').map(([, v]) => v);
+
+  let html = '';
+
+  // ── Section A: Lesson Planning Tools (planner-only, toggle list) ──
+  html += `<div style="margin-bottom:24px;">
+    <div style="font-size:0.875rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Lesson Planning Tools</div>
+    <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:12px;">These generate content within the Lesson Planner. Toggle to show/hide in the planner toolbar.</p>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      ${plannerTools.map(tool => `
+        <label style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:background 0.15s;"
+               onmouseover="this.style.background='var(--bg-subtle)'" onmouseout="this.style.background='transparent'">
+          <input type="checkbox" class="eee-planner-toggle" data-eee="${tool.key}" ${plannerSel.includes(tool.key) ? 'checked' : ''} style="accent-color:var(--accent);" />
+          <div style="flex:1;min-width:0;">
+            <span style="font-size:0.8125rem;font-weight:600;color:var(--ink);">${tool.label}</span>
+            <span style="font-size:0.75rem;color:var(--ink-muted);margin-left:8px;">${tool.desc}</span>
+          </div>
+        </label>
+      `).join('')}
+    </div>
+  </div>`;
+
+  // ── Section B: Teaching Tools (standalone, 2-col card grid) ──
+  html += `<div style="margin-bottom:24px;">
+    <div style="font-size:0.875rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Teaching Tools</div>
+    <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:12px;">Standalone tools with their own pages. Toggle to show in the sidebar for quick access.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      ${standaloneTools.map(tool => `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg-card);">
+          <div style="width:32px;height:32px;border-radius:8px;background:${_hexToRGBA(tool.color, 0.1)};color:${tool.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${tool.icon}</svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);">${tool.label}</div>
+          </div>
+          <label style="display:flex;align-items:center;gap:4px;font-size:0.6875rem;color:var(--ink-muted);cursor:pointer;white-space:nowrap;">
+            <input type="checkbox" class="eee-sidebar-toggle" data-eee="${tool.key}" ${sidebarSel.includes(tool.key) ? 'checked' : ''} style="accent-color:var(--accent);" />
+            Sidebar
+          </label>
+        </div>
+      `).join('')}
+    </div>
+  </div>`;
+
+  // ── Section C: Core Tools (always available, non-toggleable chips) ──
+  html += `<div>
+    <div style="font-size:0.875rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Core Tools</div>
+    <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:8px;">Always available in the Lesson Planner toolbar.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${coreTools.map(t => `<span style="font-size:0.75rem;font-weight:500;padding:4px 12px;border-radius:6px;background:var(--bg-subtle);color:var(--ink-secondary);border:1px solid var(--border-light);">${t.label}</span>`).join('')}
+    </div>
+  </div>`;
 
   return html;
 }
@@ -577,26 +493,13 @@ export function render(container) {
             </div>
           </div>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: 16px; line-height: 1.6;">
-            Browse <strong style="color:var(--ink-secondary);">Teaching Tools</strong> (interactive, run in class) and <strong style="color:var(--ink-secondary);">Lesson Resources</strong> (display or distribute).
-            Filter by subject or pedagogical approach. Toggle <strong style="color:var(--ink-secondary);">Planner</strong> to add to the toolbar,
-            or <strong style="color:var(--ink-secondary);">Sidebar</strong> to pin to navigation.
+            Manage which tools appear in your Lesson Planner toolbar and sidebar navigation.
           </p>
 
-          <!-- Core tools (always on, shown for reference) -->
-          <div class="mkt-core-bar">
-            <div class="mkt-section-label">Core Tools (always available)</div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-              ${Object.entries(EEE_REGISTRY).filter(([,v]) => v.cat === 'core').map(([, v]) =>
-                `<span class="mkt-core-chip">${v.label}</span>`
-              ).join('')}
-            </div>
-          </div>
-
-          <!-- Marketplace tools grid -->
           <div id="eee-tool-list">
             ${buildEEEListHTML()}
           </div>
-          <button class="btn btn-primary btn-sm" id="eee-save-btn" style="margin-top:12px;">Save Enactment Tools</button>
+          <button class="btn btn-primary btn-sm" id="eee-save-btn" style="margin-top:16px;">Save Enactment Tools</button>
         </div>
 
         <!-- Custom Links -->
@@ -878,98 +781,24 @@ export function render(container) {
     render(container); // re-render to update active state
   });
 
-  // EEE marketplace — save, filter, card visual updates
-  let currentEEEFilter = 'all';
-
-  // Helper: convert hex color to rgba with alpha
-  function hexToRGBA(hex, alpha) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
-  }
-
+  // EEE marketplace — save selections on toggle change
   const saveEEE = () => {
     const plannerChecked = [...container.querySelectorAll('.eee-planner-toggle:checked')].map(cb => cb.dataset.eee);
     const sidebarChecked = [...container.querySelectorAll('.eee-sidebar-toggle:checked')].map(cb => cb.dataset.eee);
     saveEEESelections(plannerChecked);
     saveEEESidebarSelections(sidebarChecked);
     Store.set('_eeeUpdated', Date.now());
-    // Update card visual states
-    container.querySelectorAll('.eee-marketplace-card').forEach(card => {
-      const key = card.dataset.eee;
-      const meta = COMPONENT_META_SETTINGS[key];
-      const color = meta?.color || '#4361ee';
-      const inP = plannerChecked.includes(key);
-      const inS = sidebarChecked.includes(key);
-      const active = inP || inS;
-      card.classList.toggle('active', active);
-      card.style.borderColor = active ? _hexToRGBA(color, 0.5) : '';
-      card.style.borderLeftColor = active ? color : '';
-      card.style.background = active ? _hexToRGBA(color, 0.06) : '';
-      const iconBox = card.querySelector('.mkt-icon');
-      if (iconBox) {
-        iconBox.style.background = active ? color : _hexToRGBA(color, 0.1);
-        iconBox.style.color = active ? '#fff' : color;
-      }
-    });
     return { planner: plannerChecked, sidebar: sidebarChecked };
   };
 
-  // Default pedagogy filter from onboarding priorities
-  const savedPriorities = Store.get('pedagogicalPriorities') || [];
-  let currentPedFilter = savedPriorities.length > 0 ? savedPriorities[0] : '';
-
-  const rerenderEEEList = () => {
-    const listEl = container.querySelector('#eee-tool-list');
-    if (listEl) listEl.innerHTML = buildEEEListHTML(currentEEEFilter, currentPedFilter);
-  };
-
-  // ── Event delegation: ONE listener on #eee-tool-list, never re-attached ──
   const eeeListContainer = container.querySelector('#eee-tool-list');
   if (eeeListContainer) {
-    // Click delegation for filter buttons
-    eeeListContainer.addEventListener('click', (e) => {
-      const filterBtn = e.target.closest('.eee-filter-btn');
-      if (filterBtn) {
-        currentEEEFilter = filterBtn.dataset.filter;
-        rerenderEEEList();
-        return;
-      }
-      const pedBtn = e.target.closest('.eee-ped-btn');
-      if (pedBtn) {
-        currentPedFilter = pedBtn.dataset.ped;
-        rerenderEEEList();
-        return;
-      }
-    });
-
-    // Change delegation for checkboxes
     eeeListContainer.addEventListener('change', (e) => {
       const target = e.target;
-      // Individual planner/sidebar toggle
       if (target.classList.contains('eee-planner-toggle') || target.classList.contains('eee-sidebar-toggle')) {
         saveEEE();
-        return;
-      }
-      // Select/deselect ALL sidebar
-      if (target.id === 'eee-sidebar-all') {
-        container.querySelectorAll('.eee-sidebar-toggle').forEach(cb => { cb.checked = target.checked; });
-        saveEEE();
-        return;
-      }
-      // Select/deselect ALL planner
-      if (target.id === 'eee-planner-all') {
-        container.querySelectorAll('.eee-planner-toggle').forEach(cb => { cb.checked = target.checked; });
-        saveEEE();
-        return;
       }
     });
-  }
-
-  // Apply default pedagogy filter from onboarding priorities (initial render)
-  if (currentPedFilter) {
-    rerenderEEEList();
   }
 
   container.querySelector('#eee-save-btn')?.addEventListener('click', () => {
@@ -1184,7 +1013,7 @@ export function render(container) {
           showToast(`Detected ${detectedSubjects.join(', ')}. Enabled: ${addedLabels.join(', ')}.`, 'success');
           // Re-render EEE list if it exists
           const eeeList = container.querySelector('#eee-tool-list');
-          if (eeeList) eeeList.innerHTML = buildEEEListHTML(currentEEEFilter, currentPedFilter);
+          if (eeeList) eeeList.innerHTML = buildEEEListHTML();
         }
       }
     }
