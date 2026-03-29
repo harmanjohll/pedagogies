@@ -477,7 +477,7 @@ export function renderAoL(container) {
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
                 <div>
                   <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Blueprint Title</label>
-                  <input type="text" id="bp-title" class="input" placeholder="e.g. Mid-Year Exam 2026" style="width:100%;" />
+                  <input type="text" id="bp-title" class="input" placeholder="e.g. Pop Quiz, Exit Ticket, Individual Readiness Assessment" style="width:100%;" />
                 </div>
                 <div>
                   <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Subject</label>
@@ -1986,7 +1986,7 @@ Format each as a numbered question. Make them concrete, student-friendly, and ap
       const text = await sendChat([{ role: 'user', content: prompt }], {
         trackLabel: 'generateMetacognitive',
         systemPrompt: 'You are a metacognition specialist for Singapore schools. Generate clear, practical reflection prompts.',
-        temperature: 0.6, maxTokens: 1024
+        temperature: 0.6, maxTokens: 2048
       });
 
       output.innerHTML = renderAIOutput(text);
@@ -2266,7 +2266,7 @@ function wireAfLEvents(container) {
         trackLabel: 'generateLISC_inline',
         trackDetail: topicStr.slice(0, 40),
         systemPrompt: 'You are a Visible Learning specialist for Singapore secondary schools. Generate clear, student-friendly LISC aligned to Singapore MOE curriculum.',
-        temperature: 0.5, maxTokens: 1024
+        temperature: 0.5, maxTokens: 2048
       });
 
       output.innerHTML = renderAIOutput(text);
@@ -2335,7 +2335,7 @@ function wireAfLEvents(container) {
         trackLabel: 'generateExitTicket_inline',
         trackDetail: topic.slice(0, 40),
         systemPrompt: 'You are a formative assessment specialist for Singapore secondary schools. Generate concise, effective exit ticket questions that give teachers immediate insight into student understanding.',
-        temperature: 0.5, maxTokens: 1024
+        temperature: 0.5, maxTokens: 2048
       });
 
       output.innerHTML = renderAIOutput(text);
@@ -2360,7 +2360,7 @@ function wireAfLEvents(container) {
       try {
         const text = await sendChat(
           [{ role: 'user', content: `Suggest one quick, practical classroom activity using "${strategy}" for ${cls.subject || 'any subject'} at ${cls.level || 'Secondary'} level. Something I can use tomorrow. 3-4 sentences max. Be specific and actionable.` }],
-          { trackLabel: 'aflStrategy', temperature: 0.7, maxTokens: 512 }
+          { trackLabel: 'aflStrategy', temperature: 0.7, maxTokens: 1024 }
         );
         resultEl.innerHTML = `<div style="padding:10px;border-radius:8px;background:var(--accent-light);border-left:3px solid var(--accent);font-size:0.8125rem;line-height:1.6;color:var(--ink);">${text.replace(/\n/g, '<br>')}</div>`;
       } catch (err) {
@@ -2388,7 +2388,7 @@ function wireAfLEvents(container) {
 **Feed Forward** (Where to next?): 1 extension prompt for students who are ahead, 1 support scaffold for students who need help
 
 Be concise and specific to the topic. Use bullet points.` }],
-          { trackLabel: 'aflFeedback', temperature: 0.6, maxTokens: 1024 }
+          { trackLabel: 'aflFeedback', temperature: 0.6, maxTokens: 2048 }
         );
         resultEl.innerHTML = `<div style="padding:10px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--border);font-size:0.8125rem;line-height:1.7;color:var(--ink);">${text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')}</div>`;
       } catch (err) {

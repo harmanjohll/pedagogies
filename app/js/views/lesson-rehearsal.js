@@ -777,11 +777,11 @@ function renderRehearsalInterface(container) {
       <!-- Chat input -->
       ${!rehearsalEnded ? `
         <div style="padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--border); background: var(--bg-card, var(--surface, #fff)); flex-shrink: 0;">
-          <form id="rh-chat-form" style="display: flex; gap: var(--sp-2); align-items: center;">
-            <input type="text" id="rh-chat-input" class="input"
+          <form id="rh-chat-form" style="display: flex; gap: var(--sp-2); align-items: flex-end;">
+            <textarea id="rh-chat-input" class="input" rows="1"
               placeholder="Speak to your class..."
-              style="flex: 1; padding: 0.625rem 1rem; font-size: 0.9375rem;"
-              ${isGenerating ? 'disabled' : ''} autocomplete="off" />
+              style="flex: 1; padding: 0.625rem 1rem; font-size: 0.9375rem; resize: none; overflow-y: hidden; line-height: 1.4; font-family: inherit;"
+              ${isGenerating ? 'disabled' : ''} autocomplete="off"></textarea>
             <button type="button" id="rh-mic-btn" title="Voice input — click to start"
               style="padding: 0.5rem; flex-shrink: 0; border: 1px solid var(--border); background: var(--bg-card, var(--surface, #fff)); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;" ${isGenerating ? 'disabled' : ''}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -933,6 +933,22 @@ function renderRehearsalInterface(container) {
   const chatForm = container.querySelector('#rh-chat-form');
   if (chatForm && chatInput) {
     chatInput.focus();
+
+    // Auto-resize textarea as user types
+    const autoResize = () => {
+      chatInput.style.height = 'auto';
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+    };
+    chatInput.addEventListener('input', autoResize);
+
+    // Enter = submit, Shift+Enter = newline
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatForm.dispatchEvent(new Event('submit'));
+      }
+    });
+
     chatForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const text = chatInput.value.trim();
@@ -1031,7 +1047,7 @@ async function endRehearsal(container) {
     const response = await callAnthropic(
       debriefSystemPrompt,
       [{ role: 'user', content: 'Please provide your detailed feedback on this rehearsal.' }],
-      4096
+      8192
     );
 
     debriefContent = response;

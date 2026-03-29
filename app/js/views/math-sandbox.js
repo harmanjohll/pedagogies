@@ -100,6 +100,8 @@ Show 2-3 detailed worked examples with:
 ### Success Criteria
 Measurable outcomes using "I can..." statements.
 
+For Chemistry, support reaction mechanism arrows, electron dot structures, and orbital diagrams using appropriate LaTeX notation (\\ce{} for chemical equations, \\rightarrow for reaction arrows, curly arrows described textually if LaTeX doesn't support them natively).
+
 IMPORTANT: Use extensive LaTeX throughout. ALL equations, formulas, chemical symbols, and mathematical expressions MUST use LaTeX delimiters. Use \\text{} for chemical element names within equations. Use \\\\  for line breaks within multi-step solutions.`
 };
 
@@ -425,7 +427,7 @@ export function render(container) {
           trackLabel: 'formulaLabGenerate',
           trackDetail: [subject, topic, level].filter(Boolean).join(' · '),
           temperature: 0.6,
-          maxTokens: 3072
+          maxTokens: 4096
         }
       );
 

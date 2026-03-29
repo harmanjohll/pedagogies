@@ -842,8 +842,24 @@ export function render(container) {
 
   /* ══════ Venue selector ══════ */
   const briefVenue = container.querySelector('#brief-venue');
-  briefVenue?.addEventListener('change', () => {
+  let previousVenue = 'classroom';
+  briefVenue?.addEventListener('change', async () => {
+    const items = layoutRoot.querySelectorAll('g[data-id]');
+    if (items.length > 0) {
+      const ok = await confirmDialog({
+        title: 'Change Venue',
+        message: 'All items will be cleared. Are you sure you wish to change the venue?'
+      });
+      if (!ok) {
+        briefVenue.value = previousVenue;
+        return;
+      }
+      // Clear all furniture
+      items.forEach(g => g.remove());
+      updateMetrics();
+    }
     applyVenue(briefVenue.value);
+    previousVenue = briefVenue.value;
     showToast(`Venue: ${VENUE_TYPES.find(v => v.id === briefVenue.value)?.label || briefVenue.value}`);
   });
   // Initial venue render (hide PE palette/presets by default)
