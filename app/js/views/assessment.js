@@ -2,9 +2,9 @@
  * Co-Cher Assessment
  * ==================
  * Three standalone views accessed via separate routes:
- *   AoL — Assessment of Learning (summative, Table of Specifications)
- *   AaL — Assessment as Learning (metacognition, MAI framework)
- *   AfL — Assessment for Learning (formative, Hattie's Visible Learning)
+ *   AoL: Assessment of Learning (summative, Table of Specifications)
+ *   AaL: Assessment as Learning (metacognition, MAI framework)
+ *   AfL: Assessment for Learning (formative, Hattie's Visible Learning)
  */
 
 import { Store, generateId } from '../state.js';
@@ -42,9 +42,9 @@ const MAI_DOMAINS = {
     label: 'Knowledge of Cognition',
     desc: 'What learners know about their own thinking processes',
     subs: [
-      { key: 'declarative', label: 'Declarative Knowledge', desc: 'Knowing about oneself as a learner \u2014 strengths, weaknesses, and what strategies are available.' },
-      { key: 'procedural',  label: 'Procedural Knowledge',  desc: 'Knowing how to use learning strategies \u2014 when to skim, how to take notes, how to organise information.' },
-      { key: 'conditional', label: 'Conditional Knowledge', desc: 'Knowing when and why to use particular strategies \u2014 matching strategy to task demands.' },
+      { key: 'declarative', label: 'Declarative Knowledge', desc: 'Knowing about oneself as a learner: strengths, weaknesses, and what strategies are available.' },
+      { key: 'procedural',  label: 'Procedural Knowledge',  desc: 'Knowing how to use learning strategies: when to skim, how to take notes, how to organise information.' },
+      { key: 'conditional', label: 'Conditional Knowledge', desc: 'Knowing when and why to use particular strategies: matching strategy to task demands.' },
     ]
   },
   regulation: {
@@ -52,10 +52,10 @@ const MAI_DOMAINS = {
     desc: 'How learners manage and control their thinking processes',
     subs: [
       { key: 'planning',     label: 'Planning',              desc: 'Goal setting, activating prior knowledge, and allocating time before a task.' },
-      { key: 'information',  label: 'Information Management', desc: 'Strategies for processing information \u2014 organising, elaborating, summarising, selective focusing.' },
-      { key: 'monitoring',   label: 'Comprehension Monitoring', desc: 'Assessing understanding during learning \u2014 self-testing, checking pace, questioning.' },
-      { key: 'debugging',    label: 'Debugging Strategies',  desc: 'Fixing comprehension failures \u2014 re-reading, asking for help, trying a different approach.' },
-      { key: 'evaluation',   label: 'Evaluation',            desc: 'Appraising the outcomes of learning \u2014 did I meet my goal? What would I do differently?' },
+      { key: 'information',  label: 'Information Management', desc: 'Strategies for processing information: organising, elaborating, summarising, selective focusing.' },
+      { key: 'monitoring',   label: 'Comprehension Monitoring', desc: 'Assessing understanding during learning: self-testing, checking pace, questioning.' },
+      { key: 'debugging',    label: 'Debugging Strategies',  desc: 'Fixing comprehension failures: re-reading, asking for help, trying a different approach.' },
+      { key: 'evaluation',   label: 'Evaluation',            desc: 'Appraising the outcomes of learning: did I meet my goal? What would I do differently?' },
     ]
   }
 };
@@ -1480,11 +1480,11 @@ export function renderAaL(container) {
           </div>
 
           <div style="padding:12px 16px;border-radius:8px;background:var(--bg-subtle,#f8f9fa);border:1px solid var(--border,#e2e5ea);margin-bottom:12px;">
-            <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:6px;">The Proactive Learner Cycle</div>
+            <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:6px;">The Learning Practice</div>
             <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
               GROW and ACT are part of a continuous learning cycle: <span style="color:#3b82f6;font-weight:600;">GROW</span> \u2192 <span style="color:#ef4444;font-weight:600;">ACT</span> \u2192 MAP \u2192 ASK.<br/>
               Students cycle through these both <em>in</em> and <em>out</em> of lessons, supported by three learner behaviours: <strong>Prepare</strong> \u2192 <strong>Participate</strong> \u2192 <strong>Process</strong>.<br/>
-              See the full Proactive Learner visual below.
+              See the full Learning Practice visual below.
             </div>
           </div>
 
@@ -1512,12 +1512,12 @@ export function renderAaL(container) {
         <div class="assess-card" id="aal-proactive-card">
           <div class="assess-section-title" style="cursor:pointer;" data-jump="aal-proactive-card" title="Click to see this framework in action">
             <span style="display:inline-flex;align-items:center;gap:6px;">
-              The Proactive Learner Cycle
+              The Learning Practice
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </span>
           </div>
           <div class="assess-section-desc">
-            Beatty\u2019s Proactive Learner model shows how GROW, ACT, MAP, and ASK work together simultaneously
+            Beatty\u2019s Learning Practice model shows how GROW, ACT, MAP, and ASK work together simultaneously
             \u2014 both in and out of lessons. All practices happen all the time, not in sequence.
             The inner ring represents the learner behaviours that drive learning: Prepare, Participate, and Process.
           </div>
@@ -2133,6 +2133,15 @@ export function renderAfL(container) {
               <div class="feedback-q-desc">Guide the learner on what to do to improve. Provide actionable next steps, not just grades or scores. This is the most powerful component.</div>
             </div>
           </div>
+
+          <div style="margin-top:16px;padding:14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);">
+            <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:8px;">Apply to your lesson</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+              <input type="text" class="input" id="afl-feedback-topic" placeholder="What topic are you teaching? e.g. Photosynthesis, Quadratic Equations..." style="flex:1;font-size:0.8125rem;" />
+              <button class="btn btn-sm btn-primary" id="afl-apply-feedback-btn">Generate</button>
+            </div>
+            <div id="afl-feedback-result" style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;"></div>
+          </div>
         </div>
 
         <!-- Effect Sizes Chart -->
@@ -2160,6 +2169,24 @@ export function renderAfL(container) {
             }).join('')}
           </div>
           <p style="font-size:0.75rem;color:var(--ink-muted);margin-top:8px;">Source: Hattie, J. (2023). <em>Visible Learning: The Sequel.</em> Effect sizes are indicative and context-dependent.</p>
+
+          <div style="margin-top:16px;padding:14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);">
+            <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:8px;">Try a strategy in your next lesson</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+              <select class="input" id="afl-strategy-select" style="flex:1;font-size:0.8125rem;">
+                <option value="Feedback (d=0.70)">Feedback (d=0.70)</option>
+                <option value="Classroom Discussion (d=0.82)">Classroom Discussion (d=0.82)</option>
+                <option value="Teacher Clarity (d=0.75)">Teacher Clarity (d=0.75)</option>
+                <option value="Metacognitive Strategies (d=0.60)">Metacognitive Strategies (d=0.60)</option>
+                <option value="Questioning (d=0.48)">Questioning (d=0.48)</option>
+                <option value="Peer Tutoring (d=0.53)">Peer Tutoring (d=0.53)</option>
+                <option value="Self-Assessment (d=0.54)">Self-Assessment (d=0.54)</option>
+                <option value="Worked Examples (d=0.57)">Worked Examples (d=0.57)</option>
+              </select>
+              <button class="btn btn-sm btn-primary" id="afl-try-strategy-btn">Try it</button>
+            </div>
+            <div id="afl-strategy-result" style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -2320,6 +2347,55 @@ function wireAfLEvents(container) {
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Generate Exit Ticket';
     }
   });
+
+  /* ── Try a Strategy (Effect Sizes) ── */
+  const tryBtn = container.querySelector('#afl-try-strategy-btn');
+  if (tryBtn) {
+    tryBtn.addEventListener('click', async () => {
+      const strategy = container.querySelector('#afl-strategy-select')?.value || 'Feedback';
+      const resultEl = container.querySelector('#afl-strategy-result');
+      const classes = Store.getClasses();
+      const cls = classes[0] || {};
+      resultEl.innerHTML = '<em style="color:var(--ink-faint);">Generating...</em>';
+      try {
+        const text = await sendChat(
+          [{ role: 'user', content: `Suggest one quick, practical classroom activity using "${strategy}" for ${cls.subject || 'any subject'} at ${cls.level || 'Secondary'} level. Something I can use tomorrow. 3-4 sentences max. Be specific and actionable.` }],
+          { trackLabel: 'aflStrategy', temperature: 0.7, maxTokens: 512 }
+        );
+        resultEl.innerHTML = `<div style="padding:10px;border-radius:8px;background:var(--accent-light);border-left:3px solid var(--accent);font-size:0.8125rem;line-height:1.6;color:var(--ink);">${text.replace(/\n/g, '<br>')}</div>`;
+      } catch (err) {
+        resultEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}</span>`;
+      }
+    });
+  }
+
+  /* ── Apply Feedback Model to Lesson ── */
+  const applyBtn = container.querySelector('#afl-apply-feedback-btn');
+  if (applyBtn) {
+    applyBtn.addEventListener('click', async () => {
+      const topic = container.querySelector('#afl-feedback-topic')?.value.trim();
+      if (!topic) { showToast('Please enter a topic.', 'warning'); return; }
+      const resultEl = container.querySelector('#afl-feedback-result');
+      const classes = Store.getClasses();
+      const cls = classes[0] || {};
+      resultEl.innerHTML = '<em style="color:var(--ink-faint);">Generating...</em>';
+      try {
+        const text = await sendChat(
+          [{ role: 'user', content: `For a ${cls.subject || 'General'} lesson on "${topic}" at ${cls.level || 'Secondary'} level, generate specific examples of Hattie's feedback model:
+
+**Feed Up** (Where am I going?): 1 learning intention + 1 success criterion
+**Feed Back** (How am I going?): 2 specific check-for-understanding questions to use during the lesson
+**Feed Forward** (Where to next?): 1 extension prompt for students who are ahead, 1 support scaffold for students who need help
+
+Be concise and specific to the topic. Use bullet points.` }],
+          { trackLabel: 'aflFeedback', temperature: 0.6, maxTokens: 1024 }
+        );
+        resultEl.innerHTML = `<div style="padding:10px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--border);font-size:0.8125rem;line-height:1.7;color:var(--ink);">${text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')}</div>`;
+      } catch (err) {
+        resultEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}</span>`;
+      }
+    });
+  }
 }
 
 /* \u2500\u2500 Blueprint Mapping helpers \u2500\u2500 */
