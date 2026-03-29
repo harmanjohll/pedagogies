@@ -1350,7 +1350,7 @@ export function seedPdIfNeeded() {
 }
 
 export function seedCCAIfNeeded() {
-  const CCA_SEED_KEY = 'cocher_cca_seeded_v2';
+  const CCA_SEED_KEY = 'cocher_cca_seeded_v3';
   if (localStorage.getItem(CCA_SEED_KEY)) return;
   const existing = JSON.parse(localStorage.getItem('cocher_cca_list') || '[]');
   if (existing.length >= 12) {
