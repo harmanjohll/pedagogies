@@ -9,11 +9,9 @@
 import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { trackEvent } from '../utils/analytics.js';
+import { sendChat } from '../api.js';
 
 /* ── Constants ── */
-
-const ANTHROPIC_ENDPOINT = 'https://api.anthropic.com/v1/messages';
-const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514';
 
 const PERSONA_PRESETS = [
   { id: 'high_achiever',     label: 'High achiever',      desc: 'Asks probing questions, extends concepts',                        color: '#6366f1' },
@@ -130,40 +128,6 @@ let selectedFeedbackFrames = ['stp']; // default to STP
 let customFeedbackFocus = ''; // free-text "Other" focus
 
 /* ── API ── */
-
-function getApiKey() {
-  return localStorage.getItem('cocher_api_key') || Store.get('apiKey') || '';
-}
-
-async function callAnthropic(systemPrompt, messages, maxTokens = 4096) {
-  trackEvent('ai', 'rehearsal', 'message');
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error('No API key configured.');
-
-  const res = await fetch(ANTHROPIC_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages
-    })
-  });
-
-  if (!res.ok) {
-    const errBody = await res.text();
-    throw new Error(`Anthropic API error (${res.status}): ${errBody}`);
-  }
-
-  const data = await res.json();
-  return data.content?.[0]?.text || '';
-}
 
 /* ── Build System Prompt ── */
 
@@ -344,7 +308,7 @@ export function render(container) {
 }
 
 function renderView(container) {
-  const apiKey = getApiKey();
+  const apiKey = Store.get('apiKey');
   const lessons = Store.getLessons();
   const classes = Store.getClasses();
 
@@ -366,7 +330,7 @@ function renderView(container) {
             </svg>
             <h3 style="font-size: 1.125rem; font-weight: 600; color: var(--ink); margin-bottom: 0.5rem;">API Key Required</h3>
             <p style="font-size: 0.875rem; color: var(--ink-muted); line-height: 1.6; margin-bottom: 1.5rem;">
-              Lesson Rehearsal uses the Anthropic Claude API to power realistic student personas.<br>
+              Lesson Rehearsal uses AI to power realistic student personas.<br>
               Please configure your API key in Settings to get started.
             </p>
             <a href="#/settings" class="btn btn-primary" style="text-decoration: none;">Go to Settings</a>
@@ -916,16 +880,19 @@ function renderRehearsalInterface(container) {
           micBtn.style.borderColor = '';
           micBtn.querySelector('svg').style.stroke = '';
           chatInput.placeholder = 'Speak to your class...';
-          if (event.error !== 'aborted') {
-            showToast(`Mic error: ${event.error}. Check browser permissions.`, 'warning');
+          if (event.error === 'not-allowed') {
+            showToast('Microphone access denied. Please allow microphone permission in your browser settings.', 'warning');
+          } else if (event.error !== 'aborted') {
+            showToast('Voice input error. Please try again.', 'warning');
           }
         };
 
         recognition.start();
       });
     } else {
-      micBtn.disabled = true;
-      micBtn.title = 'Speech recognition not supported in this browser';
+      micBtn.addEventListener('click', () => {
+        showToast('Voice input is not supported in this browser. Please use Chrome or Edge.', 'warning');
+      });
       micBtn.style.opacity = '0.4';
     }
   }
@@ -1012,7 +979,10 @@ async function getStudentResponse(container) {
 
   try {
     const systemPrompt = buildSystemPrompt(lesson);
-    const response = await callAnthropic(systemPrompt, apiMessages);
+    const response = await sendChat(
+      apiMessages,
+      { systemPrompt: systemPrompt, temperature: 0.8, maxTokens: 4096 }
+    );
 
     // Parse the response into individual student messages
     const studentMsgs = parseStudentMessages(response);
@@ -1045,10 +1015,9 @@ async function endRehearsal(container) {
 
   try {
     const debriefSystemPrompt = buildDebriefPrompt();
-    const response = await callAnthropic(
-      debriefSystemPrompt,
+    const response = await sendChat(
       [{ role: 'user', content: 'Please provide your detailed feedback on this rehearsal.' }],
-      8192
+      { systemPrompt: debriefSystemPrompt, temperature: 0.6, maxTokens: 8192 }
     );
 
     debriefContent = response;
