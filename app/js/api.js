@@ -6,6 +6,7 @@
 
 import { Store } from './state.js';
 import { trackEvent } from './utils/analytics.js';
+import { getPreferredName } from './components/login.js';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -69,6 +70,7 @@ Align with the 4 areas: Lesson Preparation, Lesson Enactment, Monitoring & Feedb
 9. When relevant, suggest how a lesson could be framed through different curriculum orientations (Scholar-Academic, Learner-Centred, Social Efficiency, Social Reconstructivist) — but only if it adds value, not as a checklist
 10. For CCE lessons, always connect to the Big Ideas (Identity, Relationships, Choices) and relevant R3ICH values
 11. Every lesson plan MUST begin with a real-world lesson hook — a compelling opener that connects the topic to students' lives. Frame it as a provocative question: "What if I told you...", "Did you ever wonder...", "Why do you think...". Root the hook in real-world context or application. This is the first thing students hear
+12. When a lesson activity develops E21CC competencies, name the specific domain (CAIT, CCI, CGC). When EdTech is relevant, name the tool or platform. When STP alignment is clear, reference the specific area. When CCE values connect naturally, mention them. Be explicit — teachers value seeing these connections clearly
 
 Respond conversationally. Help the teacher think through their lesson experience holistically.`;
 
@@ -92,6 +94,12 @@ export async function sendChat(messages, options = {}) {
   }
   if (schoolProfile.name) {
     systemPrompt += `\nThe teacher's school is: ${schoolProfile.name}.`;
+  }
+
+  // Inject teacher's preferred name
+  const teacherName = getPreferredName?.() || '';
+  if (teacherName) {
+    systemPrompt += `\nThe teacher's name is ${teacherName}. Address them naturally by name when appropriate — not every message, but when it fits. Never say "Hello Co-Cher" — you ARE Co-Cher. When introducing a lesson topic, connect it to a relevant pedagogical opportunity rather than starting with generic pleasantries.`;
   }
 
   let body;
@@ -197,7 +205,7 @@ Format your response as:
 
 Be encouraging, specific, and practical. Speak as a fellow educator.`,
     temperature: 0.5,
-    maxTokens: 2048
+    maxTokens: 3072
   });
 }
 
@@ -222,7 +230,7 @@ Format rubrics as markdown tables with:
 
 End with a brief "Teacher Notes" section with tips on using the rubric.`,
     temperature: 0.5,
-    maxTokens: 2048
+    maxTokens: 3072
   });
 }
 
@@ -329,7 +337,7 @@ Format:
 
 Keep questions age-appropriate and aligned to Singapore curriculum standards.`,
     temperature: 0.5,
-    maxTokens: 2048
+    maxTokens: 3072
   });
 }
 
@@ -427,7 +435,7 @@ Brief description of how the room arrangement changes during the lesson (if appl
 
 Be specific and practical. Teachers need minute-by-minute clarity.`,
     temperature: 0.5,
-    maxTokens: 2048
+    maxTokens: 3072
   });
 }
 
@@ -663,7 +671,7 @@ Guidelines:
 
 Format the worksheet in clean markdown that can be printed.`,
     temperature: 0.6,
-    maxTokens: 2048
+    maxTokens: 3072
   });
 }
 
@@ -702,7 +710,7 @@ Generate prompts in these categories:
 
 For each question, include a brief facilitator note on what kind of response to look for.`,
     temperature: 0.7,
-    maxTokens: 2048
+    maxTokens: 3072
   });
 }
 
@@ -908,7 +916,17 @@ A short paragraph (80-120 words) using the key terms, with blanks for students t
 - **Support:** Simplified definitions, visual cues, L1 translation hints
 - **Extension:** Use terms in analytical writing, create own sentences, identify terms in authentic texts
 
-Tag each vocabulary item with the E21CC domain it supports (CCI for communication terms, CAIT for analytical terms, CGC for perspective terms).`,
+Tag each vocabulary item with the E21CC domain it supports (CCI for communication terms, CAIT for analytical terms, CGC for perspective terms).
+
+If the teacher requests flashcards, add a section:
+
+## Flashcards
+For each key term, output in this exact format (one per term):
+CARD: [term]
+BACK: [definition] | [example in context] | [word class]
+---
+
+Generate 8-15 flashcard entries matching the vocabulary wall terms.`,
     temperature: 0.6,
     maxTokens: 3072
   });
@@ -1096,7 +1114,7 @@ CCE assessment is process-focused, not product-focused. Look for:
 
 Create content that is culturally relevant to Singapore students. Handle sensitive topics (race, religion, identity, mental health) with care and age-appropriateness.`,
     temperature: 0.7,
-    maxTokens: 2048
+    maxTokens: 3072
   });
 }
 
