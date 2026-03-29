@@ -27,7 +27,7 @@ const FRAMEWORKS = [
     overview: 'The Enhanced 21st Century Competencies (E21CC) framework, updated in 2021, guides holistic student development across three domains: Critical, Adaptive & Inventive Thinking (CAIT), Communication, Collaboration & Information (CCI), and Civic, Global & Cross-cultural Literacy (CGC).',
     sections: [
       {
-        heading: 'CAIT — Critical, Adaptive & Inventive Thinking',
+        heading: 'CAIT: Critical, Adaptive & Inventive Thinking',
         items: [
           { term: 'Sound Reasoning', desc: 'Examine issues logically and from multiple perspectives, draw well-reasoned conclusions.' },
           { term: 'Creative Problem-Solving', desc: 'Generate novel ideas, make connections, and explore innovative solutions.' },
@@ -36,7 +36,7 @@ const FRAMEWORKS = [
         ]
       },
       {
-        heading: 'CCI — Communication, Collaboration & Information',
+        heading: 'CCI: Communication, Collaboration & Information',
         items: [
           { term: 'Communicative Competence', desc: 'Express ideas clearly and persuasively across modes and contexts.' },
           { term: 'Collaborative Skills', desc: 'Work effectively in teams, co-create meaning, and navigate social dynamics.' },
@@ -44,7 +44,7 @@ const FRAMEWORKS = [
         ]
       },
       {
-        heading: 'CGC — Civic, Global & Cross-cultural Literacy',
+        heading: 'CGC: Civic, Global & Cross-cultural Literacy',
         items: [
           { term: 'Active Citizenship', desc: 'Contribute responsibly to community and nation; understand governance and rights.' },
           { term: 'Global Awareness', desc: 'Appreciate interconnectedness, sustainability, and global challenges.' },
@@ -54,7 +54,7 @@ const FRAMEWORKS = [
       {
         heading: 'Core Values & SEL',
         items: [
-          { term: 'Core Values', desc: 'Respect, Responsibility, Resilience, Integrity, Care, Harmony — the moral compass underlying all competencies.' },
+          { term: 'Core Values', desc: 'Respect, Responsibility, Resilience, Integrity, Care, Harmony, the moral compass underlying all competencies.' },
           { term: 'SEL Competencies', desc: 'Self-awareness, self-management, social awareness, relationship management, and responsible decision-making.' },
         ]
       }
@@ -85,7 +85,7 @@ const FRAMEWORKS = [
       {
         heading: 'Area 2: Lesson Enactment',
         items: [
-          { term: 'Teaching Actions', desc: 'Direct instruction, inquiry-based learning, discussion, modelling — selecting the right approach for the outcome.' },
+          { term: 'Teaching Actions', desc: 'Direct instruction, inquiry-based learning, discussion, modelling, selecting the right approach for the outcome.' },
           { term: 'Interaction Patterns', desc: 'Managing teacher\u2013student and student\u2013student interactions; think-pair-share, jigsaw, Socratic dialogue.' },
           { term: 'Classroom Discourse', desc: 'Questioning techniques that promote higher-order thinking; productive talk moves.' },
         ]
@@ -93,7 +93,7 @@ const FRAMEWORKS = [
       {
         heading: 'Area 3: Monitoring & Feedback',
         items: [
-          { term: 'Formative Assessment', desc: 'Check for understanding in real time \u2014 exit tickets, concept checks, mini-whiteboards.' },
+          { term: 'Formative Assessment', desc: 'Check for understanding in real time: exit tickets, concept checks, mini-whiteboards.' },
           { term: 'Effective Feedback', desc: 'Timely, specific, actionable feedback that helps students close the gap between current and desired performance.' },
           { term: 'Differentiated Support', desc: 'Adjust instruction based on assessment data; provide scaffolds or extensions as needed.' },
         ]
@@ -134,7 +134,7 @@ const FRAMEWORKS = [
         heading: 'Thrust 2: Digital Creation',
         items: [
           { term: 'Computational Thinking', desc: 'Decompose problems, recognise patterns, design algorithms, and abstract solutions.' },
-          { term: 'Digital Design', desc: 'Create digital artefacts \u2014 presentations, videos, apps, simulations \u2014 purposefully.' },
+          { term: 'Digital Design', desc: 'Create digital artefacts (presentations, videos, apps, simulations) purposefully.' },
           { term: 'AI Literacy', desc: 'Understand how AI works, its capabilities and limitations, and use it responsibly.' },
         ]
       },
@@ -168,7 +168,7 @@ const FRAMEWORKS = [
       { label: 'SEL', badge: 'badge-green' },
       { label: 'NE', badge: 'badge-amber' },
     ],
-    overview: 'The CCE2021 curriculum, refreshed by MOE Singapore, nurtures students\' character and citizenship dispositions through three Big Ideas — Identity, Relationships, and Choices — underpinned by the R3ICH core values (Respect, Responsibility, Resilience, Integrity, Care, Harmony) and Social-Emotional Learning competencies. It is delivered across six content areas: National Education (NE), Sexuality Education (SEd), Mental Health (MH), Education & Career Guidance (ECG), Cyber Wellness (CW), and Family Education (FE).',
+    overview: 'The CCE2021 curriculum, refreshed by MOE Singapore, nurtures students\' character and citizenship dispositions through three Big Ideas (Identity, Relationships, and Choices) underpinned by the R3ICH core values (Respect, Responsibility, Resilience, Integrity, Care, Harmony) and Social-Emotional Learning competencies. It is delivered across six content areas: National Education (NE), Sexuality Education (SEd), Mental Health (MH), Education & Career Guidance (ECG), Cyber Wellness (CW), and Family Education (FE).',
     sections: [
       {
         heading: 'Big Ideas',
@@ -200,19 +200,19 @@ const FRAMEWORKS = [
         ]
       },
       {
-        heading: 'NE — National Education',
+        heading: 'NE: National Education',
         items: [
           { term: 'Sense of Belonging', desc: 'Develop a deeper understanding of who we are as Singaporeans and our shared values; feel rooted to Singapore.' },
-          { term: 'Sense of Reality', desc: 'Be aware of the contemporary realities — socio-cultural, economic, security — that affect Singapore.' },
+          { term: 'Sense of Reality', desc: 'Be aware of the contemporary realities (socio-cultural, economic, security) that affect Singapore.' },
           { term: 'Sense of Hope', desc: 'Have confidence and optimism in Singapore\'s future and the resilience to face challenges.' },
           { term: 'The Will to Act', desc: 'Be active citizens who have a sense of responsibility to contribute to, and make a difference for, our community and nation.' },
-          { term: 'NE Commemorative Days', desc: 'Total Defence Day (Feb), International Friendship Day (Apr), Racial Harmony Day (Jul), National Day (Aug) — anchor experiences that bring NE to life.' },
+          { term: 'NE Commemorative Days', desc: 'Total Defence Day (Feb), International Friendship Day (Apr), Racial Harmony Day (Jul), National Day (Aug), anchor experiences that bring NE to life.' },
         ]
       },
       {
         heading: 'Content Areas',
         items: [
-          { term: 'Sexuality Education (SEd)', desc: 'Growing Years Programme (Sec), eTeens Programme — healthy relationships, boundaries, respect for self and others, human development.' },
+          { term: 'Sexuality Education (SEd)', desc: 'Growing Years Programme (Sec), eTeens Programme, healthy relationships, boundaries, respect for self and others, human development.' },
           { term: 'Mental Health (MH)', desc: 'Resilience building, peer support, help-seeking behaviour, stress management, emotional regulation, anti-bullying.' },
           { term: 'Education & Career Guidance (ECG)', desc: 'Self-awareness of strengths and interests, career exploration, MySkillsFuture portal, work values, informed decision-making about education and career pathways.' },
           { term: 'Cyber Wellness (CW)', desc: 'Balanced ICT use, online safety, digital identity, cyberbullying awareness, responsible digital citizenship, managing screen time and digital footprint.' },
@@ -223,7 +223,7 @@ const FRAMEWORKS = [
         heading: 'Pedagogical Approaches',
         items: [
           { term: 'Narrative / Storytelling', desc: 'Use stories, case studies, and scenarios to engage students\' moral imagination and empathy.' },
-          { term: 'Structured Discussion', desc: 'Four Corners, Hot Seat, Structured Academic Controversy, Circle Structure — facilitated dialogue that develops perspective-taking.' },
+          { term: 'Structured Discussion', desc: 'Four Corners, Hot Seat, Structured Academic Controversy, Circle Structure, facilitated dialogue that develops perspective-taking.' },
           { term: 'Values Clarification', desc: 'Activities that help students explore, understand, and articulate their personal values in safe, non-judgemental contexts.' },
           { term: 'Experiential Learning', desc: 'VIA (Values in Action), community engagement, learning journeys, and reflective practice to translate values into behaviours.' },
         ]
@@ -490,7 +490,7 @@ function renderUploadDetail(el, upload) {
       </div>
 
       ${upload.sourceRef ? `<div style="background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-4);font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;">
-        <strong style="color:var(--accent);">Source:</strong> ${esc(upload.sourceRef.filename)}${upload.sourceRef.isPdf && upload.sourceRef.pageRange ? ` — pp ${upload.sourceRef.pageRange.from}–${upload.sourceRef.pageRange.to} (${upload.sourceRef.extractedPages} of ${upload.sourceRef.totalPages} pages)` : ''}
+        <strong style="color:var(--accent);">Source:</strong> ${esc(upload.sourceRef.filename)}${upload.sourceRef.isPdf && upload.sourceRef.pageRange ? `, pp ${upload.sourceRef.pageRange.from}–${upload.sourceRef.pageRange.to} (${upload.sourceRef.extractedPages} of ${upload.sourceRef.totalPages} pages)` : ''}
       </div>` : ''}
       ${upload.notes ? `<div style="background:var(--bg-subtle);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-md);margin-bottom:var(--sp-4);font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;"><strong>Notes:</strong> ${esc(upload.notes)}</div>` : ''}
 
@@ -578,7 +578,7 @@ function showUploadModal(container, defaultCategory = null) {
           <div style="background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3);">
             <div style="font-size:0.75rem;font-weight:600;color:var(--accent);margin-bottom:2px;">Source Reference</div>
             <div style="font-size:0.8125rem;color:var(--ink-secondary);">
-              ${esc(meta.filename)} — pp ${meta.pageRange.from}–${meta.pageRange.to} (${meta.extractedPages} of ${meta.totalPages} pages)
+              ${esc(meta.filename)}, pp ${meta.pageRange.from}–${meta.pageRange.to} (${meta.extractedPages} of ${meta.totalPages} pages)
             </div>
           </div>
         `;

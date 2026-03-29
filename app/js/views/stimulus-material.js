@@ -713,7 +713,7 @@ export function render(container) {
       generateBtn.addEventListener('click', handleGenerate);
     }
 
-    // Related Reflections — AI form
+    // Related Reflections, AI form
     const smTopicInput = container.querySelector('#sm-topic');
     const smSubjectSelect = container.querySelector('#sm-subject');
     if (smTopicInput) {
@@ -728,7 +728,7 @@ export function render(container) {
       }
     }
 
-    // Related Reflections — Manual form
+    // Related Reflections, Manual form
     const smManualTitle = container.querySelector('#sm-manual-title');
     const smManualSubject = container.querySelector('#sm-manual-subject');
     if (smManualTitle) {
@@ -769,7 +769,7 @@ export function render(container) {
               <div style="background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);border-radius:8px;padding:8px 14px;margin-bottom:14px;">
                 <div style="font-size:0.75rem;font-weight:600;color:#4361ee;margin-bottom:2px;">Source Reference</div>
                 <div style="font-size:0.8125rem;color:var(--ink-secondary,#555);">
-                  ${escapeHtml(meta.filename)} — pp ${meta.pageRange.from}–${meta.pageRange.to} (${meta.extractedPages} of ${meta.totalPages} pages)
+                  ${escapeHtml(meta.filename)}, pp ${meta.pageRange.from}–${meta.pageRange.to} (${meta.extractedPages} of ${meta.totalPages} pages)
                 </div>
               </div>
             `;
@@ -812,7 +812,7 @@ export function render(container) {
           <div style="background:rgba(67,97,238,0.06);border:1px solid rgba(67,97,238,0.15);border-radius:8px;padding:8px 14px;margin-bottom:12px;">
             <span style="font-size:0.75rem;font-weight:600;color:#4361ee;">Source:</span>
             <span style="font-size:0.8125rem;color:var(--ink-secondary,#555);">
-              ${escapeHtml(item.sourceRef.filename)}${item.sourceRef.isPdf && item.sourceRef.pageRange ? ` — pp ${item.sourceRef.pageRange.from}–${item.sourceRef.pageRange.to} (${item.sourceRef.extractedPages} of ${item.sourceRef.totalPages} pages)` : ''}
+              ${escapeHtml(item.sourceRef.filename)}${item.sourceRef.isPdf && item.sourceRef.pageRange ? `, pp ${item.sourceRef.pageRange.from}–${item.sourceRef.pageRange.to} (${item.sourceRef.extractedPages} of ${item.sourceRef.totalPages} pages)` : ''}
             </span>
           </div>
         ` : ''}
@@ -859,7 +859,7 @@ export function render(container) {
           <input type="text" id="sm-ai-title" class="sm-input" value="${escapeHtml(generatedResult.title)}" />
         </div>
         <div class="sm-field" style="margin-bottom:14px;">
-          <label class="sm-label">Content <span style="font-weight:400;opacity:0.6;">(${countWords(generatedResult.content)} words \u2014 edit as needed)</span></label>
+          <label class="sm-label">Content <span style="font-weight:400;opacity:0.6;">(${countWords(generatedResult.content)} words; edit as needed)</span></label>
           <textarea id="sm-ai-content" class="sm-textarea" rows="12">${escapeHtml(generatedResult.content)}</textarea>
         </div>
         ${generatedResult.questions ? `

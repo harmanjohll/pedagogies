@@ -1,7 +1,7 @@
 /*
  * Co-Cher Dashboard
  * =================
- * Context-aware landing page — "What would you like to do?"
+ * Context-aware landing page: "What would you like to do?"
  * Surfaces smart suggestions, admin tasks, and recent lessons.
  * Customisable widget system with show/hide, collapse, reorder, and pinned links.
  */
@@ -12,7 +12,7 @@ import { getCurrentUser, getPreferredName, guessFirstName } from '../components/
 import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
 
 /*
- * Admin / tester accounts — present in the CSV (so they can log in and see
+ * Admin / tester accounts, present in the CSV (so they can log in and see
  * their own timetable) but excluded from operational pools such as relief.
  * Add email prefixes here as needed.
  */
@@ -114,7 +114,7 @@ function getFirstName() {
   return guessFirstName(user.name);
 }
 
-/* ── Curated quotes — one per day, rotated by period ── */
+/* ── Curated quotes, one per day, rotated by period ── */
 const QUOTES_MORNING = [
   { text: 'The art of teaching is the art of assisting discovery.', attr: 'Mark Van Doren' },
   { text: 'Every day is a chance to begin again.', attr: '' },
@@ -135,7 +135,7 @@ const QUOTES_MORNING = [
 
 const QUOTES_AFTERNOON = [
   { text: 'Rest when you need to, but don\'t quit.', attr: '' },
-  { text: 'You don\'t have to be perfect to be a great teacher — just present.', attr: '' },
+  { text: 'You don\'t have to be perfect to be a great teacher, just present.', attr: '' },
   { text: 'Progress, not perfection.', attr: '' },
   { text: 'Take a breath. You\'re doing important work.', attr: '' },
   { text: 'The afternoon knows what the morning never suspected.', attr: 'Robert Frost' },
@@ -153,7 +153,7 @@ const QUOTES_AFTERNOON = [
 
 const QUOTES_EVENING = [
   { text: 'You showed up. That matters more than you think.', attr: '' },
-  { text: 'Rest is not a reward — it is a requirement.', attr: '' },
+  { text: 'Rest is not a reward; it is a requirement.', attr: '' },
   { text: 'Let it be enough for today.', attr: '' },
   { text: 'Well done is better than well said.', attr: 'Benjamin Franklin' },
   { text: 'The work you did today will ripple forward.', attr: '' },
@@ -166,7 +166,7 @@ const QUOTES_EVENING = [
   { text: 'Be proud of how hard you are trying.', attr: '' },
   { text: 'A day of learning is never wasted.', attr: '' },
   { text: 'Switch off. Recharge. You\'ve earned it.', attr: '' },
-  { text: 'The impact you made today may not be visible yet — but it is real.', attr: '' },
+  { text: 'The impact you made today may not be visible yet, but it is real.', attr: '' },
 ];
 
 function getDailyQuote() {
@@ -226,7 +226,7 @@ export function getTTPeriodKey() {
 
   // Use CalendarReference for authoritative week type
   let weekType = _calRef ? getWeekType(_calRef, now) : null;
-  if (weekType === 'N.A.') return null; // non-teaching week — no timetable
+  if (weekType === 'N.A.') return null; // non-teaching week; no timetable
 
   // Fallback: math-based (only if calendar data unavailable)
   if (!weekType) {
@@ -301,7 +301,7 @@ function buildStatusBanner(teacherRow) {
   };
 
   if (beforeSchool && nextLesson) {
-    // Before school — show first lesson
+    // Before school: show first lesson
     const startTime = formatTime(periodStartTimes[nextLesson.p]);
     return `
       <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent,#4361ee),#6366f1);color:#fff;display:flex;align-items:center;gap:var(--sp-4);">
@@ -310,7 +310,7 @@ function buildStatusBanner(teacherRow) {
         </div>
         <div>
           <div style="font-size:0.8125rem;opacity:0.85;">First lesson today</div>
-          <div style="font-size:1.125rem;font-weight:700;">P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room} at ${startTime}</div>
+          <div style="font-size:1.125rem;font-weight:700;">P${nextLesson.p} | ${nextLesson.classCode} in ${nextLesson.room} at ${startTime}</div>
         </div>
       </div>`;
   }
@@ -333,7 +333,7 @@ function buildStatusBanner(teacherRow) {
     const upNext = allPeriods.find(s => s.p > period);
     if (isCurrent) {
       const label = upNext
-        ? `Up next: P${upNext.p} — ${upNext.classCode} in ${upNext.room} at ${formatTime(periodStartTimes[upNext.p])}`
+        ? `Up next: P${upNext.p} | ${upNext.classCode} in ${upNext.room} at ${formatTime(periodStartTimes[upNext.p])}`
         : 'This is your last lesson today';
       return `
         <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:var(--accent-light);border-left:4px solid var(--accent);display:flex;align-items:center;gap:var(--sp-4);">
@@ -342,7 +342,7 @@ function buildStatusBanner(teacherRow) {
           </div>
           <div>
             <div style="font-size:0.8125rem;color:var(--ink-muted);">Now teaching</div>
-            <div style="font-size:1.125rem;font-weight:700;color:var(--ink);">P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room}</div>
+            <div style="font-size:1.125rem;font-weight:700;color:var(--ink);">P${nextLesson.p} | ${nextLesson.classCode} in ${nextLesson.room}</div>
             <div style="font-size:0.8125rem;color:var(--ink-muted);margin-top:2px;">${label}</div>
           </div>
         </div>`;
@@ -355,7 +355,7 @@ function buildStatusBanner(teacherRow) {
           </div>
           <div>
             <div style="font-size:0.8125rem;color:var(--ink-muted);">Next lesson</div>
-            <div style="font-size:1.125rem;font-weight:700;color:var(--ink);">P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room} at ${startTime}</div>
+            <div style="font-size:1.125rem;font-weight:700;color:var(--ink);">P${nextLesson.p} | ${nextLesson.classCode} in ${nextLesson.room} at ${startTime}</div>
           </div>
         </div>`;
     }
@@ -473,7 +473,7 @@ function buildSuggestions(classes, lessons, events) {
       color: 'var(--accent)',
       bg: 'var(--accent-light)',
       title: `Continue "${latest.title || 'Untitled'}"`,
-      desc: `Draft lesson — ${latest.chatHistory?.length || 0} exchanges so far`,
+      desc: `Draft lesson, ${latest.chatHistory?.length || 0} exchanges so far`,
       action: () => navigate(`/lesson-planner/${latest.id}`)
     });
   }
@@ -489,7 +489,7 @@ function buildSuggestions(classes, lessons, events) {
       color: 'var(--warning)',
       bg: 'var(--warning-light)',
       title: `Plan a lesson for ${cls.name}`,
-      desc: `${cls.students?.length || 0} students — no lessons linked yet`,
+      desc: `${cls.students?.length || 0} students, no lessons linked yet`,
       action: () => navigate('/lesson-planner')
     });
   }
@@ -520,7 +520,7 @@ function buildSuggestions(classes, lessons, events) {
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
       color: 'var(--info)',
       bg: 'var(--info-light)',
-      title: `${ev.name} — ${done}/${enabled.length} tasks done`,
+      title: `${ev.name}, ${done}/${enabled.length} tasks done`,
       desc: `${ev.eventType || 'Event'}${ev.date ? ' · ' + ev.date : ''}`,
       action: () => navigate('/admin')
     });
@@ -554,7 +554,7 @@ function buildSuggestions(classes, lessons, events) {
           color: 'var(--success)',
           bg: 'var(--success-light)',
           title: `Boost ${dimLabel} across your classes`,
-          desc: `${dimLabel} — mostly Developing/Applying`,
+          desc: `${dimLabel}, mostly Developing/Applying`,
           action: () => navigate('/lesson-planner')
         });
       }
@@ -846,7 +846,7 @@ function renderReflectionAnalytics(lessons) {
               const snippet = (r.whatWorked || r.freeform || '').slice(0, 50);
               return `<div style="color:var(--ink-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                 <strong style="color:var(--ink);">${l.title?.slice(0, 20) || 'Untitled'}</strong>
-                ${snippet ? ` — ${snippet}...` : ''}
+                ${snippet ? `, ${snippet}...` : ''}
               </div>`;
             }).join('')}
           </div>
@@ -1019,7 +1019,7 @@ function buildPrepChecklist(teacherRow, lessons, classes) {
 
   return `
     <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-3);">
-      Next: P${nextLesson.p} — ${nextLesson.classCode} in ${nextLesson.room}
+      Next: P${nextLesson.p} | ${nextLesson.classCode} in ${nextLesson.room}
     </div>
     <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
       ${checks.map(c => `<div class="prep-check-item" style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;${c.action ? 'cursor:pointer;' : ''}" ${c.action ? `data-action-route="${c.action}"` : ''}>
@@ -1562,7 +1562,7 @@ export function render(container) {
                 ${i === 0 ? 'You last worked on: ' : ''}${item.label}
               </div>
               <div style="font-size:0.75rem;color:var(--ink-muted);margin-top:1px;">
-                ${item.detail ? item.detail + ' &mdash; ' : ''}${item.ts ? timeAgo(item.ts) : ''}
+                ${item.detail ? item.detail + ', ' : ''}${item.ts ? timeAgo(item.ts) : ''}
               </div>
             </div>
             <span style="flex-shrink:0;margin-left:var(--sp-3);font-size:0.75rem;font-weight:600;color:var(--accent);white-space:nowrap;">
@@ -1586,7 +1586,7 @@ export function render(container) {
       <p style="font-size:0.75rem;color:var(--ink-faint);line-height:1.5;max-width:440px;margin:0 auto;">Connect to SLS, Google Classroom, or your school's LMS to surface student progress, quiz results, and assignment completion here.</p>
     </div>`;
 
-  // Widget content map — content for each widget that can be rendered synchronously
+  // Widget content map: content for each widget that can be rendered synchronously
   const widgetContent = {
     schedule: '',       // populated async
     activityFeed: activityFeedHTML,
@@ -1605,15 +1605,15 @@ export function render(container) {
     studentData: studentDataHTML
   };
 
-  // Build ordered widgets HTML — insights/reflections already have their own wrapper
+  // Build ordered widgets HTML; insights/reflections already have their own wrapper
   const widgetOrder = (prefs.widgetOrder.length > 0 ? prefs.widgetOrder : [...DEFAULT_WIDGET_ORDER]);
   // Ensure all default widgets appear
   DEFAULT_WIDGET_ORDER.forEach(w => { if (!widgetOrder.includes(w)) widgetOrder.push(w); });
 
-  // Some widgets are async-populated — for those, use a placeholder div
+  // Some widgets are async-populated; for those, use a placeholder div
   const asyncWidgets = new Set(['schedule', 'weeklyOverview', 'prepChecklist', 'timetable']);
 
-  // Apply view mode — filter visible widgets for compact/minimal
+  // Apply view mode: filter visible widgets for compact/minimal
   const appliedView = prefs.defaultView || 'full';
   const compactKeep = new Set(['schedule', 'activityFeed', 'quickActions', 'notifications', 'suggestions', 'stats']);
   const minimalKeep = new Set(['schedule', 'quickActions', 'notifications']);
@@ -1652,7 +1652,7 @@ export function render(container) {
             </button>
           </div>
           <div style="margin-top:12px;font-size:0.875rem;font-style:italic;opacity:0.85;line-height:1.5;">
-            "${getDailyQuote().text}"${getDailyQuote().attr ? `<span style="font-style:normal;opacity:0.7;margin-left:6px;">— ${getDailyQuote().attr}</span>` : ''}
+            "${getDailyQuote().text}"${getDailyQuote().attr ? `<span style="font-style:normal;opacity:0.7;margin-left:6px;">- ${getDailyQuote().attr}</span>` : ''}
           </div>
         </div>
 
@@ -1917,7 +1917,7 @@ export function render(container) {
   })();
 }
 
-/* Helper for notification click routing — extract action items */
+/* Helper for notification click routing: extract action items */
 function buildNotificationItems(classes, lessons, events) {
   const items = [];
   lessons.forEach(l => {
@@ -1940,7 +1940,7 @@ function buildNotificationItems(classes, lessons, events) {
   return items.slice(0, 5);
 }
 
-/* ── My Timetable — full day grid ── */
+/* ── My Timetable: full day grid ── */
 export function buildMyTimetable(teacherRow) {
   if (!teacherRow) return '';
   const pk = getTTPeriodKey();

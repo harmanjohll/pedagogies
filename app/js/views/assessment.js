@@ -89,8 +89,8 @@ const SRL_STRATEGIES = [
   { title: 'Error Analysis', desc: 'Students examine their own mistakes, classify error types, and plan how to avoid them.',
     applications: {
       Science: 'Classify errors as conceptual (misunderstood the concept), procedural (wrong method), or careless (calculation slip).',
-      Mathematics: 'Sort mistakes into categories: sign errors, wrong formula, misread question, or conceptual gap \u2014 then target each.',
-      English: 'Review marked essays for patterns: grammar, argument structure, evidence use \u2014 create a personal improvement checklist.',
+      Mathematics: 'Sort mistakes into categories: sign errors, wrong formula, misread question, or conceptual gap; then target each.',
+      English: 'Review marked essays for patterns: grammar, argument structure, evidence use; create a personal improvement checklist.',
       Humanities: 'Analyse test answers: Did I misinterpret the source? Lack evidence? Miss the command word? Plan targeted revision.',
       default: 'Have students categorise their mistakes, identify patterns, and create a personal action plan for improvement.'
     }},
@@ -116,7 +116,7 @@ const SRL_STRATEGIES = [
 const HATTIE_STRATEGIES = [
   { strategy: 'Feedback',                    effect: 0.70, desc: 'Specific information about task performance relative to success criteria.' },
   { strategy: 'Formative Evaluation',        effect: 0.48, desc: 'Using assessment evidence to adapt teaching in real-time.' },
-  { strategy: 'Self-Reported Grades',        effect: 1.33, desc: 'Students estimating their own performance \u2014 calibrating expectations.' },
+  { strategy: 'Self-Reported Grades',        effect: 1.33, desc: 'Students estimating their own performance, calibrating expectations.' },
   { strategy: 'Classroom Discussion',        effect: 0.82, desc: 'Purposeful dialogue that makes thinking visible.' },
   { strategy: 'Teacher Clarity',             effect: 0.75, desc: 'Clear learning intentions, success criteria, and task expectations.' },
   { strategy: 'Metacognitive Strategies',    effect: 0.60, desc: 'Teaching students to think about their own thinking.' },
@@ -258,7 +258,7 @@ function classDropdownOptions(includeEmpty = true) {
     html += `<option value="${cls.id}">${label}</option>`;
   });
   if (!classes.length) {
-    html = '<option value="">No classes yet \u2014 add via Classes page</option>';
+    html = '<option value="">No classes yet; add via Classes page</option>';
   }
   return html;
 }
@@ -281,7 +281,7 @@ function renderAIOutput(text) {
 
 
 /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   AoL \u2014 Assessment of Learning (Summative / TOS)
+   AoL: Assessment of Learning (Summative / TOS)
    \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 
 export function renderAoL(container) {
@@ -295,7 +295,7 @@ export function renderAoL(container) {
         <div class="page-header" style="margin-bottom: 8px;">
           <div>
             <h1 class="page-title" style="font-size:1.625rem;">Assessment of Learning</h1>
-            <p class="page-subtitle">Summative assessment design \u2014 Table of Specifications</p>
+            <p class="page-subtitle">Summative assessment design: Table of Specifications</p>
           </div>
         </div>
 
@@ -312,7 +312,7 @@ export function renderAoL(container) {
           <div class="assess-section-desc" style="margin-top:12px;">
             A TOS maps assessment items to cognitive levels, ensuring balanced coverage.
             Choose between the <strong>original 1D taxonomy</strong> (topics \u00d7 cognitive levels) or the
-            <strong>revised 2D taxonomy</strong> (Anderson & Krathwohl \u2014 knowledge dimension \u00d7 cognitive process).
+            <strong>revised 2D taxonomy</strong> (Anderson & Krathwohl, knowledge dimension \u00d7 cognitive process).
           </div>
 
           <div class="tos-mode-toggle">
@@ -442,7 +442,7 @@ export function renderAoL(container) {
 
         <!-- Bloom's reference -->
         <div class="assess-card">
-          <div class="assess-section-title">Bloom's Taxonomy \u2014 Quick Reference</div>
+          <div class="assess-section-title">Bloom's Taxonomy: Quick Reference</div>
           ${tosMode === '2d' ? '<div class="assess-section-desc">The revised taxonomy (Anderson & Krathwohl, 2001) adds a <strong>Knowledge Dimension</strong> intersecting the cognitive process dimension.</div>' : ''}
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:12px;">
             ${BLOOMS.map((b, i) => {
@@ -554,7 +554,7 @@ function render2DInputs(lessons) {
       <div>
         <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#555);text-transform:uppercase;display:block;margin-bottom:4px;">Source (optional)</label>
         <select id="tos-lesson-select" class="input" style="width:100%;">
-          <option value="">\u2014</option>
+          <option value="">-</option>
           ${lessons.map(l => `<option value="${l.id}">${escHtml(l.title || 'Untitled')}</option>`).join('')}
         </select>
       </div>
@@ -612,12 +612,12 @@ function build1DTOSTable(objectives, totalMarks) {
         <tr style="font-weight:700;">
           <td style="text-align:left;">Column Total</td>
           ${BLOOMS.map(b => `<td data-col-total="${b.key}">0</td>`).join('')}
-          <td data-grand-total>0</td><td>\u2014</td>
+          <td data-grand-total>0</td><td>-</td>
         </tr>
         <tr>
           <td style="text-align:left;font-weight:600;">% of Paper</td>
           ${BLOOMS.map(b => `<td data-col-pct="${b.key}">0%</td>`).join('')}
-          <td>100%</td><td>\u2014</td>
+          <td>100%</td><td>-</td>
         </tr>
       </tbody>
     </table>
@@ -653,7 +653,7 @@ function build2DTOSTable(totalMarks, objectives) {
             <span class="tos-2d-obj-label">${dim.label}</span>
             <span class="tos-dim-desc">${dim.desc}</span>
           </td>
-          ${hasObj ? `<td class="tos-2d-obj-cell">${dimObjs.length ? dimObjs.map(o => `<div style="margin-bottom:2px;">\u2022 ${escHtml(o)}</div>`).join('') : '<span style="color:var(--ink-faint);font-size:0.75rem;">\u2014</span>'}</td>` : ''}
+          ${hasObj ? `<td class="tos-2d-obj-cell">${dimObjs.length ? dimObjs.map(o => `<div style="margin-bottom:2px;">\u2022 ${escHtml(o)}</div>`).join('') : '<span style="color:var(--ink-faint);font-size:0.75rem;">-</span>'}</td>` : ''}
           ${BLOOMS.map(b => `<td title="${dim.ex[b.key]}"><input type="number" class="tos-cell" data-row="${i}" data-col="${b.key}" value="0" min="0" /></td>`).join('')}
           <td class="tos-total" data-row-total="${i}">0</td>
           <td class="tos-total" data-row-pct="${i}">0%</td>
@@ -662,12 +662,12 @@ function build2DTOSTable(totalMarks, objectives) {
         <tr style="font-weight:700;">
           <td style="text-align:left;" ${hasObj ? 'colspan="2"' : ''}>Column Total</td>
           ${BLOOMS.map(b => `<td data-col-total="${b.key}">0</td>`).join('')}
-          <td data-grand-total>0</td><td>\u2014</td>
+          <td data-grand-total>0</td><td>-</td>
         </tr>
         <tr>
           <td style="text-align:left;font-weight:600;" ${hasObj ? 'colspan="2"' : ''}>% of Paper</td>
           ${BLOOMS.map(b => `<td data-col-pct="${b.key}">0%</td>`).join('')}
-          <td>100%</td><td>\u2014</td>
+          <td>100%</td><td>-</td>
         </tr>
       </tbody>
     </table>
@@ -888,7 +888,7 @@ async function generateDraftQuestions(container) {
     const isFormulaSub = formulaSubjectPattern.test(subject);
 
     const mathGuidance = isFormulaSub ? `
-IMPORTANT — This is a formula/calculation-heavy subject. Follow these rules:
+IMPORTANT: This is a formula/calculation-heavy subject. Follow these rules:
 - Write questions concisely. State the problem directly, avoid unnecessary preamble or story context unless it is essential to the question.
 - Use LaTeX notation for all mathematical expressions: wrap inline math in $...$ and display math in $$...$$.
 - For example, write "Solve $2x + 5 = 17$." not "A student has an equation where two times x plus five equals seventeen. Solve for x."
@@ -980,7 +980,7 @@ function renderGeneratedQuestions(container, questions) {
   output.innerHTML = `
     <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
       <div style="font-weight:700;font-size:1rem;color:var(--ink);">Draft Questions (${questions.length} questions, ${totalMarks} marks)</div>
-      <span class="badge badge-amber badge-dot" style="font-size:0.75rem;">AI-Generated \u2014 Review Required</span>
+      <span class="badge badge-amber badge-dot" style="font-size:0.75rem;">AI-Generated | Review Required</span>
     </div>
     ${questions.map((q, i) => {
       const color = bloomColors[q.bloom_level] || '#6366f1';
@@ -1120,7 +1120,7 @@ function exportQuestions(container) {
   trackEvent('export', 'print_questions', `${questions.length} questions`, [subject, level].filter(Boolean).join(' '));
   const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
 
-  // Detect formula-heavy subjects — use blank working space instead of lines
+  // Detect formula-heavy subjects; use blank working space instead of lines
   const formulaSubjects = /math|physics|chemistry|chem|add\s*math|a\s*math|e\s*math/i;
   const isFormulaSubject = formulaSubjects.test(subject);
 
@@ -1156,7 +1156,7 @@ function exportQuestions(container) {
 </head>
 <body>
   <div class="header">
-    <h1>${escHtml(subject)}${level ? ' \u2014 ' + escHtml(level) : ''}</h1>
+    <h1>${escHtml(subject)}${level ? ' | ' + escHtml(level) : ''}</h1>
     <p>Total Marks: ${totalMarks} | Questions: ${questions.length}</p>
   </div>
   <div class="student-info">
@@ -1211,7 +1211,7 @@ function copyQuestions(container) {
   trackEvent('export', 'copy_questions', `${questions.length} questions`, [subject, level].filter(Boolean).join(' '));
   const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
 
-  let text = `${subject}${level ? ' \u2014 ' + level : ''}\nTotal Marks: ${totalMarks}\n\n`;
+  let text = `${subject}${level ? ' | ' + level : ''}\nTotal Marks: ${totalMarks}\n\n`;
   questions.forEach((q, i) => {
     text += `Q${i + 1}. [${q.marks}m] (${q.bloom_level || 'unknown'})\n${q.question}\n`;
     text += `Answer: ${q.answer || 'N/A'}\n\n`;
@@ -1289,12 +1289,12 @@ function recalcTOS(container, rowCount, totalMarks) {
 }
 
 function updateAoLStepper(container) {
-  // Sequential card flow — no stepper to update; kept as no-op for compatibility
+  // Sequential card flow; no stepper to update. Kept as no-op for compatibility
 }
 
 
 /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   AaL \u2014 Assessment as Learning (Metacognition)
+   AaL: Assessment as Learning (Metacognition)
    \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 
 export function renderAaL(container) {
@@ -1322,7 +1322,7 @@ export function renderAaL(container) {
           </div>
           <div class="assess-section-desc">
             Beatty\u2019s GROW framework empowers students to become proactive, self-reflective learners.
-            Each letter guides a stage of personal reflection \u2014 celebrating success, planning improvement, owning knowledge, and looking ahead.
+            Each letter guides a stage of personal reflection, celebrating success, planning improvement, owning knowledge, and looking ahead.
           </div>
 
           <!-- Circular GROW Diagram (matched to reference: G top-right, R right, O bottom, W left) -->
@@ -1377,7 +1377,7 @@ export function renderAaL(container) {
           <!-- GROW detail cards -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #f59e0b;background:rgba(245,158,11,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-g" title="Click to see what G looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">G \u2014 Gift yourself success</div>
+              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">G: Gift yourself success</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Celebrate what you <em>do</em> understand. Recognise your strengths before focusing on gaps.</div>
               <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cWhat is one thing I understand?\u201d<br/>
@@ -1385,7 +1385,7 @@ export function renderAaL(container) {
               </div>
             </div>
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #f59e0b;background:rgba(245,158,11,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-r" title="Click to see what R looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">R \u2014 Rise above with small steps</div>
+              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">R: Rise above with small steps</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Identify what you don\u2019t yet understand and plan a small, achievable step to improve.</div>
               <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cWhat do I not yet understand?\u201d<br/>
@@ -1393,7 +1393,7 @@ export function renderAaL(container) {
               </div>
             </div>
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #10b981;background:rgba(16,185,129,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-o" title="Click to see what O looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#10b981;margin-bottom:4px;">O \u2014 Own your knowledge</div>
+              <div style="font-weight:700;font-size:0.9375rem;color:#10b981;margin-bottom:4px;">O: Own your knowledge</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Make learning yours by connecting it to real life and sharing it with others.</div>
               <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cWhat is one real-life example?\u201d<br/>
@@ -1401,7 +1401,7 @@ export function renderAaL(container) {
               </div>
             </div>
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #8b5cf6;background:rgba(139,92,246,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-w" title="Click to see what W looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#8b5cf6;margin-bottom:4px;">W \u2014 Watch for what comes next</div>
+              <div style="font-weight:700;font-size:0.9375rem;color:#8b5cf6;margin-bottom:4px;">W: Watch for what comes next</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Look ahead. Activate prior knowledge about the next topic so you arrive prepared.</div>
               <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cWhat do I already know about the next topic?\u201d<br/>
@@ -1449,12 +1449,12 @@ export function renderAaL(container) {
           </div>
           <div class="assess-section-desc">
             A learner-centred framework for acting on feedback received. ACT teaches students to treat feedback as a growth tool
-            rather than a judgement \u2014 moving from passive receipt to active response.
+            rather than a judgement, moving from passive receipt to active response.
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #ef4444;background:rgba(239,68,68,0.03);cursor:pointer;" class="aal-panel-link" data-panel="act-a" title="Click to see what A looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#ef4444;margin-bottom:4px;">A \u2014 Acknowledge</div>
+              <div style="font-weight:700;font-size:0.9375rem;color:#ef4444;margin-bottom:4px;">A: Acknowledge</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Receive the feedback with an open mind. Notice your emotional response and look past it to the learning message.</div>
               <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cHow do I feel about this feedback?\u201d<br/>
@@ -1462,7 +1462,7 @@ export function renderAaL(container) {
               </div>
             </div>
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #f59e0b;background:rgba(245,158,11,0.03);cursor:pointer;" class="aal-panel-link" data-panel="act-c" title="Click to see what C looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">C \u2014 Connect</div>
+              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">C: Connect</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Link the feedback to your success criteria, your goals, and any previous feedback you\u2019ve received.</div>
               <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cHow does this connect with the success criteria or my goals?\u201d<br/>
@@ -1470,7 +1470,7 @@ export function renderAaL(container) {
               </div>
             </div>
             <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #3b82f6;background:rgba(59,130,246,0.03);cursor:pointer;" class="aal-panel-link" data-panel="act-t" title="Click to see what T looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#3b82f6;margin-bottom:4px;">T \u2014 Test</div>
+              <div style="font-weight:700;font-size:0.9375rem;color:#3b82f6;margin-bottom:4px;">T: Test</div>
               <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Put the feedback into action. Identify a specific habit to adjust and plan how to check your progress.</div>
               <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
                 <strong>Ask yourself:</strong> \u201cWhat habit do I need to adjust?\u201d<br/>
@@ -1517,8 +1517,8 @@ export function renderAaL(container) {
             </span>
           </div>
           <div class="assess-section-desc">
-            Beatty\u2019s Learning Practice model shows how GROW, ACT, MAP, and ASK work together simultaneously
-            \u2014 both in and out of lessons. All practices happen all the time, not in sequence.
+            Beatty\u2019s Learning Practice model shows how GROW, ACT, MAP, and ASK work together simultaneously,
+            both in and out of lessons. All practices happen all the time, not in sequence.
             The inner ring represents the learner behaviours that drive learning: Prepare, Participate, and Process.
           </div>
 
@@ -1582,21 +1582,21 @@ export function renderAaL(container) {
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div>
-              <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Outer Ring \u2014 Learning Practices</div>
+              <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Outer Ring: Learning Practices</div>
               <div style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;">
-                <span style="color:#3b82f6;font-weight:600;">GROW</span> \u2014 Reflect on what you know and don\u2019t know<br/>
-                <span style="color:#ef4444;font-weight:600;">ACT</span> \u2014 Process and act on feedback received<br/>
-                <span style="color:#10b981;font-weight:600;">MAP</span> \u2014 Track your progress against goals<br/>
-                <span style="color:#f59e0b;font-weight:600;">ASK</span> \u2014 Seek help and clarify understanding
+                <span style="color:#3b82f6;font-weight:600;">GROW</span>: Reflect on what you know and don\u2019t know<br/>
+                <span style="color:#ef4444;font-weight:600;">ACT</span>: Process and act on feedback received<br/>
+                <span style="color:#10b981;font-weight:600;">MAP</span>: Track your progress against goals<br/>
+                <span style="color:#f59e0b;font-weight:600;">ASK</span>: Seek help and clarify understanding
               </div>
               <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">All four practices happen simultaneously, not in sequence.</div>
             </div>
             <div>
-              <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Inner Ring \u2014 Learner Behaviours</div>
+              <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Inner Ring: Learner Behaviours</div>
               <div style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;">
-                <span style="color:#6366f1;font-weight:600;">Prepare</span> \u2014 Get ready for learning before class<br/>
-                <span style="color:#ec4899;font-weight:600;">Participate</span> \u2014 Engage actively during lessons<br/>
-                <span style="color:#14b8a6;font-weight:600;">Process</span> \u2014 Make sense of learning after class
+                <span style="color:#6366f1;font-weight:600;">Prepare</span>: Get ready for learning before class<br/>
+                <span style="color:#ec4899;font-weight:600;">Participate</span>: Engage actively during lessons<br/>
+                <span style="color:#14b8a6;font-weight:600;">Process</span>: Make sense of learning after class
               </div>
             </div>
           </div>
@@ -1619,10 +1619,10 @@ export function renderAaL(container) {
             <div>
               <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Focus Domain</label>
               <select id="aal-domain" class="input" style="width:100%;">
-                <option value="planning">Planning \u2014 Before Learning</option>
-                <option value="monitoring">Monitoring \u2014 During Learning</option>
-                <option value="evaluation">Evaluation \u2014 After Learning</option>
-                <option value="debugging">Debugging \u2014 When Stuck</option>
+                <option value="planning">Planning: Before Learning</option>
+                <option value="monitoring">Monitoring: During Learning</option>
+                <option value="evaluation">Evaluation: After Learning</option>
+                <option value="debugging">Debugging: When Stuck</option>
                 <option value="general">General Metacognition</option>
               </select>
             </div>
@@ -1673,11 +1673,11 @@ export function renderAaL(container) {
           <div id="srl-detail"></div>
         </div>
 
-        <!-- MAI Framework (Say More — collapsible) -->
+        <!-- MAI Framework (Say More, collapsible) -->
         <div class="assess-card" id="aal-mai-card">
           <button class="collapsible-toggle" id="mai-toggle">
             <span class="tri"></span>
-            <span class="assess-section-title" style="margin-bottom:0;">Metacognitive Awareness Inventory (MAI) \u2014 Theoretical Reference</span>
+            <span class="assess-section-title" style="margin-bottom:0;">Metacognitive Awareness Inventory (MAI): Theoretical Reference</span>
           </button>
           <div class="assess-section-desc" style="margin-top:4px;">
             Based on Schraw &amp; Dennison (1994). Click <em>Say More</em> to expand the full MAI taxonomy.
@@ -1710,31 +1710,31 @@ export function renderAaL(container) {
 /* ── Enacted examples data for panel links ── */
 const ENACTED_EXAMPLES = {
   'grow-g': {
-    title: 'G — Gift yourself success (Enacted)',
+    title: 'G: Gift yourself success (Enacted)',
     content: `<strong>In the classroom:</strong> After a quiz on Chemical Bonding, the teacher asks students to write down one concept they understood well.\n\n<strong>Student example:</strong> "I understood that ionic bonds form when electrons are transferred from a metal to a non-metal. I could draw the dot-and-cross diagram for NaCl."\n\n<strong>Teacher prompt:</strong> "Now, how would you explain this to someone who missed today's lesson?"\n\n<strong>Outcome:</strong> Students feel empowered because they start from a position of success rather than focusing on gaps first.`
   },
   'grow-r': {
-    title: 'R — Rise above with small steps (Enacted)',
+    title: 'R: Rise above with small steps (Enacted)',
     content: `<strong>In the classroom:</strong> Students identify one thing they found challenging in the lesson.\n\n<strong>Student example:</strong> "I'm not sure why some atoms form covalent bonds instead of ionic bonds. My small step: I'll re-read the textbook section on electronegativity tonight and try the practice questions."\n\n<strong>Teacher prompt:</strong> "What is the smallest thing you can do today to move forward?"\n\n<strong>Outcome:</strong> Breaks down overwhelming gaps into manageable actions.`
   },
   'grow-o': {
-    title: 'O — Own your knowledge (Enacted)',
-    content: `<strong>In the classroom:</strong> Students connect learning to real life or share it with someone.\n\n<strong>Student example:</strong> "Ionic compounds are in table salt (NaCl) which we use every day. I explained to my younger sister why salt dissolves in water — the ions separate."\n\n<strong>Teacher prompt:</strong> "Where have you seen this concept in real life? Who could you teach this to?"\n\n<strong>Outcome:</strong> Deepens understanding through application and teaching others.`
+    title: 'O: Own your knowledge (Enacted)',
+    content: `<strong>In the classroom:</strong> Students connect learning to real life or share it with someone.\n\n<strong>Student example:</strong> "Ionic compounds are in table salt (NaCl) which we use every day. I explained to my younger sister why salt dissolves in water, the ions separate."\n\n<strong>Teacher prompt:</strong> "Where have you seen this concept in real life? Who could you teach this to?"\n\n<strong>Outcome:</strong> Deepens understanding through application and teaching others.`
   },
   'grow-w': {
-    title: 'W — Watch for what comes next (Enacted)',
+    title: 'W: Watch for what comes next (Enacted)',
     content: `<strong>In the classroom:</strong> Before the end of the lesson, students preview the next topic.\n\n<strong>Student example:</strong> "Next lesson is on metallic bonding. I already know metals conduct electricity, so maybe metallic bonds have something to do with free-moving electrons."\n\n<strong>Teacher prompt:</strong> "What do you already know about next lesson's topic? How can you prepare?"\n\n<strong>Outcome:</strong> Students arrive ready to learn, with prior knowledge activated.`
   },
   'act-a': {
-    title: 'A — Acknowledge (Enacted)',
-    content: `<strong>In the classroom:</strong> Students receive feedback on an essay and first identify their emotional response.\n\n<strong>Student example:</strong> "I feel a bit disappointed because I thought my argument was strong. But reading the feedback again, I see the teacher is pointing out that I need more evidence from the text."\n\n<strong>Teacher prompt:</strong> "How do you feel about this feedback? Now read it again — what is the learning message?"\n\n<strong>Outcome:</strong> Students learn to separate emotion from content, making feedback actionable.`
+    title: 'A: Acknowledge (Enacted)',
+    content: `<strong>In the classroom:</strong> Students receive feedback on an essay and first identify their emotional response.\n\n<strong>Student example:</strong> "I feel a bit disappointed because I thought my argument was strong. But reading the feedback again, I see the teacher is pointing out that I need more evidence from the text."\n\n<strong>Teacher prompt:</strong> "How do you feel about this feedback? Now read it again; what is the learning message?"\n\n<strong>Outcome:</strong> Students learn to separate emotion from content, making feedback actionable.`
   },
   'act-c': {
-    title: 'C — Connect (Enacted)',
-    content: `<strong>In the classroom:</strong> Students link feedback to their goals and previous feedback.\n\n<strong>Student example:</strong> "My teacher said I need more textual evidence — that's the same feedback I got last time. The success criteria says I need at least 2 quotes per paragraph. I only used 1."\n\n<strong>Teacher prompt:</strong> "How does this feedback connect to the success criteria? Have you received similar feedback before?"\n\n<strong>Outcome:</strong> Students see patterns in their learning and connect feedback to clear standards.`
+    title: 'C: Connect (Enacted)',
+    content: `<strong>In the classroom:</strong> Students link feedback to their goals and previous feedback.\n\n<strong>Student example:</strong> "My teacher said I need more textual evidence; that's the same feedback I got last time. The success criteria says I need at least 2 quotes per paragraph. I only used 1."\n\n<strong>Teacher prompt:</strong> "How does this feedback connect to the success criteria? Have you received similar feedback before?"\n\n<strong>Outcome:</strong> Students see patterns in their learning and connect feedback to clear standards.`
   },
   'act-t': {
-    title: 'T — Test (Enacted)',
+    title: 'T: Test (Enacted)',
     content: `<strong>In the classroom:</strong> Students create an action plan and a way to check improvement.\n\n<strong>Student example:</strong> "My new habit: for every point I make, I'll highlight 2 quotes before I start writing. I'll check by counting my quotes before submitting."\n\n<strong>Teacher prompt:</strong> "What specific habit will you change? How will you know you're improving?"\n\n<strong>Outcome:</strong> Feedback leads to concrete, measurable behaviour change.`
   }
 };
@@ -1935,7 +1935,7 @@ Make them empowering, non-defensive, and suitable for student self-reflection af
 
       detail.innerHTML = `
         <div class="srl-detail-panel">
-          <div style="font-weight:700;font-size:0.9375rem;color:var(--ink);margin-bottom:8px;">${strategy.title} \u2014 Subject Applications</div>
+          <div style="font-weight:700;font-size:0.9375rem;color:var(--ink);margin-bottom:8px;">${strategy.title}: Subject Applications</div>
           ${subjects.map(([subj, app]) => `
             <div class="srl-app-item">
               <div class="srl-app-subject">${subj}</div>
@@ -2002,7 +2002,7 @@ Format each as a numbered question. Make them concrete, student-friendly, and ap
 
 
 /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   AfL \u2014 Assessment for Learning (Hattie / Formative)
+   AfL: Assessment for Learning (Hattie / Formative)
    \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 
 export function renderAfL(container) {
@@ -2033,14 +2033,14 @@ export function renderAfL(container) {
             <div class="lisc-box" style="background:rgba(59,130,246,0.06);">
               <div class="lisc-label" style="color:#3b82f6;">Learning Intention (LI)</div>
               <div class="lisc-content">
-                <strong>What</strong> students will learn \u2014 stated in terms of knowledge, skills, or understanding.<br>
+                <strong>What</strong> students will learn, stated in terms of knowledge, skills, or understanding.<br>
                 <em style="color:var(--ink-muted);font-size:0.8125rem;">Example: \u201cWe are learning to explain how ionic bonds form between metals and non-metals.\u201d</em>
               </div>
             </div>
             <div class="lisc-box" style="background:rgba(16,185,129,0.06);">
               <div class="lisc-label" style="color:#10b981;">Success Criteria (SC)</div>
               <div class="lisc-content">
-                <strong>How</strong> students will know they\u2019ve succeeded \u2014 observable, measurable indicators.<br>
+                <strong>How</strong> students will know they\u2019ve succeeded, observable, measurable indicators.<br>
                 <em style="color:var(--ink-muted);font-size:0.8125rem;">Example: \u201cI can draw a dot-and-cross diagram showing electron transfer in NaCl.\u201d</em>
               </div>
             </div>
@@ -2062,7 +2062,7 @@ export function renderAfL(container) {
           </div>
           <div style="margin-bottom:12px;">
             <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Or type topic / lesson focus</label>
-            <input type="text" id="afl-lisc-topic" class="input" placeholder="e.g. Chemical bonding \u2014 ionic compounds" style="width:100%;" />
+            <input type="text" id="afl-lisc-topic" class="input" placeholder="e.g. Chemical bonding: ionic compounds" style="width:100%;" />
           </div>
           <button class="btn btn-primary btn-sm" id="afl-lisc-btn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -2080,7 +2080,7 @@ export function renderAfL(container) {
             </span>
           </div>
           <div class="assess-section-desc">
-            A quick 2\u20133 question formative check at the end of a lesson. Students answer before leaving \u2014
+            A quick 2\u20133 question formative check at the end of a lesson. Students answer before leaving;
             gives you immediate data on who understood the lesson and who needs follow-up.
           </div>
 
@@ -2121,15 +2121,15 @@ export function renderAfL(container) {
 
           <div style="display:flex;flex-direction:column;gap:8px;">
             <div class="feedback-q" style="background:rgba(59,130,246,0.06);">
-              <div class="feedback-q-label" style="color:#3b82f6;">Feed Up \u2014 \u201cWhere am I going?\u201d</div>
+              <div class="feedback-q-label" style="color:#3b82f6;">Feed Up: \u201cWhere am I going?\u201d</div>
               <div class="feedback-q-desc">Clarify the learning goal and success criteria. Students need to understand what success looks like before they can assess their progress.</div>
             </div>
             <div class="feedback-q" style="background:rgba(245,158,11,0.06);">
-              <div class="feedback-q-label" style="color:#f59e0b;">Feed Back \u2014 \u201cHow am I going?\u201d</div>
+              <div class="feedback-q-label" style="color:#f59e0b;">Feed Back: \u201cHow am I going?\u201d</div>
               <div class="feedback-q-desc">Provide information about current performance relative to the goal. Focus on the task and process, not the person. Be specific about what was done well and what needs work.</div>
             </div>
             <div class="feedback-q" style="background:rgba(16,185,129,0.06);">
-              <div class="feedback-q-label" style="color:#10b981;">Feed Forward \u2014 \u201cWhere to next?\u201d</div>
+              <div class="feedback-q-label" style="color:#10b981;">Feed Forward: \u201cWhere to next?\u201d</div>
               <div class="feedback-q-desc">Guide the learner on what to do to improve. Provide actionable next steps, not just grades or scores. This is the most powerful component.</div>
             </div>
           </div>
@@ -2146,9 +2146,9 @@ export function renderAfL(container) {
 
         <!-- Effect Sizes Chart -->
         <div class="assess-card">
-          <div class="assess-section-title">Formative Assessment Strategies \u2014 Effect Sizes (Hattie)</div>
+          <div class="assess-section-title">Formative Assessment Strategies: Effect Sizes (Hattie)</div>
           <div class="assess-section-desc">
-            From Hattie\u2019s <em>Visible Learning</em> meta-analyses. Effect size d=0.40 is the \u201chinge point\u201d \u2014
+            From Hattie\u2019s <em>Visible Learning</em> meta-analyses. Effect size d=0.40 is the \u201chinge point\u201d;
             strategies above this threshold accelerate learning beyond typical growth.
             <span style="display:inline-block;width:12px;height:12px;background:rgba(239,68,68,0.15);border-left:2px solid #ef4444;margin:0 4px;vertical-align:middle;"></span> d=0.40 threshold shown.
           </div>
