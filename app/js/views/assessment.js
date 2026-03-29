@@ -2360,7 +2360,7 @@ function wireAfLEvents(container) {
       try {
         const text = await sendChat(
           [{ role: 'user', content: `Suggest one quick, practical classroom activity using "${strategy}" for ${cls.subject || 'any subject'} at ${cls.level || 'Secondary'} level. Something I can use tomorrow. 3-4 sentences max. Be specific and actionable.` }],
-          { trackLabel: 'aflStrategy', temperature: 0.7, maxTokens: 1024 }
+          { trackLabel: 'aflStrategy', temperature: 0.7, maxTokens: 2048 }
         );
         resultEl.innerHTML = `<div style="padding:10px;border-radius:8px;background:var(--accent-light);border-left:3px solid var(--accent);font-size:0.8125rem;line-height:1.6;color:var(--ink);">${text.replace(/\n/g, '<br>')}</div>`;
       } catch (err) {

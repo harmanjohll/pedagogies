@@ -427,7 +427,7 @@ export function render(container) {
           trackLabel: 'formulaLabGenerate',
           trackDetail: [subject, topic, level].filter(Boolean).join(' · '),
           temperature: 0.6,
-          maxTokens: 4096
+          maxTokens: 8192
         }
       );
 
