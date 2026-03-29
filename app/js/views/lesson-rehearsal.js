@@ -10,6 +10,7 @@ import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { trackEvent } from '../utils/analytics.js';
 import { sendChat } from '../api.js';
+import { getCurrentUser } from '../components/login.js';
 
 /* ── Constants ── */
 
@@ -146,7 +147,16 @@ function buildSystemPrompt(lesson) {
     return `- ${s.name}: ${preset ? preset.label + ' — ' + preset.desc : 'General student'}`;
   }).join('\n');
 
+  const user = getCurrentUser();
+  const fullName = user?.name || '';
+  const surname = fullName.split(' ').filter(Boolean).pop() || 'Teacher';
+  const salutation = fullName.toLowerCase().startsWith('mr') ? fullName.split(' ')[0] : (fullName.toLowerCase().startsWith('ms') || fullName.toLowerCase().startsWith('mdm') || fullName.toLowerCase().startsWith('mrs')) ? fullName.split(' ')[0] : 'Mr/Ms';
+  const teacherAddress = `${salutation} ${surname}`;
+
   return `You are simulating a classroom of students for a teacher rehearsal. The teacher is practising delivering a lesson before teaching it to a real class.
+
+## Teacher
+The teacher's name is ${fullName || 'the teacher'}. Students should address them as "${teacherAddress}" (using surname with salutation, as Singapore students would).
 
 ## Lesson Context
 Title: ${lesson.title || 'Untitled Lesson'}
