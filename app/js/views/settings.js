@@ -464,7 +464,7 @@ export function render(container) {
             Grounded in our STP with intentional fronting of EdTech, E21CC, and various constructs and concepts in learning, Co-Cher aims to pull various knowledge bases together, including research and data, to support you in weaving multiple pieces together and curate what matters most when intentionally designing and enacting purposeful learning experiences for your students.
           </p>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-2); line-height: 1.7; font-style: italic;">
-            Created by teachers, for teachers.
+            By teachers, for teachers.
           </p>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); line-height: 1.7; font-style: italic;">
             Warmly,<br/>

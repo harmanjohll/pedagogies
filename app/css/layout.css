@@ -431,8 +431,8 @@ body.resizing-panels .resize-handle {
 .welcome-card {
   background: #fff;
   border-radius: var(--radius-2xl);
-  padding: var(--sp-12) var(--sp-10);
-  max-width: 460px;
+  padding: var(--sp-8) var(--sp-10);
+  max-width: 620px;
   width: 100%;
   text-align: center;
   box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.3);
