@@ -151,7 +151,7 @@ function suggestEEEsForSubjects(subjects) {
 /* ── Tools with dedicated pages (sidebar-navigable) ── */
 const STANDALONE_EEE_KEYS = ['simulations','stimulus','sourceAnalysis','cceDiscussion','staveNotation','rhythmTool','artCritique','designProcess','kitchenLayout'];
 
-// Build rgba tint from hex — used for card backgrounds
+// Build rgba tint from hex, used for card backgrounds
 function _hexToRGBA(hex, alpha) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -190,8 +190,8 @@ function buildEEEListHTML() {
   const sidebarSel = getEEESidebarSelections();
 
   // Split enactment tools into planner-only vs standalone (dedicated page)
-  const plannerTools = [];  // no dedicated page — toggle in planner toolbar
-  const standaloneTools = []; // have dedicated pages — toggle in sidebar
+  const plannerTools = [];  // no dedicated page; toggle in planner toolbar
+  const standaloneTools = []; // have dedicated pages; toggle in sidebar
   Object.entries(EEE_REGISTRY).filter(([, v]) => v.cat === 'enactment').forEach(([key, v]) => {
     const meta = COMPONENT_META_SETTINGS[key];
     if (STANDALONE_EEE_KEYS.includes(key)) {
@@ -356,7 +356,7 @@ export function render(container) {
           <select class="input" id="settings-model">
             ${AVAILABLE_MODELS.map(m => `
               <option value="${m.id}" ${model === m.id ? 'selected' : ''}>
-                ${m.label} — ${m.description}
+                ${m.label}: ${m.description}
               </option>
             `).join('')}
           </select>
@@ -489,7 +489,7 @@ export function render(container) {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
             </div>
             <div>
-              <h3 style="font-size: 1.0625rem; font-weight: 700; margin: 0; color: var(--ink);">Enactment &mdash; Tools &amp; Resources</h3>
+              <h3 style="font-size: 1.0625rem; font-weight: 700; margin: 0; color: var(--ink);">Enactment: Tools &amp; Resources</h3>
             </div>
           </div>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: 16px; line-height: 1.6;">
@@ -611,7 +611,7 @@ export function render(container) {
             <button class="btn btn-primary btn-sm" id="csv-confirm-btn">Confirm Import</button>
           </div>
           <p style="font-size: 0.75rem; color: var(--ink-faint); margin-top: var(--sp-2);">
-            Tip: Export from Excel as CSV (UTF-8). One student per row. Include the subject in the class name (e.g. "4A Pure Chemistry") — Co-Cher will detect it and suggest relevant tools.
+            Tip: Export from Excel as CSV (UTF-8). One student per row. Include the subject in the class name (e.g. "4A Pure Chemistry"); Co-Cher will detect it and suggest relevant tools.
           </p>
         </div>
 
@@ -718,12 +718,12 @@ export function render(container) {
               Your <strong>pedagogical priorities</strong> (set during onboarding or in General settings) directly influence how Co-Cher generates lesson content:
             </p>
             <ul style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.7;padding-left:20px;margin:0;">
-              <li><strong>Differentiated Instruction</strong> — AI generates tiered activities and scaffolded content for diverse learners</li>
-              <li><strong>Collaborative Learning</strong> — Suggestions emphasise group work, discussion protocols, and peer activities</li>
-              <li><strong>Critical Thinking</strong> — Higher-order questions and analysis tasks are prioritised</li>
-              <li><strong>Student-Centred</strong> — Activities shift focus from teacher-led to student-driven exploration</li>
-              <li><strong>Assessment for Learning</strong> — Formative check-ins and exit tickets are woven into lesson plans</li>
-              <li><strong>ICT Integration</strong> — Digital tools and simulations are recommended where appropriate</li>
+              <li><strong>Differentiated Instruction</strong>: AI generates tiered activities and scaffolded content for diverse learners</li>
+              <li><strong>Collaborative Learning</strong>: Suggestions emphasise group work, discussion protocols, and peer activities</li>
+              <li><strong>Critical Thinking</strong>: Higher-order questions and analysis tasks are prioritised</li>
+              <li><strong>Student-Centred</strong>: Activities shift focus from teacher-led to student-driven exploration</li>
+              <li><strong>Assessment for Learning</strong>: Formative check-ins and exit tickets are woven into lesson plans</li>
+              <li><strong>ICT Integration</strong>: Digital tools and simulations are recommended where appropriate</li>
             </ul>
             <p style="font-size:0.75rem;color:var(--ink-faint);margin-top:var(--sp-2);margin-bottom:0;">
               These priorities are injected into AI prompts as context. You can update them anytime in the General tab above.
@@ -781,7 +781,7 @@ export function render(container) {
     render(container); // re-render to update active state
   });
 
-  // EEE marketplace — save selections on toggle change
+  // EEE marketplace: save selections on toggle change
   const saveEEE = () => {
     const plannerChecked = [...container.querySelectorAll('.eee-planner-toggle:checked')].map(cb => cb.dataset.eee);
     const sidebarChecked = [...container.querySelectorAll('.eee-sidebar-toggle:checked')].map(cb => cb.dataset.eee);
@@ -803,10 +803,10 @@ export function render(container) {
 
   container.querySelector('#eee-save-btn')?.addEventListener('click', () => {
     const { planner, sidebar } = saveEEE();
-    showToast(`Tools updated — ${planner.length} in Planner, ${sidebar.length} in Sidebar.`, 'success');
+    showToast(`Tools updated: ${planner.length} in Planner, ${sidebar.length} in Sidebar.`, 'success');
   });
 
-  // Custom links — add, remove, open
+  // Custom links: add, remove, open
   const customLinksListEl = container.querySelector('#custom-links-list');
 
   function rerenderCustomLinks() {

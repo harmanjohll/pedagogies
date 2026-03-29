@@ -215,76 +215,76 @@ const PRESETS = [
 /* ═══════════ Preset Insights (E21CC + STP ties) ═══════════ */
 const PRESET_INSIGHTS = {
   direct: [
-    { title: '📣 Clear Communication', affordance: 'Rows facing a clear focal point ensures all students have a direct line of sight for instruction.', moves: ['Use direct instruction for introducing new concepts.', 'Employ call-and-response to maintain engagement.'], e21cc: 'CAIT — focused attention supports individual critical thinking.' },
-    { title: '🧑‍🏫 Teacher Mobility', affordance: 'Aisles allow the teacher to circulate, monitor progress, and provide individual support.', moves: ['Walk the room during independent work to check understanding.', 'Use proximity to manage off-task behavior non-verbally.'], e21cc: 'CCI — teacher circulation enables timely communication support.' },
-    { title: '👀 Focused Attention', affordance: 'Structured layout minimises distractions, encouraging individual focus.', moves: ['Set clear time limits for tasks.', 'Use think-pair-share for brief structured peer interaction.'], e21cc: 'CAIT — minimised distraction supports deep analytical thinking.' }
+    { title: '📣 Clear Communication', affordance: 'Rows facing a clear focal point ensures all students have a direct line of sight for instruction.', moves: ['Use direct instruction for introducing new concepts.', 'Employ call-and-response to maintain engagement.'], e21cc: 'CAIT: focused attention supports individual critical thinking.' },
+    { title: '🧑‍🏫 Teacher Mobility', affordance: 'Aisles allow the teacher to circulate, monitor progress, and provide individual support.', moves: ['Walk the room during independent work to check understanding.', 'Use proximity to manage off-task behavior non-verbally.'], e21cc: 'CCI: teacher circulation enables timely communication support.' },
+    { title: '👀 Focused Attention', affordance: 'Structured layout minimises distractions, encouraging individual focus.', moves: ['Set clear time limits for tasks.', 'Use think-pair-share for brief structured peer interaction.'], e21cc: 'CAIT: minimised distraction supports deep analytical thinking.' }
   ],
   pods: [
-    { title: '🤝 Enhanced Collaboration', affordance: 'Clustered seating creates natural pods for group work, peer teaching, and co-construction of knowledge.', moves: ['Use jigsaw activities where each pod becomes an expert on one topic.', 'Assign group roles to ensure equitable participation.'], e21cc: 'CCI — collaborative pods are the foundation for communication and teamwork.' },
-    { title: '💬 Peer-to-Peer Learning', affordance: 'Proximity within pods encourages spontaneous discussion and problem-solving.', moves: ['Provide complex problems requiring multiple perspectives.', 'Encourage groups to present findings to the class.'], e21cc: 'CAIT — peer discourse deepens critical and inventive thinking.' },
-    { title: '💡 Shared Cognitive Load', affordance: 'Students can easily share resources, breaking down complex tasks into manageable parts.', moves: ['Use large paper or mini-whiteboards for group brainstorming.', 'Facilitate group goal-setting at start of activity.'], e21cc: 'CCI — shared resources build information literacy skills.' }
+    { title: '🤝 Enhanced Collaboration', affordance: 'Clustered seating creates natural pods for group work, peer teaching, and co-construction of knowledge.', moves: ['Use jigsaw activities where each pod becomes an expert on one topic.', 'Assign group roles to ensure equitable participation.'], e21cc: 'CCI: collaborative pods are the foundation for communication and teamwork.' },
+    { title: '💬 Peer-to-Peer Learning', affordance: 'Proximity within pods encourages spontaneous discussion and problem-solving.', moves: ['Provide complex problems requiring multiple perspectives.', 'Encourage groups to present findings to the class.'], e21cc: 'CAIT: peer discourse deepens critical and inventive thinking.' },
+    { title: '💡 Shared Cognitive Load', affordance: 'Students can easily share resources, breaking down complex tasks into manageable parts.', moves: ['Use large paper or mini-whiteboards for group brainstorming.', 'Facilitate group goal-setting at start of activity.'], e21cc: 'CCI: shared resources build information literacy skills.' }
   ],
   stations: [
-    { title: '🔄 Differentiated Instruction', affordance: 'Multiple stations allow variety catering to different learning styles, paces, and levels.', moves: ['Design tasks at each station targeting specific skills.', 'Allow students to self-select stations based on learning goals.'], e21cc: 'CAIT — stations enable adaptive, self-directed learning paths.' },
-    { title: '🏃‍♀️ Active Learning', affordance: 'Physical movement between stations keeps students engaged and breaks sedentary periods.', moves: ['Use a timer for structured rotations.', 'Provide clear instructions and materials at each station.'], e21cc: 'CGC — movement and variety support holistic student wellbeing.' },
-    { title: '🧑‍🏫 Targeted Support', affordance: 'Teacher can work intensively with a small group while others work independently.', moves: ['Create a teacher-led station for re-teaching or enrichment.', 'Circulate among independent stations for targeted feedback.'], e21cc: 'CCI — small-group instruction supports differentiated communication.' }
+    { title: '🔄 Differentiated Instruction', affordance: 'Multiple stations allow variety catering to different learning styles, paces, and levels.', moves: ['Design tasks at each station targeting specific skills.', 'Allow students to self-select stations based on learning goals.'], e21cc: 'CAIT: stations enable adaptive, self-directed learning paths.' },
+    { title: '🏃‍♀️ Active Learning', affordance: 'Physical movement between stations keeps students engaged and breaks sedentary periods.', moves: ['Use a timer for structured rotations.', 'Provide clear instructions and materials at each station.'], e21cc: 'CGC: movement and variety support holistic student wellbeing.' },
+    { title: '🧑‍🏫 Targeted Support', affordance: 'Teacher can work intensively with a small group while others work independently.', moves: ['Create a teacher-led station for re-teaching or enrichment.', 'Circulate among independent stations for targeted feedback.'], e21cc: 'CCI: small-group instruction supports differentiated communication.' }
   ],
   ushape: [
-    { title: '💬 Democratic Dialogue', affordance: 'Circle/U-shape puts all participants on equal footing with clear sightlines to everyone.', moves: ['Facilitate Socratic seminars or philosophical chairs debates.', 'Establish norms for respectful listening and turn-taking.'], e21cc: 'CGC — equal footing fosters civic literacy and cross-cultural respect.' },
-    { title: '👁️ Full Class Visibility', affordance: 'Every student is visible to teacher and peers, encouraging active participation.', moves: ['Use non-verbal cues to gauge understanding across the group.', 'Pose open-ended questions inviting multiple viewpoints.'], e21cc: 'CCI — full visibility supports accountable talk and active listening.' },
-    { title: '🤝 Community Building', affordance: 'No "front" breaks traditional hierarchies, promoting collaborative shared learning.', moves: ['Start class with a community-building check-in circle.', 'Use format for storytelling or shared reading experiences.'], e21cc: 'CGC — community circles build global and cross-cultural awareness.' }
+    { title: '💬 Democratic Dialogue', affordance: 'Circle/U-shape puts all participants on equal footing with clear sightlines to everyone.', moves: ['Facilitate Socratic seminars or philosophical chairs debates.', 'Establish norms for respectful listening and turn-taking.'], e21cc: 'CGC: equal footing fosters civic literacy and cross-cultural respect.' },
+    { title: '👁️ Full Class Visibility', affordance: 'Every student is visible to teacher and peers, encouraging active participation.', moves: ['Use non-verbal cues to gauge understanding across the group.', 'Pose open-ended questions inviting multiple viewpoints.'], e21cc: 'CCI: full visibility supports accountable talk and active listening.' },
+    { title: '🤝 Community Building', affordance: 'No "front" breaks traditional hierarchies, promoting collaborative shared learning.', moves: ['Start class with a community-building check-in circle.', 'Use format for storytelling or shared reading experiences.'], e21cc: 'CGC: community circles build global and cross-cultural awareness.' }
   ],
   quiet: [
-    { title: '🧠 Deep Focus', affordance: 'Individual desks minimise distractions, providing each student with personal workspace.', moves: ['Use for summative assessments or timed writing.', 'Play quiet background music for concentration.'], e21cc: 'CAIT — uninterrupted focus enables deep critical analysis.' },
-    { title: '🧘‍♀️ Self-Paced Learning', affordance: 'Ideal for tasks requiring sustained, independent concentration and self-pacing.', moves: ['Provide playlists of online resources to work through.', 'Offer extension activities for early finishers.'], e21cc: 'CAIT — self-pacing develops adaptive, inventive problem-solving.' },
-    { title: '📝 Individual Accountability', affordance: 'Separated workspaces ensure each student is responsible for their own work.', moves: ['Circulate for one-on-one feedback and support.', 'Use mini-whiteboards for quick checks for understanding.'], e21cc: 'CCI — individual work builds personal information management skills.' }
+    { title: '🧠 Deep Focus', affordance: 'Individual desks minimise distractions, providing each student with personal workspace.', moves: ['Use for summative assessments or timed writing.', 'Play quiet background music for concentration.'], e21cc: 'CAIT: uninterrupted focus enables deep critical analysis.' },
+    { title: '🧘‍♀️ Self-Paced Learning', affordance: 'Ideal for tasks requiring sustained, independent concentration and self-pacing.', moves: ['Provide playlists of online resources to work through.', 'Offer extension activities for early finishers.'], e21cc: 'CAIT: self-pacing develops adaptive, inventive problem-solving.' },
+    { title: '📝 Individual Accountability', affordance: 'Separated workspaces ensure each student is responsible for their own work.', moves: ['Circulate for one-on-one feedback and support.', 'Use mini-whiteboards for quick checks for understanding.'], e21cc: 'CCI: individual work builds personal information management skills.' }
   ],
   gallery: [
-    { title: '🚶‍♀️ Peer Feedback & Review', affordance: 'Spreading work around the room enables structured peer-to-peer feedback.', moves: ['Provide sticky notes for students to leave comments at each station.', 'Use protocols like "I like, I wonder, What if" to guide feedback.'], e21cc: 'CCI — peer feedback develops constructive communication skills.' },
-    { title: '🎨 Showcasing Process', affordance: 'Perfect for displaying multiple stages of a project, showing thinking processes.', moves: ['Have students display drafts and final versions side-by-side.', 'Ask students to present their "exhibit" to small groups.'], e21cc: 'CAIT — showcasing process makes thinking visible and inventive.' },
-    { title: '🔄 Synthesising Information', affordance: 'Each station presents different information, requiring students to synthesise.', moves: ['Use for analysing different documents, data sets, or interpretations.', 'Provide a graphic organiser for students to complete as they visit each station.'], e21cc: 'CAIT — synthesis across sources builds critical information literacy.' }
+    { title: '🚶‍♀️ Peer Feedback & Review', affordance: 'Spreading work around the room enables structured peer-to-peer feedback.', moves: ['Provide sticky notes for students to leave comments at each station.', 'Use protocols like "I like, I wonder, What if" to guide feedback.'], e21cc: 'CCI: peer feedback develops constructive communication skills.' },
+    { title: '🎨 Showcasing Process', affordance: 'Perfect for displaying multiple stages of a project, showing thinking processes.', moves: ['Have students display drafts and final versions side-by-side.', 'Ask students to present their "exhibit" to small groups.'], e21cc: 'CAIT: showcasing process makes thinking visible and inventive.' },
+    { title: '🔄 Synthesising Information', affordance: 'Each station presents different information, requiring students to synthesise.', moves: ['Use for analysing different documents, data sets, or interpretations.', 'Provide a graphic organiser for students to complete as they visit each station.'], e21cc: 'CAIT: synthesis across sources builds critical information literacy.' }
   ],
   fishbowl: [
-    { title: '🗣️ Focused Dialogue', affordance: 'Inner circle creates a stage for active speakers; outer circle for active listeners.', moves: ['Use for structured debates, Socratic seminars, or role-playing.', 'Provide the outer circle with observation tasks or note-taking guides.'], e21cc: 'CGC — fishbowl develops civic discourse and respectful argumentation.' },
-    { title: '👂 Active Listening', affordance: 'Distinct speaker/listener roles make active listening explicit and purposeful.', moves: ['Have outer circle provide feedback on discussion quality.', 'Rotate students between inner and outer circles.'], e21cc: 'CCI — explicit listening roles strengthen communication competencies.' },
-    { title: '🏛️ Structured Participation', affordance: 'Clear structure manages full-class discussion, keeping conversation focused.', moves: ['Use a "hot seat" model for one student answering group questions.', 'Establish clear norms for entering and exiting the inner circle.'], e21cc: 'CGC — structured dialogue models democratic civic participation.' }
+    { title: '🗣️ Focused Dialogue', affordance: 'Inner circle creates a stage for active speakers; outer circle for active listeners.', moves: ['Use for structured debates, Socratic seminars, or role-playing.', 'Provide the outer circle with observation tasks or note-taking guides.'], e21cc: 'CGC: fishbowl develops civic discourse and respectful argumentation.' },
+    { title: '👂 Active Listening', affordance: 'Distinct speaker/listener roles make active listening explicit and purposeful.', moves: ['Have outer circle provide feedback on discussion quality.', 'Rotate students between inner and outer circles.'], e21cc: 'CCI: explicit listening roles strengthen communication competencies.' },
+    { title: '🏛️ Structured Participation', affordance: 'Clear structure manages full-class discussion, keeping conversation focused.', moves: ['Use a "hot seat" model for one student answering group questions.', 'Establish clear norms for entering and exiting the inner circle.'], e21cc: 'CGC: structured dialogue models democratic civic participation.' }
   ],
   maker: [
-    { title: '🛠️ Hands-On Creation', affordance: 'Large work surfaces and diverse tools empower hands-on design and prototyping.', moves: ['Pose design challenges requiring physical solutions.', 'Set up a tinkering station for open-ended exploration.'], e21cc: 'CAIT — making develops inventive thinking through tangible creation.' },
-    { title: '🏃‍♂️ Flexible Movement', affordance: 'Open-plan design allows easy movement between ideation and fabrication zones.', moves: ['Encourage design thinking: empathise, define, ideate, prototype, test.', 'Use mobile whiteboards for teams to share design processes.'], e21cc: 'CAIT — iterative design cycles develop adaptive problem-solving.' },
-    { title: '💡 Interdisciplinary Thinking', affordance: 'Space blends art, design, engineering, and technology across subjects.', moves: ['Partner with other subject teachers for cross-curricular projects.', 'Invite community experts to mentor student projects.'], e21cc: 'CGC — cross-disciplinary work builds global and cross-cultural literacy.' }
+    { title: '🛠️ Hands-On Creation', affordance: 'Large work surfaces and diverse tools empower hands-on design and prototyping.', moves: ['Pose design challenges requiring physical solutions.', 'Set up a tinkering station for open-ended exploration.'], e21cc: 'CAIT: making develops inventive thinking through tangible creation.' },
+    { title: '🏃‍♂️ Flexible Movement', affordance: 'Open-plan design allows easy movement between ideation and fabrication zones.', moves: ['Encourage design thinking: empathise, define, ideate, prototype, test.', 'Use mobile whiteboards for teams to share design processes.'], e21cc: 'CAIT: iterative design cycles develop adaptive problem-solving.' },
+    { title: '💡 Interdisciplinary Thinking', affordance: 'Space blends art, design, engineering, and technology across subjects.', moves: ['Partner with other subject teachers for cross-curricular projects.', 'Invite community experts to mentor student projects.'], e21cc: 'CGC: cross-disciplinary work builds global and cross-cultural literacy.' }
   ],
   circuit: [
-    { title: '🏃 Active Station Rotation', affordance: 'Multiple equipment stations spread around the space promote continuous physical activity and prevent idle time. Spacing stations evenly ensures safe transitions and clear flow.', moves: ['Set timed rotations (e.g. 40s work / 20s transition) with a whistle or music cue.', 'Include a rest/hydration station in the circuit.', 'Number stations and use cones or markers for clear pathways between them.'], e21cc: 'CAIT — self-paced stations develop adaptive physical literacy.' },
-    { title: '💪 Differentiated Fitness', affordance: 'Each station can target different muscle groups or fitness components (strength, cardio, agility, flexibility), catering to all abilities.', moves: ['Offer modified exercises at each station (3 tiers: beginner, intermediate, advanced).', 'Use peer coaching — pair stronger students with those who need support.', 'Provide visual task cards at each station showing exercise, reps/duration, and muscle groups targeted.'], e21cc: 'CCI — peer coaching at stations builds communication and collaboration.' },
-    { title: '📋 Student Ownership & Tracking', affordance: 'Students monitor their own heart rate, reps, and progress through stations, building responsibility and self-management.', moves: ['Provide individual circuit cards for students to record reps and RPE (Rate of Perceived Exertion).', 'Teach students to self-check pulse during rest intervals.', 'Debrief at the end: which station was hardest and why? What would you change?'], e21cc: 'CGC — self-tracking develops personal responsibility and wellness awareness.' },
-    { title: '🔄 Progressive Overload', affordance: 'Circuit format naturally supports progressive overload by adjusting time, reps, or resistance across sessions.', moves: ['Revisit the same circuit weekly, increasing work intervals or adding reps.', 'Let students set personal targets and track improvement over time.', 'Introduce partner-based stations (e.g. medicine ball pass) for variety.'], e21cc: 'CAIT — goal-setting and self-monitoring develop inventive thinking about personal fitness.' },
-    { title: '🎵 Atmosphere & Motivation', affordance: 'Music-driven transitions and energetic pacing keep motivation high throughout the session.', moves: ['Use an upbeat playlist with tracks timed to work/rest intervals.', 'Assign student "DJs" to select music on a rotating basis.', 'Use countdown timers visible to all students for accountability.'], e21cc: 'CGC — shared experience and student choice build community and wellbeing.' }
+    { title: '🏃 Active Station Rotation', affordance: 'Multiple equipment stations spread around the space promote continuous physical activity and prevent idle time. Spacing stations evenly ensures safe transitions and clear flow.', moves: ['Set timed rotations (e.g. 40s work / 20s transition) with a whistle or music cue.', 'Include a rest/hydration station in the circuit.', 'Number stations and use cones or markers for clear pathways between them.'], e21cc: 'CAIT: self-paced stations develop adaptive physical literacy.' },
+    { title: '💪 Differentiated Fitness', affordance: 'Each station can target different muscle groups or fitness components (strength, cardio, agility, flexibility), catering to all abilities.', moves: ['Offer modified exercises at each station (3 tiers: beginner, intermediate, advanced).', 'Use peer coaching, pair stronger students with those who need support.', 'Provide visual task cards at each station showing exercise, reps/duration, and muscle groups targeted.'], e21cc: 'CCI: peer coaching at stations builds communication and collaboration.' },
+    { title: '📋 Student Ownership & Tracking', affordance: 'Students monitor their own heart rate, reps, and progress through stations, building responsibility and self-management.', moves: ['Provide individual circuit cards for students to record reps and RPE (Rate of Perceived Exertion).', 'Teach students to self-check pulse during rest intervals.', 'Debrief at the end: which station was hardest and why? What would you change?'], e21cc: 'CGC: self-tracking develops personal responsibility and wellness awareness.' },
+    { title: '🔄 Progressive Overload', affordance: 'Circuit format naturally supports progressive overload by adjusting time, reps, or resistance across sessions.', moves: ['Revisit the same circuit weekly, increasing work intervals or adding reps.', 'Let students set personal targets and track improvement over time.', 'Introduce partner-based stations (e.g. medicine ball pass) for variety.'], e21cc: 'CAIT: goal-setting and self-monitoring develop inventive thinking about personal fitness.' },
+    { title: '🎵 Atmosphere & Motivation', affordance: 'Music-driven transitions and energetic pacing keep motivation high throughout the session.', moves: ['Use an upbeat playlist with tracks timed to work/rest intervals.', 'Assign student "DJs" to select music on a rotating basis.', 'Use countdown timers visible to all students for accountability.'], e21cc: 'CGC: shared experience and student choice build community and wellbeing.' }
   ],
   team_game: [
-    { title: '⚽ Strategic Teamwork', affordance: 'Divided court creates clear team territories, encouraging strategic positioning and communication.', moves: ['Assign positions and rotate roles each quarter.', 'Use time-outs to discuss team strategy collaboratively.'], e21cc: 'CCI — team sports are a natural setting for communication and collaboration.' },
-    { title: '🤝 Fair Play & Sportsmanship', affordance: 'Structured game setup with visible boundaries and goals reinforces rules and fair play.', moves: ['Appoint student referees to practise rule enforcement.', 'Debrief on sportsmanship after each game.'], e21cc: 'CGC — fair play develops civic responsibility and respect for others.' },
-    { title: '🧠 Tactical Thinking', affordance: 'Game scenarios require real-time decision-making, spatial awareness, and adaptive strategies.', moves: ['Pause play to highlight good tactical decisions.', 'Use "freeze" moments to ask students what they would do next.'], e21cc: 'CAIT — game tactics develop critical and inventive thinking under pressure.' }
+    { title: '⚽ Strategic Teamwork', affordance: 'Divided court creates clear team territories, encouraging strategic positioning and communication.', moves: ['Assign positions and rotate roles each quarter.', 'Use time-outs to discuss team strategy collaboratively.'], e21cc: 'CCI: team sports are a natural setting for communication and collaboration.' },
+    { title: '🤝 Fair Play & Sportsmanship', affordance: 'Structured game setup with visible boundaries and goals reinforces rules and fair play.', moves: ['Appoint student referees to practise rule enforcement.', 'Debrief on sportsmanship after each game.'], e21cc: 'CGC: fair play develops civic responsibility and respect for others.' },
+    { title: '🧠 Tactical Thinking', affordance: 'Game scenarios require real-time decision-making, spatial awareness, and adaptive strategies.', moves: ['Pause play to highlight good tactical decisions.', 'Use "freeze" moments to ask students what they would do next.'], e21cc: 'CAIT: game tactics develop critical and inventive thinking under pressure.' }
   ],
   warmup: [
-    { title: '🤸 Structured Movement', affordance: 'Lines facing the instructor ensure all students can see demonstrations clearly for correct form.', moves: ['Demonstrate each exercise, then have students mirror you.', 'Walk through rows to correct posture and technique.'], e21cc: 'CCI — clear demonstration supports visual communication and modelling.' },
-    { title: '🫀 Injury Prevention', affordance: 'Organised formation with adequate spacing ensures safe movement during dynamic warm-ups.', moves: ['Start with gentle cardio, progress to dynamic stretches.', 'Call out body parts systematically: neck, shoulders, arms, core, legs.'], e21cc: 'CGC — safe warm-up habits develop lifelong physical wellness.' },
-    { title: '🎵 Engagement & Routine', affordance: 'Familiar formation signals the start of PE, building routine and readiness to learn.', moves: ['Use music to energise the warm-up.', 'Let students lead the warm-up on a rotating basis.'], e21cc: 'CAIT — student-led warm-ups develop adaptive leadership skills.' }
+    { title: '🤸 Structured Movement', affordance: 'Lines facing the instructor ensure all students can see demonstrations clearly for correct form.', moves: ['Demonstrate each exercise, then have students mirror you.', 'Walk through rows to correct posture and technique.'], e21cc: 'CCI: clear demonstration supports visual communication and modelling.' },
+    { title: '🫀 Injury Prevention', affordance: 'Organised formation with adequate spacing ensures safe movement during dynamic warm-ups.', moves: ['Start with gentle cardio, progress to dynamic stretches.', 'Call out body parts systematically: neck, shoulders, arms, core, legs.'], e21cc: 'CGC: safe warm-up habits develop lifelong physical wellness.' },
+    { title: '🎵 Engagement & Routine', affordance: 'Familiar formation signals the start of PE, building routine and readiness to learn.', moves: ['Use music to energise the warm-up.', 'Let students lead the warm-up on a rotating basis.'], e21cc: 'CAIT: student-led warm-ups develop adaptive leadership skills.' }
   ],
   hiit: [
-    { title: '⏱️ Work-Rest Structure', affordance: 'Clearly marked zones for high-intensity work and active recovery create a disciplined, time-based training environment.', moves: ['Use a visible timer (projector or large clock) so all students can pace themselves.', 'Start with manageable intervals (e.g. 20s work / 40s rest) and progress to more challenging ratios.', 'Sound a horn or use music drops to signal transitions between work and rest.'], e21cc: 'CAIT — self-regulation of effort during timed intervals develops adaptive thinking.' },
-    { title: '🫀 Cardiovascular Fitness', affordance: 'Alternating between maximal effort and recovery trains the aerobic and anaerobic energy systems efficiently.', moves: ['Include a variety of exercises: burpees, high knees, jump squats, mountain climbers, shuttle runs.', 'Teach students to monitor their heart rate (pulse check or wearable) and understand training zones.', 'Discuss the science: why does HIIT improve VO₂ max and metabolic rate?'], e21cc: 'CGC — understanding exercise physiology builds lifelong health literacy.' },
-    { title: '🤝 Partner & Group Formats', affordance: 'HIIT can be structured as partner relay, small-group challenges, or whole-class synchronised efforts for social motivation.', moves: ['Use partner formats: one works while the other counts reps and encourages.', 'Try "AMRAP" (As Many Rounds As Possible) challenges where groups aim for collective targets.', 'Debrief on effort, honesty in self-assessment, and supporting teammates.'], e21cc: 'CCI — partner accountability and encouragement build communication and collaboration skills.' }
+    { title: '⏱️ Work-Rest Structure', affordance: 'Clearly marked zones for high-intensity work and active recovery create a disciplined, time-based training environment.', moves: ['Use a visible timer (projector or large clock) so all students can pace themselves.', 'Start with manageable intervals (e.g. 20s work / 40s rest) and progress to more challenging ratios.', 'Sound a horn or use music drops to signal transitions between work and rest.'], e21cc: 'CAIT: self-regulation of effort during timed intervals develops adaptive thinking.' },
+    { title: '🫀 Cardiovascular Fitness', affordance: 'Alternating between maximal effort and recovery trains the aerobic and anaerobic energy systems efficiently.', moves: ['Include a variety of exercises: burpees, high knees, jump squats, mountain climbers, shuttle runs.', 'Teach students to monitor their heart rate (pulse check or wearable) and understand training zones.', 'Discuss the science: why does HIIT improve VO₂ max and metabolic rate?'], e21cc: 'CGC: understanding exercise physiology builds lifelong health literacy.' },
+    { title: '🤝 Partner & Group Formats', affordance: 'HIIT can be structured as partner relay, small-group challenges, or whole-class synchronised efforts for social motivation.', moves: ['Use partner formats: one works while the other counts reps and encourages.', 'Try "AMRAP" (As Many Rounds As Possible) challenges where groups aim for collective targets.', 'Debrief on effort, honesty in self-assessment, and supporting teammates.'], e21cc: 'CCI: partner accountability and encouragement build communication and collaboration skills.' }
   ],
   skills_stations: [
-    { title: '🎯 Sport-Specific Drill Zones', affordance: 'Dedicated stations for specific techniques (passing, dribbling, shooting, serving) allow focused, repetitive practice that builds muscle memory.', moves: ['Design 4–6 stations targeting the key skills of the unit sport (e.g. badminton: serve, clear, drop, net play).', 'Provide clear visual task cards with coaching cues at each station.', 'Use small-sided space to maximise touches and repetitions per student.'], e21cc: 'CAIT — deliberate practice at skill stations develops adaptive motor learning.' },
-    { title: '📊 Peer Observation & Feedback', affordance: 'At each station, students can observe and coach each other, reinforcing technique and building communication skills.', moves: ['Pair students: one performs, one observes and gives feedback using a simple checklist (e.g. "Racket high? Follow through?").', 'Rotate roles after every set of repetitions.', 'Use video recording (tablets) for self-analysis at one station.'], e21cc: 'CCI — structured peer feedback develops constructive communication and observation skills.' },
-    { title: '🔀 Progression & Game Application', affordance: 'Stations can be arranged from isolated drills to conditioned games, building up to match-like scenarios.', moves: ['Arrange stations in order of complexity: closed drill → open drill → small-sided game → full game.', 'At the final station, apply skills in a mini-match or game scenario.', 'Debrief: which skill transferred best to the game? What needs more work?'], e21cc: 'CAIT — linking drills to game application develops critical and inventive tactical thinking.' }
+    { title: '🎯 Sport-Specific Drill Zones', affordance: 'Dedicated stations for specific techniques (passing, dribbling, shooting, serving) allow focused, repetitive practice that builds muscle memory.', moves: ['Design 4–6 stations targeting the key skills of the unit sport (e.g. badminton: serve, clear, drop, net play).', 'Provide clear visual task cards with coaching cues at each station.', 'Use small-sided space to maximise touches and repetitions per student.'], e21cc: 'CAIT: deliberate practice at skill stations develops adaptive motor learning.' },
+    { title: '📊 Peer Observation & Feedback', affordance: 'At each station, students can observe and coach each other, reinforcing technique and building communication skills.', moves: ['Pair students: one performs, one observes and gives feedback using a simple checklist (e.g. "Racket high? Follow through?").', 'Rotate roles after every set of repetitions.', 'Use video recording (tablets) for self-analysis at one station.'], e21cc: 'CCI: structured peer feedback develops constructive communication and observation skills.' },
+    { title: '🔀 Progression & Game Application', affordance: 'Stations can be arranged from isolated drills to conditioned games, building up to match-like scenarios.', moves: ['Arrange stations in order of complexity: closed drill → open drill → small-sided game → full game.', 'At the final station, apply skills in a mini-match or game scenario.', 'Debrief: which skill transferred best to the game? What needs more work?'], e21cc: 'CAIT: linking drills to game application develops critical and inventive tactical thinking.' }
   ],
   kitchen: [
-    { title: '🍳 Workstation Organisation', affordance: 'Clearly defined workstations with prep, cooking, and cleaning zones ensure efficient workflow and minimise cross-contamination.', moves: ['Assign students to numbered workstations with clear mise en place.', 'Post illustrated recipe cards and hygiene reminders at each station.', 'Use colour-coded chopping boards for different food groups.'], e21cc: 'CAIT — systematic organisation develops procedural thinking.' },
-    { title: '🧼 Food Safety & Hygiene', affordance: 'Designated handwashing and cleaning stations reinforce food safety habits required by the NFS syllabus.', moves: ['Begin every practical with a hygiene checklist: apron, hair tied, hands washed, nails trimmed.', 'Place sanitiser stations between prep and cooking areas.', 'Debrief on food safety principles after each practical.'], e21cc: 'CGC — food safety awareness builds civic responsibility and health literacy.' },
-    { title: '👥 Team Cooking & Communication', affordance: 'Paired or grouped workstations encourage collaborative cooking, role division, and communication under time pressure.', moves: ['Assign roles: chef, sous chef, timekeeper. Rotate each session.', 'Use timers visible to all groups for time management.', 'Facilitate a tasting and feedback round at the end of each session.'], e21cc: 'CCI — team cooking develops communication, collaboration, and shared responsibility.' }
+    { title: '🍳 Workstation Organisation', affordance: 'Clearly defined workstations with prep, cooking, and cleaning zones ensure efficient workflow and minimise cross-contamination.', moves: ['Assign students to numbered workstations with clear mise en place.', 'Post illustrated recipe cards and hygiene reminders at each station.', 'Use colour-coded chopping boards for different food groups.'], e21cc: 'CAIT: systematic organisation develops procedural thinking.' },
+    { title: '🧼 Food Safety & Hygiene', affordance: 'Designated handwashing and cleaning stations reinforce food safety habits required by the NFS syllabus.', moves: ['Begin every practical with a hygiene checklist: apron, hair tied, hands washed, nails trimmed.', 'Place sanitiser stations between prep and cooking areas.', 'Debrief on food safety principles after each practical.'], e21cc: 'CGC: food safety awareness builds civic responsibility and health literacy.' },
+    { title: '👥 Team Cooking & Communication', affordance: 'Paired or grouped workstations encourage collaborative cooking, role division, and communication under time pressure.', moves: ['Assign roles: chef, sous chef, timekeeper. Rotate each session.', 'Use timers visible to all groups for time management.', 'Facilitate a tasting and feedback round at the end of each session.'], e21cc: 'CCI: team cooking develops communication, collaboration, and shared responsibility.' }
   ]
 };
 
@@ -849,7 +849,7 @@ export function render(container) {
   // Initial venue render (hide PE palette/presets by default)
   applyVenue('classroom');
 
-  /* ══════ TT Awareness — show current period context ══════ */
+  /* ══════ TT Awareness: show current period context ══════ */
   (async () => {
     try {
       const user = getCurrentUser();
@@ -869,10 +869,10 @@ export function render(container) {
 
       if (slot?.free) {
         textEl.innerHTML = `<strong>${teacherName}</strong> &middot; ${dept}<br/>
-          ${slot.weekType} Week &middot; ${slot.dayStr} P${slot.period} &mdash; <span style="color:var(--success,#22c55e);font-weight:600;">Free period</span>`;
+          ${slot.weekType} Week &middot; ${slot.dayStr} P${slot.period} | <span style="color:var(--success,#22c55e);font-weight:600;">Free period</span>`;
       } else if (slot) {
         textEl.innerHTML = `<strong>${teacherName}</strong> &middot; ${dept}<br/>
-          ${slot.weekType} Week &middot; ${slot.dayStr} P${slot.period} &mdash; <strong>${slot.classCode}</strong> in <strong>${slot.room}</strong>`;
+          ${slot.weekType} Week &middot; ${slot.dayStr} P${slot.period} | <strong>${slot.classCode}</strong> in <strong>${slot.room}</strong>`;
 
         // Auto-suggest venue based on room name
         const room = (slot.room || '').toLowerCase();
@@ -891,10 +891,10 @@ export function render(container) {
         }
       }
       banner.style.display = '';
-    } catch { /* silently fail — TT is optional */ }
+    } catch { /* silently fail; TT is optional */ }
   })();
 
-  /* ══════ Design Brief — AI Suggest Layout ══════ */
+  /* ══════ Design Brief: AI Suggest Layout ══════ */
   const briefClassSelect = container.querySelector('#brief-class');
   const briefTopic = container.querySelector('#brief-topic');
   const briefConsiderations = container.querySelector('#brief-considerations');
@@ -1026,7 +1026,7 @@ export function render(container) {
     const el = container.querySelector('#scene-cards');
     if (!el) return;
     if (scenes.length === 0) {
-      el.innerHTML = '<span style="font-size:0.6875rem;color:var(--ink-faint);white-space:nowrap;">No scenes yet — save the current layout as a scene.</span>';
+      el.innerHTML = '<span style="font-size:0.6875rem;color:var(--ink-faint);white-space:nowrap;">No scenes yet; save the current layout as a scene.</span>';
       return;
     }
     el.innerHTML = scenes.map((scene, i) => `
@@ -1092,7 +1092,7 @@ export function render(container) {
 
     // Guide user if design brief is empty
     if (!topic && !cls) {
-      showToast('Fill in the Design Brief first — add a topic and/or select a class so the AI has context.', 'danger');
+      showToast('Fill in the Design Brief first; add a topic and/or select a class so the AI has context.', 'danger');
       container.querySelector('#design-brief')?.setAttribute('open', '');
       briefTopic?.focus();
       return;
@@ -1186,7 +1186,7 @@ export function render(container) {
           <div style="display:flex;gap:var(--sp-2);align-items:flex-start;font-size:0.8125rem;">
             <span style="font-weight:700;color:var(--accent);flex-shrink:0;">${i + 1}.</span>
             <div>
-              <div style="font-weight:600;color:var(--ink);">${p.name}${p.duration ? ` — ${p.duration}min` : ''}</div>
+              <div style="font-weight:600;color:var(--ink);">${p.name}${p.duration ? `, ${p.duration}min` : ''}</div>
               <div style="color:var(--ink-muted);">${p.preset} layout${p.tip ? ` · ${p.tip}` : ''}</div>
             </div>
           </div>
@@ -1199,7 +1199,7 @@ export function render(container) {
         ` + insightsEl.innerHTML;
       }
 
-      showToast('AI timeline generated — click scenes to switch layouts!', 'success');
+      showToast('AI timeline generated; click scenes to switch layouts!', 'success');
     } catch (err) {
       const hint = err.message.includes('API') || err.message.includes('key') || err.message.includes('401') || err.message.includes('403')
         ? 'Check your API key in Settings.'
@@ -1576,7 +1576,7 @@ export function render(container) {
       selected.forEach(g => {
         const [tx, ty] = getTranslate(g);
 
-        // Wall panel rotation: rotate in 90° increments (no dimension swap — group transform handles visual rotation)
+        // Wall panel rotation: rotate in 90° increments (no dimension swap; group transform handles visual rotation)
         if (g.getAttribute('data-wall')) {
           const nextRot = (getRotate(g) + step) % 360;
           g.setAttribute('transform', `translate(${tx},${ty}) rotate(${nextRot})`);
@@ -1732,44 +1732,44 @@ export function render(container) {
     } else if (name === 'circuit') {
       // Circuit training: 8 stations around the perimeter with varied equipment
       stackWall('A'); stackWall('B');
-      // Station 1 — Push-up mat (top-left)
+      // Station 1: Push-up mat (top-left)
       place(find('cone_large'), UNIT * 2.5, UNIT * 1.5);
       place(find('gym_mat'), UNIT * 3.5, UNIT * 1.8);
       place(find('marker_flat'), UNIT * 5.6, UNIT * 1.8);
-      // Station 2 — Agility hoops (top-centre-left)
+      // Station 2: Agility hoops (top-centre-left)
       place(find('cone_large'), UNIT * 7, UNIT * 1.5);
       place(find('hoop'), UNIT * 8, UNIT * 1.8);
       place(find('hoop'), UNIT * 9.3, UNIT * 1.8);
       place(find('hoop'), UNIT * 8.6, UNIT * 2.8);
-      // Station 3 — Core mat (top-centre-right)
+      // Station 3: Core mat (top-centre-right)
       place(find('cone_large'), UNIT * 11.5, UNIT * 1.5);
       place(find('gym_mat'), UNIT * 12.5, UNIT * 1.8);
       place(find('marker_flat'), UNIT * 14.6, UNIT * 1.8);
-      // Station 4 — Shuttle run (top-right)
+      // Station 4: Shuttle run (top-right)
       place(find('cone_large'), UNIT * 16.5, UNIT * 1.5);
       place(find('cone_small'), UNIT * 17.5, UNIT * 1.8);
       place(find('cone_small'), UNIT * 20, UNIT * 1.8);
       place(find('marker_flat'), UNIT * 18.7, UNIT * 1.8);
-      // Station 5 — Balance bench (right side)
+      // Station 5: Balance bench (right side)
       place(find('cone_large'), UNIT * 20.5, UNIT * 4);
       place(find('bench'), UNIT * 20, UNIT * 5);
       place(find('marker_flat'), UNIT * 21, UNIT * 6.2);
-      // Station 6 — Skipping / jump zone (bottom-right)
+      // Station 6: Skipping / jump zone (bottom-right)
       place(find('cone_large'), UNIT * 16.5, UNIT * 8.5);
       place(find('hoop'), UNIT * 17.5, UNIT * 8.8);
       place(find('hoop'), UNIT * 18.8, UNIT * 8.8);
       place(find('marker_flat'), UNIT * 20, UNIT * 8.8);
-      // Station 7 — Burpee mat (bottom-centre)
+      // Station 7: Burpee mat (bottom-centre)
       place(find('cone_large'), UNIT * 11.5, UNIT * 8.5);
       place(find('gym_mat'), UNIT * 12.5, UNIT * 8.8);
       place(find('gym_mat'), UNIT * 12.5, UNIT * 10);
-      // Station 8 — Star jumps / cone weave (bottom-left)
+      // Station 8: Star jumps / cone weave (bottom-left)
       place(find('cone_large'), UNIT * 2.5, UNIT * 8.5);
       place(find('cone_small'), UNIT * 3.5, UNIT * 9);
       place(find('cone_small'), UNIT * 4.5, UNIT * 8.5);
       place(find('cone_small'), UNIT * 5.5, UNIT * 9);
       place(find('cone_small'), UNIT * 6.5, UNIT * 8.5);
-      // Left side — stretching/rest
+      // Left side: stretching/rest
       place(find('gym_mat'), UNIT * 1, UNIT * 4.5);
       place(find('gym_mat'), UNIT * 1, UNIT * 6);
       // Directional arrows (flat markers showing rotation)
@@ -1996,7 +1996,7 @@ export function render(container) {
       purposeBanner.style.display = 'flex';
       purposeBanner.innerHTML = `
         <span style="font-weight:600;color:var(--accent);">${preset.icon} ${preset.label}</span>
-        <span style="color:var(--ink-muted);font-size:0.75rem;margin-left:8px;">— ${preset.desc}${mainInsight ? '. ' + mainInsight.title : ''}</span>
+        <span style="color:var(--ink-muted);font-size:0.75rem;margin-left:8px;">| ${preset.desc}${mainInsight ? '. ' + mainInsight.title : ''}</span>
         <button style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--ink-faint);font-size:1rem;" onclick="this.parentElement.style.display='none'">&times;</button>
       `;
     } else if (purposeBanner) {
@@ -2095,7 +2095,7 @@ export function render(container) {
   function updateMetrics() {
     const items = [...layoutRoot.querySelectorAll('g[data-id]')];
 
-    // Empty room — collapse chart to origin
+    // Empty room; collapse chart to origin
     if (items.length === 0) {
       const scores = [0, 0, 0, 0, 0, 0];
       if (radarChart) { radarChart.data.datasets[0].data = scores; radarChart.update(); }
@@ -2249,9 +2249,9 @@ export function render(container) {
     if (recsEl) {
       const recs = [];
       if (scores[0] < 50) recs.push({ icon: '👀', text: 'Add a whiteboard or TV and orient desks towards it for better sightlines.' });
-      if (scores[1] < 40) recs.push({ icon: '🚶', text: 'Layout feels dense — remove items or open walls for better mobility.' });
+      if (scores[1] < 40) recs.push({ icon: '🚶', text: 'Layout feels dense; remove items or open walls for better mobility.' });
       if (scores[2] < 40) recs.push({ icon: '🔄', text: 'Add mobile items (whiteboards, partitions, chairs) for more flexibility.' });
-      if (scores[3] < 40) recs.push({ icon: '📏', text: 'Too many desks for the space — open walls or reduce desk count.' });
+      if (scores[3] < 40) recs.push({ icon: '📏', text: 'Too many desks for the space; open walls or reduce desk count.' });
       if (scores[4] < 40) recs.push({ icon: '🎯', text: 'Cluster desks or add group tables to support multiple learning modes.' });
       if (scores[5] < 40) recs.push({ icon: '🌿', text: 'Add plants and position desks near windows for a better environment.' });
       if (scores[0] >= 70 && scores[1] >= 70 && scores[4] >= 70) recs.push({ icon: '✨', text: 'Great balance of sightlines, mobility, and modality!' });
@@ -2307,7 +2307,7 @@ export function render(container) {
   /* ══════ Save / Load layouts ══════ */
   container.querySelector('#save-layout').addEventListener('click', () => {
     const items = serializeLayout();
-    if (items.length === 0) { showToast('Nothing to save — add items first.', 'danger'); return; }
+    if (items.length === 0) { showToast('Nothing to save; add items first.', 'danger'); return; }
 
     const { backdrop, close } = openModal({
       title: 'Save Layout',
@@ -2360,7 +2360,7 @@ export function render(container) {
     });
     // Store the layout ID for the lesson planner to pick up
     sessionStorage.setItem('cocher_link_spatial_layout', saved.id);
-    showToast('Layout saved — opening Lesson Planner...', 'success');
+    showToast('Layout saved; opening Lesson Planner...', 'success');
     navigate('/lesson-planner');
   });
 

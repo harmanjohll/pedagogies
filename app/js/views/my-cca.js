@@ -285,6 +285,9 @@ function renderCCAItem(cca, cat) {
             ).join('')}
           </div>
           <p style="font-size:0.75rem;color:var(--ink-faint);margin:0 0 8px;">Select 1-2 competencies to focus on. All CCAs can develop any competency — it depends on enactment.</p>
+          <input type="text" class="input cca-training-goal" data-cca="${cca.id}"
+  placeholder="e.g. Match prep for upcoming tournament, team-building for new members..."
+  style="width:100%;font-size:0.8125rem;margin-bottom:10px;" />
           <button class="btn btn-sm btn-primary cca-generate-training-btn" data-cca="${cca.id}">Generate Training Plan</button>
         </div>
         <div class="cca-training-output" id="training-output-${cca.id}" style="display:none;"></div>
@@ -393,6 +396,9 @@ function bindExpandedAreaListeners(content, area) {
         ? `\n\nE21CC Focus: Intentionally develop ${selectedE21CC.join(' and ')} through the session design. Explain HOW each activity builds this competency.`
         : '';
 
+      const goalInput = config.querySelector('.cca-training-goal')?.value.trim() || '';
+      const goalContext = goalInput ? `\n\nTeacher's session goal: ${goalInput}. Design the session around this goal.` : '';
+
       config.style.display = 'none';
       outputEl.style.display = '';
       outputEl.innerHTML = '<em>Generating suggestions...</em>';
@@ -418,7 +424,7 @@ Format as a clean session plan:
 - 2-3 skills to develop over multiple sessions, with brief milestones.
 
 ### Safety
-- 3-4 bullet points specific to this session.${e21ccContext}
+- 3-4 bullet points specific to this session.${e21ccContext}${goalContext}
 
 Use real drill names and techniques specific to ${cca.name}. Be direct and practical — this is a working document, not an essay. Complete the entire plan without cutting short.` }],
           { trackLabel: 'ccaTraining', temperature: 0.6, maxTokens: 4096 }

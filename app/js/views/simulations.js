@@ -97,7 +97,7 @@ const SIMULATIONS = [
     id: 'rates-of-reaction',
     title: 'Rates of Reaction',
     subject: 'Chemistry',
-    description: 'Marble chips and acid \u2014 measure gas production with a syringe. Investigate concentration and surface area effects.',
+    description: 'Marble chips and acid; measure gas production with a syringe. Investigate concentration and surface area effects.',
     difficulty: 'Intermediate',
     path: 'simulations/chemistry/rates-of-reaction/index.html'
   },
@@ -170,7 +170,7 @@ const SIMULATIONS = [
     id: 'waves',
     title: 'Waves & Ripple Tank',
     subject: 'Physics',
-    description: 'Explore wave behaviour \u2014 reflection, refraction, and diffraction in a simulated ripple tank.',
+    description: 'Explore wave behaviour: reflection, refraction, and diffraction in a simulated ripple tank.',
     difficulty: 'Intermediate',
     path: 'simulations/physics/waves/index.html'
   },
@@ -195,7 +195,7 @@ const SIMULATIONS = [
     id: 'particle-dynamics',
     title: 'Particle Dynamics',
     subject: 'Interactive',
-    description: 'Simulate particle systems \u2014 explore states of matter, gas laws, diffusion, and kinetic theory with adjustable parameters.',
+    description: 'Simulate particle systems; explore states of matter, gas laws, diffusion, and kinetic theory with adjustable parameters.',
     difficulty: 'Intermediate',
     path: 'simulations/interactives/particle-dynamics/index.html'
   }
@@ -237,7 +237,7 @@ function openOverlay(container, title, opts) {
   overlay.id = 'sim-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);animation:simFadeIn 0.2s ease;';
 
-  // Window — starts full viewport, user drags edges to resize
+  // Window; starts full viewport, user drags edges to resize
   const win = document.createElement('div');
   win.id = 'sim-window';
   win.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;overflow:hidden;background:#1a1a2e;transition:border-radius 0.15s;';
@@ -1168,18 +1168,18 @@ export function render(container) {
               <div class="sim-byo-right">
                 <h4>Tips for a Great Simulation</h4>
                 <ul>
-                  <li>Be specific with your <strong>learning objective</strong> — "Investigate how temperature affects enzyme activity" is better than "enzymes".</li>
+                  <li>Be specific with your <strong>learning objective</strong>; "Investigate how temperature affects enzyme activity" is better than "enzymes".</li>
                   <li>List the <strong>key variables</strong> students should manipulate (independent) and observe (dependent).</li>
                   <li>Mention any <strong>apparatus</strong> you want drawn (e.g., beaker, thermometer, circuit board).</li>
                 </ul>
 
                 <h4>Simulation Types</h4>
                 <ul>
-                  <li><strong>Virtual Lab</strong> — Mimics a hands-on practical with apparatus, readings, and data collection.</li>
-                  <li><strong>Interactive Model</strong> — Visual diagram students can manipulate (e.g., cell structure, wave properties).</li>
-                  <li><strong>Data Collection</strong> — Focused on graphing and recording observations from variables.</li>
-                  <li><strong>Guided Exploration</strong> — Step-by-step walkthrough with embedded questions.</li>
-                  <li><strong>Free-play Sandbox</strong> — Open-ended environment for experimentation.</li>
+                  <li><strong>Virtual Lab</strong>: Mimics a hands-on practical with apparatus, readings, and data collection.</li>
+                  <li><strong>Interactive Model</strong>: Visual diagram students can manipulate (e.g., cell structure, wave properties).</li>
+                  <li><strong>Data Collection</strong>: Focused on graphing and recording observations from variables.</li>
+                  <li><strong>Guided Exploration</strong>: Step-by-step walkthrough with embedded questions.</li>
+                  <li><strong>Free-play Sandbox</strong>: Open-ended environment for experimentation.</li>
                 </ul>
 
                 <h4>After Generating</h4>
@@ -1410,7 +1410,7 @@ export function render(container) {
       }
 
       // Build the structured prompt from scaffold fields
-      const topicLine = selectedTopic ? `${selectedTopic}${objective ? ' \u2014 ' + objective : ''}` : objective;
+      const topicLine = selectedTopic ? `${selectedTopic}${objective ? ': ' + objective : ''}` : objective;
       const parts = [`Create an interactive simulation for: ${topicLine}`];
       if (subject && subject !== 'Other') parts.push(`Subject: ${subject}`);
       if (level) parts.push(`Student level: ${level}`);
