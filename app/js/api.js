@@ -74,10 +74,45 @@ Align with the 4 areas: Lesson Preparation, Lesson Enactment, Monitoring & Feedb
 
 Respond conversationally. Help the teacher think through their lesson experience holistically.`;
 
+/* ── Transient-failure handling ──
+ * Gemini free-tier keys hit 429s routinely; 5xx happens under load.
+ * Retry twice with backoff (1.5s, 3s) before surfacing a friendly error. */
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function fetchWithRetry(url, init, retries = 2) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) await sleep(1500 * Math.pow(2, attempt - 1));
+    try {
+      const res = await fetch(url, init);
+      if (!RETRYABLE_STATUS.has(res.status) || attempt === retries) return res;
+      lastErr = new Error(`API error ${res.status}`);
+    } catch (e) {
+      lastErr = e;
+      if (attempt === retries) throw new Error('Could not reach Gemini — check your internet connection and try again.');
+    }
+  }
+  throw lastErr;
+}
+
+function friendlyApiError(status, raw) {
+  if (status === 429) return 'Gemini is rate-limiting your key (free-tier quota). Co-Cher already retried; wait a minute and try again.';
+  if (status === 401 || status === 403) return 'Your Gemini API key was rejected. Check it in Settings → Gemini API Key.';
+  if (status === 404) return 'The selected model is unavailable. Pick another model in Settings.';
+  if (status >= 500) return 'Gemini had a server hiccup. Co-Cher retried without luck; try again shortly.';
+  return raw;
+}
+
+/** Map a stored model id that no longer exists to the current default. */
+export function normalizeModel(id) {
+  return AVAILABLE_MODELS.some(m => m.id === id) ? id : 'gemini-2.5-flash';
+}
+
 export async function sendChat(messages, options = {}) {
   trackEvent('ai', 'generate', options.trackLabel || 'chat', options.trackDetail || '');
   const apiKey = Store.get('apiKey');
-  const model = Store.get('model') || 'gemini-2.5-flash';
+  const model = normalizeModel(Store.get('model') || 'gemini-2.5-flash');
 
   if (!apiKey) {
     throw new Error('No API key configured. Please add your Gemini API key in Settings.');
@@ -127,16 +162,17 @@ export async function sendChat(messages, options = {}) {
     };
   }
 
-  const res = await fetch(`${ENDPOINT}/${model}:generateContent?key=${apiKey}`, {
+  // Key travels in a header (not the URL) so it can't leak into logs/history
+  const res = await fetchWithRetry(`${ENDPOINT}/${model}:generateContent`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify(body)
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const msg = err?.error?.message || `API error ${res.status}`;
-    throw new Error(msg);
+    throw new Error(friendlyApiError(res.status, msg));
   }
 
   const data = await res.json();
@@ -1124,6 +1160,5 @@ export function validateApiKey(key) {
 
 export const AVAILABLE_MODELS = [
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast and capable (recommended)' },
-  { id: 'gemini-2.5-flash-preview-05-20', label: 'Gemini 2.5 Flash Preview', description: 'Latest preview' },
-  { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', description: 'Most capable, slower' }
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Most capable, slower' }
 ];

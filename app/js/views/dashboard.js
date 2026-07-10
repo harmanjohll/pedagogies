@@ -10,6 +10,8 @@ import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { getCurrentUser, getPreferredName, guessFirstName } from '../components/login.js';
 import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
+import { escapeHtml } from '../utils/markdown.js';
+import { lessonStage, lessonNextStep, LIFECYCLE_STAGES } from './lessons.js';
 
 /*
  * Admin / tester accounts, present in the CSV (so they can log in and see
@@ -1288,6 +1290,49 @@ function widgetWrap(id, title, content, prefs, extraHeaderHtml = '') {
   </div>`;
 }
 
+/* ── Up Next hero: surface the single most actionable lesson ──
+ * Priority: closest to the classroom first (ready → rehearsed → taught
+ * needing reflection → drafts), most recently touched wins ties. */
+const STAGE_PRIORITY = { ready: 0, rehearsed: 1, taught: 2, draft: 3 };
+
+function buildUpNextHero(lessons, classes) {
+  const active = (lessons || []).filter(l => lessonStage(l) !== 'reflected');
+  if (active.length === 0) {
+    return `
+      <div class="card up-next-hero" data-hero-route="/lesson-planner" style="margin-bottom:var(--sp-5);padding:var(--sp-5);cursor:pointer;background:linear-gradient(135deg,var(--brand-navy,#000C53),#1e3a8a);color:#fff;border:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;">
+          <div>
+            <div style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.7;margin-bottom:4px;">Up next</div>
+            <div style="font-size:1rem;font-weight:600;">Design your first lesson with Co-Cher</div>
+            <div style="font-size:0.8125rem;opacity:0.75;margin-top:2px;">Chat through an idea and the plan builds itself alongside.</div>
+          </div>
+          <span class="btn btn-sm" style="background:var(--brand-yellow,#FFE200);color:var(--brand-navy,#000C53);font-weight:700;border:none;">Open Lesson Planner &rarr;</span>
+        </div>
+      </div>`;
+  }
+  const pick = [...active].sort((a, b) => {
+    const pa = STAGE_PRIORITY[lessonStage(a)] ?? 4;
+    const pb = STAGE_PRIORITY[lessonStage(b)] ?? 4;
+    if (pa !== pb) return pa - pb;
+    return (b.updatedAt || 0) - (a.updatedAt || 0);
+  })[0];
+  const stage = lessonStage(pick);
+  const stageLabel = (LIFECYCLE_STAGES.find(s => s.key === stage) || {}).label || stage;
+  const next = lessonNextStep(pick);
+  const cls = pick.classId ? (classes || []).find(c => c.id === pick.classId) : null;
+  return `
+    <div class="card up-next-hero" data-hero-route="/lessons/${pick.id}" style="margin-bottom:var(--sp-5);padding:var(--sp-5);cursor:pointer;background:linear-gradient(135deg,var(--brand-navy,#000C53),#1e3a8a);color:#fff;border:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;">
+        <div style="min-width:0;">
+          <div style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.7;margin-bottom:4px;">Up next &middot; ${stageLabel}</div>
+          <div style="font-size:1rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(pick.title || 'Untitled Lesson')}</div>
+          <div style="font-size:0.8125rem;opacity:0.75;margin-top:2px;">${cls ? escapeHtml(cls.name) + ' &middot; ' : ''}${active.length > 1 ? `${active.length - 1} more lesson${active.length > 2 ? 's' : ''} in the pipeline` : 'Your only lesson in progress'}</div>
+        </div>
+        <button class="btn btn-sm" id="up-next-cta" data-lesson-id="${pick.id}" data-action="${next.action}" style="background:var(--brand-yellow,#FFE200);color:var(--brand-navy,#000C53);font-weight:700;border:none;white-space:nowrap;">${next.label}</button>
+      </div>
+    </div>`;
+}
+
 export function render(container) {
   const classes = Store.getClasses();
   const lessons = Store.getLessons();
@@ -1656,6 +1701,9 @@ export function render(container) {
           </div>
         </div>
 
+        <!-- Up Next: the most actionable lesson in the pipeline -->
+        ${buildUpNextHero(lessons, classes)}
+
         <!-- Status Banner (next lesson / done for day) -->
         <div id="tt-status-banner"></div>
 
@@ -1672,6 +1720,25 @@ export function render(container) {
   // Customise Dashboard button
   container.querySelector('#customise-dashboard-btn')?.addEventListener('click', () => {
     showCustomiseModal(container);
+  });
+
+  // Up Next hero: card opens the lesson; the CTA jumps straight to the next step
+  container.querySelector('#up-next-cta')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    const lessonId = btn.dataset.lessonId;
+    if (btn.dataset.action === 'plan') {
+      navigate(`/lesson-planner/${lessonId}`);
+    } else if (btn.dataset.action === 'rehearse') {
+      sessionStorage.setItem('cocher_rehearse_lesson_id', lessonId);
+      navigate('/lesson-rehearsal');
+    } else {
+      navigate(`/lessons/${lessonId}`);
+    }
+  });
+  container.querySelector('.up-next-hero')?.addEventListener('click', (e) => {
+    if (e.target.closest('#up-next-cta')) return;
+    navigate(e.currentTarget.dataset.heroRoute);
   });
 
   // ── Widget resize buttons ──
@@ -1882,35 +1949,40 @@ export function render(container) {
         }
       }
 
-      // Re-wire resize buttons for async widgets
-      container.querySelectorAll('.btn-widget-resize').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const wId = btn.dataset.resizeWidget;
-          const p = getDashPrefs();
-          const currentSize = (p.widgetSizes && p.widgetSizes[wId]) || 'medium';
-          const nextSize = SIZE_CYCLE[currentSize] || 'medium';
-          p.widgetSizes = { ...(p.widgetSizes || {}), [wId]: nextSize };
-          saveDashPrefs(p);
-          render(container);
-        });
-      });
+      // Wire resize buttons / collapse tracking for the freshly-injected async
+      // widgets only — the sync widgets were already wired above, so re-querying
+      // the whole container would stack duplicate listeners on their buttons
+      const asyncWidgetEls = [scheduleEl, weeklyEl, prepEl, timetableEl].filter(Boolean);
 
-      // Re-wire collapse tracking for async widgets
-      container.querySelectorAll('.dashboard-widget details').forEach(det => {
-        det.addEventListener('toggle', () => {
-          const wId = det.closest('.dashboard-widget')?.dataset.widgetId;
-          if (!wId) return;
-          const p = getDashPrefs();
-          if (det.open) {
-            p.collapsedWidgets = (p.collapsedWidgets || []).filter(w => w !== wId);
-          } else {
-            if (!(p.collapsedWidgets || []).includes(wId)) {
-              p.collapsedWidgets = [...(p.collapsedWidgets || []), wId];
+      asyncWidgetEls.forEach(widgetEl => {
+        widgetEl.querySelectorAll('.btn-widget-resize').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const wId = btn.dataset.resizeWidget;
+            const p = getDashPrefs();
+            const currentSize = (p.widgetSizes && p.widgetSizes[wId]) || 'medium';
+            const nextSize = SIZE_CYCLE[currentSize] || 'medium';
+            p.widgetSizes = { ...(p.widgetSizes || {}), [wId]: nextSize };
+            saveDashPrefs(p);
+            render(container);
+          });
+        });
+
+        widgetEl.querySelectorAll('details').forEach(det => {
+          det.addEventListener('toggle', () => {
+            const wId = det.closest('.dashboard-widget')?.dataset.widgetId;
+            if (!wId) return;
+            const p = getDashPrefs();
+            if (det.open) {
+              p.collapsedWidgets = (p.collapsedWidgets || []).filter(w => w !== wId);
+            } else {
+              if (!(p.collapsedWidgets || []).includes(wId)) {
+                p.collapsedWidgets = [...(p.collapsedWidgets || []), wId];
+              }
             }
-          }
-          saveDashPrefs(p);
+            saveDashPrefs(p);
+          });
         });
       });
     } catch { /* TT is optional */ }

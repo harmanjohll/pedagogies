@@ -4,7 +4,6 @@
  * Main entry point. Wires sidebar, router, and views together.
  */
 
-import { Store } from './state.js';
 import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
@@ -14,7 +13,7 @@ import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedAssessmentIfNeed
 /* ── Views ── */
 import { render as renderDashboard } from './views/dashboard.js';
 import { renderList as renderClassesList, renderDetail as renderClassDetail } from './views/classes.js';
-import { render as renderLessonPlanner, renderForLesson } from './views/lesson-planner.js';
+import { renderNew as renderLessonPlanner, renderForLesson } from './views/lesson-planner.js';
 import { render as renderSpatialDesigner } from './views/spatial-designer.js';
 import { renderList as renderLessonsList, renderDetail as renderLessonDetail } from './views/lessons.js';
 import { render as renderKnowledgeBase } from './views/knowledge-base.js';
@@ -35,6 +34,7 @@ import { render as renderArtCritique } from './views/art-critique.js';
 import { render as renderStaveNotation } from './views/stave-notation.js';
 import { render as renderDesignProcess } from './views/design-process.js';
 import { render as renderKitchenLayout } from './views/kitchen-layout.js';
+import { render as renderSubjectTools } from './views/subject-tools.js';
 import { initGlobalSearch, openSearch } from './components/unified-search.js';
 import { initOnboarding } from './components/onboarding.js';
 import { initKeyboardShortcuts } from './components/keyboard-shortcuts.js';
@@ -68,12 +68,11 @@ function init() {
     </main>
   `;
 
-  // Render sidebar
+  // Render sidebar — it manages its own single Store subscription internally
+  // (badges, theme, EEE/custom-link changes); subscribing here as well would
+  // stack a new listener on every state change.
   const sidebarEl = document.getElementById('sidebar');
   renderSidebar(sidebarEl);
-
-  // Re-render sidebar on state changes (badges, theme)
-  Store.subscribe(() => renderSidebar(sidebarEl));
 
   // Mobile sidebar toggle
   const overlay = document.getElementById('sidebar-overlay');
@@ -123,6 +122,7 @@ function init() {
   registerRoute('/stave-notation', renderStaveNotation);
   registerRoute('/design-process', renderDesignProcess);
   registerRoute('/kitchen-layout', renderKitchenLayout);
+  registerRoute('/subject-tools', renderSubjectTools);
   registerRoute('/settings', renderSettings);
 
   // Start router

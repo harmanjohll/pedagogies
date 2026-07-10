@@ -48,6 +48,59 @@ function hasReflection(ref) {
   return !!(r.whatWorked || r.whatToAdjust || r.engagement || r.e21ccObservations || r.freeform);
 }
 
+/* ── Lesson lifecycle: Design → Ready → Rehearse → Teach → Reflect ──
+ * The lesson object carries the flow; each stage surfaces ONE next step
+ * so the interface guides the teacher through the cycle. */
+export const LIFECYCLE_STAGES = [
+  { key: 'draft', label: 'Design' },
+  { key: 'ready', label: 'Ready' },
+  { key: 'rehearsed', label: 'Rehearse' },
+  { key: 'taught', label: 'Teach' },
+  { key: 'reflected', label: 'Reflect' },
+];
+
+export function lessonStage(l) {
+  if (!l) return 'draft';
+  if (l.status === 'completed') return hasReflection(l.reflection) ? 'reflected' : 'taught';
+  if (l.rehearsedAt) return 'rehearsed';
+  if (l.status === 'ready') return 'ready';
+  return 'draft';
+}
+
+export function lessonNextStep(l) {
+  switch (lessonStage(l)) {
+    case 'ready': return { action: 'rehearse', label: 'Rehearse this lesson &rarr;' };
+    case 'rehearsed': return { action: 'taught', label: 'Mark as taught' };
+    case 'taught': return { action: 'reflect', label: 'Add your reflection' };
+    case 'reflected': return { action: 'next-lesson', label: 'Plan next lesson with these insights &rarr;' };
+    default: return { action: 'plan', label: 'Continue planning &rarr;' };
+  }
+}
+
+function lifecycleStepperHTML(lesson) {
+  const stage = lessonStage(lesson);
+  const idx = LIFECYCLE_STAGES.findIndex(s => s.key === stage);
+  const next = lessonNextStep(lesson);
+  return `
+    <div class="card" style="margin-bottom:var(--sp-5);padding:var(--sp-4) var(--sp-5);">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;row-gap:10px;">
+        ${LIFECYCLE_STAGES.map((s, i) => `
+          <div style="display:flex;align-items:center;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.6875rem;font-weight:700;${
+                i < idx ? 'background:var(--accent);color:#fff;'
+                : i === idx ? 'background:var(--brand-navy,#000C53);color:var(--brand-yellow,#FFE200);box-shadow:0 0 0 3px rgba(0,12,83,0.12);'
+                : 'background:var(--bg-subtle);color:var(--ink-faint);'}">${i < idx ? '&#10003;' : i + 1}</span>
+              <span style="font-size:0.75rem;font-weight:${i === idx ? 700 : 500};color:${i <= idx ? 'var(--ink)' : 'var(--ink-faint)'};">${s.label}</span>
+            </div>
+            ${i < LIFECYCLE_STAGES.length - 1 ? `<span style="width:20px;height:2px;background:${i < idx ? 'var(--accent)' : 'var(--border-light)'};margin:0 8px;border-radius:2px;"></span>` : ''}
+          </div>`).join('')}
+        <span style="flex:1;min-width:12px;"></span>
+        <button class="btn btn-primary btn-sm" id="lifecycle-cta" data-action="${next.action}">${next.label}</button>
+      </div>
+    </div>`;
+}
+
 const ROUND_ITEMS = new Set(['desk_round', 'vr_station', 'group_table', 'beanbag', 'plant']);
 const ITEM_COLORS = {
   desk_rect: '#e5e7eb', desk_round: '#d1fae5', desk_trap: '#fee2e2', desk_tri: '#e0f2fe',
@@ -476,6 +529,8 @@ export function renderDetail(container, { id }) {
           <p class="page-subtitle">Created ${fmtDate(lesson.createdAt)} &middot; Updated ${fmtDate(lesson.updatedAt)}</p>
         </div>
 
+        ${lifecycleStepperHTML(lesson)}
+
         <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-6);flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" id="edit-btn">Continue in Planner</button>
           <button class="btn btn-secondary btn-sm" id="status-btn">Change Status</button>
@@ -592,6 +647,27 @@ export function renderDetail(container, { id }) {
 
   container.querySelector('#back-btn').addEventListener('click', () => navigate('/lessons'));
   container.querySelector('#edit-btn').addEventListener('click', () => navigate(`/lesson-planner/${id}`));
+
+  // Lifecycle next-step CTA
+  container.querySelector('#lifecycle-cta')?.addEventListener('click', (e) => {
+    const action = e.currentTarget.dataset.action;
+    if (action === 'plan') {
+      navigate(`/lesson-planner/${id}`);
+    } else if (action === 'rehearse') {
+      sessionStorage.setItem('cocher_rehearse_lesson_id', id);
+      navigate('/lesson-rehearsal');
+    } else if (action === 'taught') {
+      Store.updateLesson(id, { status: 'completed' });
+      showToast('Marked as taught — capture a quick reflection while it\'s fresh!', 'success');
+      renderDetail(container, { id });
+    } else if (action === 'reflect') {
+      const ref = container.querySelector('#ref-what-worked');
+      ref?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => ref?.focus(), 400);
+    } else if (action === 'next-lesson') {
+      container.querySelector('#use-reflection-btn')?.click();
+    }
+  });
 
   // Linked resource chip navigation
   container.querySelectorAll('.linked-resource-chip').forEach(chip => {

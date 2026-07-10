@@ -33,14 +33,40 @@ function parseHash() {
   return { full: hash, parts };
 }
 
+/* Error boundary: one crashing view must not blank the whole app. */
+function safeRender(handler, container, params) {
+  try {
+    return handler(container, params) || null;
+  } catch (err) {
+    console.error('Co-Cher: view crashed on', currentRoute, err);
+    trackEvent('error', 'view_crash', currentRoute, String(err && err.message || err).slice(0, 140));
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100%;padding:24px;">
+        <div class="card" style="max-width:440px;text-align:center;padding:32px;">
+          <div style="font-size:2rem;margin-bottom:8px;">&#128295;</div>
+          <h2 style="font-size:1.125rem;font-weight:700;margin:0 0 8px;color:var(--ink);">This page hit a snag</h2>
+          <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;margin:0 0 16px;">
+            Something went wrong while loading this view. Your data is safe.
+            If it keeps happening, a screenshot of the browser console (F12) helps a lot.
+          </p>
+          <div style="display:flex;gap:8px;justify-content:center;">
+            <a href="#/" class="btn btn-primary" style="text-decoration:none;">Back to Dashboard</a>
+            <button class="btn btn-secondary" onclick="location.reload()">Reload App</button>
+          </div>
+        </div>
+      </div>`;
+    return null;
+  }
+}
+
 function handleRoute() {
   const { full, parts } = parseHash();
   const container = document.getElementById('main-view');
   if (!container) return;
 
-  // Cleanup previous view
+  // Cleanup previous view — a failing cleanup must not block navigation
   if (typeof currentCleanup === 'function') {
-    currentCleanup();
+    try { currentCleanup(); } catch (e) { console.warn('Co-Cher: view cleanup failed', e); }
     currentCleanup = null;
   }
 
@@ -48,7 +74,7 @@ function handleRoute() {
   if (routes.has(full)) {
     currentRoute = full;
     trackEvent('navigation', 'page_view', full);
-    currentCleanup = routes.get(full)(container, {}) || null;
+    currentCleanup = safeRender(routes.get(full), container, {});
     updateSidebarActive(full);
     return;
   }
@@ -72,7 +98,7 @@ function handleRoute() {
     if (match) {
       currentRoute = full;
       trackEvent('navigation', 'page_view', full);
-      currentCleanup = handler(container, params) || null;
+      currentCleanup = safeRender(handler, container, params);
       updateSidebarActive(pattern);
       return;
     }
@@ -81,7 +107,7 @@ function handleRoute() {
   // Fallback: dashboard
   currentRoute = '/';
   if (routes.has('/')) {
-    currentCleanup = routes.get('/')(container, {}) || null;
+    currentCleanup = safeRender(routes.get('/'), container, {});
   }
   updateSidebarActive('/');
 }

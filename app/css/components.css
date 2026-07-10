@@ -1354,3 +1354,31 @@ select.input {
   .settings-tab { padding: 5px 8px; font-size: 0.6875rem; gap: 4px; }
   .settings-tab svg { width: 12px; height: 12px; }
 }
+
+/* ═══════════ AI Loading — skeleton upgrade of .chat-typing ═══════════
+   Every AI wait uses .chat-typing; these pseudo-element shimmer lines turn
+   the plain italic text into a content skeleton at zero JS cost. */
+
+.chat-typing::before,
+.chat-typing::after {
+  content: '';
+  display: block;
+  height: 10px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--border-light) 50%, var(--bg-subtle) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+.chat-typing::before { width: 160px; max-width: 45vw; margin-bottom: 6px; }
+.chat-typing::after { width: 220px; max-width: 60vw; margin-top: 8px; animation-delay: 0.2s; }
+
+/* ═══════════ Reduced motion ═══════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

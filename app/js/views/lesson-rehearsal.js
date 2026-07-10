@@ -3,7 +3,7 @@
  * ========================
  * Subject-agnostic teacher rehearsal tool. Teachers select a designed lesson
  * and practice delivering it to AI-powered student personas via a chat interface.
- * Uses Anthropic API (Claude) for realistic student roleplay.
+ * Uses the shared Gemini API layer (api.js sendChat) for student roleplay.
  */
 
 import { Store } from '../state.js';
@@ -288,6 +288,12 @@ function parseStudentMessages(responseText) {
 export function render(container) {
   // Reset state when view loads
   selectedLessonId = null;
+  // Deep link from a lesson's lifecycle CTA ("Rehearse this lesson")
+  const handoffId = sessionStorage.getItem('cocher_rehearse_lesson_id');
+  if (handoffId) {
+    sessionStorage.removeItem('cocher_rehearse_lesson_id');
+    if (Store.getLesson(handoffId)) selectedLessonId = handoffId;
+  }
   studentCount = 5;
   selectedPersonas = ['high_achiever', 'quiet_learner', 'curious_questioner', 'struggling_student'];
   rehearsalActive = false;
@@ -653,6 +659,11 @@ function startRehearsal(container) {
   rehearsalActive = true;
   rehearsalEnded = false;
   debriefContent = null;
+
+  // Advance the lesson's lifecycle: it has now been rehearsed
+  if (selectedLessonId && Store.getLesson(selectedLessonId)) {
+    Store.updateLesson(selectedLessonId, { rehearsedAt: Date.now() });
+  }
 
   renderView(container);
 }

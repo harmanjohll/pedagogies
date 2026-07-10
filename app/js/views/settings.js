@@ -4,14 +4,15 @@
  * API key, model selection, theme, and data management.
  */
 
-import { Store } from '../state.js';
-import { validateApiKey, AVAILABLE_MODELS } from '../api.js';
+import { Store, getStorageEstimate } from '../state.js';
+import { validateApiKey, AVAILABLE_MODELS, normalizeModel } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser, getPreferredName, setPreferredName, guessFirstName } from '../components/login.js';
 import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks } from './lesson-planner.js';
 import { startTour, resetTour } from '../components/spotlight-tour.js';
 import { trackEvent, analyticsEnabled, setAnalyticsEnabled } from '../utils/analytics.js';
+import { APP_VERSION, PREVIOUS_VERSIONS } from '../version.js';
 
 /* ── Dashboard Layout Prefs ── */
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
@@ -284,7 +285,7 @@ const COMPONENT_META_SETTINGS = {
 
 export function render(container) {
   const apiKey = Store.get('apiKey') || '';
-  const model = Store.get('model') || 'gemini-2.5-flash';
+  const model = normalizeModel(Store.get('model') || 'gemini-2.5-flash');
   const darkMode = Store.get('darkMode');
   const dashPrefs = getDashPrefs();
 
@@ -453,7 +454,10 @@ export function render(container) {
 
         <!-- About -->
         <div class="card" style="margin-bottom: var(--sp-6);">
-          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-3); color: var(--ink);">About Co-Cher</h3>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3);">
+            <h3 style="font-size: 1rem; font-weight: 600; margin: 0; color: var(--ink);">About Co-Cher</h3>
+            <span style="font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--brand-navy, #000C53); color: var(--brand-yellow, #FFE200);">${APP_VERSION}</span>
+          </div>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7; font-style: italic;">
             Dear Cher,
           </p>
@@ -469,6 +473,10 @@ export function render(container) {
           <p style="font-size: 0.8125rem; color: var(--ink-muted); line-height: 1.7; font-style: italic;">
             Warmly,<br/>
             <strong style="color: var(--ink);">Harman</strong>
+          </p>
+          <p style="font-size: 0.75rem; color: var(--ink-faint); margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--border-light);">
+            You are on Co-Cher ${APP_VERSION}. Previous versions (with separate data):
+            ${PREVIOUS_VERSIONS.map(v => `<a href="${v.url}" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: underline;">${v.version}</a>`).join(' &middot; ')}
           </p>
         </div>
 
@@ -631,20 +639,40 @@ export function render(container) {
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Usage Analytics</h3>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
-            Help improve Co-Cher by sharing anonymous usage data.
+            When enabled, Co-Cher records which features you use — your name, school email,
+            pages visited, and AI actions (never lesson content, student data, or your API key) —
+            to a private Google Sheet that helps improve the app for BTY teachers.
           </p>
           <label style="display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.8125rem; color: var(--ink);">
             <input type="checkbox" id="analytics-toggle" ${analyticsEnabled() ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: var(--brand-navy, #000C53);" />
-            Send anonymous usage data
+            Share my feature usage to help improve Co-Cher
           </label>
         </div>
 
         <!-- Data Management -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Data Management</h3>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.5;">
             Export your data for backup or import from a previous export.
           </p>
+          ${(() => {
+            const est = getStorageEstimate();
+            const mb = (est.bytes / (1024 * 1024)).toFixed(2);
+            const barColor = est.percent >= 90 ? 'var(--danger, #ef4444)' : est.percent >= 70 ? '#f59e0b' : 'var(--accent)';
+            return `
+          <div style="margin-bottom: var(--sp-4);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--ink-muted); margin-bottom: 4px;">
+              <span>Browser storage used${est.percent >= 90 ? ' — nearly full!' : ''}</span>
+              <span>${mb} MB of ~5 MB (${est.percent}%)</span>
+            </div>
+            <div style="height: 6px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden;">
+              <div style="height: 100%; width: ${est.percent}%; border-radius: 999px; background: ${barColor}; transition: width 0.3s;"></div>
+            </div>
+            <p style="font-size: 0.6875rem; color: var(--ink-faint); margin-top: 4px;">
+              Knowledge Base upload content is stored separately (IndexedDB) and doesn't count against this limit.
+            </p>
+          </div>`;
+          })()}
           <div style="display: flex; gap: var(--sp-3); flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm" id="export-btn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -906,7 +934,28 @@ export function render(container) {
     const file = fileInput.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
+      const preview = Store.previewImportData(reader.result);
+      if (!preview.ok) {
+        showToast(`Cannot import: ${preview.error}`, 'danger');
+        return;
+      }
+      const LABELS = {
+        classes: 'classes', lessons: 'lessons', savedLayouts: 'layouts',
+        knowledgeUploads: 'uploads', pdFolders: 'PD folders', stimulusLibrary: 'stimulus items',
+        sourceLibrary: 'source sets', assessmentRoutines: 'routines', savedTOS: 'TOS',
+        assessmentChecklists: 'checklists', assessmentBlueprints: 'blueprints',
+        adminEvents: 'admin events', departmentSchemes: 'schemes'
+      };
+      const summary = Object.entries(preview.counts)
+        .filter(([k, n]) => n > 0 && LABELS[k])
+        .map(([k, n]) => `${n} ${LABELS[k]}`)
+        .join(', ') || 'no items';
+      const proceed = await confirmDialog({
+        title: 'Import Data?',
+        message: `This file contains: ${summary}. Importing will REPLACE your existing data of the same types. Consider exporting a backup first.`
+      });
+      if (!proceed) return;
       const ok = Store.importData(reader.result);
       if (ok) {
         showToast('Data imported successfully!', 'success');

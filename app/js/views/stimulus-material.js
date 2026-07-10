@@ -9,6 +9,7 @@ import { Store, generateId } from '../state.js';
 import { sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
+import { escapeHtml } from '../utils/markdown.js';
 import { createFileUploadZone } from '../components/pdf-upload.js';
 import { printStimulusMaterial } from '../components/print-export.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
@@ -99,11 +100,7 @@ function countWords(text) {
   return text.trim().split(/\s+/).filter(w => w.length > 0).length;
 }
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
+/* escapeHtml now comes from the shared markdown util (quote-safe) */
 
 function formatDate(ts) {
   return new Date(ts).toLocaleDateString('en-SG', {

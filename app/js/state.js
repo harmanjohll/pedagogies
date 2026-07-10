@@ -5,6 +5,7 @@
  */
 
 import { trackEvent } from './utils/analytics.js';
+import { idbSetContent, idbDeleteContent, idbGetAllContent, idbClearContent } from './utils/storage.js';
 
 const STORAGE_KEY = 'cocher_app_data';
 
@@ -19,12 +20,78 @@ function loadFromStorage() {
   } catch { return null; }
 }
 
+/* ── Storage-failure banner ──
+ * A failed save means the teacher's changes exist only in memory; that must
+ * never be silent. Self-contained DOM (no component imports → no cycles). */
+let _storageWarningShown = false;
+
+function showStorageWarning() {
+  if (_storageWarningShown || typeof document === 'undefined' || !document.body) return;
+  _storageWarningShown = true;
+  const el = document.createElement('div');
+  el.id = 'storage-warning-banner';
+  el.setAttribute('role', 'alert');
+  el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:0.8125rem;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+  el.innerHTML = `
+    <span>&#9888;&#65039; Your changes are NOT being saved &mdash; browser storage is full. Export your data now (Settings &rarr; Data), then delete old uploads or clear sample data.</span>
+    <a href="#/settings" style="color:#fff;text-decoration:underline;white-space:nowrap;">Open Settings</a>`;
+  document.body.appendChild(el);
+}
+
+function clearStorageWarning() {
+  if (!_storageWarningShown) return;
+  _storageWarningShown = false;
+  document.getElementById('storage-warning-banner')?.remove();
+}
+
 function saveToStorage(data) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    clearStorageWarning();
   } catch (e) {
     console.warn('Co-Cher: Failed to save to localStorage', e);
+    showStorageWarning();
   }
+}
+
+/** Rough origin-wide localStorage usage vs the typical ~5MB budget. */
+export function getStorageEstimate() {
+  let bytes = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      bytes += (k.length + (localStorage.getItem(k) || '').length) * 2; // UTF-16
+    }
+  } catch { /* ignore */ }
+  const limit = 5 * 1024 * 1024;
+  return { bytes, limit, percent: Math.min(100, Math.round((bytes / limit) * 100)) };
+}
+
+/* ── Knowledge Base content lives in IndexedDB ──
+ * Upload text is the main quota consumer; only metadata is persisted in the
+ * localStorage snapshot. In-memory _state keeps `content` for sync reads.
+ * An upload's content is stripped from the snapshot ONLY once IndexedDB has
+ * confirmed the write — if IDB is unavailable, content stays in localStorage
+ * exactly as before (no loss, just no quota relief). */
+const _kbContentInIdb = new Set();
+
+function syncKbContentToIdb(oldList, newList) {
+  try {
+    const newIds = new Set(newList.map(u => u.id));
+    oldList.forEach(u => {
+      if (u.id && !newIds.has(u.id)) {
+        _kbContentInIdb.delete(u.id);
+        idbDeleteContent(u.id).catch(() => {});
+      }
+    });
+    newList.forEach(u => {
+      if (u.id && typeof u.content === 'string' && u.content) {
+        idbSetContent(u.id, u.content)
+          .then(ok => { if (ok) { _kbContentInIdb.add(u.id); Store._persist(); } })
+          .catch(() => {});
+      }
+    });
+  } catch { /* non-fatal — content stays in memory this session */ }
 }
 
 const DEFAULT_STATE = {
@@ -136,6 +203,9 @@ export const Store = {
 
   /* ── Write ── */
   set(key, value) {
+    if (key === 'knowledgeUploads') {
+      syncKbContentToIdb(_state.knowledgeUploads || [], value || []);
+    }
     _state[key] = value;
     this._persist();
     this._notify();
@@ -161,7 +231,13 @@ export const Store = {
       lessons: _state.lessons,
       savedLayouts: _state.savedLayouts || [],
       adminEvents: _state.adminEvents || [],
-      knowledgeUploads: _state.knowledgeUploads || [],
+      // Upload content lives in IndexedDB — persist metadata only for
+      // uploads whose content is confirmed written there
+      knowledgeUploads: (_state.knowledgeUploads || []).map(u => {
+        if (!_kbContentInIdb.has(u.id)) return u;
+        const { content, ...meta } = u;
+        return meta;
+      }),
       pdFolders: _state.pdFolders || [],
       assessmentRoutines: _state.assessmentRoutines || [],
       savedTOS: _state.savedTOS || [],
@@ -353,6 +429,7 @@ export const Store = {
       lessonHook: data.lessonHook || '',
       e21ccFocus: data.e21ccFocus || [],
       attachedResources: data.attachedResources || [],
+      components: data.components || {},
       reflection: '',
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -686,26 +763,59 @@ export const Store = {
     }, null, 2);
   },
 
+  /**
+   * Validate an export file without touching state. Returns
+   * { ok, counts?, version?, error? } so callers can confirm with the user
+   * (counts per data type) before overwriting anything.
+   */
+  previewImportData(jsonStr) {
+    const ARRAY_KEYS = ['classes', 'lessons', 'savedLayouts', 'adminEvents', 'knowledgeUploads',
+      'pdFolders', 'assessmentRoutines', 'savedTOS', 'assessmentChecklists', 'stimulusLibrary',
+      'sourceLibrary', 'departmentSchemes', 'assessmentBlueprints', 'recentActivity'];
+    let data;
+    try { data = JSON.parse(jsonStr); } catch { return { ok: false, error: 'This file is not valid JSON.' }; }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return { ok: false, error: 'This file is not a Co-Cher export.' };
+    }
+    const malformed = ARRAY_KEYS.filter(k => data[k] !== undefined && !Array.isArray(data[k]));
+    if (malformed.length) {
+      return { ok: false, error: `Malformed fields in export: ${malformed.join(', ')}.` };
+    }
+    const counts = {};
+    ARRAY_KEYS.forEach(k => { if (Array.isArray(data[k])) counts[k] = data[k].length; });
+    if (Object.keys(counts).length === 0) {
+      return { ok: false, error: 'No Co-Cher data found in this file.' };
+    }
+    return { ok: true, counts, version: data.version };
+  },
+
   importData(jsonStr) {
     try {
       const data = JSON.parse(jsonStr);
-      if (data.classes) _state.classes = data.classes;
-      if (data.lessons) _state.lessons = data.lessons;
-      if (data.savedLayouts) _state.savedLayouts = data.savedLayouts;
-      if (data.adminEvents) _state.adminEvents = data.adminEvents;
-      if (data.knowledgeUploads) _state.knowledgeUploads = data.knowledgeUploads;
-      if (data.pdFolders) _state.pdFolders = data.pdFolders;
-      if (data.assessmentRoutines) _state.assessmentRoutines = data.assessmentRoutines;
-      if (data.savedTOS) _state.savedTOS = data.savedTOS;
-      if (data.assessmentChecklists) _state.assessmentChecklists = data.assessmentChecklists;
-      if (data.stimulusLibrary) _state.stimulusLibrary = data.stimulusLibrary;
-      if (data.sourceLibrary) _state.sourceLibrary = data.sourceLibrary;
-      if (data.departmentSchemes) _state.departmentSchemes = data.departmentSchemes;
-      if (data.assessmentBlueprints) _state.assessmentBlueprints = data.assessmentBlueprints;
-      if (data.recentActivity) _state.recentActivity = data.recentActivity;
+      if (!data || typeof data !== 'object') return false;
+      // Only accept well-formed arrays — a malformed field must not
+      // partially overwrite existing state
+      if (Array.isArray(data.classes)) _state.classes = data.classes;
+      if (Array.isArray(data.lessons)) _state.lessons = data.lessons;
+      if (Array.isArray(data.savedLayouts)) _state.savedLayouts = data.savedLayouts;
+      if (Array.isArray(data.adminEvents)) _state.adminEvents = data.adminEvents;
+      if (Array.isArray(data.knowledgeUploads)) {
+        _state.knowledgeUploads = data.knowledgeUploads;
+        // Imported backups may carry upload content — put it in IndexedDB
+        syncKbContentToIdb([], data.knowledgeUploads);
+      }
+      if (Array.isArray(data.pdFolders)) _state.pdFolders = data.pdFolders;
+      if (Array.isArray(data.assessmentRoutines)) _state.assessmentRoutines = data.assessmentRoutines;
+      if (Array.isArray(data.savedTOS)) _state.savedTOS = data.savedTOS;
+      if (Array.isArray(data.assessmentChecklists)) _state.assessmentChecklists = data.assessmentChecklists;
+      if (Array.isArray(data.stimulusLibrary)) _state.stimulusLibrary = data.stimulusLibrary;
+      if (Array.isArray(data.sourceLibrary)) _state.sourceLibrary = data.sourceLibrary;
+      if (Array.isArray(data.departmentSchemes)) _state.departmentSchemes = data.departmentSchemes;
+      if (Array.isArray(data.assessmentBlueprints)) _state.assessmentBlueprints = data.assessmentBlueprints;
+      if (Array.isArray(data.recentActivity)) _state.recentActivity = data.recentActivity;
       // Also sync to legacy localStorage keys for backwards compat
-      if (data.stimulusLibrary) localStorage.setItem('cocher_stimulus_library', JSON.stringify(data.stimulusLibrary));
-      if (data.sourceLibrary) localStorage.setItem('cocher_source_library', JSON.stringify(data.sourceLibrary));
+      if (Array.isArray(data.stimulusLibrary)) localStorage.setItem('cocher_stimulus_library', JSON.stringify(data.stimulusLibrary));
+      if (Array.isArray(data.sourceLibrary)) localStorage.setItem('cocher_source_library', JSON.stringify(data.sourceLibrary));
       this._persist();
       this._notify();
       return true;
@@ -733,10 +843,40 @@ export const Store = {
     // Clear legacy keys too
     localStorage.removeItem('cocher_stimulus_library');
     localStorage.removeItem('cocher_source_library');
+    idbClearContent().catch(() => {});
     this._persist();
     this._notify();
   }
 };
+
+/* ── One-time migration + hydration of Knowledge Base content ──
+ * Older snapshots stored upload content inside cocher_app_data; move it to
+ * IndexedDB, then hydrate in-memory uploads so views keep synchronous reads. */
+(async function migrateAndHydrateKbContent() {
+  try {
+    const uploads = _state.knowledgeUploads || [];
+    if (!uploads.length) return;
+    const withContent = uploads.filter(u => u.id && typeof u.content === 'string' && u.content);
+    for (const u of withContent) {
+      const ok = await idbSetContent(u.id, u.content);
+      if (ok) _kbContentInIdb.add(u.id);
+    }
+    const map = await idbGetAllContent();
+    let hydrated = false;
+    uploads.forEach(u => {
+      if (u.content == null && map.has(u.id)) {
+        u.content = map.get(u.id);
+        _kbContentInIdb.add(u.id);
+        hydrated = true;
+      }
+    });
+    // Re-persist so confirmed-migrated content leaves the localStorage snapshot
+    if (withContent.some(u => _kbContentInIdb.has(u.id))) Store._persist();
+    if (hydrated) Store._notify();
+  } catch (e) {
+    console.warn('Co-Cher: Knowledge Base content hydration failed', e);
+  }
+})();
 
 // Apply dark mode and colour palette on load
 if (_state.darkMode) {

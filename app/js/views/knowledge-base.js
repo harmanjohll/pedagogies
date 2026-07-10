@@ -471,9 +471,10 @@ function renderUploads(el, uploads, detailEl) {
 function renderUploadDetail(el, upload) {
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  const preview = upload.content.length > 3000
-    ? upload.content.slice(0, 3000) + '\n\n... (content truncated for display)'
-    : upload.content;
+  const content = upload.content || '';  // may still be hydrating from IndexedDB
+  const preview = content.length > 3000
+    ? content.slice(0, 3000) + '\n\n... (content truncated for display)'
+    : content;
 
   el.innerHTML = `
     <div class="card" style="border-top:3px solid var(--accent);padding:var(--sp-8);animation:fadeInUp var(--dur-slow) var(--ease) both;">
@@ -690,17 +691,18 @@ function renderSearchResults(el, query, uploads) {
 
   // Search uploaded resources
   (uploads || []).forEach(u => {
+    const content = u.content || '';  // may still be hydrating from IndexedDB
     if (u.title.toLowerCase().includes(query) ||
-        u.content.toLowerCase().includes(query) ||
+        content.toLowerCase().includes(query) ||
         (u.category || '').toLowerCase().includes(query) ||
         (u.subject || '').toLowerCase().includes(query)) {
       // Extract matching snippet from content
-      const idx = u.content.toLowerCase().indexOf(query);
+      const idx = content.toLowerCase().indexOf(query);
       const snippetStart = Math.max(0, idx - 60);
-      const snippetEnd = Math.min(u.content.length, idx + query.length + 100);
+      const snippetEnd = Math.min(content.length, idx + query.length + 100);
       const snippet = (snippetStart > 0 ? '...' : '') +
-                      u.content.slice(snippetStart, snippetEnd) +
-                      (snippetEnd < u.content.length ? '...' : '');
+                      content.slice(snippetStart, snippetEnd) +
+                      (snippetEnd < content.length ? '...' : '');
 
       results.push({ type: 'upload', upload: u, term: u.title, desc: snippet, section: u.category });
     }
