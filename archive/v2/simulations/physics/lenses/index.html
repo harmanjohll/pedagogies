@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lenses &amp; Light – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="lenses.css?v=5">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="../../index.html">LabSim</a> <span class="sep">/</span>
+        <a href="../../index.html">Physics</a> <span class="sep">/</span>
+        <span>Lenses &amp; Light</span>
+      </nav>
+      <div class="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-guide" class="btn btn-ghost btn-sm" aria-label="Toggle guide panel">Guide</button>
+        <button id="btn-reset" class="btn btn-ghost btn-sm" aria-label="Reset practical">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="lens-layout container">
+
+    <!-- Left: Guide + Config -->
+    <aside id="guide-panel" class="lens-guide-panel panel" role="complementary" aria-label="Guide and configuration">
+      <div class="panel-header">Setup &amp; Guide</div>
+      <div class="panel-body">
+
+        <ol class="procedure-list" id="procedure-list" role="list" aria-label="Procedure steps">
+          <li class="procedure-step" data-step="setup">Set focal length of converging lens</li>
+          <li class="procedure-step" data-step="position">Position the object on the bench</li>
+          <li class="procedure-step" data-step="observe">Observe the image formed</li>
+          <li class="procedure-step" data-step="record">Record u and v values</li>
+          <li class="procedure-step" data-step="repeat">Move object and repeat (at least 5 readings)</li>
+          <li class="procedure-step" data-step="graph">Plot 1/v against 1/u and find f</li>
+        </ol>
+
+        <div class="config-group">
+          <label class="config-label" for="slider-focal">Focal length (f)</label>
+          <div class="config-row">
+            <input type="range" id="slider-focal" min="5" max="20" value="10" step="1" class="config-slider" aria-label="Focal length">
+            <span class="config-value" id="val-focal">10 cm</span>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="config-label" for="slider-object">Object distance (u)</label>
+          <div class="config-row">
+            <input type="range" id="slider-object" min="6" max="50" value="25" step="1" class="config-slider" aria-label="Object distance">
+            <span class="config-value" id="val-object">25 cm</span>
+          </div>
+        </div>
+
+        <div class="image-info" id="image-info">
+          <div class="info-row"><span class="info-label">Image distance (v):</span> <span id="info-v" class="info-val">—</span></div>
+          <div class="info-row"><span class="info-label">Magnification:</span> <span id="info-mag" class="info-val">—</span></div>
+          <div class="info-row"><span class="info-label">Image nature:</span> <span id="info-nature" class="info-val">—</span></div>
+        </div>
+
+        <button id="btn-record" class="btn btn-primary btn-sm" aria-label="Record current reading">Record Reading</button>
+      </div>
+    </aside>
+
+    <!-- Centre: Optical bench canvas -->
+    <section class="lens-workbench-panel" role="main" aria-label="Optical bench">
+      <div class="lens-workbench">
+        <canvas id="bench-canvas" aria-label="Optical bench ray diagram"></canvas>
+      </div>
+    </section>
+
+    <!-- Right: Data -->
+    <aside class="lens-data-panel panel" role="complementary" aria-label="Data and analysis">
+      <div class="panel-header">Data</div>
+      <div class="panel-body">
+
+        <div class="table-scroll">
+          <table class="data-table" id="data-table" aria-label="Recorded measurements">
+            <thead>
+              <tr><th>#</th><th>u / cm</th><th>v / cm</th><th>1/u / cm⁻¹</th><th>1/v / cm⁻¹</th></tr>
+            </thead>
+            <tbody id="data-tbody"></tbody>
+          </table>
+        </div>
+
+        <h4 class="section-sub">1/v vs 1/u Graph</h4>
+        <div class="graph-container">
+          <canvas id="graph-canvas" aria-label="Graph of 1/v against 1/u"></canvas>
+        </div>
+
+        <div class="calc-panel" id="calc-panel" hidden>
+          <h4 class="section-sub">Calculate f</h4>
+          <div class="calc-line"><span class="calc-label">x-intercept (1/u):</span> <span id="calc-x-int" class="calc-result">—</span></div>
+          <div class="calc-line"><span class="calc-label">y-intercept (1/v):</span> <span id="calc-y-int" class="calc-result">—</span></div>
+          <div class="calc-line"><span class="calc-label">f from x-int:</span> <span id="calc-fx" class="calc-result">—</span></div>
+          <div class="calc-line"><span class="calc-label">f from y-int:</span> <span id="calc-fy" class="calc-result">—</span></div>
+          <div class="calc-line"><span class="calc-label">Average f:</span> <span id="calc-f-avg" class="calc-result">—</span></div>
+          <div class="calc-line"><span class="calc-label">% error:</span> <span id="calc-error" class="calc-result">—</span></div>
+        </div>
+
+      </div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="lenses"></div>
+    </aside>
+
+  </div>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="lenses.js?v=5"></script>
+</body>
+</html>
