@@ -639,11 +639,13 @@ export function render(container) {
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Usage Analytics</h3>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
-            Help improve Co-Cher by sharing anonymous usage data.
+            When enabled, Co-Cher records which features you use — your name, school email,
+            pages visited, and AI actions (never lesson content, student data, or your API key) —
+            to a private Google Sheet that helps improve the app for BTY teachers.
           </p>
           <label style="display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.8125rem; color: var(--ink);">
             <input type="checkbox" id="analytics-toggle" ${analyticsEnabled() ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: var(--brand-navy, #000C53);" />
-            Send anonymous usage data
+            Share my feature usage to help improve Co-Cher
           </label>
         </div>
 

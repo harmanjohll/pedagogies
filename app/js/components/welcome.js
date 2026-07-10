@@ -60,7 +60,7 @@ export function renderWelcome(onComplete) {
               value="${Store.get('apiKey') || ''}"
               style="
                 width: 100%; padding: 12px 44px 12px 14px;
-                border: 1.5px solid #e2e8f0; border-radius: 12px;
+                border: 1.5px solid var(--border-light, #e2e8f0); border-radius: 12px;
                 font-size: 0.9rem; font-family: inherit;
                 outline: none; transition: border-color 0.2s, box-shadow 0.2s;
                 background: var(--bg-subtle, #f8fafc); color: var(--ink, #0f172a); box-sizing: border-box;
@@ -88,7 +88,7 @@ export function renderWelcome(onComplete) {
           </label>
           <select id="welcome-model" style="
             width: 100%; padding: 10px 32px 10px 12px;
-            border: 1.5px solid #e2e8f0; border-radius: 12px;
+            border: 1.5px solid var(--border-light, #e2e8f0); border-radius: 12px;
             font-size: 0.875rem; font-family: inherit;
             background: var(--bg-subtle, #f8fafc); color: var(--ink, #0f172a); outline: none;
             appearance: none; cursor: pointer; box-sizing: border-box;
@@ -125,7 +125,7 @@ export function renderWelcome(onComplete) {
             ].map(p => `
               <label class="ped-priority-chip" style="
                 display: flex; align-items: center; gap: 6px;
-                padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+                padding: 8px 10px; border: 1.5px solid var(--border-light, #e2e8f0); border-radius: 10px;
                 font-size: 0.8125rem; color: var(--ink-secondary, #475569); cursor: pointer;
                 transition: all 0.15s; background: var(--bg-card, #fff);
               ">
@@ -134,6 +134,15 @@ export function renderWelcome(onComplete) {
               </label>
             `).join('')}
           </div>
+        </div>
+
+        <div style="
+          background: var(--bg-subtle, #f8fafc); border: 1px solid #e2e8f0; border-radius: 10px;
+          padding: 10px 12px; margin-bottom: 16px; font-size: 0.6875rem; color: #64748b; line-height: 1.5; text-align: left;
+        ">
+          &#128202; Co-Cher records which features you use (your name, school email, pages visited,
+          and AI actions — never lesson content or your API key) to a private Google Sheet, so the
+          app can improve for BTY teachers. Turn this off anytime in Settings &rarr; Usage Analytics.
         </div>
 
         <p id="welcome-error" style="
@@ -190,17 +199,17 @@ export function renderWelcome(onComplete) {
       if (checked.length > 3) {
         cb.checked = false;
       }
-      // Visual feedback
+      // Visual feedback (var() with fallbacks so dark mode stays legible)
       priorityCBs.forEach(c => {
         const label = c.closest('.ped-priority-chip');
         if (c.checked) {
-          label.style.borderColor = '#4361ee';
-          label.style.background = '#eef2ff';
-          label.style.color = '#1e40af';
+          label.style.borderColor = 'var(--accent, #4361ee)';
+          label.style.background = 'var(--accent-light, #eef2ff)';
+          label.style.color = 'var(--accent-dark, #1e40af)';
         } else {
-          label.style.borderColor = '#e2e8f0';
-          label.style.background = '#fff';
-          label.style.color = '#475569';
+          label.style.borderColor = 'var(--border-light, #e2e8f0)';
+          label.style.background = 'var(--bg-card, #fff)';
+          label.style.color = 'var(--ink-secondary, #475569)';
         }
       });
     });

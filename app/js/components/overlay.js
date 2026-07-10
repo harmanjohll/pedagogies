@@ -7,8 +7,12 @@
 
 export function openOverlay(title, opts) {
   // opts: { src } or { srcdoc }
+  const previouslyFocused = document.activeElement;
   const overlay = document.createElement('div');
   overlay.id = 'sim-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', title);
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);animation:simFadeIn 0.2s ease;';
 
   const win = document.createElement('div');
@@ -119,11 +123,19 @@ export function openOverlay(title, opts) {
     document.removeEventListener('keydown', escHandler);
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
+    // Return focus to the launcher button that opened the tool
+    if (previouslyFocused && typeof previouslyFocused.focus === 'function' && document.contains(previouslyFocused)) {
+      previouslyFocused.focus();
+    }
   };
 
-  overlay.querySelector('#sim-overlay-close').addEventListener('click', closeOverlay);
+  const closeBtn = overlay.querySelector('#sim-overlay-close');
+  closeBtn.addEventListener('click', closeOverlay);
   const escHandler = (e) => { if (e.key === 'Escape') closeOverlay(); };
   document.addEventListener('keydown', escHandler);
+
+  // Move focus into the dialog so Escape works immediately
+  setTimeout(() => closeBtn.focus(), 50);
 
   return { overlay, iframe, close: closeOverlay };
 }
