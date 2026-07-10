@@ -27,15 +27,13 @@ export function maybeShowWhatsNew() {
   let seen = '';
   try { seen = localStorage.getItem(SEEN_KEY) || ''; } catch { /* ignore */ }
   if (seen === APP_VERSION) return;
-  // First-ever run (no data): the onboarding tour covers this — don't stack modals
-  const firstRun = !seen;
-  try {
-    const data = JSON.parse(localStorage.getItem('cocher_app_data') || '{}');
-    if (firstRun && (!data.classes || data.classes.length === 0)) {
-      localStorage.setItem(SEEN_KEY, APP_VERSION);
-      return;
-    }
-  } catch { /* ignore */ }
+  // First-ever run (no version recorded): onboarding covers new users —
+  // record the current version silently so what's-new only ever surfaces
+  // for RETURNING users after a real version bump.
+  if (!seen) {
+    try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch {}
+    return;
+  }
 
   const body = `
     <p style="font-size:0.8125rem;color:var(--ink-muted);margin:0 0 var(--sp-4);line-height:1.5;">
