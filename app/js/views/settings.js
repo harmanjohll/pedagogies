@@ -932,7 +932,28 @@ export function render(container) {
     const file = fileInput.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
+      const preview = Store.previewImportData(reader.result);
+      if (!preview.ok) {
+        showToast(`Cannot import: ${preview.error}`, 'danger');
+        return;
+      }
+      const LABELS = {
+        classes: 'classes', lessons: 'lessons', savedLayouts: 'layouts',
+        knowledgeUploads: 'uploads', pdFolders: 'PD folders', stimulusLibrary: 'stimulus items',
+        sourceLibrary: 'source sets', assessmentRoutines: 'routines', savedTOS: 'TOS',
+        assessmentChecklists: 'checklists', assessmentBlueprints: 'blueprints',
+        adminEvents: 'admin events', departmentSchemes: 'schemes'
+      };
+      const summary = Object.entries(preview.counts)
+        .filter(([k, n]) => n > 0 && LABELS[k])
+        .map(([k, n]) => `${n} ${LABELS[k]}`)
+        .join(', ') || 'no items';
+      const proceed = await confirmDialog({
+        title: 'Import Data?',
+        message: `This file contains: ${summary}. Importing will REPLACE your existing data of the same types. Consider exporting a backup first.`
+      });
+      if (!proceed) return;
       const ok = Store.importData(reader.result);
       if (ok) {
         showToast('Data imported successfully!', 'success');

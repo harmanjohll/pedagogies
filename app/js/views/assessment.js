@@ -466,7 +466,9 @@ export function renderAoL(container) {
           </div>
 
           <!-- Saved Blueprints -->
-          ${renderBlueprintList()}
+          <div id="bp-saved-list">
+            ${renderBlueprintList()}
+          </div>
 
           <!-- Create / Edit Blueprint -->
           <details id="bp-create-section" style="margin-top:12px;">
@@ -677,6 +679,11 @@ function build2DTOSTable(totalMarks, objectives) {
 }
 
 /* \u2500\u2500 AoL event wiring \u2500\u2500 */
+// Module-level refs so re-renders can tear down the previous TOS watchers
+let tosCellObserver = null;
+let tosCellInputTarget = null;
+let tosCellInputHandler = null;
+
 function wireAoLEvents(container, lessons) {
   bindWorkflowClicks(container);
   const objArea = container.querySelector('#tos-objectives');
@@ -785,24 +792,37 @@ function wireAoLEvents(container, lessons) {
   });
 
   // ── Enable Generate Questions button when TOS has data ──
+  // Tear down watchers from a previous render so they don't stack
+  if (tosCellObserver) {
+    tosCellObserver.disconnect();
+    tosCellObserver = null;
+  }
+  if (tosCellInputTarget && tosCellInputHandler) {
+    tosCellInputTarget.removeEventListener('input', tosCellInputHandler);
+    tosCellInputTarget = null;
+    tosCellInputHandler = null;
+  }
+
   const genQBtn = container.querySelector('#aol-generate-questions-btn');
   if (genQBtn) {
     // Monitor TOS cell changes to enable the button
-    const observer = new MutationObserver(() => {
+    tosCellObserver = new MutationObserver(() => {
       const cells = container.querySelectorAll('.tos-cell');
       const hasData = [...cells].some(c => parseInt(c.value) > 0);
       genQBtn.disabled = !hasData;
     });
-    observer.observe(container.querySelector('#tos-output') || container, { childList: true, subtree: true });
+    tosCellObserver.observe(container.querySelector('#tos-output') || container, { childList: true, subtree: true });
 
     // Also enable on input changes
-    container.addEventListener('input', (e) => {
+    tosCellInputHandler = (e) => {
       if (e.target.classList.contains('tos-cell')) {
         const cells = container.querySelectorAll('.tos-cell');
         const hasData = [...cells].some(c => parseInt(c.value) > 0);
         genQBtn.disabled = !hasData;
       }
-    });
+    };
+    tosCellInputTarget = container;
+    tosCellInputTarget.addEventListener('input', tosCellInputHandler);
 
     genQBtn.addEventListener('click', () => generateDraftQuestions(container));
   }
@@ -2559,10 +2579,25 @@ function wireBlueprintEvents(container) {
     if (!list) return;
     const count = list.querySelectorAll('.bp-question-row').length + 1;
     list.insertAdjacentHTML('beforeend', renderBlueprintQuestionRow(count));
-    wireRemoveQuestionBtns(container);
   });
 
-  wireRemoveQuestionBtns(container);
+  // Single delegated listener for remove buttons (survives added/re-rendered rows)
+  const questionsList = container.querySelector('#bp-questions-list');
+  questionsList?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.bp-remove-q');
+    if (!btn) return;
+    const row = btn.closest('.bp-question-row');
+    if (!row) return;
+    if (questionsList.querySelectorAll('.bp-question-row').length > 1) {
+      row.remove();
+      questionsList.querySelectorAll('.bp-question-row').forEach((r, i) => {
+        const label = r.querySelector('span');
+        if (label) label.textContent = `Q${i + 1}`;
+      });
+    } else {
+      showToast('At least one question is required.', 'warning');
+    }
+  });
 
   container.querySelector('#bp-save-btn')?.addEventListener('click', () => {
     const title = container.querySelector('#bp-title')?.value?.trim();
@@ -2583,9 +2618,34 @@ function wireBlueprintEvents(container) {
 
     Store.addAssessmentBlueprint({ title, subject, questions, createdAt: Date.now() });
     showToast('Blueprint saved successfully.', 'success');
-    renderAoL(container);
+
+    // Reset the create form, then refresh only the blueprint subtree
+    // (a full renderAoL would wipe the in-progress TOS grid and generated questions)
+    const titleInput = container.querySelector('#bp-title');
+    if (titleInput) titleInput.value = '';
+    const subjectInput = container.querySelector('#bp-subject');
+    if (subjectInput) subjectInput.value = '';
+    const list = container.querySelector('#bp-questions-list');
+    if (list) list.innerHTML = renderBlueprintQuestionRow(1);
+    refreshBlueprintSection(container);
   });
 
+  wireBlueprintListEvents(container);
+}
+
+/* Re-render only the saved-blueprints list and coverage viz, preserving the rest of the AoL view */
+function refreshBlueprintSection(container) {
+  const savedList = container.querySelector('#bp-saved-list');
+  if (savedList) {
+    savedList.innerHTML = renderBlueprintList();
+    wireBlueprintListEvents(container);
+  }
+  const vizBox = container.querySelector('#bp-coverage-viz');
+  if (vizBox) vizBox.innerHTML = '';
+}
+
+/* Wire the per-blueprint buttons inside the saved-blueprints list */
+function wireBlueprintListEvents(container) {
   container.querySelectorAll('[data-bp-delete]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -2593,7 +2653,7 @@ function wireBlueprintEvents(container) {
       const bps = Store.getAssessmentBlueprints().filter(b => b.id !== id);
       Store.set('assessmentBlueprints', bps);
       showToast('Blueprint deleted.', 'default');
-      renderAoL(container);
+      refreshBlueprintSection(container);
     });
   });
 
@@ -2605,26 +2665,6 @@ function wireBlueprintEvents(container) {
       const vizBox = container.querySelector('#bp-coverage-viz');
       if (bp && vizBox) {
         vizBox.innerHTML = renderBlueprintCoverage(bp);
-      }
-    });
-  });
-}
-
-function wireRemoveQuestionBtns(container) {
-  container.querySelectorAll('.bp-remove-q').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const row = btn.closest('.bp-question-row');
-      if (row) {
-        const list = container.querySelector('#bp-questions-list');
-        if (list && list.querySelectorAll('.bp-question-row').length > 1) {
-          row.remove();
-          list.querySelectorAll('.bp-question-row').forEach((r, i) => {
-            const label = r.querySelector('span');
-            if (label) label.textContent = `Q${i + 1}`;
-          });
-        } else {
-          showToast('At least one question is required.', 'warning');
-        }
       }
     });
   });

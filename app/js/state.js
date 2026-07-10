@@ -763,30 +763,59 @@ export const Store = {
     }, null, 2);
   },
 
+  /**
+   * Validate an export file without touching state. Returns
+   * { ok, counts?, version?, error? } so callers can confirm with the user
+   * (counts per data type) before overwriting anything.
+   */
+  previewImportData(jsonStr) {
+    const ARRAY_KEYS = ['classes', 'lessons', 'savedLayouts', 'adminEvents', 'knowledgeUploads',
+      'pdFolders', 'assessmentRoutines', 'savedTOS', 'assessmentChecklists', 'stimulusLibrary',
+      'sourceLibrary', 'departmentSchemes', 'assessmentBlueprints', 'recentActivity'];
+    let data;
+    try { data = JSON.parse(jsonStr); } catch { return { ok: false, error: 'This file is not valid JSON.' }; }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return { ok: false, error: 'This file is not a Co-Cher export.' };
+    }
+    const malformed = ARRAY_KEYS.filter(k => data[k] !== undefined && !Array.isArray(data[k]));
+    if (malformed.length) {
+      return { ok: false, error: `Malformed fields in export: ${malformed.join(', ')}.` };
+    }
+    const counts = {};
+    ARRAY_KEYS.forEach(k => { if (Array.isArray(data[k])) counts[k] = data[k].length; });
+    if (Object.keys(counts).length === 0) {
+      return { ok: false, error: 'No Co-Cher data found in this file.' };
+    }
+    return { ok: true, counts, version: data.version };
+  },
+
   importData(jsonStr) {
     try {
       const data = JSON.parse(jsonStr);
-      if (data.classes) _state.classes = data.classes;
-      if (data.lessons) _state.lessons = data.lessons;
-      if (data.savedLayouts) _state.savedLayouts = data.savedLayouts;
-      if (data.adminEvents) _state.adminEvents = data.adminEvents;
-      if (data.knowledgeUploads) {
+      if (!data || typeof data !== 'object') return false;
+      // Only accept well-formed arrays — a malformed field must not
+      // partially overwrite existing state
+      if (Array.isArray(data.classes)) _state.classes = data.classes;
+      if (Array.isArray(data.lessons)) _state.lessons = data.lessons;
+      if (Array.isArray(data.savedLayouts)) _state.savedLayouts = data.savedLayouts;
+      if (Array.isArray(data.adminEvents)) _state.adminEvents = data.adminEvents;
+      if (Array.isArray(data.knowledgeUploads)) {
         _state.knowledgeUploads = data.knowledgeUploads;
         // Imported backups may carry upload content — put it in IndexedDB
         syncKbContentToIdb([], data.knowledgeUploads);
       }
-      if (data.pdFolders) _state.pdFolders = data.pdFolders;
-      if (data.assessmentRoutines) _state.assessmentRoutines = data.assessmentRoutines;
-      if (data.savedTOS) _state.savedTOS = data.savedTOS;
-      if (data.assessmentChecklists) _state.assessmentChecklists = data.assessmentChecklists;
-      if (data.stimulusLibrary) _state.stimulusLibrary = data.stimulusLibrary;
-      if (data.sourceLibrary) _state.sourceLibrary = data.sourceLibrary;
-      if (data.departmentSchemes) _state.departmentSchemes = data.departmentSchemes;
-      if (data.assessmentBlueprints) _state.assessmentBlueprints = data.assessmentBlueprints;
-      if (data.recentActivity) _state.recentActivity = data.recentActivity;
+      if (Array.isArray(data.pdFolders)) _state.pdFolders = data.pdFolders;
+      if (Array.isArray(data.assessmentRoutines)) _state.assessmentRoutines = data.assessmentRoutines;
+      if (Array.isArray(data.savedTOS)) _state.savedTOS = data.savedTOS;
+      if (Array.isArray(data.assessmentChecklists)) _state.assessmentChecklists = data.assessmentChecklists;
+      if (Array.isArray(data.stimulusLibrary)) _state.stimulusLibrary = data.stimulusLibrary;
+      if (Array.isArray(data.sourceLibrary)) _state.sourceLibrary = data.sourceLibrary;
+      if (Array.isArray(data.departmentSchemes)) _state.departmentSchemes = data.departmentSchemes;
+      if (Array.isArray(data.assessmentBlueprints)) _state.assessmentBlueprints = data.assessmentBlueprints;
+      if (Array.isArray(data.recentActivity)) _state.recentActivity = data.recentActivity;
       // Also sync to legacy localStorage keys for backwards compat
-      if (data.stimulusLibrary) localStorage.setItem('cocher_stimulus_library', JSON.stringify(data.stimulusLibrary));
-      if (data.sourceLibrary) localStorage.setItem('cocher_source_library', JSON.stringify(data.sourceLibrary));
+      if (Array.isArray(data.stimulusLibrary)) localStorage.setItem('cocher_stimulus_library', JSON.stringify(data.stimulusLibrary));
+      if (Array.isArray(data.sourceLibrary)) localStorage.setItem('cocher_source_library', JSON.stringify(data.sourceLibrary));
       this._persist();
       this._notify();
       return true;

@@ -329,6 +329,7 @@ function renderComponents(container) {
         .replace(/— \*[^*]+\*/g, '')
         .trim();
       const previewWin = window.open('', '_blank');
+      if (!previewWin) { showToast('Allow pop-ups for this site to open the preview.', 'danger'); return; }
       previewWin.document.write(`<!DOCTYPE html><html><head><title>${esc(meta.label)} — Student View</title>
         <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.8;font-size:15px}
         h1{font-size:18px;border-bottom:2px solid #4361ee;padding-bottom:8px;color:#4361ee}
@@ -603,6 +604,20 @@ export function renderForLesson(container, { id }) {
   if (!lesson) { navigate('/lessons'); return; }
   currentLessonId = id;
   chatMessages = [...(lesson.chatHistory || [])];
+  render(container);
+}
+
+/* Route entry for /lesson-planner (no id): if a saved lesson was being
+ * edited, start fresh — otherwise new chat turns silently auto-save into
+ * the previously opened lesson. An unsaved draft (no id) is preserved.
+ * Internal re-renders call render() directly and keep all state. */
+export function renderNew(container) {
+  if (currentLessonId) {
+    currentLessonId = null;
+    chatMessages = [];
+    lessonComponents = {};
+    planClassContext = null;
+  }
   render(container);
 }
 
@@ -954,12 +969,11 @@ export function render(container) {
   const chatSend = container.querySelector('#chat-send');
   const layoutEl = container.querySelector('#lp-layout');
 
-  // Load components from existing lesson
+  // Load components from existing lesson — always reset, otherwise a lesson
+  // without components inherits (and then auto-saves) the previous lesson's
   if (currentLessonId) {
     const existingLesson = Store.getLesson(currentLessonId);
-    if (existingLesson?.components) {
-      lessonComponents = { ...existingLesson.components };
-    }
+    lessonComponents = existingLesson?.components ? { ...existingLesson.components } : {};
   }
 
   // Render initial messages
@@ -1103,19 +1117,27 @@ export function render(container) {
     isGenerating = true;
     renderMessages(messagesEl, classes);
 
+    // Capture the conversation identity — if "New" is clicked or another
+    // lesson opened while the reply is in flight, the arrays are replaced
+    // and the stale response must be discarded (not appended/auto-saved).
+    const sessionMessages = chatMessages;
     try {
-      const response = await sendChat(chatMessages, { trackLabel: 'lessonChat', trackDetail: [planClassContext?.subject, planClassContext?.level].filter(Boolean).join(' ') || '' });
+      const response = await sendChat(sessionMessages, { trackLabel: 'lessonChat', trackDetail: [planClassContext?.subject, planClassContext?.level].filter(Boolean).join(' ') || '' });
+      if (chatMessages !== sessionMessages) return;
       chatMessages.push({ role: 'assistant', content: response });
     } catch (err) {
+      if (chatMessages !== sessionMessages) return;
       chatMessages.push({ role: 'assistant', content: `I encountered an error: ${err.message}` });
       showToast(err.message, 'danger');
     } finally {
-      isGenerating = false;
-      renderMessages(messagesEl, classes);
-      renderPlanContent(container.querySelector('#plan-content'));
-      // Auto-save if editing existing lesson
-      if (currentLessonId) {
-        Store.updateLesson(currentLessonId, { chatHistory: [...chatMessages] });
+      if (chatMessages === sessionMessages) {
+        isGenerating = false;
+        renderMessages(messagesEl, classes);
+        renderPlanContent(container.querySelector('#plan-content'));
+        // Auto-save if editing existing lesson
+        if (currentLessonId) {
+          Store.updateLesson(currentLessonId, { chatHistory: [...chatMessages] });
+        }
       }
     }
   }
@@ -1180,6 +1202,7 @@ export function render(container) {
       showToast('No lesson content to print yet.', 'danger'); return;
     }
     const printWin = window.open('', '_blank');
+    if (!printWin) { showToast('Allow pop-ups for this site to print/export.', 'danger'); return; }
     const planHtml = aiMsgs.map(m => md(m.content)).join('<hr style="margin:24px 0;">');
 
     // Build components HTML for print
@@ -1218,6 +1241,7 @@ export function render(container) {
     }
 
     const printWin = window.open('', '_blank');
+    if (!printWin) { showToast('Allow pop-ups for this site to print/export.', 'danger'); return; }
     const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
     const title = currentLesson?.title || 'Lesson Plan';
     const dateStr = new Date().toLocaleDateString('en-SG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });

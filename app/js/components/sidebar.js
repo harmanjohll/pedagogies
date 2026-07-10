@@ -46,30 +46,22 @@ const ICONS = {
   myCca: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>`,
   autopilot: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`,
   mathSandbox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/><circle cx="19" cy="19" r="2"/></svg>`,
+  subjectTools: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 14.5v6M14.5 17.5h6"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
 };
 
-/* ── Rotating section label for sandbox/innovation area ── */
-const SANDBOX_LABELS = [
-  'Innovations Akan Datang',
-  'The Lab',
-  'Eksperimen',
-  'Sandbox',
-  'Masak-Masak',
-];
+/* ── Stable section label for the beta/innovation area ── */
 const SANDBOX_SECTION_KEY = '__sandbox__';
-let _sandboxLabel = SANDBOX_LABELS[Math.floor(Math.random() * SANDBOX_LABELS.length)];
+const SANDBOX_LABEL = 'Labs';
 
-/* ── EEE-to-sidebar mapping: which EEE keys get sidebar nav items ── */
+/* ── EEE-to-sidebar mapping: which EEE keys get sidebar nav items ──
+ * Subject-specific tools (stave, rhythm, art, design, kitchen) are grouped
+ * under the single "Subject Tools" gallery instead of individual entries. */
 const EEE_NAV_MAP = {
   simulations:    { route: '/simulations',      icon: 'simulations',    label: 'Simulations' },
   stimulus:       { route: '/stimulus-material', icon: 'stimulus',       label: 'Stimulus Material' },
   sourceAnalysis: { route: '/source-analysis',   icon: 'sourceAnalysis', label: 'Source Analysis' },
   cceDiscussion:  { route: '/cce',              icon: 'cceDiscussion',  label: 'CCE Discussion' },
-  staveNotation:  { route: '/stave-notation',    icon: 'staveNotation',  label: 'Stave Notation' },
-  rhythmTool:     { route: '/rhythm-tool',      icon: 'rhythmTool',     label: 'Rhythm & Percussion' },
-  artCritique:    { route: '/art-critique',     icon: 'artCritique',    label: 'Art Critique' },
-  designProcess:  { route: '/design-process',   icon: 'designProcess',  label: 'Design Process' },
-  kitchenLayout:  { route: '/kitchen-layout',   icon: 'kitchenLayout',  label: 'Kitchen Layout' },
 };
 
 function buildNavItems() {
@@ -109,30 +101,24 @@ function buildNavItems() {
 
   // Combine with sub-section labels
   const enactmentItems = [];
-  if (toolItems.length > 0 || resourceItems.length > 0) {
-    // Teaching Tools sub-group
-    if (toolItems.length > 0) {
-      toolItems[0].section = 'Enactment';
-      toolItems[0].subsection = 'Teaching Tools';
-      enactmentItems.push(...toolItems);
-    }
-    // Lesson Resources sub-group
-    if (resourceItems.length > 0) {
-      if (toolItems.length === 0) {
-        resourceItems[0].section = 'Enactment';
-      }
-      resourceItems[0].subsection = resourceItems[0].subsection || 'Lesson Resources';
-      enactmentItems.push(...resourceItems);
-    }
+  if (toolItems.length > 0) {
+    toolItems[0].subsection = 'Teaching Tools';
+    enactmentItems.push(...toolItems);
+  }
+  if (resourceItems.length > 0) {
+    resourceItems[0].subsection = resourceItems[0].subsection || 'Lesson Resources';
+    enactmentItems.push(...resourceItems);
   }
 
-  // Always include Lesson Rehearsal under Enactment
-  enactmentItems.push({
-    id: '/lesson-rehearsal',
-    icon: 'rehearsal',
-    label: 'Lesson Rehearsal',
-    ...(enactmentItems.length === 0 ? { section: 'Enactment' } : {}),
-  });
+  // Always present under Enactment: Subject Tools gallery + Lesson Rehearsal
+  enactmentItems.push({ id: '/subject-tools', icon: 'subjectTools', label: 'Subject Tools' });
+  enactmentItems.push({ id: '/lesson-rehearsal', icon: 'rehearsal', label: 'Lesson Rehearsal' });
+
+  // Explains why items appear/disappear here: tools are chosen in the
+  // Enactment marketplace (Settings → Lesson Planner)
+  enactmentItems.push({ id: '__manage_tools__', icon: 'plus', label: 'Add / manage tools…', muted: true });
+
+  enactmentItems[0].section = 'Enactment';
 
   // Custom links from teacher
   const customLinks = getCustomLinks();
@@ -150,7 +136,7 @@ function buildNavItems() {
     { id: '/assessment/aol', icon: 'aol', label: 'AoL' },
     { id: '/knowledge', icon: 'knowledge', label: 'Knowledge Bases', section: 'Growth' },
     { id: '/my-growth', icon: 'myGrowth', label: 'My Learning' },
-    { id: '/autopilot', icon: 'autopilot', label: 'Co-Cher+ (beta)', section: SANDBOX_SECTION_KEY, sectionDisplay: _sandboxLabel },
+    { id: '/autopilot', icon: 'autopilot', label: 'Co-Cher+ (beta)', section: SANDBOX_SECTION_KEY, sectionDisplay: SANDBOX_LABEL },
     { id: '/math-sandbox', icon: 'mathSandbox', label: 'Formula Lab (beta)' },
     { id: '/admin', icon: 'admin', label: 'Admin One-Stop', section: 'Operations' }
   ];
@@ -208,8 +194,9 @@ export function renderSidebar(container) {
     if (item.id === '/lessons' && lessonCount > 0) badge = `<span class="sidebar-item-badge">${lessonCount}</span>`;
 
     const customUrlAttr = item.customUrl ? ` data-custom-url="${item.customUrl}"` : '';
+    const mutedStyle = item.muted ? ' style="opacity:0.6;font-size:0.75rem;"' : '';
     navHTML += `
-      <button class="sidebar-item" data-route="${item.id}"${customUrlAttr} aria-label="${item.label}">
+      <button class="sidebar-item" data-route="${item.id}"${customUrlAttr}${mutedStyle} aria-label="${item.label}">
         <span class="sidebar-item-icon">${ICONS[item.icon]}</span>
         <span class="sidebar-item-label">${item.label}</span>
         ${badge}
@@ -253,6 +240,11 @@ export function renderSidebar(container) {
       // Custom links open in new tab
       if (btn.dataset.route.startsWith('__custom_link__') && btn.dataset.customUrl) {
         window.open(btn.dataset.customUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      // Enactment tools are managed in the Settings marketplace
+      if (btn.dataset.route === '__manage_tools__') {
+        navigate('/settings');
         return;
       }
       navigate(btn.dataset.route);

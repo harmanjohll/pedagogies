@@ -3,7 +3,7 @@
  * ========================
  * Subject-agnostic teacher rehearsal tool. Teachers select a designed lesson
  * and practice delivering it to AI-powered student personas via a chat interface.
- * Uses Anthropic API (Claude) for realistic student roleplay.
+ * Uses the shared Gemini API layer (api.js sendChat) for student roleplay.
  */
 
 import { Store } from '../state.js';
