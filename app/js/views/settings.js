@@ -12,6 +12,7 @@ import { getCurrentUser, clearCurrentUser, getPreferredName, setPreferredName, g
 import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks } from './lesson-planner.js';
 import { startTour, resetTour } from '../components/spotlight-tour.js';
 import { trackEvent, analyticsEnabled, setAnalyticsEnabled } from '../utils/analytics.js';
+import { APP_VERSION, PREVIOUS_VERSIONS } from '../version.js';
 
 /* ── Dashboard Layout Prefs ── */
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
@@ -453,7 +454,10 @@ export function render(container) {
 
         <!-- About -->
         <div class="card" style="margin-bottom: var(--sp-6);">
-          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-3); color: var(--ink);">About Co-Cher</h3>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3);">
+            <h3 style="font-size: 1rem; font-weight: 600; margin: 0; color: var(--ink);">About Co-Cher</h3>
+            <span style="font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--brand-navy, #000C53); color: var(--brand-yellow, #FFE200);">${APP_VERSION}</span>
+          </div>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7; font-style: italic;">
             Dear Cher,
           </p>
@@ -469,6 +473,10 @@ export function render(container) {
           <p style="font-size: 0.8125rem; color: var(--ink-muted); line-height: 1.7; font-style: italic;">
             Warmly,<br/>
             <strong style="color: var(--ink);">Harman</strong>
+          </p>
+          <p style="font-size: 0.75rem; color: var(--ink-faint); margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--border-light);">
+            You are on Co-Cher ${APP_VERSION}. Previous versions (with separate data):
+            ${PREVIOUS_VERSIONS.map(v => `<a href="${v.url}" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: underline;">${v.version}</a>`).join(' &middot; ')}
           </p>
         </div>
 

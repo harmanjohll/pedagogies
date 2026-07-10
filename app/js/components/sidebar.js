@@ -6,6 +6,7 @@
 
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
+import { APP_VERSION } from '../version.js';
 import { EEE_REGISTRY, getEEESidebarSelections, getCustomLinks } from '../views/lesson-planner.js';
 
 /* ── SVG Icons (Feather-style) ── */
@@ -237,6 +238,7 @@ export function renderSidebar(container) {
         <span class="sidebar-item-icon">${ICONS.settings}</span>
         <span class="sidebar-item-label">Settings</span>
       </button>
+      <div class="sidebar-version" title="Previous versions are linked in Settings &rarr; About">Co-Cher ${APP_VERSION}</div>
     </div>
   `;
 
