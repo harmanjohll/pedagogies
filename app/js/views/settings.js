@@ -9,7 +9,7 @@ import { validateApiKey, AVAILABLE_MODELS, normalizeModel } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser, getPreferredName, setPreferredName, guessFirstName } from '../components/login.js';
-import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks } from './lesson-planner.js';
+import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks, isVigilanceEnabled, setVigilanceEnabled } from './lesson-planner.js';
 import { startTour, resetTour } from '../components/spotlight-tour.js';
 import { trackEvent, analyticsEnabled, setAnalyticsEnabled } from '../utils/analytics.js';
 import { APP_VERSION, PREVIOUS_VERSIONS } from '../version.js';
@@ -490,6 +490,20 @@ export function render(container) {
         <!-- TAB: Lesson Planner -->
         <div class="settings-panel" data-panel="planner" style="display:none;">
 
+        <!-- Design-partner nudges -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Design-Partner Nudges</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            When a first prompt asks for a lesson without saying who it's for, Co-Cher playfully
+            asks about your class before generating &mdash; so plans are designed, not dispensed.
+            One nudge per conversation, always skippable.
+          </p>
+          <label style="display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.8125rem; color: var(--ink);">
+            <input type="checkbox" id="vigilance-toggle" ${isVigilanceEnabled() ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: var(--brand-navy, #000C53);" />
+            Ask about my class before generating from vague prompts
+          </label>
+        </div>
+
         <!-- EEE: Enactment Enhancement Marketplace -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
@@ -920,6 +934,11 @@ export function render(container) {
   // Analytics toggle
   container.querySelector('#analytics-toggle').addEventListener('change', (e) => {
     setAnalyticsEnabled(e.target.checked);
+  });
+
+  container.querySelector('#vigilance-toggle')?.addEventListener('change', (e) => {
+    setVigilanceEnabled(e.target.checked);
+    showToast(e.target.checked ? 'Design-partner nudges on.' : 'Design-partner nudges off.', 'success');
   });
 
   // Export

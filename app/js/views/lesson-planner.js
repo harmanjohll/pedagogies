@@ -24,6 +24,8 @@ let chatMessages = [];
 let isGenerating = false;
 let currentLessonId = null;  // if editing a saved lesson
 let planClassContext = null;  // class context from "Plan from Class"
+let vigilanceNudged = false;  // at most one nudge per conversation
+let vigilanceState = null;    // { prompt } while the nudge card is showing
 let attachedKBContext = [];   // attached knowledge base resources
 let lessonDateTime = null;    // { date, period, room, classCode } from timetable or manual
 let selectedIdeology = '';    // optional curriculum ideology lens
@@ -38,6 +40,70 @@ function getLPPrefs() {
 }
 function saveLPPrefs(p) {
   try { localStorage.setItem(LP_PREFS_KEY, JSON.stringify(p)); } catch {}
+}
+
+/* ── Cognitive vigilance: nudge low-context generation prompts ──
+ * Pure heuristics, zero API cost. The teacher stays the designer —
+ * when a first prompt asks for a lesson with no idea who it's for,
+ * Co-Cher playfully asks before generating. Fires at most once per
+ * conversation; never when class context is attached; skippable. */
+
+export function isVigilanceEnabled() {
+  return getLPPrefs().vigilance !== false;
+}
+export function setVigilanceEnabled(on) {
+  const p = getLPPrefs();
+  p.vigilance = !!on;
+  saveLPPrefs(p);
+}
+
+const VIGILANCE_OPENERS = [
+  "Erm&hellip; I don't quite know your class yet, Cher! &#128517;",
+  "Wait wait &mdash; who am I designing this for, Cher? &#129300;",
+  "Aiyo Cher, I'd just be guessing who your students are! &#128584;",
+];
+
+function vigilanceCheck(text) {
+  if (vigilanceNudged || !isVigilanceEnabled()) return false;
+  if (planClassContext || chatMessages.length > 0) return false;
+  // Only generation-intent prompts qualify
+  if (!/\b(give|make|create|generate|plan|design|prepare|build|write)\b[\s\S]{0,80}\b(lesson|activity|activities|worksheet|plan|unit)\b/i.test(text)) return false;
+  // A class named in the prompt counts as knowing the audience
+  const lower = text.toLowerCase();
+  const classNames = Store.getClasses().map(c => (c.name || '').toLowerCase()).filter(n => n.length > 1);
+  if (classNames.some(n => lower.includes(n))) return false;
+  // Count context signals; fewer than 2 → nudge
+  let signals = 0;
+  if (/\b(sec(ondary)?\s?[1-5]|primary\s?[1-6]|jc\s?[12]|year\s?[1-6]|express|normal|na\b|nt\b|ip\b|pre-u|o[- ]level|n[- ]level|a[- ]level)\b/i.test(text)) signals++;
+  if (/\b(english|math|physic|chem|biolog|science|histor|geograph|literature|music|art|pe\b|cce|design|food|nutrition|malay|chinese|tamil|social studies)\w*/i.test(text)) signals++;
+  if (/\b(enjoy|love|like|struggle|weak|strong|mixed[- ]ability|prior|already (know|learnt|learned)|profile|restless|quiet|talkative|kinaesthetic|visual learner)/i.test(text)) signals++;
+  if (text.split(/\s+/).length >= 18) signals++;
+  return signals < 2;
+}
+
+function buildVigilanceNudgeHTML() {
+  const opener = VIGILANCE_OPENERS[Math.floor(Math.random() * VIGILANCE_OPENERS.length)];
+  const classes = Store.getClasses().slice(0, 4);
+  return `
+    <div id="vigilance-nudge" style="padding:var(--sp-6) var(--sp-4);">
+      <div style="max-width:480px;margin:0 auto;">
+        <div class="chat-msg ai" style="max-width:100%;">
+          <p style="margin:0 0 6px;font-weight:600;">${opener}</p>
+          <p style="margin:0;font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">
+            A lesson designed for <em>your</em> students beats a generic one every time.
+            Tell me who this is for &mdash; or pick a class:
+          </p>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--sp-3);">
+          ${classes.map(c => `
+            <button class="chat-option vigilance-class" data-class-id="${esc(c.id)}">
+              ${esc(c.name)}${c.level ? ` &middot; ${esc(c.level)}` : ''}${c.subject ? ` ${esc(c.subject)}` : ''}
+            </button>`).join('')}
+          <button class="chat-option" id="vigilance-describe">&#9997;&#65039; Let me describe them</button>
+          <button class="chat-option" id="vigilance-skip" style="opacity:0.75;">Just generate lah &#128518;</button>
+        </div>
+      </div>
+    </div>`;
 }
 
 /* ── EEE: Enactment Enhancements for Engagement ── */
@@ -604,6 +670,8 @@ export function renderForLesson(container, { id }) {
   if (!lesson) { navigate('/lessons'); return; }
   currentLessonId = id;
   chatMessages = [...(lesson.chatHistory || [])];
+  vigilanceNudged = false;
+  vigilanceState = null;
   render(container);
 }
 
@@ -618,6 +686,8 @@ export function renderNew(container) {
     lessonComponents = {};
     planClassContext = null;
   }
+  vigilanceNudged = false;
+  vigilanceState = null;
   render(container);
 }
 
@@ -1008,6 +1078,8 @@ export function render(container) {
     currentLessonId = null;
     isGenerating = false;
     lessonComponents = {};
+    vigilanceNudged = false;
+    vigilanceState = null;
     render(container);
   });
 
@@ -1048,6 +1120,15 @@ export function render(container) {
     const text = chatInput.value.trim();
     if (!text || isGenerating) return;
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+
+    // Cognitive vigilance: one playful checkpoint for context-free prompts
+    if (vigilanceCheck(text)) {
+      vigilanceNudged = true;
+      vigilanceState = { prompt: text };
+      renderMessages(messagesEl, classes);
+      return;
+    }
+    vigilanceState = null;
 
     // Build context-enriched message
     let contextParts = [];
@@ -1920,6 +2001,42 @@ Maximum 3-5 recommendations. If nothing genuinely fits, say so — don't pad wit
 /* ── Messages render ── */
 function renderMessages(el, classes) {
   if (!el) return;
+
+  // Vigilance nudge card replaces the starter gallery until resolved
+  if (vigilanceState && chatMessages.length === 0) {
+    el.innerHTML = buildVigilanceNudgeHTML();
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('chat-send');
+    const resend = () => {
+      if (!input || !sendBtn || !vigilanceState) return;
+      input.value = vigilanceState.prompt;
+      vigilanceState = null;
+      sendBtn.click();
+    };
+    el.querySelectorAll('.vigilance-class').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cls = Store.getClasses().find(c => c.id === btn.dataset.classId);
+        if (cls) {
+          planClassContext = { id: cls.id, name: cls.name, subject: cls.subject || '', level: cls.level || '' };
+        }
+        resend();
+      });
+    });
+    el.querySelector('#vigilance-skip')?.addEventListener('click', resend);
+    el.querySelector('#vigilance-describe')?.addEventListener('click', () => {
+      if (!input || !vigilanceState) return;
+      input.value = `${vigilanceState.prompt} — for my [class/level], who [what they enjoy / where they struggle]; they already know [prior knowledge].`;
+      vigilanceState = null;
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+      input.focus();
+      const start = input.value.indexOf('[');
+      const end = input.value.indexOf(']', start);
+      if (start >= 0 && end > start) input.setSelectionRange(start, end + 1);
+    });
+    return;
+  }
+
   if (chatMessages.length === 0) {
     const prompts = buildQuickPrompts(classes || Store.getClasses());
     el.innerHTML = `
