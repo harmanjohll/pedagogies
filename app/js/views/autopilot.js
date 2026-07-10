@@ -6,11 +6,13 @@
  * can click to expand, refine, or navigate to the relevant Co-Cher page.
  */
 
-import { sendChat } from '../api.js';
-import { Store } from '../state.js';
+import { sendChat, generateImage, generateSVGDiagram } from '../api.js';
+import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { navigate } from '../router.js';
 import { processLatex } from '../utils/latex.js';
+import { escapeHtml, sanitizeSvg } from '../utils/markdown.js';
+import { idbPut } from '../utils/storage.js';
 
 /* ── SVG icon library (inline, small) ── */
 const I = {
@@ -520,6 +522,38 @@ export function render(container) {
   const outputs = {};     // step id → raw text
   let expandedDive = null; // { stepId, type, text } for deep-dive panel
   let params = {};
+  let awaitingAt = null;          // next step index while paused at a checkpoint
+  const stepAdjustments = {};     // step id → teacher instruction for re-runs
+  const savedToLibrary = {};      // step id → true once saved
+
+  /* Per-step action row: save to library, adjust & re-run, visuals (lesson) */
+  function buildStepActionsHTML(s) {
+    if (running) return '';
+    const SAVE_LABELS = {
+      sow: 'Save to Knowledge Base',
+      lesson: 'Save as draft lesson',
+      assessment: 'Save to Knowledge Base'
+    };
+    const saveBtn = SAVE_LABELS[s.id]
+      ? (savedToLibrary[s.id]
+        ? `<span style="font-size:0.75rem;color:var(--success,#22c55e);font-weight:600;">&#10003; Saved</span>`
+        : `<button class="btn btn-secondary btn-sm" data-save-step="${s.id}">${SAVE_LABELS[s.id]}</button>`)
+      : '';
+    const visualBtns = s.id === 'lesson' ? `
+      <button class="btn btn-ghost btn-sm" data-visual="image" title="Uses your Gemini key's image model — costs quota">&#127912; Hook visual</button>
+      <button class="btn btn-ghost btn-sm" data-visual="svg" title="Free — drawn by the text model as SVG">&#128506;&#65039; Concept diagram</button>` : '';
+    return `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px dashed var(--border-light);">
+        ${saveBtn}
+        ${visualBtns}
+        <button class="btn btn-ghost btn-sm" data-adjust-step="${s.id}">&#8635; Adjust &amp; re-run</button>
+      </div>
+      <div id="ap-adjust-row-${s.id}" style="display:none;margin-top:var(--sp-2);gap:6px;">
+        <input class="input" id="ap-adjust-input-${s.id}" placeholder="e.g. more group work, shorter unit, focus on graphing skills…" style="flex:1;" />
+        <button class="btn btn-primary btn-sm" data-adjust-run="${s.id}">Re-run</button>
+      </div>
+      ${s.id === 'lesson' ? `<div id="ap-visual-out" style="margin-top:var(--sp-3);"></div>` : ''}`;
+  }
 
   function renderView() {
     // Preserve scroll position across re-renders
@@ -715,10 +749,14 @@ export function render(container) {
 
           <div class="ap-actions">
             <button id="ap-run-btn" class="btn btn-primary" style="flex:1;max-width:260px;">
-              ${I.layers} Run Full Workflow
+              ${I.layers} Run Workflow
             </button>
             <button id="ap-stop-btn" class="btn btn-ghost" style="display:none;color:#ef4444;">Stop</button>
           </div>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--ink-muted);margin-top:8px;cursor:pointer;">
+            <input type="checkbox" id="ap-checkpoint" checked style="width:14px;height:14px;accent-color:var(--brand-navy,#000C53);" />
+            Pause after each step so I can review before continuing (recommended)
+          </label>
 
           <!-- Pipeline -->
           <div class="ap-pipeline" style="${currentStep < 0 ? 'display:none;' : ''}">
@@ -765,10 +803,19 @@ export function render(container) {
                   ` : outputs[s.id] ? `
                     <div class="ap-card-body visible" id="ap-body-${s.id}">
                       ${renderStepOutput(s.id, outputs[s.id], params)}
+                      ${buildStepActionsHTML(s)}
                     </div>
                   ` : ''}
                 </div>`;
             }).join('')}
+
+            ${awaitingAt !== null && !running ? `
+              <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:var(--sp-4) var(--sp-5);border-left:3px solid var(--accent);flex-wrap:wrap;">
+                <span style="font-size:0.8125rem;color:var(--ink-secondary);">
+                  Reviewed step ${awaitingAt} of ${STEPS.length}? Adjust it above, or carry on.
+                </span>
+                <button id="ap-continue-btn" class="btn btn-primary btn-sm">Continue &rarr; ${STEPS[awaitingAt].label}</button>
+              </div>` : ''}
           </div>
         </div>
       </div>
@@ -870,6 +917,109 @@ export function render(container) {
       });
     });
 
+    // Checkpoint continue
+    container.querySelector('#ap-continue-btn')?.addEventListener('click', () => runStepsFrom(awaitingAt));
+
+    // Save step outputs into the real library
+    container.querySelectorAll('[data-save-step]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.saveStep;
+        const text = outputs[id];
+        if (!text) return;
+        if (id === 'lesson') {
+          const lesson = Store.addLesson({
+            title: `${params.topic} (${params.subject} ${params.level})`,
+            status: 'draft',
+            plan: text,
+            chatHistory: [
+              { role: 'user', content: `Design a lesson on ${params.topic} for ${params.level} ${params.subject}.` },
+              { role: 'assistant', content: text }
+            ]
+          });
+          savedToLibrary[id] = true;
+          showToast(`Saved as draft lesson "${lesson.title}" — it now has a lifecycle.`, 'success');
+        } else {
+          const title = id === 'sow'
+            ? `SoW — ${params.topic} (${params.subject} ${params.level})`
+            : `Assessment Plan — ${params.topic} (${params.subject})`;
+          const uploads = [...(Store.get('knowledgeUploads') || []), {
+            id: generateId(),
+            title,
+            category: id === 'sow' ? 'Scheme of Work' : 'Assessment',
+            subject: params.subject,
+            classId: null,
+            content: text,
+            contentLength: text.length,
+            notes: 'Generated by Co-Cher+',
+            createdAt: Date.now()
+          }];
+          Store.set('knowledgeUploads', uploads);
+          savedToLibrary[id] = true;
+          showToast(`Saved to Knowledge Base: "${title}"${id === 'sow' ? ' — the planner will auto-attach it as context.' : ''}`, 'success');
+        }
+        renderView();
+      });
+    });
+
+    // Adjust & re-run a step (downstream steps are cleared — they depend on it)
+    container.querySelectorAll('[data-adjust-step]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const row = container.querySelector(`#ap-adjust-row-${btn.dataset.adjustStep}`);
+        if (row) {
+          row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+          row.querySelector('input')?.focus();
+        }
+      });
+    });
+    container.querySelectorAll('[data-adjust-run]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.adjustRun;
+        const val = container.querySelector(`#ap-adjust-input-${id}`)?.value.trim();
+        if (!val) return;
+        stepAdjustments[id] = val;
+        const idx = STEPS.findIndex(s => s.id === id);
+        STEPS.slice(idx).forEach(s => { delete outputs[s.id]; delete savedToLibrary[s.id]; });
+        runStepsFrom(idx);
+      });
+    });
+
+    // Visuals for the lesson step: image hook (uses quota) or free SVG diagram
+    container.querySelectorAll('[data-visual]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const out = container.querySelector('#ap-visual-out');
+        if (!out) return;
+        const kind = btn.dataset.visual;
+        btn.disabled = true;
+        out.innerHTML = `<div class="chat-typing" style="padding:var(--sp-2) 0;">${kind === 'image' ? 'Painting your hook visual…' : 'Drawing the concept diagram…'}</div>`;
+        try {
+          if (kind === 'image') {
+            const dataUrl = await generateImage(`Vibrant, classroom-appropriate illustration (no words or text in the image) for a ${params.level} ${params.subject} lesson hook about "${params.topic}". Clean, modern educational style.`);
+            idbPut('images', `cocherplus_${Date.now()}`, dataUrl).catch(() => {});
+            out.innerHTML = `
+              <img src="${dataUrl}" alt="Lesson hook visual: ${escapeHtml(params.topic)}" style="max-width:100%;border-radius:10px;border:1px solid var(--border-light);" />
+              <div style="margin-top:6px;"><a href="${dataUrl}" download="hook-visual.png" class="btn btn-ghost btn-sm">Download PNG</a></div>`;
+          } else {
+            const svg = sanitizeSvg(await generateSVGDiagram(`${params.topic} — key concepts for ${params.level} ${params.subject}`));
+            out.innerHTML = `
+              <div style="background:#fff;border:1px solid var(--border-light);border-radius:10px;padding:8px;overflow-x:auto;">${svg}</div>
+              <div style="margin-top:6px;"><button class="btn btn-ghost btn-sm" id="ap-svg-download">Download SVG</button></div>`;
+            out.querySelector('#ap-svg-download')?.addEventListener('click', () => {
+              const blob = new Blob([svg], { type: 'image/svg+xml' });
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = 'concept-diagram.svg';
+              a.click();
+              URL.revokeObjectURL(a.href);
+            });
+          }
+        } catch (err) {
+          out.innerHTML = `<p style="font-size:0.75rem;color:var(--danger,#ef4444);">${escapeHtml(err.message)}</p>`;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+
     // Run/stop buttons
     const runBtn = container.querySelector('#ap-run-btn');
     const stopBtn = container.querySelector('#ap-stop-btn');
@@ -941,9 +1091,22 @@ export function render(container) {
     }
 
     params = { subject, level, topic, duration, notes };
-    running = true; aborted = false; currentStep = 0;
+    aborted = false;
+    awaitingAt = null;
     for (const key of Object.keys(outputs)) delete outputs[key];
+    for (const key of Object.keys(stepAdjustments)) delete stepAdjustments[key];
+    for (const key of Object.keys(savedToLibrary)) delete savedToLibrary[key];
 
+    await runStepsFrom(0);
+  }
+
+  /* Run steps from an index; pauses at a checkpoint after each step when
+   * "Pause after each step" is on (the teacher reviews, adjusts, continues). */
+  async function runStepsFrom(startIdx) {
+    const checkpoint = container.querySelector('#ap-checkpoint')?.checked ?? true;
+    running = true;
+    awaitingAt = null;
+    currentStep = startIdx;
     renderView();
     const setButtons = () => {
       const rb = container.querySelector('#ap-run-btn');
@@ -953,22 +1116,34 @@ export function render(container) {
     };
     setButtons();
 
-    for (let i = 0; i < STEPS.length; i++) {
+    for (let i = startIdx; i < STEPS.length; i++) {
       if (aborted) break;
       currentStep = i;
       renderView(); setButtons();
 
       const step = STEPS[i];
       const { system, user } = step.buildPrompt(params, outputs);
+      const adjustment = stepAdjustments[step.id];
+      const userContent = adjustment
+        ? `${user}\n\nTEACHER'S ADJUSTMENT (apply this to your output):\n${adjustment}`
+        : user;
 
       try {
         const text = await sendChat(
-          [{ role: 'user', content: user }],
+          [{ role: 'user', content: userContent }],
           { trackLabel: 'autopilotPipeline', systemPrompt: system, temperature: 0.6, maxTokens: 3072 }
         );
         if (aborted) break;
         outputs[step.id] = text;
         currentStep = i + 1;
+
+        // Checkpoint: hand control back to the teacher between steps
+        if (checkpoint && i < STEPS.length - 1) {
+          running = false;
+          awaitingAt = i + 1;
+          renderView();
+          return;
+        }
         renderView();
       } catch (err) {
         if (aborted) break;
@@ -979,6 +1154,7 @@ export function render(container) {
     }
 
     running = false;
+    awaitingAt = null;
     if (!aborted) showToast('Workflow complete!', 'success');
     renderView();
   }

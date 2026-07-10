@@ -6,7 +6,7 @@
  */
 
 import { Store, generateId } from '../state.js';
-import { sendChat } from '../api.js';
+import { sendChat, generateImage } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { escapeHtml } from '../utils/markdown.js';
@@ -871,6 +871,11 @@ export function render(container) {
           <textarea id="sm-ai-notes" class="sm-textarea" rows="4">${escapeHtml(generatedResult.teacherNotes)}</textarea>
         </div>
         ` : ''}
+        <div class="sm-field" style="margin-bottom:14px;">
+          <label class="sm-label">Visual Stimulus <span style="font-weight:400;opacity:0.6;">(optional — uses your Gemini key's image quota)</span></label>
+          <div id="sm-visual-out" style="margin-bottom:8px;"></div>
+          <button class="sm-close-btn" id="sm-visual-btn" type="button">&#127912; Generate visual stimulus</button>
+        </div>
         <div class="sm-btn-row">
           <button class="sm-save-btn" id="sm-ai-save-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -880,6 +885,25 @@ export function render(container) {
         </div>
       </div>
     `;
+
+    // Visual stimulus generation (opt-in — image quota)
+    const visualBtn = resultContainer.querySelector('#sm-visual-btn');
+    visualBtn?.addEventListener('click', async () => {
+      const out = resultContainer.querySelector('#sm-visual-out');
+      visualBtn.disabled = true;
+      out.innerHTML = '<div class="chat-typing" style="padding:4px 0;">Composing the visual…</div>';
+      try {
+        const title = resultContainer.querySelector('#sm-ai-title')?.value || generatedResult.title;
+        const dataUrl = await generateImage(`A visual stimulus image for a ${generatedResult.level || 'secondary'} ${generatedResult.subject || ''} ${generatedResult.type || 'discussion'} titled "${title}". Classroom-appropriate, thought-provoking, rich in observable detail for student analysis. No words or text in the image.`);
+        out.innerHTML = `
+          <img src="${dataUrl}" alt="Visual stimulus: ${escapeHtml(title)}" style="max-width:100%;border-radius:10px;border:1px solid var(--border-light,#e5e7eb);" />
+          <div style="margin-top:6px;"><a href="${dataUrl}" download="visual-stimulus.png" class="sm-close-btn" style="text-decoration:none;display:inline-block;">Download PNG</a></div>`;
+      } catch (err) {
+        out.innerHTML = `<p style="font-size:0.75rem;color:var(--danger,#ef4444);">${escapeHtml(err.message)}</p>`;
+      } finally {
+        visualBtn.disabled = false;
+      }
+    });
 
     // Wire save button for AI result
     const aiSaveBtn = resultContainer.querySelector('#sm-ai-save-btn');
