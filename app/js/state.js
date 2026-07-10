@@ -457,6 +457,15 @@ export const Store = {
     this._notify();
   },
 
+  /** Re-insert a previously deleted lesson (undo). Keeps its original id. */
+  restoreLesson(lesson) {
+    if (!lesson || !lesson.id) return;
+    if ((_state.lessons || []).some(l => l.id === lesson.id)) return;
+    _state.lessons = [...(_state.lessons || []), lesson];
+    this._persist();
+    this._notify();
+  },
+
   /* ══════════ Spatial Layouts ══════════ */
 
   getSavedLayouts() {

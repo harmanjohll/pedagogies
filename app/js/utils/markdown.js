@@ -21,6 +21,17 @@ export function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
+/** Strip active content from an AI-generated SVG so it can be inlined safely. */
+export function sanitizeSvg(svg) {
+  return String(svg ?? '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/(xlink:href|href)\s*=\s*"(?!#)[^"]*"/gi, '')
+    .replace(/(xlink:href|href)\s*=\s*'(?!#)[^']*'/gi, '');
+}
+
 /** Allow http(s), same-site relative paths, and fragments; neutralize the rest. */
 export function sanitizeUrl(url) {
   const trimmed = String(url ?? '').trim();

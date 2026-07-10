@@ -1779,3 +1779,579 @@ export function seedAssessmentIfNeeded() {
 
   localStorage.setItem(ASSESSMENT_SEED_KEY, '1');
 }
+
+/* ══════════════════════════════════════════════════════
+   Full-Lifecycle Exemplar Lessons — 9 subjects
+   ══════════════════════════════════════════════════════ */
+
+const EXEMPLAR_SEED_KEY = 'cocher_exemplars_seeded_v1';
+const DAY = 86400000;
+
+const LIFECYCLE_EXEMPLARS = [
+  /* ── 1. English — completed, with reflection ── */
+  {
+    title: 'Argumentative Writing — Social Media on Trial',
+    classMatch: ['English'],
+    status: 'completed',
+    createdDaysAgo: 21,
+    updatedDaysAgo: 19,
+    e21ccFocus: ['criticalThinking', 'communication'],
+    objectives: 'Students will construct PEEL paragraphs for an argumentative essay, anticipate and rebut counter-arguments, and evaluate the credibility of evidence used to support a claim.',
+    lessonHook: 'Last month a fake "MRT stabbing" video hit 2 million views before it was debunked. Who profits when outrage spreads faster than facts — and does social media do more harm than good?',
+    chat: {
+      user: 'Plan a Sec 4 English lesson on argumentative writing for O-Level Paper 1. Topic: "Social media does more harm than good." I want students to practise PEEL paragraphs and rebutting counter-arguments, with a hook about fake news.',
+      assistant: `## Argumentative Writing — Social Media on Trial (Sec 4 English)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. Construct a PEEL paragraph (Point, Evidence, Explanation, Link) supporting a clear stance
+2. Anticipate a counter-argument and write an effective rebuttal
+3. Evaluate whether a piece of evidence is credible, relevant, and sufficient
+
+### Lesson Flow (70 min)
+
+**Hook — The Viral Lie (10 min)**
+Show the (debunked) "MRT stabbing" video headline and its 2-million-view count next to the SPH fact-check. Ask: who gained from the spread? Students discuss in pairs, then vote on the motion: *social media does more harm than good*.
+
+**Deconstruct — What Makes an Argument Land? (15 min)**
+Display two sample paragraphs on the motion — one assertive but unsupported, one full PEEL. Students annotate: where is the evidence, where is the explanation, what links back to the stance? Draw out the PEEL frame on the board.
+
+**Build — PEEL Workshop (20 min)**
+In groups of 4, students draft one PEEL paragraph on an assigned angle (mental health, scams and misinformation, activism, small business reach). Evidence bank provided: IMDA digital literacy statistics, a Straits Times scam report, a case of crowdfunded charity. Groups must reject at least one weak piece of evidence and justify why.
+
+**Clash — Rebuttal Round (15 min)**
+Groups swap paragraphs and write the strongest possible counter-argument to the paragraph they receive, then return it. Original group drafts a two-sentence rebuttal using concession language ("While it is true that… the evidence suggests…").
+
+**Consolidate & Exit Ticket (10 min)**
+Class reconstructs the full essay skeleton: stance, 3 PEEL points, counter-argument + rebuttal, conclusion. Exit ticket: write one PEEL paragraph on a fresh motion under timed conditions (8 min).
+
+### Differentiation
+- **Support**: PEEL sentence starters and a pre-sorted evidence bank
+- **Extension**: require a hedged thesis that concedes scope ("in the hands of teenagers…")
+
+### E21CC Focus
+- **Critical thinking**: evaluating evidence credibility, constructing rebuttals
+- **Communication**: precise persuasive language, concession phrasing`
+    },
+    components: {
+      lisc: `**Learning Intentions**
+- We are learning to build persuasive arguments using the PEEL structure
+- We are learning to anticipate and rebut counter-arguments fairly
+
+**Success Criteria**
+- I can write a PEEL paragraph with credible, relevant evidence
+- I can express a counter-argument accurately before rebutting it
+- I can use concession language ("while it is true that…") in a rebuttal
+- I can explain why a piece of evidence is weak or unreliable
+
+**E21CC Alignment**: Critical Thinking (evaluating evidence), Communication (persuasive register)`,
+      timeline: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Hook: The Viral Lie | 0–10 min | Debunked video headline vs fact-check; pair talk + class vote | Direct Instruction |
+| Deconstruct | 10–25 min | Annotate strong vs weak sample paragraphs; derive PEEL frame | Direct Instruction |
+| PEEL Workshop | 25–45 min | Groups draft PEEL paragraph from evidence bank; reject one weak source | Collaborative Pods |
+| Rebuttal Round | 45–60 min | Swap paragraphs, write counter-arguments, draft rebuttals | Collaborative Pods |
+| Consolidate + Exit Ticket | 60–70 min | Essay skeleton on board; timed solo PEEL paragraph | Quiet Work |`,
+      exitTicket: `### Exit Ticket — Argumentative Writing
+
+1. Write ONE full PEEL paragraph on the motion: *"Homework should be replaced by project work."* (8 minutes, on your own)
+2. Underline your evidence and label it E. In one sentence, say why a sceptical reader should trust it.
+3. Confidence check: rate 1–5 how ready you feel to write a full argumentative essay, and name the ONE part of PEEL you most need to practise.`
+    },
+    reflection: {
+      whatWorked: 'The fake-news hook sparked genuine debate — students were still arguing about the MRT video at recess. The PEEL annotation task gave the middle band a concrete frame, and the rebuttal swap produced some of the best concession sentences I have seen from this class.',
+      whatToAdjust: 'The rebuttal round overran by 10 minutes because groups negotiated stances too long — pre-assign angles next time. Three weakest writers needed sentence starters earlier, not after they stalled.',
+      engagement: 4,
+      e21ccObservations: 'Strong critical thinking when evaluating the evidence bank; two groups rejected the crowdfunding anecdote as unrepresentative without prompting. Communication was uneven — dominant speakers crowded out quieter members during the clash round.',
+      freeform: 'Keep the same hook next run but pair it with the IMDA media literacy infographic. Timed exit paragraph was the right level of pressure — collect and use as the diagnostic for the next essay cycle.'
+    }
+  },
+
+  /* ── 2. Mathematics — ready + rehearsed ── */
+  {
+    title: 'Quadratic Functions — Modelling Projectile Motion',
+    classMatch: ['Mathematics'],
+    status: 'ready',
+    createdDaysAgo: 16,
+    updatedDaysAgo: 3,
+    rehearsedDaysAgo: 2,
+    e21ccFocus: ['criticalThinking', 'collaboration'],
+    objectives: 'Students will sketch quadratic graphs identifying the vertex, axis of symmetry and intercepts, model a real projectile path with a quadratic function, and interpret the maximum point in context.',
+    lessonHook: 'A free throw leaves the shooter’s hands at 2.1 m and drops through the hoop at 3.05 m. From just three tracked points of the ball’s flight, can we predict the entire path — and whether it was ever going to miss?',
+    chat: {
+      user: 'Plan a Sec 4 E-Math lesson on graphs of quadratic functions. I want a real-world modelling angle — basketball projectile motion — leading to sketching, completing the square for the vertex, and interpreting maximum points in context.',
+      assistant: `## Quadratic Functions — Modelling Projectile Motion (Sec 4 Mathematics)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. Sketch the graph of y = ax² + bx + c, identifying intercepts, vertex and axis of symmetry
+2. Express a quadratic in the form y = a(x − h)² + k and read off the maximum/minimum point
+3. Interpret the vertex and intercepts of a quadratic model in a real-world context
+
+### Lesson Flow (70 min)
+
+**Hook — The Free Throw (10 min)**
+Play a 20-second clip of a free throw, freeze-framed at three points with coordinates displayed (release, peak, hoop). Ask: is three points enough to know the whole flight? Students conjecture, then reveal that exactly one quadratic passes through three (non-collinear) points.
+
+**Concept Build — Anatomy of a Parabola (15 min)**
+Using y = −x² + 4x + 1 on the board: find y-intercept, use the formula x = −b/2a for the axis of symmetry, complete the square to confirm the vertex. Emphasise the link: same information, two routes.
+
+**Guided Practice — Fit the Flight (20 min)**
+Pairs receive the three tracked points of the free throw. Using a scaffolded sheet, they solve for a, b, c, then answer in context: What was the greatest height? Was the ball still rising at the hoop? Where would it have landed if it missed everything?
+
+**Gallery Compare (10 min)**
+Pairs post their sketches. Compare with a second data set (a "brick" that hits the front rim) — what changed in the model: a, the vertex, or both?
+
+**Consolidate & Exit Ticket (15 min)**
+Summarise: vertex form vs general form, and when each is fastest. Exit ticket: sketch y = 2(x − 3)² − 5, labelling vertex, axis of symmetry and y-intercept, and state one real quantity the vertex could represent in a projectile model.
+
+### Differentiation
+- **Support**: completing-the-square steps pre-structured; axis-of-symmetry formula card
+- **Extension**: derive the release angle question — what does the gradient at x = 0 tell you?
+
+### E21CC Focus
+- **Critical thinking**: linking algebraic features to physical meaning
+- **Collaboration**: paired modelling with shared accountability for the sketch`
+    },
+    components: {
+      lisc: `**Learning Intentions**
+- We are learning to sketch quadratic graphs and identify their key features
+- We are learning to use a quadratic function as a model of real motion
+
+**Success Criteria**
+- I can find the vertex by completing the square AND by x = −b/2a
+- I can sketch a parabola with labelled vertex, axis of symmetry and intercepts
+- I can interpret the maximum point of a model in context (greatest height)
+- I can explain what the coefficient a does to the shape of the path
+
+**E21CC Alignment**: Critical Thinking (representation-linking), Collaboration (paired modelling)`,
+      timeline: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Hook: The Free Throw | 0–10 min | Freeze-frame clip, three tracked points, conjecture | Direct Instruction |
+| Anatomy of a Parabola | 10–25 min | Worked example: intercepts, axis, completing the square | Direct Instruction |
+| Fit the Flight | 25–45 min | Pairs fit a quadratic through 3 points; answer in context | Collaborative Pods |
+| Gallery Compare | 45–55 min | Compare successful shot vs "brick" data set | Gallery Walk |
+| Consolidate + Exit Ticket | 55–70 min | Vertex form vs general form; solo sketch task | Quiet Work |`,
+      exitTicket: `### Exit Ticket — Quadratic Graphs
+
+1. Sketch y = 2(x − 3)² − 5. Label the vertex, the axis of symmetry, and the y-intercept.
+2. Is the vertex a maximum or a minimum? How do you know from the equation alone?
+3. In the free-throw model, what real quantity did the vertex represent? One sentence.
+4. Traffic light: green / amber / red on completing the square.`
+    }
+  },
+
+  /* ── 3. Physics — ready ── */
+  {
+    title: 'Series & Parallel Circuits — Why Chargers Overheat',
+    classMatch: ['Physics', 'Combined Science'],
+    status: 'ready',
+    createdDaysAgo: 14,
+    updatedDaysAgo: 12,
+    e21ccFocus: ['criticalThinking', 'collaboration'],
+    objectives: 'Students will state the current and potential difference rules for series and parallel circuits, calculate effective resistance, and apply P = IV to explain overheating in a household context.',
+    lessonHook: 'A $2 third-party phone charger melted overnight and scorched a bedside table in a Yishun flat. The physics of current, resistance and power can tell us exactly why the cheap one failed — and why the original did not.',
+    chat: {
+      user: 'Plan a Sec 4 Combined Science (Physics) lesson on series and parallel circuits. Include hands-on circuit building, current/voltage rules, effective resistance, and connect it to why cheap chargers overheat.',
+      assistant: `## Series & Parallel Circuits — Why Chargers Overheat (Sec 4 Combined Science, Physics)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. State that current is the same at every point in a series circuit and splits across branches in parallel
+2. State that p.d. is shared across components in series and equal across branches in parallel
+3. Calculate the effective resistance of resistors in series and in parallel (two resistors)
+4. Use P = IV to explain heating effects in a real household scenario
+
+### Lesson Flow (70 min)
+
+**Hook — The Melted Charger (8 min)**
+Photo of the scorched bedside table (news report). Ask: the wall socket supplies the same 230 V to every charger — so what could possibly differ inside a $2 charger? Collect hypotheses on the board; return to them at the end.
+
+**Predict-Build-Measure Stations (25 min)**
+Groups of 4 rotate through two station types with ammeters and voltmeters:
+- **Station S**: two lamps in series — predict, then measure current at three points and p.d. across each lamp
+- **Station P**: two lamps in parallel — predict, then measure branch currents and p.d. across each branch
+Record on a shared results grid. Rule: every member must take at least one reading.
+
+**Pattern Harvest (12 min)**
+Class compiles station data. Draw out the four rules (current/series, current/parallel, p.d./series, p.d./parallel). Brief direct instruction: effective resistance formulas, with one worked example each.
+
+**Apply — The Charger Autopsy (15 min)**
+Pairs work a structured problem: a charging cable with worn insulation drops its resistance; using P = IV and V = IR, calculate the new current and power dissipated, and explain where the heat goes. Link back to the hook hypotheses.
+
+**Consolidate & Exit Ticket (10 min)**
+Misconception check with mini-whiteboards ("current gets used up" — true or false, and prove it with today’s data). Exit ticket: two-resistor parallel calculation plus one sentence on why parallel wiring is used in homes.
+
+### Differentiation
+- **Support**: circuit diagrams pre-drawn on station cards; results grid part-filled
+- **Extension**: three-resistor mixed circuit; qualitative fuse-rating question
+
+### E21CC Focus
+- **Critical thinking**: reasoning from measured data to general rules
+- **Collaboration**: rotation roles — builder, reader, recorder, checker`
+    },
+    components: {
+      lisc: `**Learning Intentions**
+- We are learning how current and potential difference behave in series and parallel circuits
+- We are learning to use P = IV to explain electrical heating in daily life
+
+**Success Criteria**
+- I can predict and verify current at different points in a series circuit
+- I can show that p.d. across parallel branches is equal
+- I can calculate effective resistance for two resistors in series or parallel
+- I can explain, using P = IV, why a low-resistance fault causes overheating
+
+**E21CC Alignment**: Critical Thinking (data to rules), Collaboration (station roles)`,
+      timeline: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Hook: Melted Charger | 0–8 min | Scorched-table photo; hypotheses on board | Direct Instruction |
+| Predict-Build-Measure | 8–33 min | Series and parallel stations with meters | Stations |
+| Pattern Harvest | 33–45 min | Compile data, derive 4 rules, effective resistance | Direct Instruction |
+| Charger Autopsy | 45–60 min | Pairs: worn-cable calculation with P = IV | Collaborative Pods |
+| Consolidate + Exit Ticket | 60–70 min | Misconception check; solo calculation | Quiet Work |`,
+      exitTicket: `### Exit Ticket — Series & Parallel Circuits
+
+1. Two 4 Ω resistors are connected in parallel to a 12 V supply. Find the effective resistance and the total current drawn.
+2. True or false, with one line of evidence from today’s stations: "Current is used up as it passes through each lamp."
+3. In one sentence: why are the lights in your home wired in parallel, not series?`
+    }
+  },
+
+  /* ── 4. Chemistry — completed, with reflection ── */
+  {
+    title: 'Rate of Reaction — The Disappearing Cross',
+    classMatch: ['Pure Chemistry', 'Chemistry'],
+    status: 'completed',
+    createdDaysAgo: 18,
+    updatedDaysAgo: 15,
+    e21ccFocus: ['criticalThinking', 'selfRegulation'],
+    objectives: 'Students will describe the effect of concentration on reaction rate using collision theory, carry out the sodium thiosulfate and acid investigation safely, and interpret rate graphs from experimental data.',
+    lessonHook: 'Glow sticks last hours longer in the freezer — same chemicals, different speed. What actually controls how fast a reaction goes, and can we measure it with nothing but a paper cross and a stopwatch?',
+    chat: {
+      user: 'Plan a Sec 4 Pure Chemistry practical lesson on rate of reaction using the sodium thiosulfate disappearing cross investigation. Focus on the effect of concentration, collision theory explanations, and graphing rate data.',
+      assistant: `## Rate of Reaction — The Disappearing Cross (Sec 4 Pure Chemistry)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. Describe how concentration affects rate of reaction in terms of collision frequency
+2. Carry out the Na₂S₂O₃ + HCl investigation safely and record timing data accurately
+3. Plot 1/time against concentration and interpret the graph as a rate proxy
+
+### Lesson Flow (70 min double, lab)
+
+**Hook — Glow Sticks in the Freezer (8 min)**
+Two glow sticks snapped at the start of class: one into iced water, one into warm water. Park them visibly. Ask: same chemicals — what will differ by the end of the lesson, and why? Introduce today’s question: what controls reaction speed?
+
+**Briefing & Safety (10 min)**
+Demonstrate the disappearing cross setup: flask on printed cross, add HCl to thiosulfate, time until the cross vanishes. Safety points: SO₂ produced in small amounts — lab ventilation on, flasks stoppered for disposal, goggles throughout. Show how to read the measuring cylinder at eye level.
+
+**Investigation — Concentration Series (30 min)**
+Groups of 3 run five dilutions of thiosulfate (40, 32, 24, 16, 8 cm³ topped up to 50 cm³ with water), constant acid volume. Each member rotates roles: measurer, timer, recorder. Groups tabulate time and compute 1/time.
+
+**Graph & Explain (15 min)**
+Groups plot 1/time vs concentration on provided grids. Discussion: why is 1/time a fair stand-in for rate? Collision theory paragraph built collectively on the board: more particles per cm³ → more frequent effective collisions → greater rate.
+
+**Consolidate & Exit Ticket (7 min)**
+Return to the glow sticks — students explain the difference using collision theory (energy of collisions this time). Exit ticket: sketch the expected graph for doubling temperature and justify in two sentences.
+
+### Differentiation
+- **Support**: pre-drawn results table and graph axes; dilution volumes given
+- **Extension**: predict and defend the effect of halving acid concentration instead
+
+### E21CC Focus
+- **Critical thinking**: justifying 1/time as a rate proxy
+- **Self-regulation**: role rotation and lab checklist self-monitoring`
+    },
+    components: {
+      lisc: `**Learning Intentions**
+- We are learning how concentration affects the rate of a reaction
+- We are learning to collect and represent rate data from a timed investigation
+
+**Success Criteria**
+- I can carry out the disappearing cross procedure safely and consistently
+- I can compute 1/time and explain why it stands in for rate
+- I can plot and interpret a rate–concentration graph
+- I can explain the trend using collision theory (frequency of effective collisions)
+
+**E21CC Alignment**: Critical Thinking (proxy reasoning), Self-Regulation (lab checklist, role rotation)`,
+      timeline: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Hook: Glow Sticks | 0–8 min | Iced vs warm glow sticks parked; framing question | Direct Instruction |
+| Briefing & Safety | 8–18 min | Demo setup, SO₂ precautions, meniscus reading | Direct Instruction |
+| Concentration Series | 18–48 min | Groups run 5 dilutions, rotate roles, tabulate | Stations (lab benches) |
+| Graph & Explain | 48–63 min | Plot 1/time vs concentration; collision theory build | Collaborative Pods |
+| Consolidate + Exit Ticket | 63–70 min | Glow stick explanation; temperature prediction | Quiet Work |`,
+      exitTicket: `### Exit Ticket — Rate of Reaction
+
+1. Sketch the 1/time vs concentration graph your group obtained. Label the axes with units.
+2. In two sentences, use collision theory to explain the shape of your graph.
+3. Prediction: the same experiment is run 10 °C warmer. Sketch the new line on the same axes and justify it in one sentence.`
+    },
+    reflection: {
+      whatWorked: 'The disappearing cross ran cleanly — timings were tight across groups (28–90 s), which made the 1/time vs concentration graph genuinely convincing. Pre-measured thiosulfate volumes saved a good 10 minutes, and the glow stick bookend gave the lesson a satisfying full-circle close.',
+      whatToAdjust: 'Two groups misread the measuring cylinder — add a 2-minute meniscus demo before release next time. Extension groups finished early; have the temperature variation prepared as a ready-to-go second station rather than a verbal prompt.',
+      engagement: 5,
+      e21ccObservations: 'Self-regulation clearly improving: four of six groups used the lab checklist unprompted and rotated roles without reminders. Strong reasoning when predicting the effect of halving concentration before testing — several students framed it in collisions per second without prompting.',
+      freeform: 'SO₂ smell noticeable by period end despite small volumes — book Lab 2 with the newer fume extraction next run. The 1/time discussion is worth a full 5 minutes; do not rush it.'
+    }
+  },
+
+  /* ── 5. Biology — draft ── */
+  {
+    title: 'Enzymes — Why Pineapple Ruins Jelly',
+    classMatch: ['Biology', 'Combined Science'],
+    status: 'draft',
+    createdDaysAgo: 6,
+    updatedDaysAgo: 5,
+    e21ccFocus: ['criticalThinking'],
+    objectives: 'Students will describe the lock-and-key model of enzyme action, explain the effect of temperature and pH on enzyme activity, and design a fair test using fresh vs canned pineapple on gelatine.',
+    lessonHook: 'Add fresh pineapple to jelly and it never sets — but canned pineapple works fine. One enzyme, bromelain, is quietly eating the gelatine. Why does the canned version lose its power, and what does that tell us about every enzyme in your body?',
+    chat: {
+      user: 'Plan a Sec 4 Biology lesson introducing enzymes for Combined Science. Cover the lock-and-key model and the effect of temperature and pH. I want a fresh-vs-canned pineapple jelly investigation as the anchor, and I want students designing the fair test themselves.',
+      assistant: `## Enzymes — Why Pineapple Ruins Jelly (Sec 4 Biology)
+
+### Learning Objectives
+1. Describe enzymes as biological catalysts using the lock-and-key model
+2. Explain the effect of temperature and pH on enzyme activity (including denaturation)
+3. Design a fair test with clearly identified variables
+
+### Lesson Flow (70 min)
+**Hook — The Jelly That Won't Set (10 min)** — Show two jelly cups: one with fresh pineapple (liquid), one with canned (set). Students propose explanations in pairs.
+
+**Model Building (15 min)** — Introduce bromelain as an enzyme; build the lock-and-key model with a physical cut-out substrate. Draw the labelled diagram together.
+
+**Design the Test (20 min)** — Groups design a fair test: fresh vs canned vs boiled-fresh pineapple on gelatine. They identify independent, dependent, and controlled variables. (This is the E21CC critical-thinking core — do not hand them the method.)
+
+**Predict & Explain (15 min)** — Why does boiling the fresh pineapple make the jelly set again? Link to denaturation. Extend to pH with a stomach-enzyme example.
+
+**Exit Ticket (10 min)** — Label a denaturation diagram; predict one more variable.
+
+*Note: this is still a draft — the fair-test scaffold needs a worksheet, and I want to add a temperature-gradient extension before teaching it.*`
+    },
+    components: {
+      lisc: `**Learning Intentions**
+- We are learning how enzymes speed up reactions using the lock-and-key model
+- We are learning how temperature and pH change enzyme activity
+
+**Success Criteria**
+- I can explain why fresh pineapple stops jelly setting but boiled pineapple does not
+- I can identify the independent, dependent and controlled variables in our test
+- I can use the word "denatured" correctly to describe a heated enzyme`
+    }
+  },
+];
+
+/* Turn a compact exemplar spec into the Store lesson shape. */
+function buildExemplarLesson(ex, classes, now) {
+  const cls = classes.find(c => (ex.classMatch || []).some(m =>
+    (c.subject || '').toLowerCase().includes(m.toLowerCase()))) || null;
+  const chatHistory = ex.chat ? [
+    { role: 'user', content: ex.chat.user },
+    { role: 'assistant', content: ex.chat.assistant }
+  ] : [];
+  // Component entries follow the planner shape { content, meta, updatedAt }
+  const components = {};
+  Object.entries(ex.components || {}).forEach(([k, content]) => {
+    components[k] = { content, meta: '', updatedAt: now - (ex.updatedDaysAgo || 1) * DAY };
+  });
+  return {
+    title: ex.title,
+    classId: cls ? cls.id : null,
+    status: ex.status || 'draft',
+    chatHistory,
+    plan: ex.chat ? ex.chat.assistant : '',
+    objectives: ex.objectives || '',
+    lessonHook: ex.lessonHook || '',
+    e21ccFocus: ex.e21ccFocus || [],
+    components,
+    reflection: ex.reflection || '',
+    rehearsedAt: ex.rehearsedAt ? now - ex.rehearsedAt * DAY : undefined,
+    isExemplar: true,
+    createdAt: now - (ex.createdDaysAgo || 7) * DAY,
+    updatedAt: now - (ex.updatedDaysAgo || 5) * DAY
+  };
+}
+
+const EXEMPLAR_REHEARSED = new Set([
+  'Quadratic Functions — Modelling Projectile Motion',
+  'Series & Parallel Circuits — Why Chargers Overheat'
+]);
+
+export function seedExemplarsIfNeeded() {
+  if (localStorage.getItem(EXEMPLAR_SEED_KEY)) return;
+  const classes = Store.getClasses();
+  if (classes.length === 0) return; // classes must exist first
+  const now = Date.now();
+  const existing = Store.get('lessons') || [];
+  LIFECYCLE_EXEMPLARS.forEach(ex => {
+    if (existing.some(l => l.title === ex.title)) return;
+    const spec = { ...ex };
+    if (EXEMPLAR_REHEARSED.has(ex.title)) spec.rehearsedAt = 4;
+    const created = Store.addLesson(buildExemplarLesson(spec, classes, now));
+    // addLesson forces status 'draft' and reflection '' — apply the rest
+    Store.updateLesson(created.id, {
+      status: spec.status || 'draft',
+      components: created.components,
+      reflection: spec.reflection || '',
+      rehearsedAt: spec.rehearsedAt ? now - spec.rehearsedAt * DAY : undefined,
+      isExemplar: true,
+      lessonHook: spec.lessonHook || '',
+      createdAt: now - (spec.createdDaysAgo || 7) * DAY,
+      updatedAt: now - (spec.updatedDaysAgo || 5) * DAY
+    });
+  });
+  localStorage.setItem(EXEMPLAR_SEED_KEY, '1');
+}
+
+/* ══════════════════════════════════════════════════════
+   Portal Demo Seeds — KB, PD, Stimulus, Sources, CCE,
+   Admin, Spatial layouts (for demo/testing)
+   ══════════════════════════════════════════════════════ */
+
+const PORTAL_SEED_KEY = 'cocher_portal_demos_seeded_v1';
+
+export function seedPortalDemosIfNeeded() {
+  if (localStorage.getItem(PORTAL_SEED_KEY)) return;
+  const now = Date.now();
+  const classes = Store.getClasses();
+  const firstClassId = classes[0]?.id || null;
+
+  /* ── Knowledge Base uploads (content → IndexedDB via Store.set) ── */
+  if ((Store.get('knowledgeUploads') || []).length === 0) {
+    const uploads = [
+      {
+        id: generateId(), title: 'Sec 4 Chemistry — Scheme of Work (Term 3)',
+        category: 'Scheme of Work', subject: 'Pure Chemistry', classId: firstClassId,
+        content: `SCHEME OF WORK — SEC 4 PURE CHEMISTRY (TERM 3)\n\nUnit: Chemical Bonding & the Mole\nDuration: 6 weeks\n\nWeek 1-2 — Ionic & Covalent Bonding: electron transfer/sharing, dot-and-cross diagrams, giant vs simple structures. E21CC: Critical Thinking (structure-property reasoning).\nWeek 3 — Metallic bonding & properties; comparison table across bonding types.\nWeek 4-5 — The Mole Concept: Avogadro constant, molar mass, mole calculations, reacting masses. Common misconception: confusing moles with mass.\nWeek 6 — Consolidation, practical (titration link), Topical Test.\n\nAssessment: 1 formative exit-quiz per week, 1 practical write-up (titration), Topical Test (Bonding + Mole).\nDifferentiation: worked-example scaffolds for weaker students; extension on lattice energy trends for stronger.`,
+        notes: 'Sample SoW — auto-attaches as planner context.', isSample: true, createdAt: now - 20 * DAY
+      },
+      {
+        id: generateId(), title: 'School Assessment Policy 2026 (Extract)',
+        category: 'Exam Paper / Assessment', subject: '', classId: null,
+        content: `ASSESSMENT POLICY 2026 (EXTRACT)\n\n1. Balance of Assessment: Every subject maintains a mix of Assessment for/as/of Learning. AfL (formative) should occur every lesson; AoL (summative) at most twice per term.\n2. Feedback: Written feedback on major tasks within 2 weeks; feedback must be actionable ("next step" comment), not just a grade.\n3. Weighting: Continual Assessment 40%, Semestral Assessment 60% for G3/O-Level streams.\n4. Late/Absent: MC-covered absences → medical exemption, weighted from remaining components.\n5. E21CC Reporting: Each report cycle includes a holistic comment referencing at least two E21CC domains observed.`,
+        notes: 'Sample policy document.', isSample: true, createdAt: now - 18 * DAY
+      },
+      {
+        id: generateId(), title: 'Pedagogy Note — Productive Failure (Kapur)',
+        category: 'Curriculum / Syllabus', subject: '', classId: null,
+        content: `PRODUCTIVE FAILURE — QUICK REFERENCE\n\nCore idea (Manu Kapur, NIE): let students grapple with a complex problem BEFORE instruction. The struggle activates prior knowledge and primes them to understand the expert solution more deeply.\n\nDesign pattern:\n1. Generation & Exploration — students invent multiple solutions to a hard problem (no teaching yet). Expect failure; that is the point.\n2. Consolidation — teacher contrasts student attempts with the canonical method, naming why the expert solution works.\n\nWhen it works best: concept-rich topics (gradient, density, mole, rate). Avoid for pure procedural fluency.\nE21CC: strong Critical & Inventive Thinking; builds Self-Regulation through struggle.`,
+        notes: 'Sample pedagogy reference.', isSample: true, createdAt: now - 15 * DAY
+      }
+    ];
+    Store.set('knowledgeUploads', uploads);
+  }
+
+  /* ── PD folder (My Learning) ── */
+  const pdFolders = Store.get('pdFolders') || [];
+  if (!pdFolders.some(f => f.name && f.name.includes('Assessment Literacy'))) {
+    pdFolders.push({
+      id: generateId(), name: 'Assessment Literacy Workshop 2026', category: 'workshop',
+      description: 'MOE-run workshop on designing quality formative assessment and feedback.',
+      tags: ['assessment', 'AfL', 'feedback'], isSample: true,
+      materials: [
+        { id: generateId(), title: 'Workshop Handout — Feedback that Moves Learning', type: 'note',
+          content: 'Key takeaway: the best feedback answers three questions for the student — Where am I going? How am I going? Where to next? (Hattie & Timperley). Comment-only marking outperforms grades+comments because grades short-circuit the "where to next".', createdAt: now - 12 * DAY },
+        { id: generateId(), title: 'My Action Plan', type: 'reflection',
+          content: 'Trialling comment-only marking on the next two Chemistry practicals for 4A. Will compare re-submission quality against the graded baseline from Term 2.', createdAt: now - 11 * DAY }
+      ],
+      createdAt: now - 12 * DAY, updatedAt: now - 11 * DAY
+    });
+    Store.set('pdFolders', pdFolders);
+  }
+
+  /* ── Stimulus library ── */
+  if ((Store.get('stimulusLibrary') || []).length === 0) {
+    Store.set('stimulusLibrary', [
+      { id: generateId(), title: 'The Last Kampong', subject: 'English', level: 'Sec 3', type: 'comprehension',
+        content: 'Comprehension passage (adapted): a first-person recollection of Kampong Lorong Buangkok, Singapore’s last surviving village, contrasting communal kampong life with the anonymity of HDB living. Themes: belonging, modernity, loss.',
+        questions: '1. Identify two details that convey the sense of community.\n2. Explain the writer’s attitude toward modern housing (quote + explain).\n3. Vocabulary in context: "anonymity".', teacherNotes: 'Pairs well with a National Education discussion.', wordCount: 42, createdAt: now - 14 * DAY, source: 'sample', isSample: true },
+      { id: generateId(), title: 'Should Cash Be Abolished?', subject: 'General Paper', level: 'JC 1', type: 'scenario',
+        content: 'Scenario stimulus: Singapore’s rapid shift to PayNow/cashless payments. Consider the elderly hawker who cannot use QR codes, the privacy trade-offs of digital trails, and financial inclusion.',
+        questions: '1. Whose interests are served by going cashless?\n2. What is lost when cash disappears?', teacherNotes: 'Four-corners debate works well here.', wordCount: 38, createdAt: now - 10 * DAY, source: 'sample', isSample: true },
+      { id: generateId(), title: 'The Bukit Timah Landslide (Case Study)', subject: 'Geography', level: 'Sec 4', type: 'case study',
+        content: 'Case study stimulus: a hypothetical slope failure after intense monsoon rainfall near Bukit Timah. Includes rainfall data, slope angle, vegetation cover, and drainage notes for students to analyse causes and mitigation.',
+        questions: '1. Identify the physical and human factors contributing to the landslide.\n2. Suggest two mitigation strategies and evaluate one.', teacherNotes: 'Links to the water cycle and urban planning units.', wordCount: 45, createdAt: now - 7 * DAY, source: 'sample', isSample: true }
+    ]);
+  }
+
+  /* ── Source Analysis library ── */
+  if ((Store.get('sourceLibrary') || []).length === 0) {
+    Store.set('sourceLibrary', [
+      { id: generateId(), title: 'Singapore’s Separation from Malaysia, 1965', subject: 'History', topic: 'Road to Independence', level: 'Sec 4', framework: 'sbq', source: 'sample', isSample: true,
+        sources: [
+          { title: 'Excerpt from a 1965 newspaper editorial', type: 'Written', provenance: 'The Straits Times, 10 August 1965', content: 'An editorial expressing shock and uncertainty at the announcement of separation, urging calm and unity among all races.' },
+          { title: 'Photograph of Lee Kuan Yew’s press conference', type: 'Visual', provenance: 'Press photo, 9 August 1965', content: 'A widely circulated image of an emotional press conference announcing separation.' }
+        ],
+        questions: [
+          { question: 'What can you infer from Source A about public sentiment in August 1965?', type: 'Inference', marks: 5, skill: 'Inference', e21cc: 'CGC' },
+          { question: 'How far do Sources A and B agree about the mood of the nation? Explain.', type: 'Comparison', marks: 6, skill: 'Comparison', e21cc: 'CAIT' }
+        ], createdAt: new Date(now - 16 * DAY).toISOString() },
+      { id: generateId(), title: 'Climate Change & Small States', subject: 'Social Studies', topic: 'Living in a Globalised World', level: 'Sec 3', framework: 'seq', source: 'sample', isSample: true,
+        sources: [
+          { title: 'Statement by a Pacific island leader at COP', type: 'Written', provenance: 'UN Climate Summit address', content: 'A plea from a low-lying island state on the existential threat of sea-level rise, calling for shared responsibility.' },
+          { title: 'Line graph of global mean sea level 1990–2025', type: 'Data', provenance: 'Satellite altimetry dataset', content: 'A rising trend line showing accelerating sea-level rise over three decades.' }
+        ],
+        questions: [
+          { question: 'Assess the reliability of Source A as evidence of the impact of climate change.', type: 'Reliability', marks: 6, skill: 'Reliability', e21cc: 'CAIT' },
+          { question: 'To what extent should developed nations bear greater responsibility? Justify.', type: 'Assertion', marks: 8, skill: 'Evaluation', e21cc: 'CGC' }
+        ], createdAt: new Date(now - 9 * DAY).toISOString() }
+    ]);
+  }
+
+  /* ── CCE saved discussions ── */
+  try {
+    const cceKey = 'cocher_cce_discussions';
+    const existingCce = JSON.parse(localStorage.getItem(cceKey) || '[]');
+    if (existingCce.length === 0) {
+      localStorage.setItem(cceKey, JSON.stringify([
+        { id: generateId(), title: 'Handling Online Rumours Responsibly', contentArea: 'CW', bigIdea: 'Choices', values: 'Responsibility, Integrity', level: 'Sec 2', format: 'circle', isSample: true,
+          content: '## Cyber Wellness Discussion — Online Rumours\n\n**Hook:** A classmate’s edited photo is spreading in a class chat.\n\n**Circle questions:**\n1. What would you feel if it were you?\n2. What is the difference between forwarding and creating?\n3. What is one responsible action you can take in the next 5 minutes?\n\n**Close:** Draft a class agreement on sharing.', createdAt: now - 13 * DAY },
+        { id: generateId(), title: 'Respecting Difference — Race & Religion', contentArea: 'NE', bigIdea: 'Relationships', values: 'Respect, Harmony', level: 'Sec 3', format: 'four corners', isSample: true,
+          content: '## National Education — Living with Difference\n\n**Provocation:** Should void-deck spaces be used for religious events?\n\n**Four corners:** Strongly agree / Agree / Disagree / Strongly disagree — students justify and may move as they hear others.\n\n**Debrief:** name one perspective that shifted your thinking. Connect to Singapore’s multiracial compact.', createdAt: now - 6 * DAY }
+      ]));
+    }
+  } catch { /* ignore */ }
+
+  /* ── Admin events ── */
+  if ((Store.get('adminEvents') || []).length === 0) {
+    const mkTask = (key, status, data) => ({ key, enabled: true, status, approvalStatus: status === 'completed' ? 'approved' : 'not_started', data: data || {} });
+    Store.set('adminEvents', [
+      {
+        id: generateId(), name: 'Sec 3 Geography Fieldwork — Sungei Buloh', date: new Date(now - 4 * DAY).toISOString().slice(0, 10),
+        eventType: 'Learning Journey', status: 'completed', isSample: true,
+        tasks: [
+          mkTask('rams', 'completed', { activity_desc: 'Guided wetland fieldwork collecting abiotic data and observing mangrove adaptations.', venue: 'Sungei Buloh Wetland Reserve', hazards: 'Uneven boardwalk, heat, insect bites, water edges', mitigations: 'Buddy system, hydration breaks every 30 min, first-aid kit, staff:student 1:15', emergency_plan: 'Nearest hospital: Khoo Teck Puat. Assembly point at visitor centre. Teacher-IC carries emergency contacts.', risk_level: 'Medium' }),
+          mkTask('bus_booking', 'completed', { teacher_ic: 'Mr Tan', pickup: '7:30am school gate', return: '1:00pm', pax: '80' }),
+          mkTask('student_list', 'completed', { teacher_ic: 'Mr Tan' }),
+          mkTask('parent_notification', 'completed', {}),
+          mkTask('aor', 'completed', { amount: '$640 (bus + entry)' })
+        ], createdAt: now - 25 * DAY, updatedAt: now - 4 * DAY
+      },
+      {
+        id: generateId(), name: 'Sec 2 Cohort Camp 2026', date: new Date(now + 30 * DAY).toISOString().slice(0, 10),
+        eventType: 'Camp', status: 'in_progress', isSample: true,
+        tasks: [
+          mkTask('rams', 'completed', { activity_desc: '3-day residential team-building camp.', venue: 'Outward Bound Singapore, Pulau Ubin', hazards: 'Water activities, high elements, weather', mitigations: 'OBS-certified instructors, PFDs, weather monitoring', emergency_plan: 'OBS on-site medic + evacuation protocol.', risk_level: 'High' }),
+          mkTask('venue_booking', 'completed', {}),
+          mkTask('bus_booking', 'pending', {}),
+          mkTask('parent_notification', 'pending', {}),
+          mkTask('aor', 'pending', {})
+        ], createdAt: now - 8 * DAY, updatedAt: now - 2 * DAY
+      }
+    ]);
+  }
+
+  /* ── Spatial saved layouts ── */
+  if ((Store.getSavedLayouts() || []).length === 0) {
+    Store.saveLayout({ name: 'Discussion Pods (32)', preset: 'pods', studentCount: 32, wallState: 'closed', isSample: true,
+      items: [
+        { id: 'teacher_desk', x: 340, y: 30, r: 0 },
+        { id: 'group_table', x: 120, y: 160, r: 0 }, { id: 'group_table', x: 360, y: 160, r: 0 }, { id: 'group_table', x: 600, y: 160, r: 0 },
+        { id: 'group_table', x: 120, y: 340, r: 0 }, { id: 'group_table', x: 360, y: 340, r: 0 }, { id: 'group_table', x: 600, y: 340, r: 0 }
+      ] });
+    Store.saveLayout({ name: 'Exam Rows (single)', preset: 'exam', studentCount: 30, wallState: 'closed', isSample: true,
+      items: Array.from({ length: 30 }, (_, i) => ({ id: 'desk_rect', x: 80 + (i % 6) * 110, y: 120 + Math.floor(i / 6) * 90, r: 0 })) });
+  }
+
+  localStorage.setItem(PORTAL_SEED_KEY, '1');
+}

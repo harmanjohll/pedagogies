@@ -8,7 +8,7 @@ import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
 import { renderLogin, isLoggedIn } from './components/login.js';
-import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedAssessmentIfNeeded, seedCCAIfNeeded } from './seed-data.js';
+import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedAssessmentIfNeeded, seedCCAIfNeeded, seedExemplarsIfNeeded, seedPortalDemosIfNeeded } from './seed-data.js';
 
 /* ── Views ── */
 import { render as renderDashboard } from './views/dashboard.js';
@@ -35,8 +35,12 @@ import { render as renderStaveNotation } from './views/stave-notation.js';
 import { render as renderDesignProcess } from './views/design-process.js';
 import { render as renderKitchenLayout } from './views/kitchen-layout.js';
 import { render as renderSubjectTools } from './views/subject-tools.js';
+import { render as renderReportComments } from './views/report-comments.js';
+import { render as renderQuestionBank } from './views/question-bank.js';
+import { render as renderReliefKit } from './views/relief-kit.js';
 import { initGlobalSearch, openSearch } from './components/unified-search.js';
 import { initOnboarding } from './components/onboarding.js';
+import { maybeShowWhatsNew } from './components/whats-new.js';
 import { initKeyboardShortcuts } from './components/keyboard-shortcuts.js';
 
 function init() {
@@ -49,6 +53,8 @@ function init() {
   seedLessonsIfNeeded();
   seedAssessmentIfNeeded();
   seedCCAIfNeeded();
+  seedExemplarsIfNeeded();
+  seedPortalDemosIfNeeded();
 
   app.innerHTML = `
     <aside class="sidebar" id="sidebar"></aside>
@@ -123,6 +129,9 @@ function init() {
   registerRoute('/design-process', renderDesignProcess);
   registerRoute('/kitchen-layout', renderKitchenLayout);
   registerRoute('/subject-tools', renderSubjectTools);
+  registerRoute('/report-comments', renderReportComments);
+  registerRoute('/question-bank', renderQuestionBank);
+  registerRoute('/relief-kit', renderReliefKit);
   registerRoute('/settings', renderSettings);
 
   // Start router
@@ -136,6 +145,9 @@ function init() {
 
   // Onboarding for first-time users
   initOnboarding();
+
+  // One-time "what's new" for returning users after a version bump
+  maybeShowWhatsNew();
 
   // Show API key reminder banner if key was deferred
   if (isApiKeyMissing()) {

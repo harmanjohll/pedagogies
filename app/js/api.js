@@ -112,7 +112,9 @@ export function normalizeModel(id) {
 export async function sendChat(messages, options = {}) {
   trackEvent('ai', 'generate', options.trackLabel || 'chat', options.trackDetail || '');
   const apiKey = Store.get('apiKey');
-  const model = normalizeModel(Store.get('model') || 'gemini-2.5-flash');
+  // options.model lets a caller pick a heavier model for one call
+  // (e.g. complex simulation builds) without changing the app default
+  const model = normalizeModel(options.model || Store.get('model') || 'gemini-2.5-flash');
 
   if (!apiKey) {
     throw new Error('No API key configured. Please add your Gemini API key in Settings.');
@@ -1152,6 +1154,52 @@ Create content that is culturally relevant to Singapore students. Handle sensiti
     temperature: 0.7,
     maxTokens: 3072
   });
+}
+
+/* ── Image generation (Gemini image model, same key) ──
+ * Returns a data: URL. Image calls burn free-tier quota quickly, so
+ * callers keep this opt-in. Fails with a clear message when the key or
+ * tier has no image access. */
+export async function generateImage(prompt, options = {}) {
+  trackEvent('ai', 'generate', 'image', options.trackDetail || '');
+  const apiKey = Store.get('apiKey');
+  if (!apiKey) {
+    throw new Error('No API key configured. Please add your Gemini API key in Settings.');
+  }
+  const model = 'gemini-2.5-flash-image';
+  const res = await fetchWithRetry(`${ENDPOINT}/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+  });
+  if (!res.ok) {
+    if (res.status === 404 || res.status === 400) {
+      throw new Error('Image generation is not available on this API key or model tier.');
+    }
+    const err = await res.json().catch(() => ({}));
+    throw new Error(friendlyApiError(res.status, err?.error?.message || `API error ${res.status}`));
+  }
+  const data = await res.json();
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const img = parts.find(p => p.inlineData?.data);
+  if (!img) throw new Error('No image returned — the model may have declined this prompt.');
+  return `data:${img.inlineData.mimeType || 'image/png'};base64,${img.inlineData.data}`;
+}
+
+/* ── SVG concept diagrams (text model — free, printable, crisp) ── */
+export async function generateSVGDiagram(description) {
+  const text = await sendChat(
+    [{ role: 'user', content: `Create a labelled concept diagram for: ${description}` }],
+    {
+      trackLabel: 'svgDiagram',
+      systemPrompt: 'You produce ONE self-contained SVG diagram for classroom use. Output ONLY the <svg>…</svg> element: viewBox="0 0 800 500", white or transparent background, clear boxes/arrows, legible sans-serif labels 14-18px, accessible colour contrast, no scripts, no external references, no images. Educationally accurate.',
+      temperature: 0.4,
+      maxTokens: 6000
+    }
+  );
+  const m = text.match(/<svg[\s\S]*<\/svg>/i);
+  if (!m) throw new Error('No diagram returned — try rephrasing the topic.');
+  return m[0];
 }
 
 export function validateApiKey(key) {

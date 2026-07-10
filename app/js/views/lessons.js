@@ -7,7 +7,7 @@
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { confirmDialog } from '../components/modals.js';
-import { showToast } from '../components/toast.js';
+import { showToast, showActionToast } from '../components/toast.js';
 import { processLatex } from '../utils/latex.js';
 import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
@@ -19,8 +19,22 @@ const STATUS_MAP = {
   completed: { label: 'Completed', badge: 'badge-blue' }
 };
 
-const E21CC_LABELS = { cait: 'CAIT', cci: 'CCI', cgc: 'CGC' };
-const E21CC_BADGE = { cait: 'badge-blue', cci: 'badge-green', cgc: 'badge-amber' };
+const E21CC_LABELS = {
+  // Legacy 3-domain keys
+  cait: 'CAIT', cci: 'CCI', cgc: 'CGC',
+  // Current 6-dimension keys
+  criticalThinking: 'Critical Thinking', creativeThinking: 'Creative Thinking',
+  communication: 'Communication', collaboration: 'Collaboration',
+  socialConnectedness: 'Social Connectedness', selfRegulation: 'Self-Regulation'
+};
+const E21CC_BADGE = {
+  cait: 'badge-blue', cci: 'badge-green', cgc: 'badge-amber',
+  criticalThinking: 'badge-blue', creativeThinking: 'badge-violet',
+  communication: 'badge-green', collaboration: 'badge-amber',
+  socialConnectedness: 'badge-rose', selfRegulation: 'badge-gray'
+};
+const e21Label = (f) => E21CC_LABELS[f] || f;
+const e21Badge = (f) => E21CC_BADGE[f] || 'badge-gray';
 
 function timeAgo(ts) {
   const d = Date.now() - ts, m = Math.floor(d / 60000);
@@ -208,6 +222,7 @@ export function renderList(container) {
             <button class="tab" data-filter="draft">Draft (${lessons.filter(l => l.status === 'draft').length})</button>
             <button class="tab" data-filter="ready">Ready (${lessons.filter(l => l.status === 'ready').length})</button>
             <button class="tab" data-filter="completed">Done (${lessons.filter(l => l.status === 'completed').length})</button>
+            ${lessons.some(l => l.isExemplar) ? `<button class="tab" data-filter="exemplar">&#9733; Exemplars (${lessons.filter(l => l.isExemplar).length})</button>` : ''}
           </div>
           <div id="lessons-grid" class="stagger" style="display:flex;flex-direction:column;gap:var(--sp-4);"></div>
         `}
@@ -256,7 +271,10 @@ export function renderList(container) {
       container.querySelectorAll('[data-filter]').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       const f = tab.dataset.filter;
-      renderCards(grid, f === 'all' ? lessons : lessons.filter(l => l.status === f), classMap);
+      const subset = f === 'all' ? lessons
+        : f === 'exemplar' ? lessons.filter(l => l.isExemplar)
+        : lessons.filter(l => l.status === f);
+      renderCards(grid, subset, classMap);
     });
   });
 
@@ -375,8 +393,9 @@ function renderCards(grid, lessons, classMap) {
             <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-1);flex-wrap:wrap;">
               <span style="color:var(--ink-faint);cursor:grab;margin-right:2px;" title="Drag to reorder">&#9776;</span>
               <span class="badge ${s.badge} badge-dot">${s.label}</span>
+              ${l.isExemplar ? `<span class="badge badge-violet" title="Sample lesson you can explore or duplicate">&#9733; Exemplar</span>` : ''}
               ${cn ? `<span class="badge badge-gray">${esc(cn)}</span>` : ''}
-              ${(l.e21ccFocus || []).map(f => `<span class="badge ${E21CC_BADGE[f]}">${E21CC_LABELS[f]}</span>`).join('')}
+              ${(l.e21ccFocus || []).map(f => `<span class="badge ${e21Badge(f)}">${e21Label(f)}</span>`).join('')}
             </div>
             <h3 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:2px;">${esc(l.title)}</h3>
             <p style="font-size:0.8125rem;color:var(--ink-muted);">
@@ -430,8 +449,19 @@ function renderCards(grid, lessons, classMap) {
   grid.querySelectorAll('.del-btn').forEach(b => {
     b.addEventListener('click', async e => {
       e.stopPropagation();
-      const ok = await confirmDialog({ title: 'Delete Lesson', message: `Delete "${Store.getLesson(b.dataset.id)?.title}"? This cannot be undone.` });
-      if (ok) { Store.deleteLesson(b.dataset.id); showToast('Lesson deleted'); navigate('/lessons'); }
+      const lesson = Store.getLesson(b.dataset.id);
+      const ok = await confirmDialog({ title: 'Delete Lesson', message: `Delete "${lesson?.title}"? You'll have a few seconds to undo.`, confirmLabel: 'Delete' });
+      if (ok && lesson) {
+        // Snapshot for undo, then delete
+        const snapshot = JSON.parse(JSON.stringify(lesson));
+        Store.deleteLesson(b.dataset.id);
+        navigate('/lessons');
+        showActionToast(`Deleted "${lesson.title}"`, 'Undo', () => {
+          Store.restoreLesson(snapshot);
+          showToast('Lesson restored', 'success');
+          navigate('/lessons');
+        });
+      }
     });
   });
 
@@ -523,7 +553,7 @@ export function renderDetail(container, { id }) {
           <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-2);flex-wrap:wrap;">
             <span class="badge ${s.badge} badge-dot">${s.label}</span>
             ${cn ? `<span class="badge badge-gray">${esc(cn)}</span>` : ''}
-            ${(lesson.e21ccFocus || []).map(f => `<span class="badge ${E21CC_BADGE[f]}">${E21CC_LABELS[f]}</span>`).join('')}
+            ${(lesson.e21ccFocus || []).map(f => `<span class="badge ${e21Badge(f)}">${e21Label(f)}</span>`).join('')}
           </div>
           <h1 class="page-title">${esc(lesson.title)}</h1>
           <p class="page-subtitle">Created ${fmtDate(lesson.createdAt)} &middot; Updated ${fmtDate(lesson.updatedAt)}</p>
@@ -587,7 +617,7 @@ export function renderDetail(container, { id }) {
               <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
                 ${resources.map(r => `
                   <button class="btn btn-ghost btn-sm linked-resource-chip" data-type="${r.type}" style="display:inline-flex;align-items:center;gap:var(--sp-1);padding:var(--sp-1) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-lg);font-size:0.8125rem;border:1px solid var(--border-light);cursor:pointer;">
-                    <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : 'badge-amber'}" style="font-size:0.625rem;">${r.type === 'stimulus' ? 'Stimulus' : 'Source'}</span>
+                    <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : r.type === 'simulation' ? 'badge-green' : 'badge-amber'}" style="font-size:0.625rem;">${r.type === 'stimulus' ? 'Stimulus' : r.type === 'simulation' ? 'Simulation' : 'Source'}</span>
                     <span style="color:var(--ink);">${esc(r.title)}</span>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2" style="margin-left:2px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </button>
@@ -673,7 +703,7 @@ export function renderDetail(container, { id }) {
   container.querySelectorAll('.linked-resource-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const type = chip.dataset.type;
-      navigate(type === 'stimulus' ? '/stimulus-material' : '/source-analysis');
+      navigate(type === 'stimulus' ? '/stimulus-material' : type === 'simulation' ? '/simulations' : '/source-analysis');
     });
   });
 
@@ -781,7 +811,7 @@ export function renderDetail(container, { id }) {
         <div class="meta">
           <span>${s.label}</span>
           ${cn ? `<span>${esc(cn)}</span>` : ''}
-          ${(lesson.e21ccFocus || []).map(f => `<span>${E21CC_LABELS[f]}</span>`).join('')}
+          ${(lesson.e21ccFocus || []).map(f => `<span>${e21Label(f)}</span>`).join('')}
           <span>${fmtDate(lesson.createdAt)}</span>
         </div>
         ${planHtml}

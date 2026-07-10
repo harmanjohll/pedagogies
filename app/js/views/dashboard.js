@@ -1290,6 +1290,15 @@ function widgetWrap(id, title, content, prefs, extraHeaderHtml = '') {
   </div>`;
 }
 
+/* Render raw event dates (e.g. "2026-07-11") as "11 Jul" / "11 Jul 2027" */
+function fmtEventDate(raw) {
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  const opts = { day: 'numeric', month: 'short' };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString('en-SG', opts);
+}
+
 /* ── Up Next hero: surface the single most actionable lesson ──
  * Priority: closest to the classroom first (ready → rehearsed → taught
  * needing reflection → drafts), most recently touched wins ties. */
@@ -1484,7 +1493,7 @@ export function render(container) {
               return `
                 <div class="card card-hover card-interactive" data-action="admin" style="padding:var(--sp-4) var(--sp-5);">
                   <div style="font-weight:600;color:var(--ink);font-size:0.875rem;margin-bottom:var(--sp-1);">${ev.name}</div>
-                  <div style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">${ev.eventType || 'Event'}${ev.date ? ' · ' + ev.date : ''}</div>
+                  <div style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-3);">${ev.eventType || 'Event'}${ev.date ? ' · ' + fmtEventDate(ev.date) : ''}</div>
                   <div style="display:flex;align-items:center;gap:var(--sp-2);">
                     <div style="flex:1;height:5px;background:var(--bg-subtle);border-radius:var(--radius-full);overflow:hidden;">
                       <div style="width:${progress}%;height:100%;background:${progress === 100 ? 'var(--success)' : 'var(--accent)'};border-radius:var(--radius-full);transition:width 0.3s;"></div>
@@ -2052,10 +2061,10 @@ export function buildMyTimetable(teacherRow) {
     </div>`;
   }).join('');
 
+  // No inner "My Timetable" heading — widgetWrap already renders the title
   return `
     <div style="margin-bottom:var(--sp-8);">
-      <div class="section-header">
-        <h2 class="section-title" style="font-size:1.125rem;">My Timetable</h2>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:var(--sp-2);">
         <span style="font-size:0.75rem;color:var(--ink-muted);">${weekType} Week &middot; ${dayStr}</span>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">

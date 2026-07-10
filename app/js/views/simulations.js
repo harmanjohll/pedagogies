@@ -8,6 +8,9 @@ import { showToast } from '../components/toast.js';
 import { Store } from '../state.js';
 import { sendChat } from '../api.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
+import { idbPut, idbGet, idbRemove } from '../utils/storage.js';
+import { escapeHtml } from '../utils/markdown.js';
+import { openModal, confirmDialog } from '../components/modals.js';
 
 /* ── Simulation catalogue ── */
 const SIMULATIONS = [
@@ -217,6 +220,58 @@ function difficultyColor(level) {
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+/* ── Custom sim storage ──
+ * Metadata (id, title, timestamps) lives in localStorage; the heavy HTML
+ * payload lives in IndexedDB ('custom_sims' store) as { html, versions }
+ * so generated sims stop eating the ~5MB localStorage budget. Legacy sims
+ * that still carry .html inline migrate on first render. */
+const _simHtmlCache = new Map();  // id -> { html, versions: [] }
+
+async function loadSimRecord(id) {
+  if (_simHtmlCache.has(id)) return _simHtmlCache.get(id);
+  const rec = await idbGet('custom_sims', id);
+  if (rec && typeof rec.html === 'string') {
+    _simHtmlCache.set(id, rec);
+    return rec;
+  }
+  // Fallback: legacy inline html
+  const sim = getCustomSims().find(s => s.id === id);
+  if (sim && typeof sim.html === 'string') {
+    const legacy = { html: sim.html, versions: [] };
+    _simHtmlCache.set(id, legacy);
+    return legacy;
+  }
+  return null;
+}
+
+function storeSimRecord(id, html, versions) {
+  const rec = { html, versions: (versions || []).slice(-3) };
+  _simHtmlCache.set(id, rec);
+  idbPut('custom_sims', id, rec).catch(() => {});
+  return rec;
+}
+
+let _simMigrationDone = false;
+async function migrateLegacySimHtml() {
+  if (_simMigrationDone) return;
+  _simMigrationDone = true;
+  try {
+    const sims = getCustomSims();
+    let dirty = false;
+    for (const sim of sims) {
+      if (typeof sim.html === 'string' && sim.html) {
+        const ok = await idbPut('custom_sims', sim.id, { html: sim.html, versions: [] });
+        if (ok) {
+          _simHtmlCache.set(sim.id, { html: sim.html, versions: [] });
+          delete sim.html;
+          dirty = true;
+        }
+      }
+    }
+    if (dirty) saveCustomSims(sims);
+  } catch { /* legacy sims keep working from localStorage */ }
 }
 
 function getCustomSims() {
@@ -522,6 +577,32 @@ function extractHTML(text) {
   if (htmlMatch) return htmlMatch[0];
   // If nothing else, wrap in a basic page
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;font-family:sans-serif;background:#1a1a2e;color:#eee;display:flex;align-items:center;justify-content:center;min-height:100vh;}</style></head><body>${trimmed}</body></html>`;
+}
+
+/* A generation cut off mid-document would save a silently broken sim —
+ * detect it, ask the model to finish, and hard-close as a last resort. */
+function isCompleteHTML(html) {
+  return /<\/html>\s*$/i.test(html.trim()) || html.toLowerCase().includes('</html>');
+}
+
+async function completeTruncatedHTML(partial, originalPrompt, model) {
+  try {
+    const remainder = await sendChat(
+      [{ role: 'user', content: `The simulation below was cut off mid-generation. Original request:\n${originalPrompt}\n\nPARTIAL HTML (ends abruptly):\n${partial}` }],
+      {
+        trackLabel: 'customSimulationContinue',
+        systemPrompt: 'You complete truncated HTML documents. Output ONLY the missing remainder, continuing EXACTLY from the final character of the partial document — no repetition of earlier content, no markdown fences, no commentary. End with </html>.',
+        temperature: 0.3,
+        maxTokens: 8000,
+        model
+      }
+    );
+    const cleaned = remainder.replace(/^```(?:html)?\s*\n?/, '').replace(/```\s*$/, '');
+    const joined = partial + cleaned;
+    if (isCompleteHTML(joined)) return joined;
+  } catch { /* fall through to hard close */ }
+  // Last resort: close open tags so the sim at least renders what exists
+  return partial + '\n</body></html>';
 }
 
 /* ── Derive a short title from the prompt ── */
@@ -1140,9 +1221,16 @@ export function render(container) {
                   <label class="sim-byo-label">Key Variables / Parameters</label>
                   <input type="text" id="byo-variables" class="sim-byo-input" placeholder="e.g. coil turns, magnet speed" />
                 </div>
-                <div class="sim-byo-field" style="margin-bottom:14px;">
+                <div class="sim-byo-field" style="margin-bottom:12px;">
                   <label class="sim-byo-label">Additional Instructions <span style="font-weight:400;opacity:0.6;">(optional)</span></label>
                   <textarea class="sim-byo-textarea" id="sim-prompt" rows="2" placeholder="Apparatus, colour scheme, data table format..."></textarea>
+                </div>
+                <div class="sim-byo-field" style="margin-bottom:14px;">
+                  <label class="sim-byo-label">Build Quality</label>
+                  <select id="byo-model" class="sim-byo-select">
+                    <option value="">Fast (Gemini Flash — recommended)</option>
+                    <option value="gemini-2.5-pro">Complex build (Gemini Pro — slower, better for multi-part sims)</option>
+                  </select>
                 </div>
                 <button class="sim-generate-btn" id="sim-generate-btn" style="width:100%;">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -1202,13 +1290,17 @@ export function render(container) {
             <div class="sim-custom-grid" id="sim-custom-grid">
               ${customSims.map(sim => `
                 <div class="sim-custom-card" data-custom-id="${sim.id}">
-                  <div class="sim-custom-title" title="${sim.title}">${sim.title}</div>
+                  <div class="sim-custom-title" title="${escapeHtml(sim.title)}">${escapeHtml(sim.title)}</div>
                   <div class="sim-custom-date">${new Date(sim.createdAt).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                   <div class="sim-custom-actions">
                     <button class="sim-custom-launch" data-custom-launch="${sim.id}">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline;vertical-align:-1px;margin-right:4px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                       Launch
                     </button>
+                    <button class="sim-custom-delete" data-custom-refine="${sim.id}" title="Preview & refine with AI">Refine</button>
+                    <button class="sim-custom-delete" data-custom-attach="${sim.id}" title="Link under a lesson's resources">Attach</button>
+                    <button class="sim-custom-delete" data-custom-rename="${sim.id}">Rename</button>
+                    <button class="sim-custom-delete" data-custom-export="${sim.id}" title="Download as standalone .html">Export</button>
                     <button class="sim-custom-delete" data-custom-delete="${sim.id}">Delete</button>
                   </div>
                 </div>
@@ -1367,21 +1459,109 @@ export function render(container) {
 
     // Launch custom sims
     container.querySelectorAll('[data-custom-launch]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const sim = getCustomSims().find(s => s.id === btn.dataset.customLaunch);
+        if (!sim) return;
+        const rec = await loadSimRecord(sim.id);
+        if (rec) openOverlay(container, sim.title, { srcdoc: rec.html });
+        else showToast('Could not load this simulation’s content.', 'danger');
+      });
+    });
+
+    // Open in the refine workbench (centre preview + refine box)
+    container.querySelectorAll('[data-custom-refine]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const sim = getCustomSims().find(s => s.id === btn.dataset.customRefine);
+        if (!sim) return;
+        const rec = await loadSimRecord(sim.id);
+        if (!rec) { showToast('Could not load this simulation’s content.', 'danger'); return; }
+        renderPreviewPane(container, sim, rec);
+        container.querySelector('#sim-byo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    // Rename
+    container.querySelectorAll('[data-custom-rename]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const sims = getCustomSims();
-        const sim = sims.find(s => s.id === btn.dataset.customLaunch);
-        if (sim) {
-          openOverlay(container, sim.title, { srcdoc: sim.html });
-        }
+        const sim = getCustomSims().find(s => s.id === btn.dataset.customRename);
+        if (!sim) return;
+        const { backdrop, close } = openModal({
+          title: 'Rename Simulation',
+          body: `<input class="input" id="sim-rename-input" value="${escapeHtml(sim.title)}" style="width:100%;box-sizing:border-box;" />`,
+          footer: `<button class="btn btn-secondary" data-action="cancel">Cancel</button>
+                   <button class="btn btn-primary" data-action="save">Save</button>`
+        });
+        backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+        backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
+          const name = backdrop.querySelector('#sim-rename-input').value.trim();
+          if (name) {
+            const sims = getCustomSims();
+            const target = sims.find(s => s.id === sim.id);
+            if (target) { target.title = name; saveCustomSims(sims); }
+            close();
+            renderView();
+          }
+        });
+      });
+    });
+
+    // Export as standalone .html file
+    container.querySelectorAll('[data-custom-export]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const sim = getCustomSims().find(s => s.id === btn.dataset.customExport);
+        if (!sim) return;
+        const rec = await loadSimRecord(sim.id);
+        if (!rec) { showToast('Could not load this simulation’s content.', 'danger'); return; }
+        const blob = new Blob([rec.html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${sim.title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'simulation'}.html`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+    });
+
+    // Attach to a lesson (shows under the lesson's Linked Resources)
+    container.querySelectorAll('[data-custom-attach]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sim = getCustomSims().find(s => s.id === btn.dataset.customAttach);
+        if (!sim) return;
+        const lessons = Store.getLessons();
+        if (lessons.length === 0) { showToast('No lessons yet — save a lesson first.', 'default'); return; }
+        const { backdrop, close } = openModal({
+          title: 'Attach to Lesson',
+          body: `<div style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;">
+            ${lessons.map(l => `<button class="btn btn-secondary btn-sm sim-attach-lesson" data-lesson-id="${escapeHtml(l.id)}" style="justify-content:flex-start;text-align:left;">${escapeHtml(l.title || 'Untitled Lesson')}</button>`).join('')}
+          </div>`
+        });
+        backdrop.querySelectorAll('.sim-attach-lesson').forEach(lb => {
+          lb.addEventListener('click', () => {
+            const lesson = Store.getLesson(lb.dataset.lessonId);
+            if (lesson) {
+              const resources = (lesson.attachedResources || []).filter(r => r.id !== sim.id);
+              resources.push({ id: sim.id, type: 'simulation', title: sim.title });
+              Store.updateLesson(lesson.id, { attachedResources: resources });
+              showToast(`Attached to "${lesson.title}"`, 'success');
+            }
+            close();
+          });
+        });
       });
     });
 
     // Delete custom sims
     container.querySelectorAll('[data-custom-delete]').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const id = btn.dataset.customDelete;
-        const sims = getCustomSims().filter(s => s.id !== id);
-        saveCustomSims(sims);
+        const ok = await confirmDialog({
+          title: 'Delete Simulation',
+          message: 'Delete this generated simulation? This cannot be undone.',
+          confirmLabel: 'Delete'
+        });
+        if (!ok) return;
+        saveCustomSims(getCustomSims().filter(s => s.id !== id));
+        _simHtmlCache.delete(id);
+        idbRemove('custom_sims', id).catch(() => {});
         showToast('Simulation deleted', 'default');
         renderView();
       });
@@ -1419,9 +1599,17 @@ export function render(container) {
       if (extra) parts.push(`Additional instructions: ${extra}`);
       const prompt = parts.join('\n');
 
-      // Show loading state
+      // Show loading state with staged progress (generation takes 30-60s)
       generateBtn.disabled = true;
       loadingEl.style.display = 'flex';
+      const loadingText = loadingEl.querySelector('span');
+      const stages = ['Sketching the apparatus…', 'Wiring up your variables…', 'Calibrating the science…', 'Building data tables…', 'Polishing pixels…', 'Almost there…'];
+      let stageIdx = 0;
+      if (loadingText) loadingText.textContent = stages[0];
+      const stageTimer = setInterval(() => {
+        stageIdx = Math.min(stageIdx + 1, stages.length - 1);
+        if (loadingText) loadingText.textContent = stages[stageIdx];
+      }, 9000);
 
       try {
         const systemPrompt = `You are LabSim Builder, an expert at creating visually rich, interactive science simulations for Singapore secondary / JC students. Generate a COMPLETE, self-contained HTML page with embedded CSS and JavaScript.
@@ -1454,39 +1642,135 @@ TECHNICAL:
 - requestAnimationFrame for animations.
 - Return ONLY the raw HTML. No markdown fences, no explanation.`;
 
+        const model = container.querySelector('#byo-model')?.value || undefined;
         const text = await sendChat(
           [{ role: 'user', content: prompt }],
-          { trackLabel: 'customSimulation', systemPrompt, temperature: 0.5, maxTokens: 16000 }
+          { trackLabel: 'customSimulation', systemPrompt, temperature: 0.5, maxTokens: 16000, model }
         );
 
-        const html = extractHTML(text);
+        let html = extractHTML(text);
+        if (!isCompleteHTML(html)) {
+          if (loadingText) loadingText.textContent = 'Response was cut off — asking Gemini to finish it…';
+          html = await completeTruncatedHTML(html, prompt, model);
+        }
+
         const title = deriveTitle(prompt);
         const newSim = {
           id: generateId(),
           title: title,
-          html: html,
-          createdAt: Date.now()
+          prompt: prompt,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
         };
+        storeSimRecord(newSim.id, html, []);
 
         const sims = getCustomSims();
         sims.unshift(newSim);
         saveCustomSims(sims);
 
-        showToast('Simulation generated!', 'success');
+        showToast('Simulation generated! Preview it below — you can refine it with follow-up instructions.', 'success');
 
-        // Re-render to show the new sim, then auto-launch it
+        // Re-render, then show the refine workbench with the new sim
         renderView();
-        openOverlay(container, title, { srcdoc: html });
+        const rec = _simHtmlCache.get(newSim.id);
+        renderPreviewPane(container, newSim, rec);
+        container.querySelector('#sim-byo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
       } catch (err) {
         console.error('Simulation generation error:', err);
         showToast(`Generation failed: ${err.message}`, 'danger');
       } finally {
+        clearInterval(stageTimer);
         generateBtn.disabled = false;
         loadingEl.style.display = 'none';
       }
     });
   }
 
+  /* ── Refine workbench: live preview + conversational refinement ── */
+  function renderPreviewPane(container, sim, rec) {
+    const pane = container.querySelector('#sim-byo-preview');
+    if (!pane || !rec) return;
+    const versions = rec.versions || [];
+    pane.innerHTML = `
+      <div style="display:flex;flex-direction:column;height:100%;width:100%;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <strong style="flex:1;font-size:0.8125rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:120px;">${escapeHtml(sim.title)}</strong>
+          ${versions.length > 0 ? `
+            <select id="sim-version-select" class="sim-byo-select" style="width:auto;font-size:0.75rem;padding:4px 24px 4px 8px;">
+              <option value="current">Current version</option>
+              ${versions.map((_, i) => `<option value="${i}">Restore v${i + 1} (older)</option>`).join('')}
+            </select>` : ''}
+          <button class="sim-custom-launch" id="sim-open-full">Fullscreen</button>
+        </div>
+        <iframe id="sim-preview-frame" sandbox="allow-scripts" style="flex:1;width:100%;min-height:360px;border:1px solid var(--border-light,#333);border-radius:10px;background:#1a1a2e;"></iframe>
+        <div style="display:flex;gap:6px;">
+          <input id="sim-refine-input" class="sim-byo-input" style="flex:1;" placeholder="Refine it: e.g. slow the animation, add a data table, larger labels…" />
+          <button class="sim-generate-btn" id="sim-refine-btn" style="width:auto;padding:8px 16px;">Refine</button>
+        </div>
+        <div id="sim-refine-loading" style="display:none;" class="sim-loading"><div class="sim-spinner"></div><span>Applying your changes…</span></div>
+      </div>`;
+
+    pane.querySelector('#sim-preview-frame').srcdoc = rec.html;
+
+    pane.querySelector('#sim-open-full').addEventListener('click', () => {
+      openOverlay(container, sim.title, { srcdoc: rec.html });
+    });
+
+    pane.querySelector('#sim-version-select')?.addEventListener('change', (e) => {
+      if (e.target.value === 'current') {
+        pane.querySelector('#sim-preview-frame').srcdoc = rec.html;
+        return;
+      }
+      const idx = parseInt(e.target.value);
+      const old = versions[idx];
+      if (!old) return;
+      // Restoring promotes the old version to current; current joins history
+      const newRec = storeSimRecord(sim.id, old, [...versions.filter((_, i) => i !== idx), rec.html]);
+      const sims = getCustomSims();
+      const target = sims.find(s => s.id === sim.id);
+      if (target) { target.updatedAt = Date.now(); saveCustomSims(sims); }
+      showToast('Older version restored.', 'success');
+      renderPreviewPane(container, sim, newRec);
+    });
+
+    const refineBtn = pane.querySelector('#sim-refine-btn');
+    const refineInput = pane.querySelector('#sim-refine-input');
+    const refineLoading = pane.querySelector('#sim-refine-loading');
+    const doRefine = async () => {
+      const instruction = refineInput.value.trim();
+      if (!instruction) { refineInput.focus(); return; }
+      refineBtn.disabled = true;
+      refineLoading.style.display = 'flex';
+      try {
+        const text = await sendChat(
+          [{ role: 'user', content: `CURRENT SIMULATION HTML:\n${rec.html}\n\nREQUESTED CHANGE:\n${instruction}` }],
+          {
+            trackLabel: 'customSimulationRefine',
+            systemPrompt: 'You refine existing self-contained HTML simulations. Apply ONLY the requested change while preserving everything else (layout, science, styling conventions). Return the COMPLETE updated HTML document. No markdown fences, no commentary.',
+            temperature: 0.4,
+            maxTokens: 16000
+          }
+        );
+        let html = extractHTML(text);
+        if (!isCompleteHTML(html)) html = await completeTruncatedHTML(html, instruction);
+        const newRec = storeSimRecord(sim.id, html, [...(rec.versions || []), rec.html]);
+        const sims = getCustomSims();
+        const target = sims.find(s => s.id === sim.id);
+        if (target) { target.updatedAt = Date.now(); saveCustomSims(sims); }
+        showToast('Refined! Previous version kept in history.', 'success');
+        renderPreviewPane(container, sim, newRec);
+      } catch (err) {
+        showToast(`Refine failed: ${err.message}`, 'danger');
+      } finally {
+        refineBtn.disabled = false;
+        refineLoading.style.display = 'none';
+      }
+    };
+    refineBtn.addEventListener('click', doRefine);
+    refineInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doRefine(); });
+  }
+
+  migrateLegacySimHtml();
   renderView();
 }
