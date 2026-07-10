@@ -7,7 +7,7 @@
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { confirmDialog } from '../components/modals.js';
-import { showToast } from '../components/toast.js';
+import { showToast, showActionToast } from '../components/toast.js';
 import { processLatex } from '../utils/latex.js';
 import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
@@ -449,8 +449,19 @@ function renderCards(grid, lessons, classMap) {
   grid.querySelectorAll('.del-btn').forEach(b => {
     b.addEventListener('click', async e => {
       e.stopPropagation();
-      const ok = await confirmDialog({ title: 'Delete Lesson', message: `Delete "${Store.getLesson(b.dataset.id)?.title}"? This cannot be undone.` });
-      if (ok) { Store.deleteLesson(b.dataset.id); showToast('Lesson deleted'); navigate('/lessons'); }
+      const lesson = Store.getLesson(b.dataset.id);
+      const ok = await confirmDialog({ title: 'Delete Lesson', message: `Delete "${lesson?.title}"? You'll have a few seconds to undo.`, confirmLabel: 'Delete' });
+      if (ok && lesson) {
+        // Snapshot for undo, then delete
+        const snapshot = JSON.parse(JSON.stringify(lesson));
+        Store.deleteLesson(b.dataset.id);
+        navigate('/lessons');
+        showActionToast(`Deleted "${lesson.title}"`, 'Undo', () => {
+          Store.restoreLesson(snapshot);
+          showToast('Lesson restored', 'success');
+          navigate('/lessons');
+        });
+      }
     });
   });
 

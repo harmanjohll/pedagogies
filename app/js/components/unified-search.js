@@ -11,8 +11,25 @@ let overlay = null;
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+/* Quick actions — verbs, not just destinations. Always ranked first when
+ * their keywords match so "new lesson" jumps straight to creating one. */
+function getQuickActions() {
+  return [
+    { type: 'action', icon: '&#43;', color: '#000C53', title: 'New lesson', subtitle: 'Start a fresh lesson in the planner',
+      searchText: 'new lesson create plan design action', action: () => navigate('/lesson-planner') },
+    { type: 'action', icon: '&#43;', color: '#000C53', title: 'New class', subtitle: 'Add a class and students',
+      searchText: 'new class add students action', action: () => navigate('/classes') },
+    { type: 'action', icon: '&#9654;', color: '#8b5cf6', title: 'Rehearse a lesson', subtitle: 'Practise against AI student personas',
+      searchText: 'rehearse rehearsal practice deliver action', action: () => navigate('/lesson-rehearsal') },
+    { type: 'action', icon: '&#9881;', color: '#64748b', title: 'Manage Enactment tools', subtitle: 'Turn generator tools on or off',
+      searchText: 'manage enactment tools marketplace eee settings action', action: () => { sessionStorage.setItem('cocher_settings_tab', 'planner'); navigate('/settings'); } },
+    { type: 'action', icon: '&#128506;', color: '#f59e0b', title: 'Design a classroom layout', subtitle: 'Open the Spatial Designer',
+      searchText: 'spatial layout seating classroom design action', action: () => navigate('/spatial') },
+  ];
+}
+
 function getAllSearchableItems() {
-  const items = [];
+  const items = [...getQuickActions()];
 
   // Custom-built simulations (metadata only; HTML lives in IndexedDB)
   try {
@@ -121,7 +138,11 @@ function renderResults(query, items, resultsList) {
   }
 
   const q = query.toLowerCase();
-  const matches = items.filter(item => item.searchText.toLowerCase().includes(q)).slice(0, 12);
+  // Actions rank above content when both match
+  const matches = items
+    .filter(item => item.searchText.toLowerCase().includes(q))
+    .sort((a, b) => (a.type === 'action' ? 0 : 1) - (b.type === 'action' ? 0 : 1))
+    .slice(0, 12);
 
   if (matches.length === 0) {
     resultsList.innerHTML = `<div style="text-align:center;padding:24px;color:var(--ink-faint,#94a3b8);font-size:0.8125rem;">No results for "${esc(query)}"</div>`;

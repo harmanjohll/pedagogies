@@ -40,6 +40,7 @@ import { render as renderQuestionBank } from './views/question-bank.js';
 import { render as renderReliefKit } from './views/relief-kit.js';
 import { initGlobalSearch, openSearch } from './components/unified-search.js';
 import { initOnboarding } from './components/onboarding.js';
+import { maybeShowWhatsNew } from './components/whats-new.js';
 import { initKeyboardShortcuts } from './components/keyboard-shortcuts.js';
 
 function init() {
@@ -144,6 +145,9 @@ function init() {
 
   // Onboarding for first-time users
   initOnboarding();
+
+  // One-time "what's new" for returning users after a version bump
+  maybeShowWhatsNew();
 
   // Show API key reminder banner if key was deferred
   if (isApiKeyMissing()) {
