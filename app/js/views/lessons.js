@@ -587,7 +587,7 @@ export function renderDetail(container, { id }) {
               <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
                 ${resources.map(r => `
                   <button class="btn btn-ghost btn-sm linked-resource-chip" data-type="${r.type}" style="display:inline-flex;align-items:center;gap:var(--sp-1);padding:var(--sp-1) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-lg);font-size:0.8125rem;border:1px solid var(--border-light);cursor:pointer;">
-                    <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : 'badge-amber'}" style="font-size:0.625rem;">${r.type === 'stimulus' ? 'Stimulus' : 'Source'}</span>
+                    <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : r.type === 'simulation' ? 'badge-green' : 'badge-amber'}" style="font-size:0.625rem;">${r.type === 'stimulus' ? 'Stimulus' : r.type === 'simulation' ? 'Simulation' : 'Source'}</span>
                     <span style="color:var(--ink);">${esc(r.title)}</span>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2" style="margin-left:2px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </button>
@@ -673,7 +673,7 @@ export function renderDetail(container, { id }) {
   container.querySelectorAll('.linked-resource-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const type = chip.dataset.type;
-      navigate(type === 'stimulus' ? '/stimulus-material' : '/source-analysis');
+      navigate(type === 'stimulus' ? '/stimulus-material' : type === 'simulation' ? '/simulations' : '/source-analysis');
     });
   });
 

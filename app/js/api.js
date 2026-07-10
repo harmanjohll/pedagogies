@@ -112,7 +112,9 @@ export function normalizeModel(id) {
 export async function sendChat(messages, options = {}) {
   trackEvent('ai', 'generate', options.trackLabel || 'chat', options.trackDetail || '');
   const apiKey = Store.get('apiKey');
-  const model = normalizeModel(Store.get('model') || 'gemini-2.5-flash');
+  // options.model lets a caller pick a heavier model for one call
+  // (e.g. complex simulation builds) without changing the app default
+  const model = normalizeModel(options.model || Store.get('model') || 'gemini-2.5-flash');
 
   if (!apiKey) {
     throw new Error('No API key configured. Please add your Gemini API key in Settings.');
