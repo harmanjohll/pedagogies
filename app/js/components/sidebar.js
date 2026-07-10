@@ -138,6 +138,9 @@ function buildNavItems() {
     { id: '/my-growth', icon: 'myGrowth', label: 'My Learning' },
     { id: '/autopilot', icon: 'autopilot', label: 'Co-Cher+ (beta)', section: SANDBOX_SECTION_KEY, sectionDisplay: SANDBOX_LABEL },
     { id: '/math-sandbox', icon: 'mathSandbox', label: 'Formula Lab (beta)' },
+    { id: '/report-comments', icon: 'modelResponse', label: 'Report Comments (beta)' },
+    { id: '/question-bank', icon: 'aol', label: 'Question Bank (beta)' },
+    { id: '/relief-kit', icon: 'lessons', label: 'Relief Kit (beta)' },
     { id: '/admin', icon: 'admin', label: 'Admin One-Stop', section: 'Operations' }
   ];
 

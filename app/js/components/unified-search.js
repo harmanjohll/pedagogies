@@ -14,6 +14,19 @@ function esc(s) { const d = document.createElement('div'); d.textContent = s; re
 function getAllSearchableItems() {
   const items = [];
 
+  // Custom-built simulations (metadata only; HTML lives in IndexedDB)
+  try {
+    const sims = JSON.parse(localStorage.getItem('cocher_custom_sims') || '[]');
+    sims.forEach(s => {
+      items.push({
+        type: 'simulation', icon: 'SIM', color: '#8b5cf6',
+        title: s.title, subtitle: 'Your generated simulation',
+        searchText: `${s.title} ${s.prompt || ''} simulation`,
+        action: () => navigate('/simulations')
+      });
+    });
+  } catch { /* ignore */ }
+
   // Knowledge Base uploads
   (Store.get('knowledgeUploads') || []).forEach(u => {
     items.push({

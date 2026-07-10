@@ -1779,3 +1779,329 @@ export function seedAssessmentIfNeeded() {
 
   localStorage.setItem(ASSESSMENT_SEED_KEY, '1');
 }
+
+/* ══════════════════════════════════════════════════════
+   Full-Lifecycle Exemplar Lessons — 9 subjects
+   ══════════════════════════════════════════════════════ */
+
+const EXEMPLAR_SEED_KEY = 'cocher_exemplars_seeded_v1';
+const DAY = 86400000;
+
+const LIFECYCLE_EXEMPLARS = [
+  /* ── 1. English — completed, with reflection ── */
+  {
+    title: 'Argumentative Writing — Social Media on Trial',
+    classMatch: ['English'],
+    status: 'completed',
+    createdDaysAgo: 21,
+    updatedDaysAgo: 19,
+    e21ccFocus: ['criticalThinking', 'communication'],
+    objectives: 'Students will construct PEEL paragraphs for an argumentative essay, anticipate and rebut counter-arguments, and evaluate the credibility of evidence used to support a claim.',
+    lessonHook: 'Last month a fake "MRT stabbing" video hit 2 million views before it was debunked. Who profits when outrage spreads faster than facts — and does social media do more harm than good?',
+    chat: {
+      user: 'Plan a Sec 4 English lesson on argumentative writing for O-Level Paper 1. Topic: "Social media does more harm than good." I want students to practise PEEL paragraphs and rebutting counter-arguments, with a hook about fake news.',
+      assistant: `## Argumentative Writing — Social Media on Trial (Sec 4 English)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. Construct a PEEL paragraph (Point, Evidence, Explanation, Link) supporting a clear stance
+2. Anticipate a counter-argument and write an effective rebuttal
+3. Evaluate whether a piece of evidence is credible, relevant, and sufficient
+
+### Lesson Flow (70 min)
+
+**Hook — The Viral Lie (10 min)**
+Show the (debunked) "MRT stabbing" video headline and its 2-million-view count next to the SPH fact-check. Ask: who gained from the spread? Students discuss in pairs, then vote on the motion: *social media does more harm than good*.
+
+**Deconstruct — What Makes an Argument Land? (15 min)**
+Display two sample paragraphs on the motion — one assertive but unsupported, one full PEEL. Students annotate: where is the evidence, where is the explanation, what links back to the stance? Draw out the PEEL frame on the board.
+
+**Build — PEEL Workshop (20 min)**
+In groups of 4, students draft one PEEL paragraph on an assigned angle (mental health, scams and misinformation, activism, small business reach). Evidence bank provided: IMDA digital literacy statistics, a Straits Times scam report, a case of crowdfunded charity. Groups must reject at least one weak piece of evidence and justify why.
+
+**Clash — Rebuttal Round (15 min)**
+Groups swap paragraphs and write the strongest possible counter-argument to the paragraph they receive, then return it. Original group drafts a two-sentence rebuttal using concession language ("While it is true that… the evidence suggests…").
+
+**Consolidate & Exit Ticket (10 min)**
+Class reconstructs the full essay skeleton: stance, 3 PEEL points, counter-argument + rebuttal, conclusion. Exit ticket: write one PEEL paragraph on a fresh motion under timed conditions (8 min).
+
+### Differentiation
+- **Support**: PEEL sentence starters and a pre-sorted evidence bank
+- **Extension**: require a hedged thesis that concedes scope ("in the hands of teenagers…")
+
+### E21CC Focus
+- **Critical thinking**: evaluating evidence credibility, constructing rebuttals
+- **Communication**: precise persuasive language, concession phrasing`
+    },
+    components: {
+      lisc: `**Learning Intentions**
+- We are learning to build persuasive arguments using the PEEL structure
+- We are learning to anticipate and rebut counter-arguments fairly
+
+**Success Criteria**
+- I can write a PEEL paragraph with credible, relevant evidence
+- I can express a counter-argument accurately before rebutting it
+- I can use concession language ("while it is true that…") in a rebuttal
+- I can explain why a piece of evidence is weak or unreliable
+
+**E21CC Alignment**: Critical Thinking (evaluating evidence), Communication (persuasive register)`,
+      timeline: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Hook: The Viral Lie | 0–10 min | Debunked video headline vs fact-check; pair talk + class vote | Direct Instruction |
+| Deconstruct | 10–25 min | Annotate strong vs weak sample paragraphs; derive PEEL frame | Direct Instruction |
+| PEEL Workshop | 25–45 min | Groups draft PEEL paragraph from evidence bank; reject one weak source | Collaborative Pods |
+| Rebuttal Round | 45–60 min | Swap paragraphs, write counter-arguments, draft rebuttals | Collaborative Pods |
+| Consolidate + Exit Ticket | 60–70 min | Essay skeleton on board; timed solo PEEL paragraph | Quiet Work |`,
+      exitTicket: `### Exit Ticket — Argumentative Writing
+
+1. Write ONE full PEEL paragraph on the motion: *"Homework should be replaced by project work."* (8 minutes, on your own)
+2. Underline your evidence and label it E. In one sentence, say why a sceptical reader should trust it.
+3. Confidence check: rate 1–5 how ready you feel to write a full argumentative essay, and name the ONE part of PEEL you most need to practise.`
+    },
+    reflection: {
+      whatWorked: 'The fake-news hook sparked genuine debate — students were still arguing about the MRT video at recess. The PEEL annotation task gave the middle band a concrete frame, and the rebuttal swap produced some of the best concession sentences I have seen from this class.',
+      whatToAdjust: 'The rebuttal round overran by 10 minutes because groups negotiated stances too long — pre-assign angles next time. Three weakest writers needed sentence starters earlier, not after they stalled.',
+      engagement: 4,
+      e21ccObservations: 'Strong critical thinking when evaluating the evidence bank; two groups rejected the crowdfunding anecdote as unrepresentative without prompting. Communication was uneven — dominant speakers crowded out quieter members during the clash round.',
+      freeform: 'Keep the same hook next run but pair it with the IMDA media literacy infographic. Timed exit paragraph was the right level of pressure — collect and use as the diagnostic for the next essay cycle.'
+    }
+  },
+
+  /* ── 2. Mathematics — ready + rehearsed ── */
+  {
+    title: 'Quadratic Functions — Modelling Projectile Motion',
+    classMatch: ['Mathematics'],
+    status: 'ready',
+    createdDaysAgo: 16,
+    updatedDaysAgo: 3,
+    rehearsedDaysAgo: 2,
+    e21ccFocus: ['criticalThinking', 'collaboration'],
+    objectives: 'Students will sketch quadratic graphs identifying the vertex, axis of symmetry and intercepts, model a real projectile path with a quadratic function, and interpret the maximum point in context.',
+    lessonHook: 'A free throw leaves the shooter’s hands at 2.1 m and drops through the hoop at 3.05 m. From just three tracked points of the ball’s flight, can we predict the entire path — and whether it was ever going to miss?',
+    chat: {
+      user: 'Plan a Sec 4 E-Math lesson on graphs of quadratic functions. I want a real-world modelling angle — basketball projectile motion — leading to sketching, completing the square for the vertex, and interpreting maximum points in context.',
+      assistant: `## Quadratic Functions — Modelling Projectile Motion (Sec 4 Mathematics)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. Sketch the graph of y = ax² + bx + c, identifying intercepts, vertex and axis of symmetry
+2. Express a quadratic in the form y = a(x − h)² + k and read off the maximum/minimum point
+3. Interpret the vertex and intercepts of a quadratic model in a real-world context
+
+### Lesson Flow (70 min)
+
+**Hook — The Free Throw (10 min)**
+Play a 20-second clip of a free throw, freeze-framed at three points with coordinates displayed (release, peak, hoop). Ask: is three points enough to know the whole flight? Students conjecture, then reveal that exactly one quadratic passes through three (non-collinear) points.
+
+**Concept Build — Anatomy of a Parabola (15 min)**
+Using y = −x² + 4x + 1 on the board: find y-intercept, use the formula x = −b/2a for the axis of symmetry, complete the square to confirm the vertex. Emphasise the link: same information, two routes.
+
+**Guided Practice — Fit the Flight (20 min)**
+Pairs receive the three tracked points of the free throw. Using a scaffolded sheet, they solve for a, b, c, then answer in context: What was the greatest height? Was the ball still rising at the hoop? Where would it have landed if it missed everything?
+
+**Gallery Compare (10 min)**
+Pairs post their sketches. Compare with a second data set (a "brick" that hits the front rim) — what changed in the model: a, the vertex, or both?
+
+**Consolidate & Exit Ticket (15 min)**
+Summarise: vertex form vs general form, and when each is fastest. Exit ticket: sketch y = 2(x − 3)² − 5, labelling vertex, axis of symmetry and y-intercept, and state one real quantity the vertex could represent in a projectile model.
+
+### Differentiation
+- **Support**: completing-the-square steps pre-structured; axis-of-symmetry formula card
+- **Extension**: derive the release angle question — what does the gradient at x = 0 tell you?
+
+### E21CC Focus
+- **Critical thinking**: linking algebraic features to physical meaning
+- **Collaboration**: paired modelling with shared accountability for the sketch`
+    },
+    components: {
+      lisc: `**Learning Intentions**
+- We are learning to sketch quadratic graphs and identify their key features
+- We are learning to use a quadratic function as a model of real motion
+
+**Success Criteria**
+- I can find the vertex by completing the square AND by x = −b/2a
+- I can sketch a parabola with labelled vertex, axis of symmetry and intercepts
+- I can interpret the maximum point of a model in context (greatest height)
+- I can explain what the coefficient a does to the shape of the path
+
+**E21CC Alignment**: Critical Thinking (representation-linking), Collaboration (paired modelling)`,
+      timeline: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Hook: The Free Throw | 0–10 min | Freeze-frame clip, three tracked points, conjecture | Direct Instruction |
+| Anatomy of a Parabola | 10–25 min | Worked example: intercepts, axis, completing the square | Direct Instruction |
+| Fit the Flight | 25–45 min | Pairs fit a quadratic through 3 points; answer in context | Collaborative Pods |
+| Gallery Compare | 45–55 min | Compare successful shot vs "brick" data set | Gallery Walk |
+| Consolidate + Exit Ticket | 55–70 min | Vertex form vs general form; solo sketch task | Quiet Work |`,
+      exitTicket: `### Exit Ticket — Quadratic Graphs
+
+1. Sketch y = 2(x − 3)² − 5. Label the vertex, the axis of symmetry, and the y-intercept.
+2. Is the vertex a maximum or a minimum? How do you know from the equation alone?
+3. In the free-throw model, what real quantity did the vertex represent? One sentence.
+4. Traffic light: green / amber / red on completing the square.`
+    }
+  },
+
+  /* ── 3. Physics — ready ── */
+  {
+    title: 'Series & Parallel Circuits — Why Chargers Overheat',
+    classMatch: ['Physics', 'Combined Science'],
+    status: 'ready',
+    createdDaysAgo: 14,
+    updatedDaysAgo: 12,
+    e21ccFocus: ['criticalThinking', 'collaboration'],
+    objectives: 'Students will state the current and potential difference rules for series and parallel circuits, calculate effective resistance, and apply P = IV to explain overheating in a household context.',
+    lessonHook: 'A $2 third-party phone charger melted overnight and scorched a bedside table in a Yishun flat. The physics of current, resistance and power can tell us exactly why the cheap one failed — and why the original did not.',
+    chat: {
+      user: 'Plan a Sec 4 Combined Science (Physics) lesson on series and parallel circuits. Include hands-on circuit building, current/voltage rules, effective resistance, and connect it to why cheap chargers overheat.',
+      assistant: `## Series & Parallel Circuits — Why Chargers Overheat (Sec 4 Combined Science, Physics)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. State that current is the same at every point in a series circuit and splits across branches in parallel
+2. State that p.d. is shared across components in series and equal across branches in parallel
+3. Calculate the effective resistance of resistors in series and in parallel (two resistors)
+4. Use P = IV to explain heating effects in a real household scenario
+
+### Lesson Flow (70 min)
+
+**Hook — The Melted Charger (8 min)**
+Photo of the scorched bedside table (news report). Ask: the wall socket supplies the same 230 V to every charger — so what could possibly differ inside a $2 charger? Collect hypotheses on the board; return to them at the end.
+
+**Predict-Build-Measure Stations (25 min)**
+Groups of 4 rotate through two station types with ammeters and voltmeters:
+- **Station S**: two lamps in series — predict, then measure current at three points and p.d. across each lamp
+- **Station P**: two lamps in parallel — predict, then measure branch currents and p.d. across each branch
+Record on a shared results grid. Rule: every member must take at least one reading.
+
+**Pattern Harvest (12 min)**
+Class compiles station data. Draw out the four rules (current/series, current/parallel, p.d./series, p.d./parallel). Brief direct instruction: effective resistance formulas, with one worked example each.
+
+**Apply — The Charger Autopsy (15 min)**
+Pairs work a structured problem: a charging cable with worn insulation drops its resistance; using P = IV and V = IR, calculate the new current and power dissipated, and explain where the heat goes. Link back to the hook hypotheses.
+
+**Consolidate & Exit Ticket (10 min)**
+Misconception check with mini-whiteboards ("current gets used up" — true or false, and prove it with today’s data). Exit ticket: two-resistor parallel calculation plus one sentence on why parallel wiring is used in homes.
+
+### Differentiation
+- **Support**: circuit diagrams pre-drawn on station cards; results grid part-filled
+- **Extension**: three-resistor mixed circuit; qualitative fuse-rating question
+
+### E21CC Focus
+- **Critical thinking**: reasoning from measured data to general rules
+- **Collaboration**: rotation roles — builder, reader, recorder, checker`
+    },
+    components: {
+      lisc: `**Learning Intentions**
+- We are learning how current and potential difference behave in series and parallel circuits
+- We are learning to use P = IV to explain electrical heating in daily life
+
+**Success Criteria**
+- I can predict and verify current at different points in a series circuit
+- I can show that p.d. across parallel branches is equal
+- I can calculate effective resistance for two resistors in series or parallel
+- I can explain, using P = IV, why a low-resistance fault causes overheating
+
+**E21CC Alignment**: Critical Thinking (data to rules), Collaboration (station roles)`,
+      timeline: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Hook: Melted Charger | 0–8 min | Scorched-table photo; hypotheses on board | Direct Instruction |
+| Predict-Build-Measure | 8–33 min | Series and parallel stations with meters | Stations |
+| Pattern Harvest | 33–45 min | Compile data, derive 4 rules, effective resistance | Direct Instruction |
+| Charger Autopsy | 45–60 min | Pairs: worn-cable calculation with P = IV | Collaborative Pods |
+| Consolidate + Exit Ticket | 60–70 min | Misconception check; solo calculation | Quiet Work |`,
+      exitTicket: `### Exit Ticket — Series & Parallel Circuits
+
+1. Two 4 Ω resistors are connected in parallel to a 12 V supply. Find the effective resistance and the total current drawn.
+2. True or false, with one line of evidence from today’s stations: "Current is used up as it passes through each lamp."
+3. In one sentence: why are the lights in your home wired in parallel, not series?`
+    }
+  },
+
+  /* ── 4. Chemistry — completed, with reflection ── */
+  {
+    title: 'Rate of Reaction — The Disappearing Cross',
+    classMatch: ['Pure Chemistry', 'Chemistry'],
+    status: 'completed',
+    createdDaysAgo: 18,
+    updatedDaysAgo: 15,
+    e21ccFocus: ['criticalThinking', 'selfRegulation'],
+    objectives: 'Students will describe the effect of concentration on reaction rate using collision theory, carry out the sodium thiosulfate and acid investigation safely, and interpret rate graphs from experimental data.',
+    lessonHook: 'Glow sticks last hours longer in the freezer — same chemicals, different speed. What actually controls how fast a reaction goes, and can we measure it with nothing but a paper cross and a stopwatch?',
+    chat: {
+      user: 'Plan a Sec 4 Pure Chemistry practical lesson on rate of reaction using the sodium thiosulfate disappearing cross investigation. Focus on the effect of concentration, collision theory explanations, and graphing rate data.',
+      assistant: `## Rate of Reaction — The Disappearing Cross (Sec 4 Pure Chemistry)
+
+### Learning Objectives
+By the end of this lesson, students will be able to:
+1. Describe how concentration affects rate of reaction in terms of collision frequency
+2. Carry out the Na₂S₂O₃ + HCl investigation safely and record timing data accurately
+3. Plot 1/time against concentration and interpret the graph as a rate proxy
+
+### Lesson Flow (70 min double, lab)
+
+**Hook — Glow Sticks in the Freezer (8 min)**
+Two glow sticks snapped at the start of class: one into iced water, one into warm water. Park them visibly. Ask: same chemicals — what will differ by the end of the lesson, and why? Introduce today’s question: what controls reaction speed?
+
+**Briefing & Safety (10 min)**
+Demonstrate the disappearing cross setup: flask on printed cross, add HCl to thiosulfate, time until the cross vanishes. Safety points: SO₂ produced in small amounts — lab ventilation on, flasks stoppered for disposal, goggles throughout. Show how to read the measuring cylinder at eye level.
+
+**Investigation — Concentration Series (30 min)**
+Groups of 3 run five dilutions of thiosulfate (40, 32, 24, 16, 8 cm³ topped up to 50 cm³ with water), constant acid volume. Each member rotates roles: measurer, timer, recorder. Groups tabulate time and compute 1/time.
+
+**Graph & Explain (15 min)**
+Groups plot 1/time vs concentration on provided grids. Discussion: why is 1/time a fair stand-in for rate? Collision theory paragraph built collectively on the board: more particles per cm³ → more frequent effective collisions → greater rate.
+
+**Consolidate & Exit Ticket (7 min)**
+Return to the glow sticks — students explain the difference using collision theory (energy of collisions this time). Exit ticket: sketch the expected graph for doubling temperature and justify in two sentences.
+
+### Differentiation
+- **Support**: pre-drawn results table and graph axes; dilution volumes given
+- **Extension**: predict and defend the effect of halving acid concentration instead
+
+### E21CC Focus
+- **Critical thinking**: justifying 1/time as a rate proxy
+- **Self-regulation**: role rotation and lab checklist self-monitoring`
+    },
+    components: {
+      lisc: `**Learning Intentions**
+- We are learning how concentration affects the rate of a reaction
+- We are learning to collect and represent rate data from a timed investigation
+
+**Success Criteria**
+- I can carry out the disappearing cross procedure safely and consistently
+- I can compute 1/time and explain why it stands in for rate
+- I can plot and interpret a rate–concentration graph
+- I can explain the trend using collision theory (frequency of effective collisions)
+
+**E21CC Alignment**: Critical Thinking (proxy reasoning), Self-Regulation (lab checklist, role rotation)`,
+      timeline: `| Phase | Time | Activity | Layout |
+|-------|------|----------|--------|
+| Hook: Glow Sticks | 0–8 min | Iced vs warm glow sticks parked; framing question | Direct Instruction |
+| Briefing & Safety | 8–18 min | Demo setup, SO₂ precautions, meniscus reading | Direct Instruction |
+| Concentration Series | 18–48 min | Groups run 5 dilutions, rotate roles, tabulate | Stations (lab benches) |
+| Graph & Explain | 48–63 min | Plot 1/time vs concentration; collision theory build | Collaborative Pods |
+| Consolidate + Exit Ticket | 63–70 min | Glow stick explanation; temperature prediction | Quiet Work |`,
+      exitTicket: `### Exit Ticket — Rate of Reaction
+
+1. Sketch the 1/time vs concentration graph your group obtained. Label the axes with units.
+2. In two sentences, use collision theory to explain the shape of your graph.
+3. Prediction: the same experiment is run 10 °C warmer. Sketch the new line on the same axes and justify it in one sentence.`
+    },
+    reflection: {
+      whatWorked: 'The disappearing cross ran cleanly — timings were tight across groups (28–90 s), which made the 1/time vs concentration graph genuinely convincing. Pre-measured thiosulfate volumes saved a good 10 minutes, and the glow stick bookend gave the lesson a satisfying full-circle close.',
+      whatToAdjust: 'Two groups misread the measuring cylinder — add a 2-minute meniscus demo before release next time. Extension groups finished early; have the temperature variation prepared as a ready-to-go second station rather than a verbal prompt.',
+      engagement: 5,
+      e21ccObservations: 'Self-regulation clearly improving: four of six groups used the lab checklist unprompted and rotated roles without reminders. Strong reasoning when predicting the effect of halving concentration before testing — several students framed it in collisions per second without prompting.',
+      freeform: 'SO₂ smell noticeable by period end despite small volumes — book Lab 2 with the newer fume extraction next run. The 1/time discussion is worth a full 5 minutes; do not rush it.'
+    }
+  },
+
+  /* ── 5. Biology — draft ── */
+  {
+    title: 'Enzymes — Why Pineapple Ruins Jelly',
+    classMatch: ['Biology', 'Combined Science'],
+    status: 'draft',
+    createdDaysAgo: 6,
+    updatedDaysAgo: 5,
+    e21ccFocus: ['criticalThinking'],
+

@@ -35,6 +35,9 @@ import { render as renderStaveNotation } from './views/stave-notation.js';
 import { render as renderDesignProcess } from './views/design-process.js';
 import { render as renderKitchenLayout } from './views/kitchen-layout.js';
 import { render as renderSubjectTools } from './views/subject-tools.js';
+import { render as renderReportComments } from './views/report-comments.js';
+import { render as renderQuestionBank } from './views/question-bank.js';
+import { render as renderReliefKit } from './views/relief-kit.js';
 import { initGlobalSearch, openSearch } from './components/unified-search.js';
 import { initOnboarding } from './components/onboarding.js';
 import { initKeyboardShortcuts } from './components/keyboard-shortcuts.js';
@@ -123,6 +126,9 @@ function init() {
   registerRoute('/design-process', renderDesignProcess);
   registerRoute('/kitchen-layout', renderKitchenLayout);
   registerRoute('/subject-tools', renderSubjectTools);
+  registerRoute('/report-comments', renderReportComments);
+  registerRoute('/question-bank', renderQuestionBank);
+  registerRoute('/relief-kit', renderReliefKit);
   registerRoute('/settings', renderSettings);
 
   // Start router
