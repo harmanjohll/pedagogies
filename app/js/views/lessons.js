@@ -19,8 +19,22 @@ const STATUS_MAP = {
   completed: { label: 'Completed', badge: 'badge-blue' }
 };
 
-const E21CC_LABELS = { cait: 'CAIT', cci: 'CCI', cgc: 'CGC' };
-const E21CC_BADGE = { cait: 'badge-blue', cci: 'badge-green', cgc: 'badge-amber' };
+const E21CC_LABELS = {
+  // Legacy 3-domain keys
+  cait: 'CAIT', cci: 'CCI', cgc: 'CGC',
+  // Current 6-dimension keys
+  criticalThinking: 'Critical Thinking', creativeThinking: 'Creative Thinking',
+  communication: 'Communication', collaboration: 'Collaboration',
+  socialConnectedness: 'Social Connectedness', selfRegulation: 'Self-Regulation'
+};
+const E21CC_BADGE = {
+  cait: 'badge-blue', cci: 'badge-green', cgc: 'badge-amber',
+  criticalThinking: 'badge-blue', creativeThinking: 'badge-violet',
+  communication: 'badge-green', collaboration: 'badge-amber',
+  socialConnectedness: 'badge-rose', selfRegulation: 'badge-gray'
+};
+const e21Label = (f) => E21CC_LABELS[f] || f;
+const e21Badge = (f) => E21CC_BADGE[f] || 'badge-gray';
 
 function timeAgo(ts) {
   const d = Date.now() - ts, m = Math.floor(d / 60000);
@@ -208,6 +222,7 @@ export function renderList(container) {
             <button class="tab" data-filter="draft">Draft (${lessons.filter(l => l.status === 'draft').length})</button>
             <button class="tab" data-filter="ready">Ready (${lessons.filter(l => l.status === 'ready').length})</button>
             <button class="tab" data-filter="completed">Done (${lessons.filter(l => l.status === 'completed').length})</button>
+            ${lessons.some(l => l.isExemplar) ? `<button class="tab" data-filter="exemplar">&#9733; Exemplars (${lessons.filter(l => l.isExemplar).length})</button>` : ''}
           </div>
           <div id="lessons-grid" class="stagger" style="display:flex;flex-direction:column;gap:var(--sp-4);"></div>
         `}
@@ -256,7 +271,10 @@ export function renderList(container) {
       container.querySelectorAll('[data-filter]').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       const f = tab.dataset.filter;
-      renderCards(grid, f === 'all' ? lessons : lessons.filter(l => l.status === f), classMap);
+      const subset = f === 'all' ? lessons
+        : f === 'exemplar' ? lessons.filter(l => l.isExemplar)
+        : lessons.filter(l => l.status === f);
+      renderCards(grid, subset, classMap);
     });
   });
 
@@ -375,8 +393,9 @@ function renderCards(grid, lessons, classMap) {
             <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-1);flex-wrap:wrap;">
               <span style="color:var(--ink-faint);cursor:grab;margin-right:2px;" title="Drag to reorder">&#9776;</span>
               <span class="badge ${s.badge} badge-dot">${s.label}</span>
+              ${l.isExemplar ? `<span class="badge badge-violet" title="Sample lesson you can explore or duplicate">&#9733; Exemplar</span>` : ''}
               ${cn ? `<span class="badge badge-gray">${esc(cn)}</span>` : ''}
-              ${(l.e21ccFocus || []).map(f => `<span class="badge ${E21CC_BADGE[f]}">${E21CC_LABELS[f]}</span>`).join('')}
+              ${(l.e21ccFocus || []).map(f => `<span class="badge ${e21Badge(f)}">${e21Label(f)}</span>`).join('')}
             </div>
             <h3 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:2px;">${esc(l.title)}</h3>
             <p style="font-size:0.8125rem;color:var(--ink-muted);">
@@ -523,7 +542,7 @@ export function renderDetail(container, { id }) {
           <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-2);flex-wrap:wrap;">
             <span class="badge ${s.badge} badge-dot">${s.label}</span>
             ${cn ? `<span class="badge badge-gray">${esc(cn)}</span>` : ''}
-            ${(lesson.e21ccFocus || []).map(f => `<span class="badge ${E21CC_BADGE[f]}">${E21CC_LABELS[f]}</span>`).join('')}
+            ${(lesson.e21ccFocus || []).map(f => `<span class="badge ${e21Badge(f)}">${e21Label(f)}</span>`).join('')}
           </div>
           <h1 class="page-title">${esc(lesson.title)}</h1>
           <p class="page-subtitle">Created ${fmtDate(lesson.createdAt)} &middot; Updated ${fmtDate(lesson.updatedAt)}</p>
@@ -781,7 +800,7 @@ export function renderDetail(container, { id }) {
         <div class="meta">
           <span>${s.label}</span>
           ${cn ? `<span>${esc(cn)}</span>` : ''}
-          ${(lesson.e21ccFocus || []).map(f => `<span>${E21CC_LABELS[f]}</span>`).join('')}
+          ${(lesson.e21ccFocus || []).map(f => `<span>${e21Label(f)}</span>`).join('')}
           <span>${fmtDate(lesson.createdAt)}</span>
         </div>
         ${planHtml}

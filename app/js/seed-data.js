@@ -2104,4 +2104,254 @@ Return to the glow sticks — students explain the difference using collision th
     createdDaysAgo: 6,
     updatedDaysAgo: 5,
     e21ccFocus: ['criticalThinking'],
+    objectives: 'Students will describe the lock-and-key model of enzyme action, explain the effect of temperature and pH on enzyme activity, and design a fair test using fresh vs canned pineapple on gelatine.',
+    lessonHook: 'Add fresh pineapple to jelly and it never sets — but canned pineapple works fine. One enzyme, bromelain, is quietly eating the gelatine. Why does the canned version lose its power, and what does that tell us about every enzyme in your body?',
+    chat: {
+      user: 'Plan a Sec 4 Biology lesson introducing enzymes for Combined Science. Cover the lock-and-key model and the effect of temperature and pH. I want a fresh-vs-canned pineapple jelly investigation as the anchor, and I want students designing the fair test themselves.',
+      assistant: `## Enzymes — Why Pineapple Ruins Jelly (Sec 4 Biology)
 
+### Learning Objectives
+1. Describe enzymes as biological catalysts using the lock-and-key model
+2. Explain the effect of temperature and pH on enzyme activity (including denaturation)
+3. Design a fair test with clearly identified variables
+
+### Lesson Flow (70 min)
+**Hook — The Jelly That Won't Set (10 min)** — Show two jelly cups: one with fresh pineapple (liquid), one with canned (set). Students propose explanations in pairs.
+
+**Model Building (15 min)** — Introduce bromelain as an enzyme; build the lock-and-key model with a physical cut-out substrate. Draw the labelled diagram together.
+
+**Design the Test (20 min)** — Groups design a fair test: fresh vs canned vs boiled-fresh pineapple on gelatine. They identify independent, dependent, and controlled variables. (This is the E21CC critical-thinking core — do not hand them the method.)
+
+**Predict & Explain (15 min)** — Why does boiling the fresh pineapple make the jelly set again? Link to denaturation. Extend to pH with a stomach-enzyme example.
+
+**Exit Ticket (10 min)** — Label a denaturation diagram; predict one more variable.
+
+*Note: this is still a draft — the fair-test scaffold needs a worksheet, and I want to add a temperature-gradient extension before teaching it.*`
+    },
+    components: {
+      lisc: `**Learning Intentions**
+- We are learning how enzymes speed up reactions using the lock-and-key model
+- We are learning how temperature and pH change enzyme activity
+
+**Success Criteria**
+- I can explain why fresh pineapple stops jelly setting but boiled pineapple does not
+- I can identify the independent, dependent and controlled variables in our test
+- I can use the word "denatured" correctly to describe a heated enzyme`
+    }
+  },
+];
+
+/* Turn a compact exemplar spec into the Store lesson shape. */
+function buildExemplarLesson(ex, classes, now) {
+  const cls = classes.find(c => (ex.classMatch || []).some(m =>
+    (c.subject || '').toLowerCase().includes(m.toLowerCase()))) || null;
+  const chatHistory = ex.chat ? [
+    { role: 'user', content: ex.chat.user },
+    { role: 'assistant', content: ex.chat.assistant }
+  ] : [];
+  // Component entries follow the planner shape { content, meta, updatedAt }
+  const components = {};
+  Object.entries(ex.components || {}).forEach(([k, content]) => {
+    components[k] = { content, meta: '', updatedAt: now - (ex.updatedDaysAgo || 1) * DAY };
+  });
+  return {
+    title: ex.title,
+    classId: cls ? cls.id : null,
+    status: ex.status || 'draft',
+    chatHistory,
+    plan: ex.chat ? ex.chat.assistant : '',
+    objectives: ex.objectives || '',
+    lessonHook: ex.lessonHook || '',
+    e21ccFocus: ex.e21ccFocus || [],
+    components,
+    reflection: ex.reflection || '',
+    rehearsedAt: ex.rehearsedAt ? now - ex.rehearsedAt * DAY : undefined,
+    isExemplar: true,
+    createdAt: now - (ex.createdDaysAgo || 7) * DAY,
+    updatedAt: now - (ex.updatedDaysAgo || 5) * DAY
+  };
+}
+
+const EXEMPLAR_REHEARSED = new Set([
+  'Quadratic Functions — Modelling Projectile Motion',
+  'Series & Parallel Circuits — Why Chargers Overheat'
+]);
+
+export function seedExemplarsIfNeeded() {
+  if (localStorage.getItem(EXEMPLAR_SEED_KEY)) return;
+  const classes = Store.getClasses();
+  if (classes.length === 0) return; // classes must exist first
+  const now = Date.now();
+  const existing = Store.get('lessons') || [];
+  LIFECYCLE_EXEMPLARS.forEach(ex => {
+    if (existing.some(l => l.title === ex.title)) return;
+    const spec = { ...ex };
+    if (EXEMPLAR_REHEARSED.has(ex.title)) spec.rehearsedAt = 4;
+    const created = Store.addLesson(buildExemplarLesson(spec, classes, now));
+    // addLesson forces status 'draft' and reflection '' — apply the rest
+    Store.updateLesson(created.id, {
+      status: spec.status || 'draft',
+      components: created.components,
+      reflection: spec.reflection || '',
+      rehearsedAt: spec.rehearsedAt ? now - spec.rehearsedAt * DAY : undefined,
+      isExemplar: true,
+      lessonHook: spec.lessonHook || '',
+      createdAt: now - (spec.createdDaysAgo || 7) * DAY,
+      updatedAt: now - (spec.updatedDaysAgo || 5) * DAY
+    });
+  });
+  localStorage.setItem(EXEMPLAR_SEED_KEY, '1');
+}
+
+/* ══════════════════════════════════════════════════════
+   Portal Demo Seeds — KB, PD, Stimulus, Sources, CCE,
+   Admin, Spatial layouts (for demo/testing)
+   ══════════════════════════════════════════════════════ */
+
+const PORTAL_SEED_KEY = 'cocher_portal_demos_seeded_v1';
+
+export function seedPortalDemosIfNeeded() {
+  if (localStorage.getItem(PORTAL_SEED_KEY)) return;
+  const now = Date.now();
+  const classes = Store.getClasses();
+  const firstClassId = classes[0]?.id || null;
+
+  /* ── Knowledge Base uploads (content → IndexedDB via Store.set) ── */
+  if ((Store.get('knowledgeUploads') || []).length === 0) {
+    const uploads = [
+      {
+        id: generateId(), title: 'Sec 4 Chemistry — Scheme of Work (Term 3)',
+        category: 'Scheme of Work', subject: 'Pure Chemistry', classId: firstClassId,
+        content: `SCHEME OF WORK — SEC 4 PURE CHEMISTRY (TERM 3)\n\nUnit: Chemical Bonding & the Mole\nDuration: 6 weeks\n\nWeek 1-2 — Ionic & Covalent Bonding: electron transfer/sharing, dot-and-cross diagrams, giant vs simple structures. E21CC: Critical Thinking (structure-property reasoning).\nWeek 3 — Metallic bonding & properties; comparison table across bonding types.\nWeek 4-5 — The Mole Concept: Avogadro constant, molar mass, mole calculations, reacting masses. Common misconception: confusing moles with mass.\nWeek 6 — Consolidation, practical (titration link), Topical Test.\n\nAssessment: 1 formative exit-quiz per week, 1 practical write-up (titration), Topical Test (Bonding + Mole).\nDifferentiation: worked-example scaffolds for weaker students; extension on lattice energy trends for stronger.`,
+        notes: 'Sample SoW — auto-attaches as planner context.', isSample: true, createdAt: now - 20 * DAY
+      },
+      {
+        id: generateId(), title: 'School Assessment Policy 2026 (Extract)',
+        category: 'Exam Paper / Assessment', subject: '', classId: null,
+        content: `ASSESSMENT POLICY 2026 (EXTRACT)\n\n1. Balance of Assessment: Every subject maintains a mix of Assessment for/as/of Learning. AfL (formative) should occur every lesson; AoL (summative) at most twice per term.\n2. Feedback: Written feedback on major tasks within 2 weeks; feedback must be actionable ("next step" comment), not just a grade.\n3. Weighting: Continual Assessment 40%, Semestral Assessment 60% for G3/O-Level streams.\n4. Late/Absent: MC-covered absences → medical exemption, weighted from remaining components.\n5. E21CC Reporting: Each report cycle includes a holistic comment referencing at least two E21CC domains observed.`,
+        notes: 'Sample policy document.', isSample: true, createdAt: now - 18 * DAY
+      },
+      {
+        id: generateId(), title: 'Pedagogy Note — Productive Failure (Kapur)',
+        category: 'Curriculum / Syllabus', subject: '', classId: null,
+        content: `PRODUCTIVE FAILURE — QUICK REFERENCE\n\nCore idea (Manu Kapur, NIE): let students grapple with a complex problem BEFORE instruction. The struggle activates prior knowledge and primes them to understand the expert solution more deeply.\n\nDesign pattern:\n1. Generation & Exploration — students invent multiple solutions to a hard problem (no teaching yet). Expect failure; that is the point.\n2. Consolidation — teacher contrasts student attempts with the canonical method, naming why the expert solution works.\n\nWhen it works best: concept-rich topics (gradient, density, mole, rate). Avoid for pure procedural fluency.\nE21CC: strong Critical & Inventive Thinking; builds Self-Regulation through struggle.`,
+        notes: 'Sample pedagogy reference.', isSample: true, createdAt: now - 15 * DAY
+      }
+    ];
+    Store.set('knowledgeUploads', uploads);
+  }
+
+  /* ── PD folder (My Learning) ── */
+  const pdFolders = Store.get('pdFolders') || [];
+  if (!pdFolders.some(f => f.name && f.name.includes('Assessment Literacy'))) {
+    pdFolders.push({
+      id: generateId(), name: 'Assessment Literacy Workshop 2026', category: 'workshop',
+      description: 'MOE-run workshop on designing quality formative assessment and feedback.',
+      tags: ['assessment', 'AfL', 'feedback'], isSample: true,
+      materials: [
+        { id: generateId(), title: 'Workshop Handout — Feedback that Moves Learning', type: 'note',
+          content: 'Key takeaway: the best feedback answers three questions for the student — Where am I going? How am I going? Where to next? (Hattie & Timperley). Comment-only marking outperforms grades+comments because grades short-circuit the "where to next".', createdAt: now - 12 * DAY },
+        { id: generateId(), title: 'My Action Plan', type: 'reflection',
+          content: 'Trialling comment-only marking on the next two Chemistry practicals for 4A. Will compare re-submission quality against the graded baseline from Term 2.', createdAt: now - 11 * DAY }
+      ],
+      createdAt: now - 12 * DAY, updatedAt: now - 11 * DAY
+    });
+    Store.set('pdFolders', pdFolders);
+  }
+
+  /* ── Stimulus library ── */
+  if ((Store.get('stimulusLibrary') || []).length === 0) {
+    Store.set('stimulusLibrary', [
+      { id: generateId(), title: 'The Last Kampong', subject: 'English', level: 'Sec 3', type: 'comprehension',
+        content: 'Comprehension passage (adapted): a first-person recollection of Kampong Lorong Buangkok, Singapore’s last surviving village, contrasting communal kampong life with the anonymity of HDB living. Themes: belonging, modernity, loss.',
+        questions: '1. Identify two details that convey the sense of community.\n2. Explain the writer’s attitude toward modern housing (quote + explain).\n3. Vocabulary in context: "anonymity".', teacherNotes: 'Pairs well with a National Education discussion.', wordCount: 42, createdAt: now - 14 * DAY, source: 'sample', isSample: true },
+      { id: generateId(), title: 'Should Cash Be Abolished?', subject: 'General Paper', level: 'JC 1', type: 'scenario',
+        content: 'Scenario stimulus: Singapore’s rapid shift to PayNow/cashless payments. Consider the elderly hawker who cannot use QR codes, the privacy trade-offs of digital trails, and financial inclusion.',
+        questions: '1. Whose interests are served by going cashless?\n2. What is lost when cash disappears?', teacherNotes: 'Four-corners debate works well here.', wordCount: 38, createdAt: now - 10 * DAY, source: 'sample', isSample: true },
+      { id: generateId(), title: 'The Bukit Timah Landslide (Case Study)', subject: 'Geography', level: 'Sec 4', type: 'case study',
+        content: 'Case study stimulus: a hypothetical slope failure after intense monsoon rainfall near Bukit Timah. Includes rainfall data, slope angle, vegetation cover, and drainage notes for students to analyse causes and mitigation.',
+        questions: '1. Identify the physical and human factors contributing to the landslide.\n2. Suggest two mitigation strategies and evaluate one.', teacherNotes: 'Links to the water cycle and urban planning units.', wordCount: 45, createdAt: now - 7 * DAY, source: 'sample', isSample: true }
+    ]);
+  }
+
+  /* ── Source Analysis library ── */
+  if ((Store.get('sourceLibrary') || []).length === 0) {
+    Store.set('sourceLibrary', [
+      { id: generateId(), title: 'Singapore’s Separation from Malaysia, 1965', subject: 'History', topic: 'Road to Independence', level: 'Sec 4', framework: 'sbq', source: 'sample', isSample: true,
+        sources: [
+          { title: 'Excerpt from a 1965 newspaper editorial', type: 'Written', provenance: 'The Straits Times, 10 August 1965', content: 'An editorial expressing shock and uncertainty at the announcement of separation, urging calm and unity among all races.' },
+          { title: 'Photograph of Lee Kuan Yew’s press conference', type: 'Visual', provenance: 'Press photo, 9 August 1965', content: 'A widely circulated image of an emotional press conference announcing separation.' }
+        ],
+        questions: [
+          { question: 'What can you infer from Source A about public sentiment in August 1965?', type: 'Inference', marks: 5, skill: 'Inference', e21cc: 'CGC' },
+          { question: 'How far do Sources A and B agree about the mood of the nation? Explain.', type: 'Comparison', marks: 6, skill: 'Comparison', e21cc: 'CAIT' }
+        ], createdAt: new Date(now - 16 * DAY).toISOString() },
+      { id: generateId(), title: 'Climate Change & Small States', subject: 'Social Studies', topic: 'Living in a Globalised World', level: 'Sec 3', framework: 'seq', source: 'sample', isSample: true,
+        sources: [
+          { title: 'Statement by a Pacific island leader at COP', type: 'Written', provenance: 'UN Climate Summit address', content: 'A plea from a low-lying island state on the existential threat of sea-level rise, calling for shared responsibility.' },
+          { title: 'Line graph of global mean sea level 1990–2025', type: 'Data', provenance: 'Satellite altimetry dataset', content: 'A rising trend line showing accelerating sea-level rise over three decades.' }
+        ],
+        questions: [
+          { question: 'Assess the reliability of Source A as evidence of the impact of climate change.', type: 'Reliability', marks: 6, skill: 'Reliability', e21cc: 'CAIT' },
+          { question: 'To what extent should developed nations bear greater responsibility? Justify.', type: 'Assertion', marks: 8, skill: 'Evaluation', e21cc: 'CGC' }
+        ], createdAt: new Date(now - 9 * DAY).toISOString() }
+    ]);
+  }
+
+  /* ── CCE saved discussions ── */
+  try {
+    const cceKey = 'cocher_cce_discussions';
+    const existingCce = JSON.parse(localStorage.getItem(cceKey) || '[]');
+    if (existingCce.length === 0) {
+      localStorage.setItem(cceKey, JSON.stringify([
+        { id: generateId(), title: 'Handling Online Rumours Responsibly', contentArea: 'CW', bigIdea: 'Choices', values: 'Responsibility, Integrity', level: 'Sec 2', format: 'circle', isSample: true,
+          content: '## Cyber Wellness Discussion — Online Rumours\n\n**Hook:** A classmate’s edited photo is spreading in a class chat.\n\n**Circle questions:**\n1. What would you feel if it were you?\n2. What is the difference between forwarding and creating?\n3. What is one responsible action you can take in the next 5 minutes?\n\n**Close:** Draft a class agreement on sharing.', createdAt: now - 13 * DAY },
+        { id: generateId(), title: 'Respecting Difference — Race & Religion', contentArea: 'NE', bigIdea: 'Relationships', values: 'Respect, Harmony', level: 'Sec 3', format: 'four corners', isSample: true,
+          content: '## National Education — Living with Difference\n\n**Provocation:** Should void-deck spaces be used for religious events?\n\n**Four corners:** Strongly agree / Agree / Disagree / Strongly disagree — students justify and may move as they hear others.\n\n**Debrief:** name one perspective that shifted your thinking. Connect to Singapore’s multiracial compact.', createdAt: now - 6 * DAY }
+      ]));
+    }
+  } catch { /* ignore */ }
+
+  /* ── Admin events ── */
+  if ((Store.get('adminEvents') || []).length === 0) {
+    const mkTask = (key, status, data) => ({ key, enabled: true, status, approvalStatus: status === 'completed' ? 'approved' : 'not_started', data: data || {} });
+    Store.set('adminEvents', [
+      {
+        id: generateId(), name: 'Sec 3 Geography Fieldwork — Sungei Buloh', date: new Date(now - 4 * DAY).toISOString().slice(0, 10),
+        eventType: 'Learning Journey', status: 'completed', isSample: true,
+        tasks: [
+          mkTask('rams', 'completed', { activity_desc: 'Guided wetland fieldwork collecting abiotic data and observing mangrove adaptations.', venue: 'Sungei Buloh Wetland Reserve', hazards: 'Uneven boardwalk, heat, insect bites, water edges', mitigations: 'Buddy system, hydration breaks every 30 min, first-aid kit, staff:student 1:15', emergency_plan: 'Nearest hospital: Khoo Teck Puat. Assembly point at visitor centre. Teacher-IC carries emergency contacts.', risk_level: 'Medium' }),
+          mkTask('bus_booking', 'completed', { teacher_ic: 'Mr Tan', pickup: '7:30am school gate', return: '1:00pm', pax: '80' }),
+          mkTask('student_list', 'completed', { teacher_ic: 'Mr Tan' }),
+          mkTask('parent_notification', 'completed', {}),
+          mkTask('aor', 'completed', { amount: '$640 (bus + entry)' })
+        ], createdAt: now - 25 * DAY, updatedAt: now - 4 * DAY
+      },
+      {
+        id: generateId(), name: 'Sec 2 Cohort Camp 2026', date: new Date(now + 30 * DAY).toISOString().slice(0, 10),
+        eventType: 'Camp', status: 'in_progress', isSample: true,
+        tasks: [
+          mkTask('rams', 'completed', { activity_desc: '3-day residential team-building camp.', venue: 'Outward Bound Singapore, Pulau Ubin', hazards: 'Water activities, high elements, weather', mitigations: 'OBS-certified instructors, PFDs, weather monitoring', emergency_plan: 'OBS on-site medic + evacuation protocol.', risk_level: 'High' }),
+          mkTask('venue_booking', 'completed', {}),
+          mkTask('bus_booking', 'pending', {}),
+          mkTask('parent_notification', 'pending', {}),
+          mkTask('aor', 'pending', {})
+        ], createdAt: now - 8 * DAY, updatedAt: now - 2 * DAY
+      }
+    ]);
+  }
+
+  /* ── Spatial saved layouts ── */
+  if ((Store.getSavedLayouts() || []).length === 0) {
+    Store.saveLayout({ name: 'Discussion Pods (32)', preset: 'pods', studentCount: 32, wallState: 'closed', isSample: true,
+      items: [
+        { id: 'teacher_desk', x: 340, y: 30, r: 0 },
+        { id: 'group_table', x: 120, y: 160, r: 0 }, { id: 'group_table', x: 360, y: 160, r: 0 }, { id: 'group_table', x: 600, y: 160, r: 0 },
+        { id: 'group_table', x: 120, y: 340, r: 0 }, { id: 'group_table', x: 360, y: 340, r: 0 }, { id: 'group_table', x: 600, y: 340, r: 0 }
+      ] });
+    Store.saveLayout({ name: 'Exam Rows (single)', preset: 'exam', studentCount: 30, wallState: 'closed', isSample: true,
+      items: Array.from({ length: 30 }, (_, i) => ({ id: 'desk_rect', x: 80 + (i % 6) * 110, y: 120 + Math.floor(i / 6) * 90, r: 0 })) });
+  }
+
+  localStorage.setItem(PORTAL_SEED_KEY, '1');
+}

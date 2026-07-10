@@ -1111,9 +1111,11 @@ export function render(container) {
     if (ok) {
       Store.clearAllData();
       // Reset seed flags so they don't re-seed
-      localStorage.setItem('cocher_seeded', '1');
-      localStorage.setItem('cocher_pd_seeded', '1');
-      localStorage.setItem('cocher_lessons_seeded', '1');
+      ['cocher_seeded', 'cocher_pd_seeded', 'cocher_lessons_seeded',
+       'cocher_assessment_seeded', 'cocher_exemplars_seeded_v1',
+       'cocher_portal_demos_seeded_v1'].forEach(k => localStorage.setItem(k, '1'));
+      // Portal demos that live outside the main Store snapshot
+      localStorage.removeItem('cocher_cce_discussions');
       showToast('Sample data cleared. You can now add your own classes!', 'success');
       render(container);
     }
