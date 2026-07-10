@@ -18,6 +18,7 @@ import { sendChat } from '../api.js';
 import { navigate } from '../router.js';
 import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
 import { getCurrentUser } from '../components/login.js';
+import { escapeHtml } from '../utils/markdown.js';
 
 /* ═══════════ Timetable (TT) Awareness ═══════════ */
 let _ttData = null;
@@ -995,19 +996,19 @@ export function render(container) {
       const insightsEl = container.querySelector('#insights');
       if (insightsEl) {
         const tipsHtml = (suggestion.tips || []).map(t =>
-          `<li style="margin-bottom:var(--sp-1);">${t}</li>`
+          `<li style="margin-bottom:var(--sp-1);">${escapeHtml(t)}</li>`
         ).join('');
         const aiInsightsHtml = (suggestion.insights || []).map(ins => `
           <div style="margin-bottom:var(--sp-3);">
-            <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:var(--sp-1);">${ins.title}</div>
-            <div style="font-size:0.8125rem;color:var(--ink-secondary);margin-bottom:var(--sp-1);"><em>Affordance:</em> ${ins.affordance}</div>
-            ${ins.moves?.length ? `<ul style="margin:0;padding-left:var(--sp-4);font-size:0.8125rem;color:var(--ink-muted);">${ins.moves.map(m => `<li>${m}</li>`).join('')}</ul>` : ''}
+            <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);margin-bottom:var(--sp-1);">${escapeHtml(ins.title)}</div>
+            <div style="font-size:0.8125rem;color:var(--ink-secondary);margin-bottom:var(--sp-1);"><em>Affordance:</em> ${escapeHtml(ins.affordance)}</div>
+            ${ins.moves?.length ? `<ul style="margin:0;padding-left:var(--sp-4);font-size:0.8125rem;color:var(--ink-muted);">${ins.moves.map(m => `<li>${escapeHtml(m)}</li>`).join('')}</ul>` : ''}
           </div>
         `).join('');
         insightsEl.innerHTML = `
           <div style="background:var(--accent-light);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-md);border-left:3px solid var(--accent);margin-bottom:var(--sp-3);">
             <div style="font-weight:600;font-size:0.8125rem;color:var(--accent-dark);margin-bottom:var(--sp-1);">AI Suggestion</div>
-            ${suggestion.rationale ? `<div style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;margin-bottom:var(--sp-2);">${suggestion.rationale}</div>` : ''}
+            ${suggestion.rationale ? `<div style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;margin-bottom:var(--sp-2);">${escapeHtml(suggestion.rationale)}</div>` : ''}
             ${tipsHtml ? `<ul style="margin:0 0 var(--sp-2);padding-left:var(--sp-4);font-size:0.8125rem;color:var(--ink-secondary);">${tipsHtml}</ul>` : ''}
           </div>
           ${aiInsightsHtml}
@@ -1202,8 +1203,8 @@ export function render(container) {
           <div style="display:flex;gap:var(--sp-2);align-items:flex-start;font-size:0.8125rem;">
             <span style="font-weight:700;color:var(--accent);flex-shrink:0;">${i + 1}.</span>
             <div>
-              <div style="font-weight:600;color:var(--ink);">${p.name}${p.duration ? `, ${p.duration}min` : ''}</div>
-              <div style="color:var(--ink-muted);">${p.preset} layout${p.tip ? ` · ${p.tip}` : ''}</div>
+              <div style="font-weight:600;color:var(--ink);">${escapeHtml(p.name)}${p.duration ? `, ${escapeHtml(p.duration)}min` : ''}</div>
+              <div style="color:var(--ink-muted);">${escapeHtml(p.preset)} layout${p.tip ? ` · ${escapeHtml(p.tip)}` : ''}</div>
             </div>
           </div>
         `).join('');
@@ -1375,6 +1376,16 @@ export function render(container) {
     layoutRoot.innerHTML = html;
     [...layoutRoot.querySelectorAll('g[data-id]')].forEach(g => {
       makeDraggable(g);
+      // Text labels edit their text in place (matches createItem)
+      if (g.getAttribute('data-id') === 'text_label') {
+        g.addEventListener('dblclick', () => {
+          const t = g.querySelector('text');
+          if (!t) return;
+          const newText = prompt('Enter label text:', t.textContent);
+          if (newText !== null) t.textContent = newText;
+        });
+        return;
+      }
       // Re-attach label editing on any item
       g.addEventListener('dblclick', () => {
         let t = g.querySelector('text.user-label');
@@ -1434,18 +1445,18 @@ export function render(container) {
   function clamp(v, min, max) { return Math.max(min, Math.min(v, max)); }
 
   function makeDraggable(g) {
-    let offset = { x: 0, y: 0 }, isDragging = false, groupStart = null;
+    let offset = { x: 0, y: 0 }, isDragging = false, groupStart = null, undoPushed = false;
 
     g.addEventListener('pointerdown', e => {
       e.stopPropagation();
       isDragging = true;
+      undoPushed = false;
       g.style.cursor = 'grabbing';
       g.setPointerCapture(e.pointerId);
 
       if (!e.shiftKey && !selected.has(g)) { clearSelection(); selectItem(g); }
       else if (e.shiftKey) { toggleSelect(g); }
 
-      pushUndo();
       const p = getMouseSVG(e);
       groupStart = [...selected].map(n => ({ n, t: getTranslate(n) }));
       const me = groupStart.find(s => s.n === g)?.t || getTranslate(g);
@@ -1454,6 +1465,9 @@ export function render(container) {
 
     g.addEventListener('pointermove', e => {
       if (!isDragging) return;
+      // Lazy snapshot: only record undo state once an actual drag begins,
+      // so plain selection clicks don't pollute undo history
+      if (!undoPushed) { pushUndo(); undoPushed = true; }
       const p = getMouseSVG(e);
       const bypass = e.altKey || !snapToggle.checked;
       let nx = bypass ? p.x - offset.x : snap(p.x - offset.x);

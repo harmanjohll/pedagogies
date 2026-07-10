@@ -1882,35 +1882,40 @@ export function render(container) {
         }
       }
 
-      // Re-wire resize buttons for async widgets
-      container.querySelectorAll('.btn-widget-resize').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const wId = btn.dataset.resizeWidget;
-          const p = getDashPrefs();
-          const currentSize = (p.widgetSizes && p.widgetSizes[wId]) || 'medium';
-          const nextSize = SIZE_CYCLE[currentSize] || 'medium';
-          p.widgetSizes = { ...(p.widgetSizes || {}), [wId]: nextSize };
-          saveDashPrefs(p);
-          render(container);
-        });
-      });
+      // Wire resize buttons / collapse tracking for the freshly-injected async
+      // widgets only — the sync widgets were already wired above, so re-querying
+      // the whole container would stack duplicate listeners on their buttons
+      const asyncWidgetEls = [scheduleEl, weeklyEl, prepEl, timetableEl].filter(Boolean);
 
-      // Re-wire collapse tracking for async widgets
-      container.querySelectorAll('.dashboard-widget details').forEach(det => {
-        det.addEventListener('toggle', () => {
-          const wId = det.closest('.dashboard-widget')?.dataset.widgetId;
-          if (!wId) return;
-          const p = getDashPrefs();
-          if (det.open) {
-            p.collapsedWidgets = (p.collapsedWidgets || []).filter(w => w !== wId);
-          } else {
-            if (!(p.collapsedWidgets || []).includes(wId)) {
-              p.collapsedWidgets = [...(p.collapsedWidgets || []), wId];
+      asyncWidgetEls.forEach(widgetEl => {
+        widgetEl.querySelectorAll('.btn-widget-resize').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const wId = btn.dataset.resizeWidget;
+            const p = getDashPrefs();
+            const currentSize = (p.widgetSizes && p.widgetSizes[wId]) || 'medium';
+            const nextSize = SIZE_CYCLE[currentSize] || 'medium';
+            p.widgetSizes = { ...(p.widgetSizes || {}), [wId]: nextSize };
+            saveDashPrefs(p);
+            render(container);
+          });
+        });
+
+        widgetEl.querySelectorAll('details').forEach(det => {
+          det.addEventListener('toggle', () => {
+            const wId = det.closest('.dashboard-widget')?.dataset.widgetId;
+            if (!wId) return;
+            const p = getDashPrefs();
+            if (det.open) {
+              p.collapsedWidgets = (p.collapsedWidgets || []).filter(w => w !== wId);
+            } else {
+              if (!(p.collapsedWidgets || []).includes(wId)) {
+                p.collapsedWidgets = [...(p.collapsedWidgets || []), wId];
+              }
             }
-          }
-          saveDashPrefs(p);
+            saveDashPrefs(p);
+          });
         });
       });
     } catch { /* TT is optional */ }

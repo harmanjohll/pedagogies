@@ -995,7 +995,7 @@ function renderGeneratedQuestions(container, questions) {
     analyse: '#a855f7', evaluate: '#d946ef', create: '#ec4899'
   };
 
-  const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
+  const totalMarks = questions.reduce((s, q) => s + (Number(q.marks) || 0), 0);
 
   output.innerHTML = `
     <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
@@ -1138,7 +1138,7 @@ function exportQuestions(container) {
   const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';
   const level = container.querySelector('#aol-level')?.value?.trim() || '';
   trackEvent('export', 'print_questions', `${questions.length} questions`, [subject, level].filter(Boolean).join(' '));
-  const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
+  const totalMarks = questions.reduce((s, q) => s + (Number(q.marks) || 0), 0);
 
   // Detect formula-heavy subjects; use blank working space instead of lines
   const formulaSubjects = /math|physics|chemistry|chem|add\s*math|a\s*math|e\s*math/i;
@@ -1194,7 +1194,7 @@ function exportQuestions(container) {
         <span class="q-number">Q${i + 1}.</span>
         <span class="q-marks">[${q.marks} mark${q.marks !== 1 ? 's' : ''}]</span>
       </div>
-      <div class="q-text">${q.question}</div>
+      <div class="q-text">${escHtmlKeepLatex(q.question)}</div>
       ${Array.from({length: spaceLines}, () => '<div class="' + spaceClass + '"></div>').join('')}
     </div>`;
   }).join('')}
@@ -1204,7 +1204,7 @@ function exportQuestions(container) {
     ${questions.map((q, i) => `
       <div class="answer">
         <strong>Q${i + 1} (${(q.bloom_level || '').charAt(0).toUpperCase() + (q.bloom_level || '').slice(1)}, ${q.marks}m):</strong>
-        ${q.answer || 'No answer provided'}
+        ${escHtmlKeepLatex(q.answer || 'No answer provided')}
       </div>
     `).join('')}
   </div>
@@ -1229,7 +1229,7 @@ function copyQuestions(container) {
   const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';
   const level = container.querySelector('#aol-level')?.value?.trim() || '';
   trackEvent('export', 'copy_questions', `${questions.length} questions`, [subject, level].filter(Boolean).join(' '));
-  const totalMarks = questions.reduce((s, q) => s + (q.marks || 0), 0);
+  const totalMarks = questions.reduce((s, q) => s + (Number(q.marks) || 0), 0);
 
   let text = `${subject}${level ? ' | ' + level : ''}\nTotal Marks: ${totalMarks}\n\n`;
   questions.forEach((q, i) => {
@@ -2674,4 +2674,30 @@ function wireBlueprintListEvents(container) {
 function escHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* Escape HTML but preserve LaTeX spans so KaTeX can render them
+ * (same protect-escape-restore approach as renderMd in utils/latex.js). */
+function escHtmlKeepLatex(str) {
+  if (!str) return '';
+  const latexBlocks = [];
+  const protect = (match) => {
+    const idx = latexBlocks.length;
+    latexBlocks.push(match);
+    return `\x00LATEX${idx}\x00`;
+  };
+
+  let processed = String(str);
+  // Protect display math $$...$$ and \[...\]
+  processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, protect);
+  processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, protect);
+  // Protect inline math $...$ and \(...\) \u2014 but not currency like $10
+  processed = processed.replace(/\$([^\s$](?:[^$]*?[^\s$])?)\$/g, (match, inner) => {
+    if (/^\d+([.,]\d+)?$/.test(inner.trim())) return match;
+    return protect(match);
+  });
+  processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, protect);
+
+  // Escape the rest, then restore the LaTeX blocks
+  return escHtml(processed).replace(/\x00LATEX(\d+)\x00/g, (_, idx) => latexBlocks[parseInt(idx)]);
 }
