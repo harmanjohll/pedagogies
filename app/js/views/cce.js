@@ -10,6 +10,7 @@ import { sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog, openModal } from '../components/modals.js';
 import { processLatex } from '../utils/latex.js';
+import { md as renderMarkdown, escapeHtml as escapeHTML } from '../utils/markdown.js';
 
 /* ── Module-level state ── */
 
@@ -865,69 +866,3 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
   renderView();
 }
 
-/* ── Utility: escape HTML ── */
-function escapeHTML(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-/* ── Utility: simple markdown to HTML ── */
-function renderMarkdown(md) {
-  if (!md) return '';
-
-  // Extract links before escaping
-  const linkPlaceholders = [];
-  let processed = md.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
-    const idx = linkPlaceholders.length;
-    linkPlaceholders.push({ label, url });
-    return `%%LINK_${idx}%%`;
-  });
-
-  let html = escapeHTML(processed);
-
-  // Restore links with proper HTML
-  html = html.replace(/%%LINK_(\d+)%%/g, (_, idx) => {
-    const { label, url } = linkPlaceholders[parseInt(idx)];
-    // YouTube search tile
-    const ytSearch = url.match(/youtube\.com\/results\?search_query=/);
-    if (ytSearch) {
-      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border,#e2e5ea);border-radius:8px;text-decoration:none;color:var(--ink);font-size:0.8125rem;margin:4px 0;background:var(--bg-card,#fff);">` +
-        `<svg width="16" height="16" viewBox="0 0 24 24" fill="#dc2626"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98" fill="#fff"/></svg>` +
-        `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(label)}</span>` +
-        `<span style="font-size:0.6875rem;color:#dc2626;white-space:nowrap;">Search →</span></a>`;
-    }
-    return `<a href="${url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">${escapeHTML(label)}</a>`;
-  });
-
-  // Headers
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:1.05rem;margin-top:1.2em;">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-  // Bold and italic
-  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-  // Unordered lists
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
-
-  // Ordered lists
-  html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
-
-  // Paragraphs — convert double newlines
-  html = html.replace(/\n\n/g, '</p><p>');
-  html = html.replace(/\n/g, '<br>');
-  html = '<p>' + html + '</p>';
-
-  // Clean up empty paragraphs
-  html = html.replace(/<p>\s*<\/p>/g, '');
-  html = html.replace(/<p>\s*(<h[1-3]>)/g, '$1');
-  html = html.replace(/(<\/h[1-3]>)\s*<\/p>/g, '$1');
-  html = html.replace(/<p>\s*(<ul>)/g, '$1');
-  html = html.replace(/(<\/ul>)\s*<\/p>/g, '$1');
-
-  return html;
-}

@@ -10,6 +10,7 @@ import { openModal, confirmDialog } from '../components/modals.js';
 import { showToast } from '../components/toast.js';
 import { summarizeNotes, suggestGrouping, sendChat } from '../api.js';
 import { renderMd } from '../utils/latex.js';
+import { escapeHtml } from '../utils/markdown.js';
 
 const E21CC_DIMS = [
   { key: 'criticalThinking',    label: 'Critical Thinking',     short: 'CT',  color: '#6366f1' },
@@ -1145,11 +1146,7 @@ function showGroupingModal(classId) {
 }
 
 /* ── Helpers ── */
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
+/* escapeHtml now comes from the shared markdown util (quote-safe) */
 
 function escapeAttr(str) {
   return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
