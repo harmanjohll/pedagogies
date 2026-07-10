@@ -4,8 +4,8 @@
  * API key, model selection, theme, and data management.
  */
 
-import { Store } from '../state.js';
-import { validateApiKey, AVAILABLE_MODELS } from '../api.js';
+import { Store, getStorageEstimate } from '../state.js';
+import { validateApiKey, AVAILABLE_MODELS, normalizeModel } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog } from '../components/modals.js';
 import { getCurrentUser, clearCurrentUser, getPreferredName, setPreferredName, guessFirstName } from '../components/login.js';
@@ -285,7 +285,7 @@ const COMPONENT_META_SETTINGS = {
 
 export function render(container) {
   const apiKey = Store.get('apiKey') || '';
-  const model = Store.get('model') || 'gemini-2.5-flash';
+  const model = normalizeModel(Store.get('model') || 'gemini-2.5-flash');
   const darkMode = Store.get('darkMode');
   const dashPrefs = getDashPrefs();
 
@@ -650,9 +650,27 @@ export function render(container) {
         <!-- Data Management -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Data Management</h3>
-          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.5;">
             Export your data for backup or import from a previous export.
           </p>
+          ${(() => {
+            const est = getStorageEstimate();
+            const mb = (est.bytes / (1024 * 1024)).toFixed(2);
+            const barColor = est.percent >= 90 ? 'var(--danger, #ef4444)' : est.percent >= 70 ? '#f59e0b' : 'var(--accent)';
+            return `
+          <div style="margin-bottom: var(--sp-4);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--ink-muted); margin-bottom: 4px;">
+              <span>Browser storage used${est.percent >= 90 ? ' — nearly full!' : ''}</span>
+              <span>${mb} MB of ~5 MB (${est.percent}%)</span>
+            </div>
+            <div style="height: 6px; border-radius: 999px; background: var(--bg-subtle); overflow: hidden;">
+              <div style="height: 100%; width: ${est.percent}%; border-radius: 999px; background: ${barColor}; transition: width 0.3s;"></div>
+            </div>
+            <p style="font-size: 0.6875rem; color: var(--ink-faint); margin-top: 4px;">
+              Knowledge Base upload content is stored separately (IndexedDB) and doesn't count against this limit.
+            </p>
+          </div>`;
+          })()}
           <div style="display: flex; gap: var(--sp-3); flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm" id="export-btn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>

@@ -1265,7 +1265,7 @@ export function render(container) {
     // KB context — attach on every message where KB is attached
     if (attachedKBContext.length > 0) {
       contextParts.push(...attachedKBContext.map(kb =>
-        `[Reference — ${kb.title}]:\n${kb.content.slice(0, 2000)}`
+        `[Reference — ${kb.title}]:\n${(kb.content || '').slice(0, 2000)}`
       ));
     }
     // Auto-attach SoW if available and first message (background context)
@@ -1273,7 +1273,7 @@ export function render(container) {
       const sowUploads = (Store.get('knowledgeUploads') || []).filter(u => u.category === 'Scheme of Work');
       sowUploads.forEach(sow => {
         if (!attachedKBContext.some(kb => kb.id === sow.id)) {
-          contextParts.push(`[Scheme of Work — ${sow.title}]:\n${sow.content.slice(0, 3000)}`);
+          contextParts.push(`[Scheme of Work — ${sow.title}]:\n${(sow.content || '').slice(0, 3000)}`);
         }
       });
       // Inject reflection insights from previous lesson
@@ -2771,7 +2771,7 @@ function showAttachKBModal(container) {
   const pdFolders = Store.get('pdFolders') || [];
   const allItems = [
     ...FRAMEWORK_SUMMARIES.map(f => ({ ...f, type: 'framework' })),
-    ...uploads.map(u => ({ id: u.id, title: u.title, content: u.content, type: 'upload' })),
+    ...uploads.map(u => ({ id: u.id, title: u.title, content: u.content || '', type: 'upload' })),
     ...pdFolders.map(f => ({
       id: 'pd_' + f.id,
       title: f.name + ' (PD Folder)',

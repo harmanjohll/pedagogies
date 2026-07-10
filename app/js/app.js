@@ -4,7 +4,6 @@
  * Main entry point. Wires sidebar, router, and views together.
  */
 
-import { Store } from './state.js';
 import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
@@ -68,12 +67,11 @@ function init() {
     </main>
   `;
 
-  // Render sidebar
+  // Render sidebar — it manages its own single Store subscription internally
+  // (badges, theme, EEE/custom-link changes); subscribing here as well would
+  // stack a new listener on every state change.
   const sidebarEl = document.getElementById('sidebar');
   renderSidebar(sidebarEl);
-
-  // Re-render sidebar on state changes (badges, theme)
-  Store.subscribe(() => renderSidebar(sidebarEl));
 
   // Mobile sidebar toggle
   const overlay = document.getElementById('sidebar-overlay');

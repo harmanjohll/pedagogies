@@ -166,7 +166,12 @@ function setCollapsedSections(arr) {
   localStorage.setItem('cocher_sidebar_collapsed', JSON.stringify(arr));
 }
 
+/* The sidebar owns exactly ONE live Store subscription; each render replaces
+ * the previous one. Without this, every re-render stacked another listener. */
+let _unsubscribe = null;
+
 export function renderSidebar(container) {
+  if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
   const classCount = Store.getClasses().length;
   const lessonCount = Store.getLessons().length;
   const navItems = buildNavItems();
@@ -285,33 +290,37 @@ export function renderSidebar(container) {
       const dark = !Store.get('darkMode');
       Store.set('darkMode', dark);
       document.documentElement.classList.toggle('dark', dark);
-      // Re-render sidebar to update icon
-      renderSidebar(container);
+      // The store subscription below re-renders the sidebar (icon swap)
     });
   }
 
-  // Subscribe to state changes to update badges & re-render on EEE/custom link changes
+  // Subscribe to state changes to update badges & re-render on EEE/custom link/theme changes
   let lastEEEUpdate = Store.get('_eeeUpdated') || 0;
   let lastCustomLinksUpdate = Store.get('_customLinksUpdated') || 0;
-  return Store.subscribe(() => {
-    // Re-render entire sidebar when EEE sidebar selections or custom links change
+  let lastDarkMode = Store.get('darkMode');
+
+  function updateBadge(route, count) {
+    const item = container.querySelector(`[data-route="${route}"]`);
+    if (!item) return;
+    const badge = item.querySelector('.sidebar-item-badge');
+    if (badge) badge.textContent = count;
+    else if (count > 0) {
+      item.insertAdjacentHTML('beforeend', `<span class="sidebar-item-badge">${count}</span>`);
+    }
+  }
+
+  _unsubscribe = Store.subscribe(() => {
+    // Re-render entire sidebar when EEE sidebar selections, custom links, or theme change
     const curEEEUpdate = Store.get('_eeeUpdated') || 0;
     const curCustomLinksUpdate = Store.get('_customLinksUpdated') || 0;
-    if (curEEEUpdate !== lastEEEUpdate || curCustomLinksUpdate !== lastCustomLinksUpdate) {
-      lastEEEUpdate = curEEEUpdate;
-      lastCustomLinksUpdate = curCustomLinksUpdate;
+    const curDarkMode = Store.get('darkMode');
+    if (curEEEUpdate !== lastEEEUpdate || curCustomLinksUpdate !== lastCustomLinksUpdate || curDarkMode !== lastDarkMode) {
       renderSidebar(container);
       return;
     }
 
-    const newClassCount = Store.getClasses().length;
-    const classBadge = container.querySelector('[data-route="/classes"] .sidebar-item-badge');
-    if (classBadge) classBadge.textContent = newClassCount;
-    else if (newClassCount > 0) {
-      const classItem = container.querySelector('[data-route="/classes"]');
-      if (classItem && !classItem.querySelector('.sidebar-item-badge')) {
-        classItem.insertAdjacentHTML('beforeend', `<span class="sidebar-item-badge">${newClassCount}</span>`);
-      }
-    }
+    updateBadge('/classes', Store.getClasses().length);
+    updateBadge('/lessons', Store.getLessons().length);
   });
+  return _unsubscribe;
 }
