@@ -765,19 +765,28 @@ export function render(container) {
   `;
 
   // Tab switching
-  container.querySelectorAll('.settings-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const target = tab.dataset.tab;
-      // Update tab styles
-      container.querySelectorAll('.settings-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.tab === target);
-      });
-      // Show/hide panels
-      container.querySelectorAll('.settings-panel').forEach(p => {
-        p.style.display = p.dataset.panel === target ? '' : 'none';
-      });
+  function activateTab(target) {
+    container.querySelectorAll('.settings-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === target);
     });
+    container.querySelectorAll('.settings-panel').forEach(p => {
+      p.style.display = p.dataset.panel === target ? '' : 'none';
+    });
+  }
+
+  container.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', () => activateTab(tab.dataset.tab));
   });
+
+  // Deep link: other views (e.g. sidebar "Add / manage tools…") can request a
+  // specific tab via a one-shot sessionStorage handoff
+  const requestedTab = sessionStorage.getItem('cocher_settings_tab');
+  if (requestedTab) {
+    sessionStorage.removeItem('cocher_settings_tab');
+    if (container.querySelector(`.settings-tab[data-tab="${requestedTab}"]`)) {
+      activateTab(requestedTab);
+    }
+  }
 
   // Toggle key visibility
   const keyInput = container.querySelector('#settings-key');

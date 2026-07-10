@@ -242,8 +242,10 @@ export function renderSidebar(container) {
         window.open(btn.dataset.customUrl, '_blank', 'noopener,noreferrer');
         return;
       }
-      // Enactment tools are managed in the Settings marketplace
+      // Enactment tools are managed in the Settings marketplace —
+      // land directly on the Lesson Planner (Enactment) tab
       if (btn.dataset.route === '__manage_tools__') {
+        sessionStorage.setItem('cocher_settings_tab', 'planner');
         navigate('/settings');
         return;
       }

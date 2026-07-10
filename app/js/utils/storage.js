@@ -11,8 +11,12 @@
  */
 
 const DB_NAME = 'cocher';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'kb_content';
+// v2 adds: custom_sims (generated simulation HTML), images (AI-generated
+// visuals keyed by owner id) — all bulky payloads that must stay out of
+// the ~5MB localStorage budget
+const ALL_STORES = ['kb_content', 'custom_sims', 'images'];
 
 let _dbPromise = null;
 
@@ -22,9 +26,11 @@ function openDb() {
   _dbPromise = new Promise((resolve) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(STORE)) {
-        req.result.createObjectStore(STORE);
-      }
+      ALL_STORES.forEach(name => {
+        if (!req.result.objectStoreNames.contains(name)) {
+          req.result.createObjectStore(name);
+        }
+      });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => resolve(null);
@@ -33,8 +39,58 @@ function openDb() {
   return _dbPromise;
 }
 
-function tx(db, mode) {
-  return db.transaction(STORE, mode).objectStore(STORE);
+function tx(db, mode, store = STORE) {
+  return db.transaction(store, mode).objectStore(store);
+}
+
+/* ── Generic per-store helpers ── */
+
+export async function idbPut(store, id, value) {
+  const db = await openDb();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    const req = tx(db, 'readwrite', store).put(value, id);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => resolve(false);
+  });
+}
+
+export async function idbGet(store, id) {
+  const db = await openDb();
+  if (!db) return undefined;
+  return new Promise((resolve) => {
+    const req = tx(db, 'readonly', store).get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(undefined);
+  });
+}
+
+export async function idbRemove(store, id) {
+  const db = await openDb();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    const req = tx(db, 'readwrite', store).delete(id);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => resolve(false);
+  });
+}
+
+/** Returns a Map of id -> value for every entry in the store. */
+export async function idbGetAllFrom(store) {
+  const db = await openDb();
+  if (!db) return new Map();
+  return new Promise((resolve) => {
+    const s = tx(db, 'readonly', store);
+    const keysReq = s.getAllKeys();
+    const valsReq = s.getAll();
+    let keys = null, vals = null;
+    const done = () => {
+      if (keys && vals) resolve(new Map(keys.map((k, i) => [k, vals[i]])));
+    };
+    keysReq.onsuccess = () => { keys = keysReq.result; done(); };
+    valsReq.onsuccess = () => { vals = valsReq.result; done(); };
+    keysReq.onerror = valsReq.onerror = () => resolve(new Map());
+  });
 }
 
 export async function idbSetContent(id, text) {
