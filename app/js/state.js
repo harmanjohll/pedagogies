@@ -528,7 +528,7 @@ export const Store = {
     const detail = [p.level, p.subject].filter(Boolean).join(', ');
     lines.push(`CLASS PORTRAIT — ${p.className}${detail ? ` (${detail})` : ''}, ${p.studentCount} student${p.studentCount === 1 ? '' : 's'}.`);
     if (p.studentCount > 0) {
-      lines.push('E21CC levels (developing/applying/extending/leading): ' +
+      lines.push('E21CC levels (Co-Cher\'s six tracked dimensions; developing/applying/extending/leading): ' +
         E21CC_DIM_KEYS.map(k => {
           const c = p.e21ccDistribution[k];
           return `${E21CC_DIM_LABELS[k]} ${c.developing}/${c.applying}/${c.extending}/${c.leading}`;

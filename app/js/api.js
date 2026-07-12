@@ -22,6 +22,8 @@ Every lesson should intentionally develop one or more E21CC domains:
 - Core Values (R3ICH): Respect, Responsibility, Resilience, Integrity, Care, Harmony
 - SEL Outcomes: Self-Awareness, Self-Management, Social Awareness, Relationship Management, Responsible Decision-Making
 
+For classroom observation and student profiling, Co-Cher tracks six classroom-observable dimensions: Critical Thinking and Creative Thinking (mapping to CAIT), Communication and Collaboration (mapping to CCI), and Social Connectedness and Self-Regulation (SEL-adjacent dimensions tracked alongside E21CC). These six are Co-Cher's tracking dimensions, not MOE domains.
+
 When suggesting activities, always note which E21CC domain(s) they develop and how.
 
 ### CCE2021 — Character & Citizenship Education
@@ -47,7 +49,7 @@ Technology should amplify pedagogy, not replace it. Consider how digital tools c
 Respect the discipline the teacher works in. A Science lesson emphasises inquiry and evidence; a Language lesson emphasises expression and interpretation; a Humanities lesson emphasises perspective and analysis; a Mathematics lesson emphasises reasoning and modelling; a CCE lesson emphasises values clarification, ethical reasoning, and perspective-taking through discussion of real-world issues. Adapt your language, examples, and suggestions to the teacher's subject context. If no subject is specified, keep suggestions cross-disciplinary.
 
 ### Singapore Teaching Practice (STP)
-Align with the 4 areas: Lesson Preparation, Lesson Enactment, Monitoring & Feedback, Positive Learning Culture.
+Align with the four Teaching Processes (non-hierarchical): Positive Classroom Culture, Lesson Preparation, Lesson Enactment, Assessment and Feedback.
 
 ## Your Expertise
 - Singapore MOE frameworks: E21CC, STP, EdTech Masterplan 2030, CCE2021
@@ -70,7 +72,7 @@ Align with the 4 areas: Lesson Preparation, Lesson Enactment, Monitoring & Feedb
 9. When relevant, suggest how a lesson could be framed through different curriculum orientations (Scholar-Academic, Learner-Centred, Social Efficiency, Social Reconstructivist) — but only if it adds value, not as a checklist
 10. For CCE lessons, always connect to the Big Ideas (Identity, Relationships, Choices) and relevant R3ICH values
 11. Every lesson plan MUST begin with a real-world lesson hook — a compelling opener that connects the topic to students' lives. Frame it as a provocative question: "What if I told you...", "Did you ever wonder...", "Why do you think...". Root the hook in real-world context or application. This is the first thing students hear
-12. When a lesson activity develops E21CC competencies, name the specific domain (CAIT, CCI, CGC). When EdTech is relevant, name the tool or platform. When STP alignment is clear, reference the specific area. When CCE values connect naturally, mention them. Be explicit — teachers value seeing these connections clearly
+12. When a lesson activity develops E21CC competencies, name the specific domain (CAIT, CCI, CGC). When EdTech is relevant, name the tool or platform. When STP alignment is clear, reference the specific teaching process. When CCE values connect naturally, mention them. Be explicit — teachers value seeing these connections clearly
 13. TEACHER'S CALL: when a design decision genuinely belongs to the teacher (hook variant, grouping format, assessment format, pacing trade-off), do NOT decide it for them. Present it on its own line in exactly this form: [CHOICE: first option | second option]. Use at most 2 per response, and only when the decision meaningfully shapes the lesson — never for trivia
 
 Respond conversationally. Help the teacher think through their lesson experience holistically.`;
@@ -144,19 +146,35 @@ export async function sendChat(messages, options = {}) {
 
   if (options.jsonMode) {
     // JSON mode: match the proven pattern from the original spatial planner.
-    // Embed system prompt in the user message (no systemInstruction) and
-    // only set responseMimeType — this is what Gemini reliably responds to.
+    // Embed system prompt in the user message (no systemInstruction) and set
+    // responseMimeType — this is what Gemini reliably responds to. Callers'
+    // temperature/maxTokens are honoured here just like the text path.
     const userText = messages.map(m => m.content).join('\n\n');
     const combined = `${systemPrompt}\n\nUser request:\n${userText}`;
     body = {
       contents: [{ role: 'user', parts: [{ text: combined }] }],
-      generationConfig: { responseMimeType: 'application/json' }
+      generationConfig: { responseMimeType: 'application/json', temperature, maxOutputTokens: maxTokens }
     };
   } else {
-    // Normal text mode: use systemInstruction for richer conversations
+    // Normal text mode: use systemInstruction for richer conversations.
+    // m.content may be a plain string or an array of multimodal items —
+    // map each item to a Gemini part ({text} or {inlineData}).
+    const toParts = (content) => {
+      if (!Array.isArray(content)) return [{ text: content }];
+      return content.map(item => {
+        if (item == null) return null;
+        if (typeof item === 'string') return { text: item };
+        if (item.inlineData) return { inlineData: item.inlineData };            // direct Gemini passthrough
+        if (item.type === 'image' && item.source) {                             // Anthropic-style image block
+          return { inlineData: { mimeType: item.source.media_type || item.source.mimeType || 'image/png', data: item.source.data } };
+        }
+        if (typeof item.text === 'string') return { text: item.text };
+        return null;
+      }).filter(Boolean);
+    };
     const contents = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : m.role,
-      parts: [{ text: m.content }]
+      parts: toParts(m.content)
     }));
     body = {
       systemInstruction: { parts: [{ text: systemPrompt }] },
@@ -224,7 +242,7 @@ export async function reviewLesson(planText) {
     trackLabel: 'reviewLesson',
     systemPrompt: `You are Co-Cher's lesson review assistant for Singapore educators. Analyse lesson plans against:
 - E21CC alignment (CAIT, CCI, CGC) — which domains are addressed, which could be strengthened
-- STP alignment — lesson preparation, enactment, monitoring/feedback, positive culture
+- STP alignment — positive classroom culture, lesson preparation, lesson enactment, assessment and feedback
 - Differentiation — how well does the plan cater to diverse learners
 - Engagement — student-centred vs teacher-centred balance
 - Assessment — how understanding is checked
@@ -444,7 +462,7 @@ For each relevant student (extending or leading in key dimensions):
 ## Quick Adjustments
 2–3 small tweaks to the lesson plan that would better serve diverse learners.
 
-Be practical, name specific students, and tie suggestions to the actual lesson content. Reference STP Area 3 (Monitoring & Feedback) where relevant.`,
+Be practical, name specific students, and tie suggestions to the actual lesson content. Reference the STP teaching process of Assessment and Feedback where relevant.`,
     temperature: 0.5,
     maxTokens: 3072
   });

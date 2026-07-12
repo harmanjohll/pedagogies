@@ -1377,7 +1377,7 @@ export function renderAaL(container) {
           </div>
         </div>
 
-        <!-- GROW by Reflecting (Beatty, 2015) -->
+        <!-- GROW by Reflecting -->
         <div class="assess-card" id="aal-grow-card">
           <div class="assess-section-title" style="cursor:pointer;" data-jump="aal-grow-card" title="Click to see this framework in action">
             <span style="display:inline-flex;align-items:center;gap:6px;">
@@ -1386,7 +1386,7 @@ export function renderAaL(container) {
             </span>
           </div>
           <div class="assess-section-desc">
-            Beatty\u2019s GROW framework empowers students to become proactive, self-reflective learners.
+            The GROW by Reflecting routine empowers students to become proactive, self-reflective learners.
             Each letter guides a stage of personal reflection, celebrating success, planning improvement, owning knowledge, and looking ahead.
           </div>
 
@@ -1582,7 +1582,7 @@ export function renderAaL(container) {
             </span>
           </div>
           <div class="assess-section-desc">
-            Beatty\u2019s Learning Practice model shows how GROW, ACT, MAP, and ASK work together simultaneously,
+            The Learning Practice model shows how GROW, ACT, MAP, and ASK work together simultaneously,
             both in and out of lessons. All practices happen all the time, not in sequence.
             The inner ring represents the learner behaviours that drive learning: Prepare, Participate, and Process.
           </div>
@@ -1892,9 +1892,9 @@ function wireAaLEvents(container) {
     output.innerHTML = '<p style="color:var(--ink-muted);font-size:0.8125rem;">Generating GROW prompts\u2026</p>';
 
     try {
-      const prompt = `Generate a set of GROW self-reflection prompts for Singapore secondary students (age 13-17) based on Beatty's "GROW by reflecting" framework.
+      const prompt = `Generate a set of GROW self-reflection prompts for Singapore secondary students (age 13-17) based on the "GROW by Reflecting" routine.
 
-GROW framework (Beatty):
+GROW routine:
 G = Gift yourself success: Celebrate what you DO understand. "What is one thing I understand? How would I teach this to a friend?"
 R = Rise above with small steps: Identify gaps and plan improvement. "What do I not yet understand? What will I do to improve?"
 O = Own your knowledge: Connect learning to real life and share it. "What is one real-life example? How have I shared this?"
@@ -1913,7 +1913,7 @@ Make them concrete, empowering, and suitable for student self-reflection journal
       const text = await sendChat([{ role: 'user', content: prompt }], {
         trackLabel: 'generateGROW',
         trackDetail: topic || '',
-        systemPrompt: 'You are a metacognition specialist for Singapore secondary schools using Beatty\'s GROW by reflecting framework. Generate empowering student self-reflection prompts.',
+        systemPrompt: 'You are a metacognition specialist for Singapore secondary schools using the GROW by Reflecting routine. Generate empowering student self-reflection prompts.',
         temperature: 0.6, maxTokens: 4096
       });
 
@@ -1945,9 +1945,9 @@ Make them concrete, empowering, and suitable for student self-reflection journal
     output.innerHTML = '<p style="color:var(--ink-muted);font-size:0.8125rem;">Generating ACT observation prompts\u2026</p>';
 
     try {
-      const prompt = `Generate a set of ACT on Feedback prompts for Singapore secondary students (age 13-17) based on Beatty's framework.
+      const prompt = `Generate a set of ACT on Feedback prompts for Singapore secondary students (age 13-17) based on the ACT on Feedback routine.
 
-ACT on Feedback framework (Beatty):
+ACT on Feedback routine:
 A = Acknowledge: "How do I feel about this feedback? How might it help me learn better?"
 C = Connect: "How does this connect with success criteria/my goals? How does this connect with previous feedback?"
 T = Test: "What habit do I need to adjust? How will I know I am improving?"
@@ -1965,7 +1965,7 @@ Make them empowering, non-defensive, and suitable for student self-reflection af
 
       const text = await sendChat([{ role: 'user', content: prompt }], {
         trackLabel: 'generateACT',
-        systemPrompt: 'You are a metacognition specialist for Singapore secondary schools using Beatty\'s ACT on Feedback framework. Generate empowering student self-reflection prompts that help learners process and act on feedback.',
+        systemPrompt: 'You are a metacognition specialist for Singapore secondary schools using the ACT on Feedback routine. Generate empowering student self-reflection prompts that help learners process and act on feedback.',
         temperature: 0.6, maxTokens: 4096
       });
 

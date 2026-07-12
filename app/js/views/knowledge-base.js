@@ -24,7 +24,7 @@ const FRAMEWORKS = [
       { label: 'CCI', badge: 'badge-green' },
       { label: 'CGC', badge: 'badge-amber' },
     ],
-    overview: 'The Enhanced 21st Century Competencies (E21CC) framework, updated in 2021, guides holistic student development across three domains: Critical, Adaptive & Inventive Thinking (CAIT), Communication, Collaboration & Information (CCI), and Civic, Global & Cross-cultural Literacy (CGC).',
+    overview: 'The Emerging 21st Century Competencies (E21CC) framework, refreshed in 2023, guides holistic student development across three domains: Critical, Adaptive & Inventive Thinking (CAIT), Communication, Collaboration & Information (CCI), and Civic, Global & Cross-cultural Literacy (CGC).',
     sections: [
       {
         heading: 'CAIT: Critical, Adaptive & Inventive Thinking',
@@ -75,7 +75,7 @@ const FRAMEWORKS = [
     overview: 'The Singapore Teaching Practice (STP) is an integrated model of the knowledge bases, skills, and professional values that underpin effective teaching. It guides teachers in creating positive learning experiences across four areas of practice.',
     sections: [
       {
-        heading: 'Area 1: Lesson Preparation',
+        heading: 'Lesson Preparation',
         items: [
           { term: 'Understanding Learners', desc: 'Know students\' readiness, interests, backgrounds, and learning profiles to plan inclusive lessons.' },
           { term: 'Clear Learning Objectives', desc: 'Define outcomes aligned to syllabi, E21CC, and relevant assessment criteria.' },
@@ -83,7 +83,7 @@ const FRAMEWORKS = [
         ]
       },
       {
-        heading: 'Area 2: Lesson Enactment',
+        heading: 'Lesson Enactment',
         items: [
           { term: 'Teaching Actions', desc: 'Direct instruction, inquiry-based learning, discussion, modelling, selecting the right approach for the outcome.' },
           { term: 'Interaction Patterns', desc: 'Managing teacher\u2013student and student\u2013student interactions; think-pair-share, jigsaw, Socratic dialogue.' },
@@ -91,7 +91,7 @@ const FRAMEWORKS = [
         ]
       },
       {
-        heading: 'Area 3: Monitoring & Feedback',
+        heading: 'Assessment and Feedback',
         items: [
           { term: 'Formative Assessment', desc: 'Check for understanding in real time: exit tickets, concept checks, mini-whiteboards.' },
           { term: 'Effective Feedback', desc: 'Timely, specific, actionable feedback that helps students close the gap between current and desired performance.' },
@@ -99,7 +99,7 @@ const FRAMEWORKS = [
         ]
       },
       {
-        heading: 'Area 4: Positive Learning Culture',
+        heading: 'Positive Classroom Culture',
         items: [
           { term: 'Safe & Supportive Environment', desc: 'Build trust, belonging, and psychological safety so students can take intellectual risks.' },
           { term: 'Routines & Expectations', desc: 'Establish clear, consistent classroom norms that maximise learning time.' },

@@ -14,7 +14,7 @@ const ASSESSMENT_SEED_KEY = 'cocher_assessment_seeded';
 const BUILT_IN_ROUTINES = [
   {
     name: 'GROW',
-    description: 'A metacognitive routine for students to reflect on their learning journey — Gift, Rise, Own, Watch.',
+    description: 'Co-Cher\'s GROW by Reflecting routine — Gift, Rise, Own, Watch — for students to reflect on their learning journey.',
     isBuiltIn: true,
     steps: [
       { key: 'G', label: 'Gift yourself success', colour: '#22c55e',
@@ -398,7 +398,7 @@ STP (Singapore Teaching Practice) Alignment
 - Lesson Preparation: Designing inquiry tasks requires deep content knowledge
 - Positive Classroom Culture: IBL builds a culture of curiosity and risk-taking
 - Lesson Enactment: Teacher circulates, questions, and scaffolds during investigation
-- Monitoring & Feedback: Formative assessment is embedded in the inquiry process
+- Assessment and Feedback: Formative assessment is embedded in the inquiry process
 
 Resources for Further Reading
 ------------------------------
@@ -661,7 +661,7 @@ STP Alignment
 --------------
 - Positive Classroom Culture: metacognitive classrooms value thinking and growth
 - Lesson Enactment: metacognitive prompts embedded in instruction
-- Monitoring & Feedback: metacognitive check-ins ARE formative assessment
+- Assessment and Feedback: metacognitive check-ins ARE formative assessment
 - Assessment Literacy: student self-assessment is metacognitive by nature
 
 Key Takeaway
@@ -907,7 +907,7 @@ STP (Singapore Teaching Practice) Alignment
 - Lesson Preparation: designing RAP questions and 4S activities requires deep content mastery
 - Positive Classroom Culture: TBL builds a collaborative, accountable culture
 - Lesson Enactment: teacher role shifts to facilitator during application activities
-- Monitoring & Feedback: iRAT/tRAT provides immediate formative data; teacher adjusts mini-lecture
+- Assessment and Feedback: iRAT/tRAT provides immediate formative data; teacher adjusts mini-lecture
 - Assessment: TBL's multi-component assessment aligns with holistic assessment principles
 
 Recommended Starting Point
@@ -980,10 +980,10 @@ In Singapore's mixed-ability classrooms — especially with Subject-Based Bandin
 
 Why DI Matters
 --------------
-- Hattie's meta-analysis: Differentiation strategies contribute to effect sizes of 0.46–0.71 depending on implementation
+- Research on differentiated instruction shows mixed but promising effects; Hattie cautions that within-class grouping alone has modest impact — how DI is implemented matters more than the label
 - Students who feel the work is "just right" (Vygotsky's Zone of Proximal Development) are more engaged and learn faster
 - DI reduces behavioural issues — bored students and overwhelmed students both act out
-- Aligns with STP Area 3 (Differentiated Support) and MOE's emphasis on student-centred learning`
+- Aligns with the STP teaching process of Assessment and Feedback (differentiated support) and MOE's emphasis on student-centred learning`
       },
       {
         title: 'DI Strategies for the Classroom',
@@ -1059,16 +1059,16 @@ STP Alignment
 --------------
 Differentiated Instruction maps directly to the Singapore Teaching Practice:
 
-**Area 1 — Lesson Preparation**
+**Lesson Preparation**
 - Understanding learners: DI starts with knowing your students' readiness, interests, and profiles
 - Clear objectives: Same learning goal for all, different pathways to get there
 
-**Area 3 — Monitoring & Feedback**
+**Assessment and Feedback**
 - Formative assessment: Exit tickets, observations, and conversations inform differentiation decisions
 - Differentiated support: The heart of DI — providing the right level of challenge and scaffold
 - Effective feedback: Tailored to each student's current position relative to the goal
 
-**Area 4 — Positive Learning Culture**
+**Positive Classroom Culture**
 - Student agency: Choice boards and learning menus give students ownership
 - Safe environment: DI normalises different paces and approaches — "different, not less"
 
@@ -1110,7 +1110,7 @@ Resources
 ----------
 - Tomlinson, C.A. — "How to Differentiate Instruction in Academically Diverse Classrooms"
 - NIE Singapore — Professional development courses on differentiation
-- STP Guide — Area 3: Differentiated Support
+- STP Guide — Assessment and Feedback: Differentiated Support
 - AST resources on inclusive pedagogy`
       }
     ]
@@ -1135,9 +1135,9 @@ Formative assessment is any assessment activity that provides information to be 
 
 The landmark research of **Black & Wiliam (1998)** — *Inside the Black Box* — showed that formative assessment produces significant learning gains, particularly for lower-achieving students. Their review of 250+ studies found effect sizes of 0.4 to 0.7.
 
-**Hattie's Visible Learning** effect sizes:
+**Hattie's Visible Learning** effect sizes (Hattie, 2009):
 - Feedback: **d = 0.70** (well above the 0.40 "hinge point")
-- Formative evaluation: **d = 0.48**
+- Providing formative evaluation: **d = 0.90** — one of the highest-impact influences
 - Teacher clarity (linked to formative assessment): **d = 0.75**
 - Metacognitive strategies (enabled by formative assessment): **d = 0.60**
 
@@ -1168,7 +1168,7 @@ Dylan Wiliam identified five core strategies that underpin effective formative a
 5. **Activating students as owners of their own learning**
    - Self-assessment against success criteria
    - Goal-setting and reflection
-   - Metacognitive prompts (connects to Beatty's GROW framework)
+   - Metacognitive prompts (connects to Co-Cher's GROW by Reflecting routine)
 
 Formative vs. Summative Assessment
 ------------------------------------
@@ -1253,16 +1253,16 @@ STP Alignment
 --------------
 Formative assessment is deeply embedded in the Singapore Teaching Practice:
 
-**Area 2 — Lesson Enactment**
+**Lesson Enactment**
 - Interaction patterns: Questioning techniques (cold calling, hinge questions) create productive classroom discourse
 - Classroom discourse: Think-Pair-Share and structured discussions make thinking visible
 
-**Area 3 — Monitoring & Feedback**
+**Assessment and Feedback**
 - Formative assessment: The entire framework maps here — exit tickets, mini-whiteboards, observations
 - Effective feedback: Specific, timely, and forward-looking (Wiliam's Strategy 3)
 - Differentiated support: Formative data enables responsive differentiation (exit ticket sorting → tiered groups)
 
-**Area 4 — Positive Learning Culture**
+**Positive Classroom Culture**
 - Safe environment: Low-stakes assessment reduces anxiety and encourages risk-taking
 - Student agency: Self-assessment and peer feedback develop learner autonomy
 
@@ -1288,7 +1288,7 @@ E21CC Alignment
 - **Communication** — Think-Pair-Share, peer feedback, and class discussions develop communication skills
 - **Collaboration** — Peer assessment and collaborative error analysis build teamwork
 - **Social Connectedness** — A low-stakes, feedback-rich culture builds trust and belonging
-- **Self-Regulation** — Self-assessment checklists and goal-setting develop metacognitive self-regulation (connects directly to Beatty's GROW framework and Schraw & Dennison's MAI)
+- **Self-Regulation** — Self-assessment checklists and goal-setting develop metacognitive self-regulation (connects directly to Co-Cher's GROW by Reflecting routine and Schraw & Dennison's MAI)
 
 Practical Tips for Implementation
 -----------------------------------
@@ -1313,7 +1313,7 @@ Resources
 - Hattie, J. (2009) — "Visible Learning"
 - EEF Guidance Report — "Teacher Feedback to Improve Pupil Learning"
 - NIE Singapore — Assessment Literacy professional development programmes
-- STP Guide — Area 3: Monitoring & Feedback`
+- STP Guide — Assessment and Feedback`
       }
     ]
   }
@@ -1797,7 +1797,7 @@ const LIFECYCLE_EXEMPLARS = [
     updatedDaysAgo: 19,
     e21ccFocus: ['criticalThinking', 'communication'],
     objectives: 'Students will construct PEEL paragraphs for an argumentative essay, anticipate and rebut counter-arguments, and evaluate the credibility of evidence used to support a claim.',
-    lessonHook: 'Last month a fake "MRT stabbing" video hit 2 million views before it was debunked. Who profits when outrage spreads faster than facts — and does social media do more harm than good?',
+    lessonHook: 'Present this HYPOTHETICAL scenario: imagine a fake "MRT stabbing" video hits 2 million views before it is debunked. Who profits when outrage spreads faster than facts — and does social media do more harm than good?',
     chat: {
       user: 'Plan a Sec 4 English lesson on argumentative writing for O-Level Paper 1. Topic: "Social media does more harm than good." I want students to practise PEEL paragraphs and rebutting counter-arguments, with a hook about fake news.',
       assistant: `## Argumentative Writing — Social Media on Trial (Sec 4 English)
@@ -1811,7 +1811,7 @@ By the end of this lesson, students will be able to:
 ### Lesson Flow (70 min)
 
 **Hook — The Viral Lie (10 min)**
-Show the (debunked) "MRT stabbing" video headline and its 2-million-view count next to the SPH fact-check. Ask: who gained from the spread? Students discuss in pairs, then vote on the motion: *social media does more harm than good*.
+Present this HYPOTHETICAL scenario: imagine a video claiming an "MRT stabbing" goes viral, hitting 2 million views before it is debunked. Display a teacher-prepared mock headline and mock fact-check (both clearly labelled as training examples). Ask: who would gain from the spread? Students discuss in pairs, then vote on the motion: *social media does more harm than good*.
 
 **Deconstruct — What Makes an Argument Land? (15 min)**
 Display two sample paragraphs on the motion — one assertive but unsupported, one full PEEL. Students annotate: where is the evidence, where is the explanation, what links back to the stance? Draw out the PEEL frame on the board.
@@ -1847,7 +1847,7 @@ Class reconstructs the full essay skeleton: stance, 3 PEEL points, counter-argum
 **E21CC Alignment**: Critical Thinking (evaluating evidence), Communication (persuasive register)`,
       timeline: `| Phase | Time | Activity | Layout |
 |-------|------|----------|--------|
-| Hook: The Viral Lie | 0–10 min | Debunked video headline vs fact-check; pair talk + class vote | Direct Instruction |
+| Hook: The Viral Lie | 0–10 min | Hypothetical viral video: mock headline vs mock fact-check (teacher-prepared, clearly labelled); pair talk + class vote | Direct Instruction |
 | Deconstruct | 10–25 min | Annotate strong vs weak sample paragraphs; derive PEEL frame | Direct Instruction |
 | PEEL Workshop | 25–45 min | Groups draft PEEL paragraph from evidence bank; reject one weak source | Collaborative Pods |
 | Rebuttal Round | 45–60 min | Swap paragraphs, write counter-arguments, draft rebuttals | Collaborative Pods |
@@ -1859,7 +1859,7 @@ Class reconstructs the full essay skeleton: stance, 3 PEEL points, counter-argum
 3. Confidence check: rate 1–5 how ready you feel to write a full argumentative essay, and name the ONE part of PEEL you most need to practise.`
     },
     reflection: {
-      whatWorked: 'The fake-news hook sparked genuine debate — students were still arguing about the MRT video at recess. The PEEL annotation task gave the middle band a concrete frame, and the rebuttal swap produced some of the best concession sentences I have seen from this class.',
+      whatWorked: 'The hypothetical fake-news hook sparked genuine debate — students were still arguing about the mock MRT video scenario at recess. The PEEL annotation task gave the middle band a concrete frame, and the rebuttal swap produced some of the best concession sentences I have seen from this class.',
       whatToAdjust: 'The rebuttal round overran by 10 minutes because groups negotiated stances too long — pre-assign angles next time. Three weakest writers needed sentence starters earlier, not after they stalled.',
       engagement: 4,
       e21ccObservations: 'Strong critical thinking when evaluating the evidence bank; two groups rejected the crowdfunding anecdote as unrepresentative without prompting. Communication was uneven — dominant speakers crowded out quieter members during the clash round.',
@@ -1950,7 +1950,7 @@ Summarise: vertex form vs general form, and when each is fastest. Exit ticket: s
     updatedDaysAgo: 12,
     e21ccFocus: ['criticalThinking', 'collaboration'],
     objectives: 'Students will state the current and potential difference rules for series and parallel circuits, calculate effective resistance, and apply P = IV to explain overheating in a household context.',
-    lessonHook: 'A $2 third-party phone charger melted overnight and scorched a bedside table in a Yishun flat. The physics of current, resistance and power can tell us exactly why the cheap one failed — and why the original did not.',
+    lessonHook: 'Present this HYPOTHETICAL scenario: imagine a $2 third-party phone charger melts overnight and scorches a bedside table in an HDB flat. The physics of current, resistance and power can tell us exactly why the cheap one would fail — and why the original would not.',
     chat: {
       user: 'Plan a Sec 4 Combined Science (Physics) lesson on series and parallel circuits. Include hands-on circuit building, current/voltage rules, effective resistance, and connect it to why cheap chargers overheat.',
       assistant: `## Series & Parallel Circuits — Why Chargers Overheat (Sec 4 Combined Science, Physics)
@@ -1965,7 +1965,7 @@ By the end of this lesson, students will be able to:
 ### Lesson Flow (70 min)
 
 **Hook — The Melted Charger (8 min)**
-Photo of the scorched bedside table (news report). Ask: the wall socket supplies the same 230 V to every charger — so what could possibly differ inside a $2 charger? Collect hypotheses on the board; return to them at the end.
+Present this HYPOTHETICAL scenario: imagine a $2 charger melts overnight and scorches a bedside table. Display a teacher-prepared mock headline or illustration (clearly labelled as a training example). Ask: the wall socket supplies the same 230 V to every charger — so what could possibly differ inside a $2 charger? Collect hypotheses on the board; return to them at the end.
 
 **Predict-Build-Measure Stations (25 min)**
 Groups of 4 rotate through two station types with ammeters and voltmeters:
@@ -2004,7 +2004,7 @@ Misconception check with mini-whiteboards ("current gets used up" — true or fa
 **E21CC Alignment**: Critical Thinking (data to rules), Collaboration (station roles)`,
       timeline: `| Phase | Time | Activity | Layout |
 |-------|------|----------|--------|
-| Hook: Melted Charger | 0–8 min | Scorched-table photo; hypotheses on board | Direct Instruction |
+| Hook: Melted Charger | 0–8 min | Hypothetical scenario with teacher-prepared mock headline (clearly labelled); hypotheses on board | Direct Instruction |
 | Predict-Build-Measure | 8–33 min | Series and parallel stations with meters | Stations |
 | Pattern Harvest | 33–45 min | Compile data, derive 4 rules, effective resistance | Direct Instruction |
 | Charger Autopsy | 45–60 min | Pairs: worn-cable calculation with P = IV | Collaborative Pods |
