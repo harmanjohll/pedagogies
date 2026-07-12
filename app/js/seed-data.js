@@ -1350,7 +1350,7 @@ export function seedPdIfNeeded() {
 }
 
 export function seedCCAIfNeeded() {
-  const CCA_SEED_KEY = 'cocher_cca_seeded_v3';
+  const CCA_SEED_KEY = 'cocher_cca_seeded_v4'; // v4: added Scouts
   if (localStorage.getItem(CCA_SEED_KEY)) return;
   const existing = JSON.parse(localStorage.getItem('cocher_cca_list') || '[]');
   if (existing.length >= 12) {
@@ -1371,6 +1371,7 @@ export function seedCCAIfNeeded() {
     { id: generateId(), name: 'National Cadet Corps (NCC)', category: 'uniformed', createdAt: Date.now() - 86400000 * 24 },
     { id: generateId(), name: 'Girl Guides', category: 'uniformed', createdAt: Date.now() - 86400000 * 23 },
     { id: generateId(), name: 'St John Brigade', category: 'uniformed', createdAt: Date.now() - 86400000 * 22 },
+    { id: generateId(), name: 'Scouts', category: 'uniformed', createdAt: Date.now() - 86400000 * 21.5 },
     // Clubs & Societies
     { id: generateId(), name: 'Robotics Club', category: 'clubs', createdAt: Date.now() - 86400000 * 21 },
     { id: generateId(), name: 'Debate Society', category: 'clubs', createdAt: Date.now() - 86400000 * 20 },
@@ -2307,7 +2308,13 @@ export function seedPortalDemosIfNeeded() {
         { id: generateId(), title: 'Handling Online Rumours Responsibly', contentArea: 'CW', bigIdea: 'Choices', values: 'Responsibility, Integrity', level: 'Sec 2', format: 'circle', isSample: true,
           content: '## Cyber Wellness Discussion — Online Rumours\n\n**Hook:** A classmate’s edited photo is spreading in a class chat.\n\n**Circle questions:**\n1. What would you feel if it were you?\n2. What is the difference between forwarding and creating?\n3. What is one responsible action you can take in the next 5 minutes?\n\n**Close:** Draft a class agreement on sharing.', createdAt: now - 13 * DAY },
         { id: generateId(), title: 'Respecting Difference — Race & Religion', contentArea: 'NE', bigIdea: 'Relationships', values: 'Respect, Harmony', level: 'Sec 3', format: 'four corners', isSample: true,
-          content: '## National Education — Living with Difference\n\n**Provocation:** Should void-deck spaces be used for religious events?\n\n**Four corners:** Strongly agree / Agree / Disagree / Strongly disagree — students justify and may move as they hear others.\n\n**Debrief:** name one perspective that shifted your thinking. Connect to Singapore’s multiracial compact.', createdAt: now - 6 * DAY }
+          content: '## National Education — Living with Difference\n\n**Provocation:** Should void-deck spaces be used for religious events?\n\n**Four corners:** Strongly agree / Agree / Disagree / Strongly disagree — students justify and may move as they hear others.\n\n**Debrief:** name one perspective that shifted your thinking. Connect to Singapore’s multiracial compact.', createdAt: now - 6 * DAY },
+        { id: generateId(), title: 'Total Defence — Six Pillars in My Life', contentArea: 'NE', bigIdea: 'Identity', values: 'Responsibility, Resilience', level: 'Sec 1', format: 'Circle Structure', isSample: true,
+          content: '## National Education — Total Defence: Six Pillars in My Life\n\n**Hook:** Total Defence Day isn’t just about the army — it’s six pillars, and five of them need you, not a uniform.\n\n**Circle — one prompt per pillar, going round:**\n1. **Military** (SAF protects our land, sea & skies) — Do you know someone doing NS? What do you think they protect?\n2. **Civil** (staying calm & prepared in a crisis) — Do you know what to do if the fire alarm rings right now?\n3. **Economic** (a strong, resilient economy) — Name a local business your family supports.\n4. **Social** (racial & religious harmony) — Name a friend from a different race or religion — what have you learnt from them?\n5. **Psychological** (staying resilient, not giving up) — Think of a time things went wrong for you — what kept you going?\n6. **Digital** (added in 2019 — spotting scams, misinformation & staying cyber-safe) — Have you ever nearly fallen for a scam message or shared something online without checking if it was true?\n\n**Close:** Go round once more — each student names one small Total Defence action they’ll commit to this month.', createdAt: now - 20 * DAY },
+        { id: generateId(), title: 'My Digital Footprint', contentArea: 'CW', bigIdea: 'Choices', values: 'Responsibility, Integrity', level: 'Sec 2', format: 'Think-Pair-Share', isSample: true,
+          content: '## Cyber Wellness — My Digital Footprint\n\n**Hook:** A JC teacher once said, “I checked a student’s Instagram before writing his testimonial.” True story — happens every intake.\n\n**Sense (alone, 2 min):** List 3 things visible on your public social media right now. Would you be comfortable if a poly/JC interviewer or a future boss saw them?\n\n**Think (pair, 5 min):** A deleted post can still exist as someone’s screenshot. What’s the difference between a private mistake and a public, permanent one? Does deleting it really undo it?\n\n**Act (share back):** Each pair suggests one concrete habit — e.g. a “future-me filter” before posting — to keep a digital footprint they’d be proud of in five years.\n\n**Close:** Silently think of one post or photo you’d edit or remove today, and why.', createdAt: now - 9 * DAY },
+        { id: generateId(), title: 'Stress Signals — Naming It Before It Names You', contentArea: 'MH', bigIdea: 'Choices', values: 'Resilience, Care', level: 'Sec 2', format: 'Values Clarification Exercise', isSample: true,
+          content: '## Mental Health — Stress Signals: Naming It Before It Names You\n\n**Scenario:** Your test results are back, lower than you hoped. CCA has finals training tonight, and your parents keep bringing up grades at dinner. Your chest feels tight and you snap at a friend for no reason.\n\n**Values clarification — which response feels most like you, and why?**\n(a) Push through silently and hope it passes.\n(b) Vent to a friend, but don’t tell any adult.\n(c) Find your form teacher or a Peer Support Leader (PSL) and name what’s going on.\n\n**“I am, I have, I can” check-in (pairs):** *I am* — one strength you have under pressure. *I have* — one person or thing that supports you. *I can* — one small action you can take today.\n\n**Debrief:** Help-seeking is not a sign of weakness — it’s an act of strength. Every level has trained PSLs, and every student has a form teacher.\n\n**Close:** Silently name one trusted adult or PSL you could actually go to this week — you don’t have to say it aloud.', createdAt: now - 3 * DAY }
       ]));
     }
   } catch { /* ignore */ }
@@ -2337,6 +2344,28 @@ export function seedPortalDemosIfNeeded() {
           mkTask('parent_notification', 'pending', {}),
           mkTask('aor', 'pending', {})
         ], createdAt: now - 8 * DAY, updatedAt: now - 2 * DAY
+      },
+      {
+        id: generateId(), name: 'Inter-School Basketball Championship 2026', date: new Date(now + 18 * DAY).toISOString().slice(0, 10),
+        eventType: 'Competition', status: 'planning', isSample: true,
+        tasks: [
+          mkTask('rams', 'pending', {}),
+          mkTask('bus_booking', 'pending', {}),
+          mkTask('student_list', 'pending', {}),
+          mkTask('parent_notification', 'pending', {}),
+          mkTask('aor', 'pending', {})
+        ], createdAt: now - 1 * DAY, updatedAt: now - 1 * DAY
+      },
+      {
+        id: generateId(), name: 'Sec 2 VIA — Beach Cleanup, East Coast Park', date: new Date(now + 10 * DAY).toISOString().slice(0, 10),
+        eventType: 'Community Service', status: 'in_progress', isSample: true,
+        tasks: [
+          mkTask('rams', 'completed', { activity_desc: 'Values-in-Action beach cleanup — collecting and sorting litter along a marked stretch of East Coast Park, with a short briefing on marine debris impact.', venue: 'East Coast Park, Area C (near McDonald\'s)', hazards: 'Sun exposure/heat, uneven sandy terrain, sharp debris (glass, metal), proximity to cycling path', mitigations: 'Sunscreen and hats reminder in PG notice, gloves and litter-pickers provided (no bare-hand contact), buddy system, staff:student 1:12, stay off the cycling path', emergency_plan: 'Nearest hospital: Changi General. First-aid kit on-site with a trained First Aider. Assembly point at the Area C shelter.', risk_level: 'Low' }),
+          mkTask('bus_booking', 'completed', { teacher_ic: 'Mdm Farah', pickup_point: 'School Main Gate', destination: 'East Coast Park Area C', departure_time: '8:00 AM', return_time: '11:30 AM', return_to: 'School', num_passengers: '62', num_buses: '2' }),
+          mkTask('student_list', 'pending', {}),
+          mkTask('parent_notification', 'pending', {}),
+          mkTask('aor', 'pending', {})
+        ], createdAt: now - 6 * DAY, updatedAt: now - 2 * DAY
       }
     ]);
   }
