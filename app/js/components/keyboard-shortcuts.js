@@ -11,8 +11,13 @@ const SHORTCUTS = [
   { keys: ['Ctrl', 'K'], desc: 'Search everything', action: null },  // Handled by unified-search
   { keys: ['Ctrl', 'N'], desc: 'New lesson', action: () => navigate('/lesson-planner') },
   { keys: ['Ctrl', 'Shift', 'S'], desc: 'Spatial Designer', action: () => navigate('/spatial') },
+  { keys: ['Ctrl', '.'], desc: 'Focus mode (hide sidebar while planning)', action: null },
   { keys: ['Ctrl', '/'], desc: 'Show shortcuts', action: () => showShortcutsHelp() },
 ];
+
+export function toggleFocusMode() {
+  document.body.classList.toggle('focus-mode');
+}
 
 function showShortcutsHelp() {
   openModal({
@@ -59,5 +64,14 @@ export function initKeyboardShortcuts() {
       e.preventDefault();
       showShortcutsHelp();
     }
+    if ((e.ctrlKey || e.metaKey) && e.key === '.') {
+      e.preventDefault();
+      toggleFocusMode();
+    }
+  });
+
+  // Leaving a page always exits focus mode (the sidebar must come back)
+  window.addEventListener('hashchange', () => {
+    document.body.classList.remove('focus-mode');
   });
 }

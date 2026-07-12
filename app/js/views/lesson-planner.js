@@ -16,6 +16,8 @@ import { loadTT, findTeacherRow, ensureCalendar } from './dashboard.js';
 import { getWeekType } from '../utils/calendar.js';
 import { processLatex } from '../utils/latex.js';
 import { md, escapeHtml } from '../utils/markdown.js';
+import { critiquePlan } from '../api.js';
+import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
@@ -1037,6 +1039,24 @@ export function render(container) {
   const messagesEl = container.querySelector('#chat-messages');
   const chatInput = container.querySelector('#chat-input');
   const chatSend = container.querySelector('#chat-send');
+
+  // Teacher's-call choice blocks ([CHOICE: A | B]) — one delegated listener
+  // on the persistent container; elements are re-created on every render.
+  if (!container._choiceWired) {
+    container._choiceWired = true;
+    container.addEventListener('click', (e) => {
+      const opt = e.target.closest('.md-choice-opt');
+      if (!opt) return;
+      opt.closest('.md-choice')?.querySelectorAll('.md-choice-opt').forEach(b => b.classList.remove('chosen'));
+      opt.classList.add('chosen');
+      const input = document.getElementById('chat-input');
+      const send = document.getElementById('chat-send');
+      if (input && send) {
+        input.value = `Let's go with: ${opt.dataset.choice}`;
+        send.click();
+      }
+    });
+  }
   const layoutEl = container.querySelector('#lp-layout');
 
   // Load components from existing lesson — always reset, otherwise a lesson
@@ -1134,6 +1154,19 @@ export function render(container) {
     let contextParts = [];
     if (planClassContext && chatMessages.length === 0) {
       contextParts.push(`[Class Context: ${planClassContext.name}, ${planClassContext.level} ${planClassContext.subject}]`);
+      // Learner-centric core: the AI designs for the class the teacher
+      // actually has — full portrait (E21CC spread, observations, trends)
+      const portrait = Store.getPortraitPromptText?.(planClassContext.id);
+      if (portrait) {
+        contextParts.push(`[Class Portrait — design FOR these learners; differentiate by default for the dimensions most students are still developing]:\n${portrait}`);
+      }
+    }
+    // Teacher's active practice goal: support it quietly, never lecture about it
+    if (chatMessages.length === 0) {
+      const goal = Store.getPracticeGoal?.();
+      if (goal?.text) {
+        contextParts.push(`[The teacher is personally working on: "${goal.text}". Where natural, shape suggestions to give them practice at this — do not mention the goal explicitly.]`);
+      }
     }
     // Inject spatial layout context if linked
     if (chatMessages.length === 0) {
@@ -2157,15 +2190,20 @@ function renderPlanContent(el) {
     return;
   }
 
-  // Show the latest AI response as the working plan
+  // Show the latest AI response as the working plan (document voice)
   const latest = aiMsgs[aiMsgs.length - 1].content;
   el.innerHTML = `
-    <div class="card" style="padding:var(--sp-6);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);">
+    <div class="card doc-canvas" style="padding:var(--sp-6);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4);gap:8px;flex-wrap:wrap;">
         <span class="text-overline" style="color:var(--ink-faint);">Latest from Co-Cher</span>
-        <span class="badge badge-blue badge-dot">${aiMsgs.length} exchange${aiMsgs.length > 1 ? 's' : ''}</span>
+        <span style="display:flex;align-items:center;gap:6px;">
+          <button class="btn btn-ghost btn-sm" id="critical-friend-btn" title="A trusted colleague reads your plan with a red pen">&#128395;&#65039; Critical friend</button>
+          <button class="btn btn-ghost btn-sm" id="focus-mode-btn" title="Hide the sidebar while planning (Ctrl+.)">&#9974; Focus</button>
+          <span class="badge badge-blue badge-dot">${aiMsgs.length} exchange${aiMsgs.length > 1 ? 's' : ''}</span>
+        </span>
       </div>
       <div style="font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);">${md(latest)}</div>
+      <div id="critique-panel"></div>
     </div>
     ${aiMsgs.length > 1 ? `
       <details style="margin-top:var(--sp-4);">
@@ -2182,6 +2220,38 @@ function renderPlanContent(el) {
       </details>
     ` : ''}
   `;
+
+  // Focus mode toggle
+  el.querySelector('#focus-mode-btn')?.addEventListener('click', () => toggleFocusMode());
+
+  // Critical friend: a colleague reads the plan with a red pen
+  el.querySelector('#critical-friend-btn')?.addEventListener('click', async () => {
+    const panel = el.querySelector('#critique-panel');
+    const btn = el.querySelector('#critical-friend-btn');
+    if (!panel || !btn) return;
+    let espoused = '';
+    try { espoused = localStorage.getItem('cocher_espoused_ideology') || ''; } catch { /* ignore */ }
+    const lens = selectedIdeology || espoused || '';
+    btn.disabled = true;
+    panel.innerHTML = '<div class="chat-typing" style="padding:var(--sp-3) 0;">Reading your plan with a red pen…</div>';
+    try {
+      const critique = await critiquePlan(latest, lens);
+      panel.innerHTML = `
+        <div style="margin-top:var(--sp-5);padding:var(--sp-4);border:1px solid var(--redpen-light,#f3d6d6);border-left:3px solid var(--redpen,#C94F4F);border-radius:10px;background:color-mix(in srgb, var(--redpen-light,#f8e8e8) 40%, transparent);">
+          <div style="font-size:0.6875rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--redpen,#C94F4F);margin-bottom:6px;">
+            Critical friend${lens ? ` · ${lens.replace(/-/g, ' ')}` : ''}
+          </div>
+          <div style="font-size:0.8125rem;line-height:1.65;color:var(--ink-secondary);">${md(critique)}</div>
+          <button class="btn btn-ghost btn-sm" id="critique-dismiss" style="margin-top:8px;color:var(--ink-muted);">Dismiss</button>
+        </div>`;
+      panel.querySelector('#critique-dismiss')?.addEventListener('click', () => { panel.innerHTML = ''; });
+    } catch (err) {
+      panel.innerHTML = `<p class="redpen-note" style="margin-top:var(--sp-3);">${escapeHtml(err.message)}</p>`;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   // Render LaTeX in plan content
   processLatex(el);
 }

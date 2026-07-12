@@ -1382,3 +1382,47 @@ select.input {
     scroll-behavior: auto !important;
   }
 }
+
+/* ═══════════ Teacher's-call choice blocks (co-authorship made visible) ═══════════ */
+
+.md-choice {
+  border: 1.5px dashed var(--marker-ink, #b8a100);
+  background: color-mix(in srgb, var(--marker-wash, #FFF6BF) 55%, transparent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 10px 0;
+}
+.md-choice-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--marker-ink, #7a6300);
+  margin-bottom: 6px;
+}
+.md-choice-opt {
+  display: inline-block;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 5px 12px;
+  margin: 2px 6px 2px 0;
+  font-size: 0.8125rem;
+  color: var(--ink-secondary, #475569);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.md-choice-opt:hover { border-color: var(--marker-ink, #7a6300); background: var(--marker-wash, #FFF6BF); }
+.md-choice-opt.chosen {
+  border-color: var(--marker-ink, #7a6300);
+  background: var(--marker, #FFE200);
+  color: #000C53;
+  font-weight: 600;
+}
+
+/* ═══════════ Document canvas — the plan reads like paper ═══════════ */
+
+.doc-canvas h1, .doc-canvas h2, .doc-canvas h3, .doc-canvas h4, .doc-canvas h5 {
+  font-family: var(--font-serif);
+}
+.doc-canvas { line-height: 1.7; }
