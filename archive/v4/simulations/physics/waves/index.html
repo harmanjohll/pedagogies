@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waves &amp; Ripple Tank – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="waves.css?v=5">
+</head>
+<body>
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../../index.html">LabSim</a>
+      <span class="separator">/</span>
+      <a href="../../index.html">Physics</a>
+      <span class="separator">/</span>
+      Waves
+    </span>
+    <div class="topbar-actions">
+      <div id="record-mode-slot"></div>
+        <button id="btn-toggle-guide" class="btn btn-ghost btn-sm">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+        Guide
+      </button>
+      <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+    </div>
+  </nav>
+
+  <!-- Main 3-column layout -->
+  <div class="waves-layout">
+
+    <!-- Left: Procedure + Controls -->
+    <aside id="guide-panel" class="waves-guide-panel">
+
+      <!-- Experiment selector -->
+      <div class="panel">
+        <div class="panel-header">Experiment</div>
+        <div class="panel-body">
+          <div class="experiment-tabs" id="experiment-tabs">
+            <button class="experiment-tab active" data-exp="reflection">Reflection</button>
+            <button class="experiment-tab" data-exp="refraction">Refraction</button>
+            <button class="experiment-tab" data-exp="diffraction">Diffraction</button>
+          </div>
+          <p class="experiment-desc text-sm text-muted mt-2" id="experiment-desc"></p>
+        </div>
+      </div>
+
+      <!-- Procedure -->
+      <div class="panel mt-4">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <ol class="procedure-list" id="procedure-list">
+            <!-- steps injected by JS -->
+          </ol>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="panel mt-4">
+        <div class="panel-header">Controls</div>
+        <div class="panel-body">
+          <!-- Frequency slider -->
+          <div class="config-row">
+            <label for="freq-slider">Frequency / Hz</label>
+            <div class="flex items-center gap-2">
+              <input type="range" id="freq-slider" min="4" max="20" step="1" value="10" class="slider">
+              <span id="freq-display" class="config-value">10 Hz</span>
+            </div>
+          </div>
+
+          <!-- Wave type toggle -->
+          <div class="config-row mt-2">
+            <label>Wave Type</label>
+            <div class="toggle-group" id="wave-type-toggle">
+              <button class="toggle-btn active" data-mode="plane">Plane</button>
+              <button class="toggle-btn" data-mode="circular">Circular</button>
+            </div>
+          </div>
+
+          <!-- Depth / gap toggle -->
+          <div class="config-row mt-2" id="depth-toggle-row">
+            <label id="depth-toggle-label">Option</label>
+            <div class="toggle-group" id="depth-toggle">
+              <button class="toggle-btn active" data-opt="default">Default</button>
+              <button class="toggle-btn" data-opt="alt">Alternate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Centre: Ripple Tank Canvas -->
+    <section class="waves-tank-panel">
+      <div class="waves-tank">
+        <canvas id="ripple-canvas" width="600" height="500"></canvas>
+        <!-- Overlay info -->
+        <div class="tank-overlay" id="tank-overlay">
+          <span class="tank-hint">Select an experiment and press Play to begin</span>
+        </div>
+      </div>
+      <!-- Playback controls -->
+      <div class="tank-controls">
+        <button id="btn-play" class="btn btn-primary btn-sm">Play</button>
+        <button id="btn-pause" class="btn btn-ghost btn-sm" disabled>Pause</button>
+        <button id="btn-step" class="btn btn-ghost btn-sm" title="Advance one frame">Step</button>
+        <div class="speed-control">
+          <label for="speed-slider" class="text-xs text-muted">Speed</label>
+          <input type="range" id="speed-slider" min="0.25" max="2" step="0.25" value="1" class="slider slider-sm">
+          <span id="speed-display" class="config-value">1.0x</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Observations + Measurements -->
+    <aside class="waves-data-panel">
+
+      <!-- Measurements -->
+      <div class="panel">
+        <div class="panel-header">Measurements</div>
+        <div class="panel-body">
+          <div class="measurement-grid">
+            <div class="measurement-item">
+              <span class="measurement-label">Frequency</span>
+              <span class="measurement-value" id="meas-freq">10.0 Hz</span>
+            </div>
+            <div class="measurement-item">
+              <span class="measurement-label">Wavelength (&lambda;)</span>
+              <span class="measurement-value" id="meas-lambda">3.00 cm</span>
+            </div>
+            <div class="measurement-item">
+              <span class="measurement-label">Speed (v)</span>
+              <span class="measurement-value" id="meas-speed">30.0 cm/s</span>
+            </div>
+            <div class="measurement-item" id="meas-lambda-shallow-row" style="display:none">
+              <span class="measurement-label">&lambda; (shallow)</span>
+              <span class="measurement-value" id="meas-lambda-shallow">1.80 cm</span>
+            </div>
+            <div class="measurement-item" id="meas-speed-shallow-row" style="display:none">
+              <span class="measurement-label">v (shallow)</span>
+              <span class="measurement-value" id="meas-speed-shallow">18.0 cm/s</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wave equation display -->
+      <div class="panel mt-4">
+        <div class="panel-header">Wave Equation</div>
+        <div class="panel-body">
+          <div class="equation-box" id="equation-box">
+            <div class="equation-main">v = f &times; &lambda;</div>
+            <div class="equation-sub" id="equation-sub">30.0 = 10.0 &times; 3.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Observations -->
+      <div class="panel mt-4">
+        <div class="panel-header">Observations</div>
+        <div class="panel-body">
+          <textarea id="observations-text" class="observations-textarea" rows="6"
+            placeholder="Type your observations here..."></textarea>
+          <button id="btn-save-obs" class="btn btn-ghost btn-sm mt-2 w-full">Save Observation</button>
+        </div>
+      </div>
+
+      <!-- Saved observations log -->
+      <div class="panel mt-4">
+        <div class="panel-header">Observation Log</div>
+        <div class="panel-body">
+          <div id="obs-log" class="obs-log">
+            <p class="text-sm text-muted text-center" id="obs-empty">No observations recorded yet.</p>
+          </div>
+        </div>
+      </div>
+
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="waves"></div>
+    </aside>
+
+  </div>
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="waves-data.js?v=5"></script>
+  <script src="waves.js?v=5"></script>
+</body>
+</html>

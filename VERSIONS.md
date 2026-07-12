@@ -8,7 +8,8 @@ The canonical URL always serves the **latest** version:
 | v1 | `archive/cocher-v1.html` (single-file: Lesson Planner chat + Spatial Designer tabs) | `/pedagogies/archive/cocher-v1.html` (old `/pedagogies/cocher.html` bookmarks redirect here) | `cocher_api_key`, `cocher_model`, `darkMode`, `spatialPlannerCustomPresets` | Archived |
 | v2 | `archive/v2/` (frozen snapshot of the modular app as of Jul 2026) | `/pedagogies/archive/v2/cocher.html` | `cocher_v2_*` (renamed at freeze time so the archive can never touch live data) | Archived |
 | v3 | `archive/v3/` (frozen snapshot as of Jul 2026 — v3.1 feature set) | `/pedagogies/archive/v3/cocher.html` | `cocher_v3_*` (renamed at freeze time) | Archived |
-| v4 | `app/` (active development — "Staffroom Desk" design + learner portraits, growth engine, department packs) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
+| v4 | `archive/v4/` (frozen snapshot as of Jul 2026 — "Staffroom Desk" design + learner portraits, growth engine, department packs, as originally shipped) | `/pedagogies/archive/v4/cocher.html` | `cocher_v4_*` (renamed at freeze time) | Archived |
+| v4.1 | `app/` (active development — domain-accuracy audit sweep: assessment/spatial/simulation fixes, admin workflow bug fix, Sec 1/2 CCE lessons, CCA exemplars, demo events) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
 
 ## Notes
 
@@ -22,10 +23,13 @@ The canonical URL always serves the **latest** version:
   file is the latest, versioned files are archives.
 - Sign-in in all versions is a client-side roster check (timetable CSV), not real authentication.
 
-## Archiving a future version (e.g. freezing v3 before v4)
+## Archiving a future version (e.g. freezing v4 before v4.1)
 
-1. `cp -r app archive/v3` (drop `labsim.zip`).
-2. In `archive/v3/` only: `sed -i "s/'cocher_/'cocher_v3_/g"` across `*.js`/`*.html`
+1. `cp -r app archive/v4` (drop `labsim.zip`). If freezing from a point in history rather than
+   the current working tree (e.g. the audit-fix sweep landed on top of the shipped v4 before the
+   freeze happened), use `git archive <shipped-v4-commit> app | tar -x -C archive/v4` instead so
+   the archive reflects what was actually released, not later work.
+2. In `archive/v4/` only: `sed -i "s/'cocher_/'cocher_v4_/g"` across `*.js`/`*.html`
    (storage keys only — do NOT rename the `_cocher_lesson` share-format marker).
-3. Add the archived banner to `archive/v3/cocher.html` (copy from `archive/v2/cocher.html`).
+3. Add the archived banner to `archive/v4/cocher.html` (copy from `archive/v3/cocher.html`).
 4. Update the table above and the version badge in `app/js/version.js`.

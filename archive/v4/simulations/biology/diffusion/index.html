@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diffusion – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="diffusion.css?v=5">
+</head>
+<body>
+
+  <a href="#sim-canvas" class="skip-link">Skip to simulation</a>
+
+  <!-- Print-only header -->
+  <div class="print-header">
+    <h1>Diffusion</h1>
+    <p>LabSim Biology Practical</p>
+  </div>
+
+  <!-- Top bar -->
+  <nav class="topbar" role="navigation" aria-label="Main navigation">
+    <div class="topbar-inner">
+      <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+      <span class="topbar-breadcrumb">
+        <a href="../../index.html">LabSim</a>
+        <span class="separator">/</span>
+        <a href="../../index.html">Biology</a>
+        <span class="separator">/</span>
+        Diffusion
+      </span>
+      <div class="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-toggle-guide" class="btn btn-ghost btn-sm" aria-label="Toggle procedure guide">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+          Guide
+        </button>
+        <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main 3-column layout -->
+  <main class="diff-layout">
+
+    <!-- Left: Experiment Selector + Controls + Procedure -->
+    <aside id="guide-panel" class="diff-guide-panel" aria-label="Experiment selector and procedure guide">
+
+      <!-- Experiment selector -->
+      <div class="panel">
+        <div class="panel-header">Experiment</div>
+        <div class="panel-body">
+          <div class="experiment-selector">
+            <label for="experiment-select">Choose investigation</label>
+            <select id="experiment-select" class="experiment-select">
+              <option value="temperature">Temperature &amp; Diffusion (KMnO&#8324;)</option>
+              <option value="agar">Agar Cubes (SA:V Ratio)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Temperature controls (Experiment 1) -->
+      <div class="panel mt-4" id="temp-controls-panel">
+        <div class="panel-header">Temperature</div>
+        <div class="panel-body">
+          <div class="temp-selector" id="temp-selector">
+            <button class="temp-chip" data-temp="20">20&deg;C</button>
+            <button class="temp-chip" data-temp="30">30&deg;C</button>
+            <button class="temp-chip" data-temp="40">40&deg;C</button>
+            <button class="temp-chip" data-temp="50">50&deg;C</button>
+          </div>
+          <div class="info-box">
+            <div class="info-box-title">KMnO&#8324; Crystal</div>
+            <div class="info-box-text">
+              Potassium permanganate produces a deep purple colour in water.
+              Higher temperatures give particles more kinetic energy, increasing the rate of diffusion.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agar controls (Experiment 2) -->
+      <div class="panel mt-4" id="agar-controls-panel" style="display:none;">
+        <div class="panel-header">Agar Cubes</div>
+        <div class="panel-body">
+          <p class="text-sm text-muted mb-2">
+            Three phenolphthalein agar cubes (1 cm, 2 cm, 3 cm) will be placed in dilute HCl.
+            The acid diffuses inward, turning the pink agar clear.
+          </p>
+          <div class="info-box">
+            <div class="info-box-title">SA:V Ratio</div>
+            <div class="info-box-text">
+              Smaller cubes have a higher surface area to volume ratio, so acid reaches the centre faster.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Procedure guide -->
+      <div class="panel mt-4">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <ol class="procedure-list" id="procedure-list"></ol>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Centre: Simulation Canvas -->
+    <section class="diff-workbench-panel" aria-label="Simulation">
+
+      <div class="workbench-area" id="workbench-area">
+        <div class="bench-surface"></div>
+        <canvas id="sim-canvas" class="sim-canvas"></canvas>
+        <!-- Temperature indicator (Exp 1 only) -->
+        <div class="temp-indicator" id="temp-indicator" style="display:none;">
+          Water: <span class="temp-value" id="temp-indicator-value">--</span>&deg;C
+        </div>
+      </div>
+
+      <!-- Stopwatch display -->
+      <div class="stopwatch-display" id="stopwatch-display">
+        <span class="stopwatch-label">Time:</span>
+        <span class="stopwatch-time" id="timer-display">0.0 s</span>
+        <span class="stopwatch-label" id="radius-label">Radius:</span>
+        <span class="stopwatch-radius" id="radius-display">0.0 mm</span>
+      </div>
+
+      <!-- Action bar -->
+      <div class="action-bar" id="action-bar">
+        <button id="btn-drop" class="btn btn-primary btn-sm" disabled>Drop Crystal</button>
+        <button id="btn-place-cubes" class="btn btn-primary btn-sm" style="display:none;" disabled>Place Cubes in Acid</button>
+        <button id="btn-record" class="btn btn-success btn-sm" disabled>Record Result</button>
+        <button id="btn-speed" class="btn btn-ghost btn-sm">Speed: x1</button>
+      </div>
+    </section>
+
+    <!-- Right: Results + Graph + Analysis -->
+    <aside class="diff-data-panel" aria-label="Data and analysis">
+
+      <!-- Results table -->
+      <div class="panel">
+        <div class="panel-header">Results</div>
+        <div class="panel-body">
+          <div class="table-scroll">
+            <!-- Temperature experiment table -->
+            <table class="data-table" id="temp-results-table">
+              <thead>
+                <tr>
+                  <th>Temp / &deg;C</th>
+                  <th>Time / s</th>
+                  <th>Distance / mm</th>
+                  <th>Rate / mm s&#8315;&#185;</th>
+                </tr>
+              </thead>
+              <tbody id="temp-results-tbody"></tbody>
+            </table>
+
+            <!-- Agar experiment table -->
+            <table class="data-table" id="agar-results-table" style="display:none;">
+              <thead>
+                <tr>
+                  <th>Size / cm</th>
+                  <th>SA / cm&sup2;</th>
+                  <th>Vol / cm&sup3;</th>
+                  <th>SA:V</th>
+                  <th>Time / s</th>
+                </tr>
+              </thead>
+              <tbody id="agar-results-tbody"></tbody>
+            </table>
+          </div>
+          <p id="data-empty" class="text-sm text-muted text-center mt-2">
+            Select an experiment and begin measuring.
+          </p>
+        </div>
+      </div>
+
+      <!-- Graph -->
+      <div class="panel mt-4">
+        <div class="panel-header">Graph</div>
+        <div class="panel-body">
+          <div class="graph-container">
+            <canvas id="graph-canvas" width="280" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analysis questions -->
+      <div class="panel mt-4">
+        <div class="panel-header">Analysis Questions</div>
+        <div class="panel-body analysis-section" id="analysis-section"></div>
+      </div>
+
+      <!-- Score summary slot -->
+      <div id="score-slot" class="mt-4"></div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="diffusion"></div>
+    </aside>
+
+  </main>
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="diffusion-data.js?v=5"></script>
+  <script src="diffusion.js?v=5"></script>
+</body>
+</html>
