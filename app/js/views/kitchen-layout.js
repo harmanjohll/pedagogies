@@ -532,4 +532,11 @@ Make it practical and classroom-ready for Singapore secondary school NFS/FCE.` }
       }
     });
   });
+
+  // Cleanup on route change — stop the rotation timer so it doesn't keep
+  // firing toasts/beeps after leaving the page
+  return () => {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  };
 }
