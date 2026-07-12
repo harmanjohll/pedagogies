@@ -1022,11 +1022,15 @@ function buildPrepChecklist(teacherRow, lessons, classes) {
   const matchingClass = classes.find(c => c.name === nextLesson.classCode || c.name?.includes(nextLesson.classCode));
   const linkedLesson = matchingClass ? lessons.find(l => l.classId === matchingClass.id && l.status === 'ready') : null;
 
+  // Room/materials/tech checks are only actionable once there's a linked lesson
+  // to persist state onto — they toggle via `linkedLesson.prepChecks.<key>` and
+  // survive reloads that day (see the data-prep-toggle click wiring in render()).
+  const prepChecks = linkedLesson?.prepChecks || {};
   const checks = [
     { label: 'Lesson plan prepared', done: !!linkedLesson, action: linkedLesson ? `/lesson-planner/${linkedLesson.id}` : '/lesson-planner' },
-    { label: `Room ${nextLesson.room} ready`, done: false, action: null },
-    { label: 'Materials / handouts printed', done: false, action: null },
-    { label: 'Tech / simulation tested', done: false, action: linkedLesson?.components?.simulations ? '/simulations' : null },
+    { label: `Room ${nextLesson.room} ready`, done: !!prepChecks.roomReady, action: null, prepKey: 'roomReady' },
+    { label: 'Materials / handouts printed', done: !!prepChecks.materialsReady, action: null, prepKey: 'materialsReady' },
+    { label: 'Tech / simulation tested', done: !!prepChecks.techTested, action: linkedLesson?.components?.simulations ? '/simulations' : null, prepKey: 'techTested' },
     { label: 'Spatial layout configured', done: !!linkedLesson?.spatialLayout, action: '/spatial' },
   ];
 
@@ -1035,12 +1039,30 @@ function buildPrepChecklist(teacherRow, lessons, classes) {
       Next: P${nextLesson.p} | ${nextLesson.classCode} in ${nextLesson.room}
     </div>
     <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
-      ${checks.map(c => `<div class="prep-check-item" style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;${c.action ? 'cursor:pointer;' : ''}" ${c.action ? `data-action-route="${c.action}"` : ''}>
+      ${checks.map(c => {
+        if (c.prepKey && !linkedLesson) {
+          // Nothing to attach state to yet — show honestly as disabled rather
+          // than a fake checkbox that can never be checked.
+          return `<div class="prep-check-item" style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;opacity:0.6;">
+            <div style="width:18px;height:18px;border-radius:4px;border:2px solid var(--border, #d1d5db);background:transparent;flex-shrink:0;"></div>
+            <span style="color:var(--ink-secondary);">${c.label} <span style="color:var(--ink-faint);font-size:0.75rem;">&mdash; link a lesson plan first</span></span>
+          </div>`;
+        }
+        const openLink = (c.prepKey && c.action) ? `<a href="#" class="prep-check-open-link" data-action-route="${c.action}" title="Open simulations" style="margin-left:auto;flex-shrink:0;color:var(--ink-faint);display:flex;align-items:center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>` : '';
+        const clickable = !!(c.prepKey || c.action);
+        const dataAttrs = c.prepKey
+          ? `data-prep-toggle="${c.prepKey}" data-lesson-id="${linkedLesson.id}"`
+          : (c.action ? `data-action-route="${c.action}"` : '');
+        return `<div class="prep-check-item" style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;${clickable ? 'cursor:pointer;' : ''}" ${dataAttrs}>
         <div style="width:18px;height:18px;border-radius:4px;border:2px solid ${c.done ? 'var(--success, #22c55e)' : 'var(--border, #d1d5db)'};background:${c.done ? 'var(--success, #22c55e)' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           ${c.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
         </div>
         <span style="color:${c.done ? 'var(--success, #22c55e)' : 'var(--ink-secondary)'};${c.done ? 'text-decoration:line-through;' : ''}">${c.label}</span>
-      </div>`).join('')}
+        ${openLink}
+      </div>`;
+      }).join('')}
     </div>`;
 }
 
@@ -2243,14 +2265,37 @@ export function render(container) {
       // Prep checklist widget
       const prepEl = container.querySelector('#widget-prepChecklist');
       if (prepEl && !prefs.hiddenWidgets.includes('prepChecklist')) {
-        const prepContent = buildPrepChecklist(teacherRow, lessons, classes);
-        if (prepContent) {
+        // Re-buildable so a prep-check toggle click can refresh just this
+        // widget without a full dashboard re-render.
+        const renderPrepChecklist = () => {
+          const prepContent = buildPrepChecklist(teacherRow, Store.getLessons(), classes);
+          if (!prepContent) return;
           prepEl.innerHTML = widgetWrap('prepChecklist', getWidgetLabel('prepChecklist', prefs), prepContent, prefs);
           // Wire route clicks inside prep checklist
           prepEl.querySelectorAll('[data-action-route]').forEach(el => {
-            el.addEventListener('click', () => navigate(el.dataset.actionRoute));
+            el.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate(el.dataset.actionRoute);
+            });
           });
-        }
+          // Wire Room ready / Materials / Tech tested toggles — persisted on
+          // the linked lesson's `prepChecks` so state survives reloads that day.
+          prepEl.querySelectorAll('[data-prep-toggle]').forEach(el => {
+            el.addEventListener('click', () => {
+              const key = el.dataset.prepToggle;
+              const lessonId = el.dataset.lessonId;
+              // Look up the linked lesson fresh (not the closed-over `lessons`
+              // array) so we toggle against current state, not a stale copy.
+              const freshLesson = Store.getLessons().find(l => l.id === lessonId);
+              if (!freshLesson) return;
+              const current = freshLesson.prepChecks || {};
+              Store.updateLesson(freshLesson.id, { prepChecks: { ...current, [key]: !current[key] } });
+              renderPrepChecklist();
+            });
+          });
+        };
+        renderPrepChecklist();
       }
 
       // My timetable widget
