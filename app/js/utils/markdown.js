@@ -148,6 +148,18 @@ export function md(text) {
         ${opts.map(o => `<button type="button" class="md-choice-opt" data-choice="${o.replace(/"/g, '&quot;')}">${o}</button>`).join('')}
       </div>`;
     })
+    // Click-to-expand detail: [DETAIL: short label | fuller explanation]
+    // Native <details>/<summary> — no click-delegation wiring needed anywhere
+    // that renders through this pipeline. Split on the FIRST pipe only, since
+    // the detail body may itself legitimately contain a "|" character.
+    .replace(/\[DETAIL:\s*([^\]]+)\]/g, (m, inner) => {
+      const pipeIdx = inner.indexOf('|');
+      if (pipeIdx === -1) return m;
+      const label = inner.slice(0, pipeIdx).trim();
+      const body = inner.slice(pipeIdx + 1).trim();
+      if (!label || !body) return m;
+      return `<details class="md-detail"><summary>${label}</summary><div class="md-detail-body">${body}</div></details>`;
+    })
     // Blockquotes (for "copy this prompt" sections)
     .replace(/&gt; (.+)/g, '<blockquote style="border-left:3px solid var(--accent);padding:8px 12px;margin:6px 0;background:var(--accent-light,rgba(67,97,238,0.06));border-radius:0 6px 6px 0;font-size:0.8125rem;color:var(--ink-secondary);">$1</blockquote>')
     // Paragraphs

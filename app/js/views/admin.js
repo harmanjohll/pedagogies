@@ -7,7 +7,7 @@
 
 import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
-import { openModal } from '../components/modals.js';
+import { openModal, confirmDialog } from '../components/modals.js';
 import { sendChat } from '../api.js';
 import { getCurrentUser } from '../components/login.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
@@ -709,6 +709,7 @@ function getApprovalStyle(status) {
 function showEventDetail(pageContainer, ev, opts = {}) {
   const events = Store.get('adminEvents') || [];
   const enabledTasks = ev.tasks.filter(t => t.enabled);
+  const disabledTasks = ev.tasks.filter(t => !t.enabled);
 
   pageContainer.innerHTML = `
     <div style="margin-bottom:var(--sp-6);">
@@ -774,6 +775,9 @@ function showEventDetail(pageContainer, ev, opts = {}) {
               <div style="display:flex;align-items:center;gap:var(--sp-2);">
                 <span class="badge" style="background:${approval.bg};color:${approval.color};font-size:0.6875rem;">${approval.label}</span>
                 <span class="badge ${isComplete ? 'badge-green' : 'badge-gray'} badge-dot">${isComplete ? 'Done' : 'Pending'}</span>
+                <button type="button" class="btn btn-ghost btn-icon btn-sm task-remove-btn" data-task-key="${task.key}" title="Remove ${tmpl.label} from this event" style="color:var(--ink-faint);padding:2px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" class="task-chevron" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
             </div>
@@ -830,6 +834,26 @@ function showEventDetail(pageContainer, ev, opts = {}) {
           </div>`;
       }).join('')}
     </div>
+
+    ${disabledTasks.length > 0 ? `
+      <div style="margin-top:var(--sp-4);position:relative;display:inline-block;">
+        <button type="button" class="btn btn-ghost btn-sm" id="add-task-btn" style="border:1px dashed var(--border);color:var(--ink-muted);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add task
+        </button>
+        <div id="add-task-menu" style="display:none;position:absolute;top:100%;left:0;margin-top:var(--sp-2);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-card-hover);min-width:240px;z-index:20;overflow:hidden;">
+          ${disabledTasks.map(t => {
+            const tmpl = EVENT_TASKS.find(et => et.key === t.key);
+            if (!tmpl) return '';
+            return `
+              <button type="button" class="add-task-item" data-task-key="${t.key}" style="display:flex;align-items:center;gap:var(--sp-2);width:100%;padding:var(--sp-2) var(--sp-3);background:none;border:none;text-align:left;cursor:pointer;font-size:0.8125rem;color:var(--ink);" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='none'">
+                <span style="font-size:1rem;">${tmpl.icon}</span>
+                <span>${tmpl.label}</span>
+              </button>`;
+          }).join('')}
+        </div>
+      </div>
+    ` : ''}
   `;
 
   // Back button
@@ -843,6 +867,51 @@ function showEventDetail(pageContainer, ev, opts = {}) {
     Store.set('adminEvents', updated);
     showToast('Event deleted.', 'success');
     render(pageContainer.closest('#main-view') || pageContainer.closest('main'));
+  });
+
+  // Remove task from event
+  pageContainer.querySelectorAll('.task-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const key = btn.dataset.taskKey;
+      const tmpl = EVENT_TASKS.find(et => et.key === key);
+      const ok = await confirmDialog({
+        title: 'Remove Task',
+        message: `Remove "${tmpl?.label || key}" from this event? You can add it back later.`
+      });
+      if (!ok) return;
+      const task = ev.tasks.find(t => t.key === key);
+      if (task) {
+        task.enabled = false;
+        ev.updatedAt = Date.now();
+        Store.set('adminEvents', [...events]);
+        showToast(`"${tmpl?.label || key}" removed from event.`, 'success');
+        showEventDetail(pageContainer, ev);
+      }
+    });
+  });
+
+  // Add task back (re-enable a previously removed task)
+  const addTaskBtn = pageContainer.querySelector('#add-task-btn');
+  const addTaskMenu = pageContainer.querySelector('#add-task-menu');
+  if (addTaskBtn && addTaskMenu) {
+    addTaskBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      addTaskMenu.style.display = addTaskMenu.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+  pageContainer.querySelectorAll('.add-task-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const key = item.dataset.taskKey;
+      const task = ev.tasks.find(t => t.key === key);
+      if (task) {
+        task.enabled = true;
+        ev.updatedAt = Date.now();
+        Store.set('adminEvents', [...events]);
+        showToast(`"${EVENT_TASKS.find(et => et.key === key)?.label || key}" added back to event.`, 'success');
+        showEventDetail(pageContainer, ev);
+      }
+    });
   });
 
   // Accordion toggle

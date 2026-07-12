@@ -1420,6 +1420,41 @@ select.input {
   font-weight: 600;
 }
 
+/* ═══════════ Click-to-expand detail (keeps the main plan scannable) ═══════════ */
+
+.md-detail {
+  margin: 4px 0;
+  font-size: 0.8125rem;
+}
+.md-detail summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--ink-muted, #64748b);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 1px 0;
+  border-bottom: 1px dotted var(--border, #cbd5e1);
+}
+.md-detail summary::-webkit-details-marker { display: none; }
+.md-detail summary::before {
+  content: '\25B8'; /* ▸ */
+  font-size: 0.6875rem;
+  color: var(--ink-faint, #94a3b8);
+  transition: transform 0.15s;
+}
+.md-detail[open] summary::before { transform: rotate(90deg); }
+.md-detail summary:hover { color: var(--accent, #4361ee); border-bottom-color: var(--accent, #4361ee); }
+.md-detail-body {
+  margin: 4px 0 6px 14px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--border-light, #e2e8f0);
+  color: var(--ink-secondary, #475569);
+  line-height: 1.55;
+}
+
 /* ═══════════ Document canvas — the plan reads like paper ═══════════ */
 
 .doc-canvas h1, .doc-canvas h2, .doc-canvas h3, .doc-canvas h4, .doc-canvas h5 {
