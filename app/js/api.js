@@ -274,12 +274,25 @@ End with a brief "Teacher Notes" section with tips on using the rubric.`,
 }
 
 /* ── Student Grouping ── */
+/* Students carry six E21CC dimensions with rubric levels
+ * (developing → applying → extending → leading) — see state.js. */
+const E21CC_PROFILE_DIMS = [
+  ['criticalThinking', 'Critical Thinking'],
+  ['creativeThinking', 'Creative Thinking'],
+  ['communication', 'Communication'],
+  ['collaboration', 'Collaboration'],
+  ['socialConnectedness', 'Social Connectedness'],
+  ['selfRegulation', 'Self-Regulation']
+];
+const e21ccProfileLine = (s) =>
+  E21CC_PROFILE_DIMS.map(([key, label]) => `${label}=${s.e21cc?.[key] || 'developing'}`).join(', ');
+
 export async function suggestGrouping(students, activityType, options = {}) {
   const groupSize = options.groupSize || 4;
   const considerations = options.considerations || '';
 
   const studentSummary = students.map((s, i) =>
-    `${i + 1}. ${s.name}: CAIT=${s.e21cc?.cait || 50}, CCI=${s.e21cc?.cci || 50}, CGC=${s.e21cc?.cgc || 50}`
+    `${i + 1}. ${s.name}: ${e21ccProfileLine(s)}`
   ).join('\n');
 
   const totalStudents = students.length;
@@ -304,13 +317,15 @@ ABSOLUTE RULES — FOLLOW EXACTLY:
 3. Keep rationale SHORT — one sentence per group maximum.
 4. Use the student's FULL NAME exactly as provided in the list.
 
+E21CC dimension levels run developing → applying → extending → leading.
+
 Grouping logic:
 - Collaborative: mix E21CC strengths
-- Peer tutoring: pair strong with developing
+- Peer tutoring: pair extending/leading with developing
 - Competitive: balance groups fairly
 - Jigsaw: roles by individual strengths
 - Lab/practical: mix practical readiness
-- Debate: balance CCI scores
+- Debate: balance Communication levels
 - Project-based: diverse strengths
 
 FORMAT — follow this exactly:
@@ -383,7 +398,7 @@ Keep questions age-appropriate and aligned to Singapore curriculum standards.`,
 /* ── Differentiation Suggestions ── */
 export async function suggestDifferentiation(students, planText) {
   const profileSummary = students.map(s =>
-    `${s.name}: CAIT=${s.e21cc?.cait || 50}, CCI=${s.e21cc?.cci || 50}, CGC=${s.e21cc?.cgc || 50}`
+    `${s.name}: ${e21ccProfileLine(s)}`
   ).join('\n');
 
   const messages = [{
@@ -401,11 +416,11 @@ ${profileSummary}`
     trackLabel: 'suggestDifferentiation',
     systemPrompt: `You are Co-Cher's differentiation specialist for Singapore educators. Analyse student E21CC profiles and identify which students may need additional support or extension for a given lesson.
 
-E21CC score interpretation:
-- Below 40: May need scaffolding and structured support in this domain
-- 40–60: Developing; benefits from guided practice
-- 60–80: Competent; ready for standard-level activities
-- Above 80: Strong; can take on extension tasks or peer mentoring
+E21CC level interpretation (developing → applying → extending → leading):
+- developing: likely needs scaffolding and structured support in that dimension
+- applying: benefits from guided practice
+- extending: ready for standard-level activities with some stretch
+- leading: ready for extension tasks or peer mentoring
 
 Format your response as:
 
@@ -413,12 +428,12 @@ Format your response as:
 Brief summary of the class's E21CC strengths and areas for growth.
 
 ## Students Needing Scaffolding
-For each relevant student (scores below 40 in any domain):
-- **[Name]** — [domain] at [score]: [specific suggestion for this lesson]
+For each relevant student (developing in any dimension):
+- **[Name]** — [dimension] at [level]: [specific suggestion for this lesson]
 
 ## Students Ready for Extension
-For each relevant student (scores above 75 in key domains):
-- **[Name]** — [domain] at [score]: [extension opportunity for this lesson]
+For each relevant student (extending or leading in key dimensions):
+- **[Name]** — [dimension] at [level]: [extension opportunity for this lesson]
 
 ## Differentiation Strategies
 3–4 practical strategies the teacher can embed in this lesson:
