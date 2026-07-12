@@ -7,7 +7,8 @@ The canonical URL always serves the **latest** version:
 |---------|----------|----------|-------------------|--------|
 | v1 | `archive/cocher-v1.html` (single-file: Lesson Planner chat + Spatial Designer tabs) | `/pedagogies/archive/cocher-v1.html` (old `/pedagogies/cocher.html` bookmarks redirect here) | `cocher_api_key`, `cocher_model`, `darkMode`, `spatialPlannerCustomPresets` | Archived |
 | v2 | `archive/v2/` (frozen snapshot of the modular app as of Jul 2026) | `/pedagogies/archive/v2/cocher.html` | `cocher_v2_*` (renamed at freeze time so the archive can never touch live data) | Archived |
-| v3 | `app/` (active development) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
+| v3 | `archive/v3/` (frozen snapshot as of Jul 2026 — v3.1 feature set) | `/pedagogies/archive/v3/cocher.html` | `cocher_v3_*` (renamed at freeze time) | Archived |
+| v4 | `app/` (active development — "Staffroom Desk" design + learner portraits, growth engine, department packs) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
 
 ## Notes
 

@@ -1,0 +1,648 @@
+/*
+ * Co-Cher Layout
+ * ==============
+ * App shell: sidebar + main content area.
+ */
+
+/* ═══════════ App Shell ═══════════ */
+
+#app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ═══════════ Sidebar ═══════════ */
+
+.sidebar {
+  width: var(--sidebar-w);
+  height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-4) var(--sp-3);
+  gap: var(--sp-2);
+  transition: width var(--dur-slow) var(--ease), background-color var(--dur-slow) var(--ease);
+  z-index: 50;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.sidebar-brand-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--brand-gradient);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 12, 83, 0.25);
+}
+
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-brand-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--brand-navy);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.dark .sidebar-brand-name {
+  color: var(--brand-gold);
+}
+
+.sidebar-brand-tagline {
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  overflow-y: auto;
+}
+
+.sidebar-section-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  padding: var(--sp-3) var(--sp-2) var(--sp-1);
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-md);
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.sidebar-item:hover {
+  background: var(--bg-subtle);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.sidebar-item.active {
+  background: var(--accent-light);
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
+.dark .sidebar-item.active {
+  background: var(--accent-light);
+  color: #93c5fd;
+}
+
+.sidebar-item-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.sidebar-item.active .sidebar-item-icon {
+  opacity: 1;
+}
+
+.sidebar-item-badge {
+  margin-left: auto;
+  background: var(--bg-subtle);
+  color: var(--ink-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  min-width: 20px;
+  text-align: center;
+}
+
+.sidebar-item.active .sidebar-item-badge {
+  background: rgba(59,130,246,0.15);
+  color: var(--accent-dark);
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--border-light);
+  padding-top: var(--sp-3);
+  margin-top: var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  flex-shrink: 0;
+}
+
+.sidebar-version {
+  font-size: 0.6875rem;
+  color: var(--ink-faint);
+  text-align: center;
+  padding: var(--sp-1) 0 2px;
+  user-select: none;
+}
+
+/* ═══════════ Main Content ═══════════ */
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-4) var(--sp-8);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--surface);
+  flex-shrink: 0;
+  min-height: 56px;
+  transition: background-color var(--dur-slow) var(--ease);
+}
+
+.main-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.main-header-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.main-header-subtitle {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.main-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.main-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--sp-8);
+}
+
+/* ═══════════ Page Layouts ═══════════ */
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeInUp var(--dur-slow) var(--ease) both;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-8);
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  margin-top: var(--sp-1);
+}
+
+/* Grid layouts */
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-6); }
+/* minmax(0,1fr) so long unbreakable content can't crush sibling columns */
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-6); }
+.grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-6); }
+
+@media (max-width: 1100px) {
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .main-scroll { padding: var(--sp-4); }
+}
+
+/* ═══════════ Lesson Planner Layout ═══════════ */
+
+.lp-layout {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lp-chat-col {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface);
+  flex: 1 1 50%;
+  min-width: 320px;
+}
+
+.lp-plan-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  flex: 1 1 50%;
+  min-width: 320px;
+}
+
+/* ═══════════ Three-Column Layout (for spatial) ═══════════ */
+
+.three-col {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  padding: var(--sp-3);
+  overflow: hidden;
+  gap: 0;
+}
+
+.three-col > .panel:first-child {
+  flex: 0 0 240px;
+  min-width: 180px;
+  max-width: 400px;
+}
+
+/* Canvas column (child 3, after left handle) */
+.three-col > #spatial-canvas-col {
+  flex: 1 1 auto;
+  min-width: 200px;
+}
+
+/* Right analysis panel (child 5, after right handle) */
+.three-col > #spatial-right-panel {
+  flex: 0 0 280px;
+  min-width: 200px;
+  max-width: 460px;
+}
+
+@media (max-width: 1200px) {
+  .three-col > .panel:first-child { flex: 0 0 200px; }
+  .three-col > #spatial-right-panel { flex: 0 0 240px; }
+}
+
+/* ═══════════ Resizable Panel Divider ═══════════ */
+
+.resize-handle {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 10;
+  transition: background 0.15s;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--accent-light);
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 32px;
+  background: var(--border);
+  border-radius: 1px;
+  transition: background 0.15s, height 0.15s;
+}
+
+.resize-handle:hover::after,
+.resize-handle.active::after {
+  background: var(--accent);
+  height: 48px;
+}
+
+body.resizing-panels {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+body.resizing-panels * {
+  cursor: col-resize !important;
+  user-select: none !important;
+  pointer-events: none !important;
+}
+
+body.resizing-panels .resize-handle {
+  pointer-events: auto !important;
+}
+
+/* ═══════════ Panels ═══════════ */
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  padding: var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  transition: background-color var(--dur-slow) var(--ease), box-shadow var(--dur-normal) var(--ease);
+}
+
+.panel:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-5);
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ═══════════ Welcome Overlay ═══════════ */
+
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--brand-gradient);
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--sp-6);
+  overflow-y: auto;
+}
+
+.welcome-card {
+  background: #fff;
+  border-radius: var(--radius-2xl);
+  padding: var(--sp-8) var(--sp-10);
+  max-width: 620px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.3);
+  animation: scaleIn 0.5s var(--ease) both;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.dark .welcome-card {
+  background: var(--surface);
+}
+
+/* ═══════════ Mobile Header ═══════════ */
+
+.mobile-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--surface);
+  flex-shrink: 0;
+  min-height: 52px;
+}
+
+.hamburger-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background var(--dur-fast);
+}
+.hamburger-btn:hover { background: var(--bg-subtle); }
+
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.mobile-brand-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--brand-gradient);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  box-shadow: 0 2px 6px rgba(0, 12, 83, 0.2);
+}
+
+.mobile-brand-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--brand-navy);
+}
+.dark .mobile-brand-name { color: var(--brand-gold); }
+
+/* ═══════════ Sidebar Overlay ═══════════ */
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 90;
+  opacity: 0;
+  transition: opacity var(--dur-normal) var(--ease);
+}
+.sidebar-overlay.visible {
+  display: block;
+  opacity: 1;
+}
+
+/* ═══════════ Responsive ═══════════ */
+
+/* ── Tablet / iPad landscape (≤ 1024px) ── */
+@media (max-width: 1024px) {
+  .mobile-header { display: flex; }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-xl);
+    z-index: 100;
+    transition: transform var(--dur-normal) var(--ease);
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  .main-content { width: 100%; }
+  .main-header { padding: var(--sp-3) var(--sp-4); }
+
+  /* Lesson planner: show both panels but allow flexible sizing */
+  .lp-chat-col { min-width: 280px; flex: 1 1 45%; }
+  .lp-plan-col { min-width: 280px; flex: 1 1 45%; }
+
+  /* Spatial: compress panels */
+  .three-col > .panel:first-child { flex: 0 0 200px; min-width: 160px; }
+  .three-col > #spatial-right-panel { flex: 0 0 220px; min-width: 180px; }
+
+  .welcome-card { max-width: 400px; padding: var(--sp-8) var(--sp-6); }
+}
+
+/* ── Tablet portrait / iPad portrait (≤ 768px) ── */
+@media (max-width: 768px) {
+  .main-scroll { padding: var(--sp-4); }
+  .main-header { padding: var(--sp-3); }
+
+  .greeting-card { padding: var(--sp-6); }
+  .greeting-title { font-size: 1.375rem; }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+
+  /* Lesson planner: toggle between chat and plan (only show one at a time) */
+  .lp-chat-col { min-width: 0; flex: 1 1 100%; }
+  .lp-plan-col { display: none; min-width: 0; flex: 1 1 100%; }
+  .lp-chat-col { border-right: none; }
+  .lp-layout.show-plan .lp-chat-col { display: none; }
+  .lp-layout.show-plan .lp-plan-col { display: flex; }
+
+  /* Hide resize handle on mobile */
+  .resize-handle { display: none; }
+
+  /* Spatial: stack panels vertically */
+  .three-col {
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--sp-2);
+    gap: var(--sp-2);
+  }
+  .three-col > .panel:first-child {
+    flex: 0 0 auto;
+    min-width: 100%;
+    max-width: 100%;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+  .three-col > #spatial-canvas-col {
+    flex: 0 0 auto;
+    min-width: 100%;
+    min-height: 50vh;
+  }
+  .three-col > #spatial-right-panel {
+    flex: 0 0 auto;
+    min-width: 100%;
+    max-width: 100%;
+    max-height: none;
+  }
+
+  /* Hide spatial resize handles on mobile */
+  #spatial-resize-left,
+  #spatial-resize-right { display: none; }
+
+  .welcome-card { max-width: 100%; padding: var(--sp-6) var(--sp-4); }
+
+  .panel { padding: var(--sp-4); }
+}
+
+/* ── Phone (≤ 480px) ── */
+@media (max-width: 480px) {
+  .main-scroll { padding: var(--sp-3); }
+  .greeting-card { padding: var(--sp-5) var(--sp-4); }
+  .greeting-title { font-size: 1.25rem; }
+  .greeting-subtitle { font-size: 0.8125rem; }
+
+  .action-card { padding: var(--sp-4); }
+  .action-card-icon { width: 36px; height: 36px; }
+  .action-card-title { font-size: 0.875rem; }
+
+  .stat-card { padding: var(--sp-4); }
+  .stat-value { font-size: 1.375rem; }
+
+  .chat-input-row { padding: var(--sp-3); }
+  .chat-input { min-height: 60px; font-size: 0.875rem; }
+  .chat-send { padding: var(--sp-2) var(--sp-4); font-size: 0.875rem; min-height: 44px; }
+
+  .panel { padding: var(--sp-3); border-radius: var(--radius-md); }
+
+  /* Spatial canvas gets more vertical space on phone */
+  .three-col > #spatial-canvas-col {
+    min-height: 60vh;
+  }
+  .three-col > .panel:first-child {
+    max-height: 30vh;
+    padding: var(--sp-2);
+  }
+}

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Electromagnets – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="electromagnets.css?v=5">
+</head>
+<body>
+
+  <!-- Skip to content -->
+  <a href="#workbench" class="skip-link">Skip to simulation</a>
+
+  <!-- Print header (hidden on screen) -->
+  <div class="print-header">
+    <h1>Electromagnets Investigation</h1>
+    <p>LabSim Physics Practical</p>
+  </div>
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../../index.html">LabSim</a>
+      <span class="separator">/</span>
+      <a href="../../index.html">Physics</a>
+      <span class="separator">/</span>
+      Electromagnets
+    </span>
+    <div class="topbar-actions">
+      <div id="record-mode-container"></div>
+      <button id="btn-toggle-guide" class="btn btn-ghost btn-sm">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+        Guide
+      </button>
+      <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+    </div>
+  </nav>
+
+  <!-- Main 3-column layout -->
+  <div class="em-layout">
+
+    <!-- ═══ LEFT PANEL: Variable selector + Procedure ═══ -->
+    <aside id="guide-panel" class="em-guide-panel">
+
+      <!-- Variable selector -->
+      <div class="panel">
+        <div class="panel-header">Investigation Variable</div>
+        <div class="panel-body">
+          <div class="var-selector" id="var-selector">
+            <div class="var-option selected" data-var="coils" tabindex="0" role="radio" aria-checked="true">
+              <span class="var-radio"></span>
+              <span>Number of coils</span>
+            </div>
+            <div class="var-option" data-var="current" tabindex="0" role="radio" aria-checked="false">
+              <span class="var-radio"></span>
+              <span>Current</span>
+            </div>
+            <div class="var-option" data-var="core" tabindex="0" role="radio" aria-checked="false">
+              <span class="var-radio"></span>
+              <span>Core material</span>
+            </div>
+          </div>
+          <div class="controlled-vars mt-2" id="controlled-vars">
+            <strong>Controlled:</strong> <span id="controlled-list"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Setup controls -->
+      <div class="panel mt-4" id="setup-panel">
+        <div class="panel-header">Setup</div>
+        <div class="panel-body" id="setup-controls">
+          <!-- Populated by JS based on selected variable -->
+        </div>
+      </div>
+
+      <!-- Procedure -->
+      <div class="panel mt-4">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <ol class="procedure-list" id="procedure-list">
+            <!-- Populated by JS from EM_DATA.procedureSteps -->
+          </ol>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══ CENTRE PANEL: Workbench ═══ -->
+    <section class="em-workbench-panel" id="workbench">
+      <div class="em-workbench">
+        <canvas id="sim-canvas" width="620" height="420"></canvas>
+
+        <!-- Controls overlay -->
+        <div class="bench-controls" id="bench-controls">
+          <div class="bench-info ammeter-display">
+            <span class="bench-info-label">Ammeter</span>
+            <span class="bench-info-value" id="ammeter-value">0.0 A</span>
+          </div>
+
+          <button id="btn-power" class="btn btn-primary btn-sm">Switch ON</button>
+          <button id="btn-pickup" class="btn btn-success btn-sm" disabled>Pick Up Clips</button>
+          <button id="btn-record" class="btn btn-ghost btn-sm" disabled>Record Result</button>
+
+          <div class="bench-info clip-count-display" id="clip-count-display" style="display:none;">
+            <span class="bench-info-label">Clips picked up</span>
+            <span class="bench-info-value" id="clip-count-value">0</span>
+          </div>
+
+          <!-- Independent mode: manual entry -->
+          <div class="clip-input-group" id="clip-input-group" style="display:none;">
+            <label class="bench-info-label" for="clip-input" style="color:rgba(255,255,255,0.5);">Your count:</label>
+            <input type="number" id="clip-input" class="clip-input" min="0" max="50" value="">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ RIGHT PANEL: Results + Graph + Analysis ═══ -->
+    <aside class="em-data-panel">
+
+      <!-- Data table -->
+      <div class="panel">
+        <div class="panel-header" id="table-header">Results</div>
+        <div class="panel-body">
+          <table class="data-table" id="data-table">
+            <thead id="table-thead">
+              <tr>
+                <th id="th-independent">Turns</th>
+                <th>Clips picked up</th>
+              </tr>
+            </thead>
+            <tbody id="data-tbody"></tbody>
+          </table>
+          <p id="data-empty" class="text-sm text-muted text-center mt-2">
+            No results recorded yet.
+          </p>
+        </div>
+      </div>
+
+      <!-- Graph -->
+      <div class="panel mt-4">
+        <div class="panel-header" id="graph-header">Graph</div>
+        <div class="panel-body graph-container">
+          <canvas id="graph-canvas" width="280" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Analysis questions -->
+      <div class="panel mt-4" id="analysis-panel">
+        <div class="panel-header">Analysis</div>
+        <div class="panel-body analysis-section" id="analysis-questions">
+          <p class="text-sm text-muted">Complete the experiment to unlock analysis questions.</p>
+        </div>
+      </div>
+
+      <!-- Score summary (appears after analysis) -->
+      <div id="score-container"></div>
+
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="electromagnets"></div>
+    </aside>
+  </div>
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Shared scripts -->
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+
+  <!-- Practical scripts -->
+  <script src="em-data.js?v=5"></script>
+  <script src="electromagnets.js?v=5"></script>
+</body>
+</html>
