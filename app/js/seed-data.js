@@ -2209,7 +2209,7 @@ export function seedExemplarsIfNeeded() {
    Admin, Spatial layouts (for demo/testing)
    ══════════════════════════════════════════════════════ */
 
-const PORTAL_SEED_KEY = 'cocher_portal_demos_seeded_v1';
+const PORTAL_SEED_KEY = 'cocher_portal_demos_seeded_v2';
 
 export function seedPortalDemosIfNeeded() {
   if (localStorage.getItem(PORTAL_SEED_KEY)) return;
@@ -2299,30 +2299,39 @@ export function seedPortalDemosIfNeeded() {
     ]);
   }
 
-  /* ── CCE saved discussions ── */
+  /* ── CCE saved discussions ──
+   * Appended by exact title match rather than gated on the array being
+   * empty, so future seed additions reach browsers that already ran this
+   * function once (returning users) instead of silently never landing. */
   try {
     const cceKey = 'cocher_cce_discussions';
     const existingCce = JSON.parse(localStorage.getItem(cceKey) || '[]');
-    if (existingCce.length === 0) {
-      localStorage.setItem(cceKey, JSON.stringify([
-        { id: generateId(), title: 'Handling Online Rumours Responsibly', contentArea: 'CW', bigIdea: 'Choices', values: 'Responsibility, Integrity', level: 'Sec 2', format: 'circle', isSample: true,
-          content: '## Cyber Wellness Discussion — Online Rumours\n\n**Hook:** A classmate’s edited photo is spreading in a class chat.\n\n**Circle questions:**\n1. What would you feel if it were you?\n2. What is the difference between forwarding and creating?\n3. What is one responsible action you can take in the next 5 minutes?\n\n**Close:** Draft a class agreement on sharing.', createdAt: now - 13 * DAY },
-        { id: generateId(), title: 'Respecting Difference — Race & Religion', contentArea: 'NE', bigIdea: 'Relationships', values: 'Respect, Harmony', level: 'Sec 3', format: 'four corners', isSample: true,
-          content: '## National Education — Living with Difference\n\n**Provocation:** Should void-deck spaces be used for religious events?\n\n**Four corners:** Strongly agree / Agree / Disagree / Strongly disagree — students justify and may move as they hear others.\n\n**Debrief:** name one perspective that shifted your thinking. Connect to Singapore’s multiracial compact.', createdAt: now - 6 * DAY },
-        { id: generateId(), title: 'Total Defence — Six Pillars in My Life', contentArea: 'NE', bigIdea: 'Identity', values: 'Responsibility, Resilience', level: 'Sec 1', format: 'Circle Structure', isSample: true,
-          content: '## National Education — Total Defence: Six Pillars in My Life\n\n**Hook:** Total Defence Day isn’t just about the army — it’s six pillars, and five of them need you, not a uniform.\n\n**Circle — one prompt per pillar, going round:**\n1. **Military** (SAF protects our land, sea & skies) — Do you know someone doing NS? What do you think they protect?\n2. **Civil** (staying calm & prepared in a crisis) — Do you know what to do if the fire alarm rings right now?\n3. **Economic** (a strong, resilient economy) — Name a local business your family supports.\n4. **Social** (racial & religious harmony) — Name a friend from a different race or religion — what have you learnt from them?\n5. **Psychological** (staying resilient, not giving up) — Think of a time things went wrong for you — what kept you going?\n6. **Digital** (added in 2019 — spotting scams, misinformation & staying cyber-safe) — Have you ever nearly fallen for a scam message or shared something online without checking if it was true?\n\n**Close:** Go round once more — each student names one small Total Defence action they’ll commit to this month.', createdAt: now - 20 * DAY },
-        { id: generateId(), title: 'My Digital Footprint', contentArea: 'CW', bigIdea: 'Choices', values: 'Responsibility, Integrity', level: 'Sec 2', format: 'Think-Pair-Share', isSample: true,
-          content: '## Cyber Wellness — My Digital Footprint\n\n**Hook:** A JC teacher once said, “I checked a student’s Instagram before writing his testimonial.” True story — happens every intake.\n\n**Sense (alone, 2 min):** List 3 things visible on your public social media right now. Would you be comfortable if a poly/JC interviewer or a future boss saw them?\n\n**Think (pair, 5 min):** A deleted post can still exist as someone’s screenshot. What’s the difference between a private mistake and a public, permanent one? Does deleting it really undo it?\n\n**Act (share back):** Each pair suggests one concrete habit — e.g. a “future-me filter” before posting — to keep a digital footprint they’d be proud of in five years.\n\n**Close:** Silently think of one post or photo you’d edit or remove today, and why.', createdAt: now - 9 * DAY },
-        { id: generateId(), title: 'Stress Signals — Naming It Before It Names You', contentArea: 'MH', bigIdea: 'Choices', values: 'Resilience, Care', level: 'Sec 2', format: 'Values Clarification Exercise', isSample: true,
-          content: '## Mental Health — Stress Signals: Naming It Before It Names You\n\n**Scenario:** Your test results are back, lower than you hoped. CCA has finals training tonight, and your parents keep bringing up grades at dinner. Your chest feels tight and you snap at a friend for no reason.\n\n**Values clarification — which response feels most like you, and why?**\n(a) Push through silently and hope it passes.\n(b) Vent to a friend, but don’t tell any adult.\n(c) Find your form teacher or a Peer Support Leader (PSL) and name what’s going on.\n\n**“I am, I have, I can” check-in (pairs):** *I am* — one strength you have under pressure. *I have* — one person or thing that supports you. *I can* — one small action you can take today.\n\n**Debrief:** Help-seeking is not a sign of weakness — it’s an act of strength. Every level has trained PSLs, and every student has a form teacher.\n\n**Close:** Silently name one trusted adult or PSL you could actually go to this week — you don’t have to say it aloud.', createdAt: now - 3 * DAY }
-      ]));
+    const CCE_SEED_DISCUSSIONS = [
+      { id: generateId(), title: 'Handling Online Rumours Responsibly', contentArea: 'CW', bigIdea: 'Choices', values: 'Responsibility, Integrity', level: 'Sec 2', format: 'circle', isSample: true,
+        content: '## Cyber Wellness Discussion — Online Rumours\n\n**Hook:** A classmate’s edited photo is spreading in a class chat.\n\n**Circle questions:**\n1. What would you feel if it were you?\n2. What is the difference between forwarding and creating?\n3. What is one responsible action you can take in the next 5 minutes?\n\n**Close:** Draft a class agreement on sharing.', createdAt: now - 13 * DAY },
+      { id: generateId(), title: 'Respecting Difference — Race & Religion', contentArea: 'NE', bigIdea: 'Relationships', values: 'Respect, Harmony', level: 'Sec 3', format: 'four corners', isSample: true,
+        content: '## National Education — Living with Difference\n\n**Provocation:** Should void-deck spaces be used for religious events?\n\n**Four corners:** Strongly agree / Agree / Disagree / Strongly disagree — students justify and may move as they hear others.\n\n**Debrief:** name one perspective that shifted your thinking. Connect to Singapore’s multiracial compact.', createdAt: now - 6 * DAY },
+      { id: generateId(), title: 'Total Defence — Six Pillars in My Life', contentArea: 'NE', bigIdea: 'Identity', values: 'Responsibility, Resilience', level: 'Sec 1', format: 'Circle Structure', isSample: true,
+        content: '## National Education — Total Defence: Six Pillars in My Life\n\n**Hook:** Total Defence Day isn’t just about the army — it’s six pillars, and five of them need you, not a uniform.\n\n**Circle — one prompt per pillar, going round:**\n1. **Military** (SAF protects our land, sea & skies) — Do you know someone doing NS? What do you think they protect?\n2. **Civil** (staying calm & prepared in a crisis) — Do you know what to do if the fire alarm rings right now?\n3. **Economic** (a strong, resilient economy) — Name a local business your family supports.\n4. **Social** (racial & religious harmony) — Name a friend from a different race or religion — what have you learnt from them?\n5. **Psychological** (staying resilient, not giving up) — Think of a time things went wrong for you — what kept you going?\n6. **Digital** (added in 2019 — spotting scams, misinformation & staying cyber-safe) — Have you ever nearly fallen for a scam message or shared something online without checking if it was true?\n\n**Close:** Go round once more — each student names one small Total Defence action they’ll commit to this month.', createdAt: now - 20 * DAY },
+      { id: generateId(), title: 'My Digital Footprint', contentArea: 'CW', bigIdea: 'Choices', values: 'Responsibility, Integrity', level: 'Sec 2', format: 'Think-Pair-Share', isSample: true,
+        content: '## Cyber Wellness — My Digital Footprint\n\n**Hook:** A JC teacher once said, “I checked a student’s Instagram before writing his testimonial.” True story — happens every intake.\n\n**Sense (alone, 2 min):** List 3 things visible on your public social media right now. Would you be comfortable if a poly/JC interviewer or a future boss saw them?\n\n**Think (pair, 5 min):** A deleted post can still exist as someone’s screenshot. What’s the difference between a private mistake and a public, permanent one? Does deleting it really undo it?\n\n**Act (share back):** Each pair suggests one concrete habit — e.g. a “future-me filter” before posting — to keep a digital footprint they’d be proud of in five years.\n\n**Close:** Silently think of one post or photo you’d edit or remove today, and why.', createdAt: now - 9 * DAY },
+      { id: generateId(), title: 'Stress Signals — Naming It Before It Names You', contentArea: 'MH', bigIdea: 'Choices', values: 'Resilience, Care', level: 'Sec 2', format: 'Values Clarification Exercise', isSample: true,
+        content: '## Mental Health — Stress Signals: Naming It Before It Names You\n\n**Scenario:** Your test results are back, lower than you hoped. CCA has finals training tonight, and your parents keep bringing up grades at dinner. Your chest feels tight and you snap at a friend for no reason.\n\n**Values clarification — which response feels most like you, and why?**\n(a) Push through silently and hope it passes.\n(b) Vent to a friend, but don’t tell any adult.\n(c) Find your form teacher or a Peer Support Leader (PSL) and name what’s going on.\n\n**“I am, I have, I can” check-in (pairs):** *I am* — one strength you have under pressure. *I have* — one person or thing that supports you. *I can* — one small action you can take today.\n\n**Debrief:** Help-seeking is not a sign of weakness — it’s an act of strength. Every level has trained PSLs, and every student has a form teacher.\n\n**Close:** Silently name one trusted adult or PSL you could actually go to this week — you don’t have to say it aloud.', createdAt: now - 3 * DAY }
+    ];
+    const existingCceTitles = new Set(existingCce.map(d => d.title));
+    const newCce = CCE_SEED_DISCUSSIONS.filter(d => !existingCceTitles.has(d.title));
+    if (newCce.length > 0) {
+      localStorage.setItem(cceKey, JSON.stringify([...existingCce, ...newCce]));
     }
   } catch { /* ignore */ }
 
-  /* ── Admin events ── */
-  if ((Store.get('adminEvents') || []).length === 0) {
+  /* ── Admin events ──
+   * Appended by exact name match rather than gated on the array being
+   * empty — see the CCE discussions comment above for why. */
+  {
     const mkTask = (key, status, data) => ({ key, enabled: true, status, approvalStatus: status === 'completed' ? 'approved' : 'not_started', data: data || {} });
-    Store.set('adminEvents', [
+    const existingEvents = Store.get('adminEvents') || [];
+    const ADMIN_SEED_EVENTS = [
       {
         id: generateId(), name: 'Sec 3 Geography Fieldwork — Sungei Buloh', date: new Date(now - 4 * DAY).toISOString().slice(0, 10),
         eventType: 'Learning Journey', status: 'completed', isSample: true,
@@ -2367,7 +2376,12 @@ export function seedPortalDemosIfNeeded() {
           mkTask('aor', 'pending', {})
         ], createdAt: now - 6 * DAY, updatedAt: now - 2 * DAY
       }
-    ]);
+    ];
+    const existingEventNames = new Set(existingEvents.map(e => e.name));
+    const newEvents = ADMIN_SEED_EVENTS.filter(e => !existingEventNames.has(e.name));
+    if (newEvents.length > 0) {
+      Store.set('adminEvents', [...existingEvents, ...newEvents]);
+    }
   }
 
   /* ── Spatial saved layouts ── */
