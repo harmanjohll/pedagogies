@@ -296,7 +296,7 @@ function saveCustomSims(sims) {
 
 /* ── Iframe overlay with drag-to-resize edges ── */
 function openOverlay(container, title, opts) {
-  // opts: { src } or { srcdoc }
+  // opts: { src } for trusted built-ins, or { srcdoc, spec } for generated sims
   const overlay = document.createElement('div');
   overlay.id = 'sim-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);animation:simFadeIn 0.2s ease;';
@@ -319,7 +319,11 @@ function openOverlay(container, title, opts) {
   iframe.style.cssText = 'flex:1;border:none;width:100%;height:100%;background:#1e1f2b;';
   if (opts.src) iframe.src = opts.src;
   else if (opts.srcdoc) iframe.srcdoc = opts.srcdoc;
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
+  // SECURITY: with allow-same-origin a srcdoc iframe inherits THIS origin, so
+  // AI-generated code could read the teacher's API key out of localStorage.
+  // Generated (srcdoc) sims get allow-scripts ONLY; same-origin stays limited
+  // to the trusted built-in sims loaded via src (needed for layout injection).
+  iframe.setAttribute('sandbox', opts.src ? 'allow-scripts allow-same-origin allow-popups' : 'allow-scripts');
 
   // Inject responsive CSS + layout overrides into simulations after load
   iframe.addEventListener('load', () => {
@@ -342,7 +346,14 @@ function openOverlay(container, title, opts) {
   });
 
   win.appendChild(topBar);
-  win.appendChild(iframe);
+  // Custom sims that carry a pedagogical spec get app-owned chrome around the
+  // iframe (objective strip, predict-first veil, guiding questions). Legacy
+  // sims and built-ins get the bare iframe, exactly as before.
+  if (opts.spec && opts.srcdoc) {
+    win.appendChild(buildPedagogyShell(iframe, opts.spec));
+  } else {
+    win.appendChild(iframe);
+  }
 
   // ── Resize state ──
   let resizing = null;
@@ -433,6 +444,84 @@ function openOverlay(container, title, opts) {
   overlay.querySelector('#sim-overlay-close').addEventListener('click', closeOverlay);
   const escHandler = (e) => { if (e.key === 'Escape') closeOverlay(); };
   document.addEventListener('keydown', escHandler);
+}
+
+/* ── Pedagogical shell around generated sims ──
+ * App-owned chrome (never AI-generated): the learning objective up top, a
+ * predict-before-you-run veil over the iframe, guiding questions in a
+ * collapsible side panel, debrief question beneath. Teacher-mediated by
+ * design — the Skip link is always there; this is a nudge, not a lock. */
+function buildPedagogyShell(iframe, spec) {
+  const shell = document.createElement('div');
+  shell.style.cssText = 'flex:1;display:flex;flex-direction:column;min-height:0;';
+  const questions = Array.isArray(spec.guidingQuestions)
+    ? spec.guidingQuestions.filter(q => typeof q === 'string' && q.trim())
+    : [];
+  const debrief = typeof spec.debrief === 'string' ? spec.debrief.trim() : '';
+  shell.innerHTML = `
+    ${spec.learningObjective ? `
+      <div style="padding:8px 16px;background:#1c1c3a;color:#c7cbe8;font-size:0.8125rem;line-height:1.5;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+        <strong style="color:#8f9bff;">Objective:</strong> ${escapeHtml(spec.learningObjective)}
+      </div>` : ''}
+    <div style="flex:1;display:flex;min-height:0;">
+      <div id="sim-shell-stage" style="position:relative;flex:1;min-width:0;display:flex;"></div>
+      ${(questions.length || debrief) ? `
+      <div id="sim-shell-side" style="width:280px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;background:#12122a;border-left:1px solid rgba(255,255,255,0.08);">
+        <button id="sim-shell-side-toggle" aria-expanded="true" style="background:none;border:none;color:#c7cbe8;cursor:pointer;padding:10px 14px;font-size:0.75rem;font-weight:600;text-align:left;letter-spacing:0.03em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.08);">Guiding questions &#9662;</button>
+        <div id="sim-shell-side-body" style="flex:1;overflow-y:auto;padding:12px 14px;color:#e8e8f0;font-size:0.8125rem;line-height:1.6;">
+          ${questions.length ? `<ol style="margin:0 0 14px;padding-left:18px;display:flex;flex-direction:column;gap:8px;">${questions.map(q => `<li>${escapeHtml(q)}</li>`).join('')}</ol>` : ''}
+          ${debrief ? `
+            <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;">
+              <div style="font-size:0.6875rem;font-weight:700;color:#8f9bff;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Debrief</div>
+              ${escapeHtml(debrief)}
+            </div>` : ''}
+        </div>
+      </div>` : ''}
+    </div>`;
+
+  const stage = shell.querySelector('#sim-shell-stage');
+  stage.appendChild(iframe);
+
+  // Predict first: blur the sim until the class has committed to a prediction
+  if (typeof spec.prediction === 'string' && spec.prediction.trim()) {
+    iframe.style.filter = 'blur(8px)';
+    iframe.style.pointerEvents = 'none';
+    const veil = document.createElement('div');
+    veil.style.cssText = 'position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(18,18,42,0.45);';
+    veil.innerHTML = `
+      <div style="max-width:520px;width:100%;background:#252540;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:22px 24px;color:#e8e8f0;box-shadow:0 12px 40px rgba(0,0,0,0.45);">
+        <div style="font-size:0.6875rem;font-weight:700;color:#8f9bff;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Predict first</div>
+        <p style="margin:0 0 12px;font-size:0.9375rem;line-height:1.55;">${escapeHtml(spec.prediction)}</p>
+        <textarea id="sim-predict-answer" rows="3" aria-label="Class prediction" placeholder="Type the class prediction here (optional)…" style="width:100%;box-sizing:border-box;background:#1a1a2e;color:#e8e8f0;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;font-family:inherit;font-size:0.8125rem;resize:vertical;"></textarea>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:12px;">
+          <button id="sim-predict-reveal" style="background:#4361ee;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:0.8125rem;font-weight:600;cursor:pointer;">Reveal simulation</button>
+          <a href="#" id="sim-predict-skip" style="font-size:0.75rem;color:rgba(255,255,255,0.45);">Skip</a>
+        </div>
+      </div>`;
+    const reveal = () => {
+      veil.remove();
+      iframe.style.filter = '';
+      iframe.style.pointerEvents = '';
+    };
+    veil.querySelector('#sim-predict-reveal').addEventListener('click', reveal);
+    veil.querySelector('#sim-predict-skip').addEventListener('click', (e) => { e.preventDefault(); reveal(); });
+    stage.appendChild(veil);
+  }
+
+  // Collapsible side panel
+  const toggle = shell.querySelector('#sim-shell-side-toggle');
+  const side = shell.querySelector('#sim-shell-side');
+  const sideBody = shell.querySelector('#sim-shell-side-body');
+  if (toggle && side && sideBody) {
+    toggle.addEventListener('click', () => {
+      const collapsed = sideBody.style.display === 'none';
+      sideBody.style.display = collapsed ? '' : 'none';
+      side.style.width = collapsed ? '280px' : 'auto';
+      toggle.setAttribute('aria-expanded', String(collapsed));
+      toggle.innerHTML = collapsed ? 'Guiding questions &#9662;' : 'Guiding questions &#9656;';
+    });
+  }
+  return shell;
 }
 
 /* ── Inject layout overrides into labsim simulation iframes ── */
@@ -573,18 +662,27 @@ function injectSimLayoutOverrides(doc) {
 
 /* ── Extract HTML from AI response ── */
 function extractHTML(text) {
-  // Try to find HTML within code fences first
-  const fenced = text.match(/```(?:html)?\s*\n?([\s\S]*?)```/);
-  if (fenced) return fenced[1].trim();
-  // If it starts with <!DOCTYPE or <html, use the whole thing
   const trimmed = text.trim();
-  if (trimmed.startsWith('<!') || trimmed.startsWith('<html') || trimmed.startsWith('<HTML')) {
-    return trimmed;
+  let candidate = null;
+  // Try to find HTML within code fences first
+  const fenced = trimmed.match(/```(?:html)?\s*\n?([\s\S]*?)```/);
+  if (fenced) candidate = fenced[1].trim();
+  // If it starts with <!DOCTYPE or <html, use the whole thing
+  else if (trimmed.startsWith('<!') || /^<html/i.test(trimmed)) candidate = trimmed;
+  else {
+    // Last resort: find first <html...> to </html>
+    const htmlMatch = trimmed.match(/<html[\s\S]*<\/html>/i);
+    if (htmlMatch) candidate = htmlMatch[0];
   }
-  // Last resort: find first <html...> to </html>
-  const htmlMatch = trimmed.match(/<html[\s\S]*<\/html>/i);
-  if (htmlMatch) return htmlMatch[0];
-  // If nothing else, wrap in a basic page
+  // A response with no HTML markers at all is a refusal or an explanation —
+  // surface it as an error instead of wrapping prose into a saved "sim".
+  const target = candidate || trimmed;
+  if (!/<!doctype|<html[\s>]|<canvas[\s>]|<script[\s>]/i.test(target)) {
+    const snippet = trimmed.replace(/\s+/g, ' ').slice(0, 220);
+    throw new Error(`The model replied with text instead of a simulation: "${snippet}${trimmed.length > 220 ? '…' : ''}"`);
+  }
+  if (candidate) return candidate;
+  // Markers exist but no full document (e.g. a bare <canvas>+<script> fragment) — wrap it
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;font-family:sans-serif;background:#1a1a2e;color:#eee;display:flex;align-items:center;justify-content:center;min-height:100vh;}</style></head><body>${trimmed}</body></html>`;
 }
 
@@ -614,12 +712,241 @@ async function completeTruncatedHTML(partial, originalPrompt, model) {
   return partial + '\n</body></html>';
 }
 
+/* ── Quality gate: test-run generated HTML before it is ever saved ──
+ * A copy of the HTML gets a tiny reporter script and runs in a hidden
+ * allow-scripts iframe. The reporter posts back either the first runtime
+ * error, or (after the sim has had ~1.2s to boot) an ok message with a
+ * control count. Silence means the document never parsed. */
+const PROBE_TIMEOUT_MS = 6000;
+
+function injectProbeReporter(html) {
+  const reporter = `<script>(function(){window.onerror=function(m,s,l){parent.postMessage({simProbe:1,error:String(m)+' @'+l},'*');};window.addEventListener('load',function(){setTimeout(function(){parent.postMessage({simProbe:1,ok:true,hasCanvas:!!document.querySelector('canvas'),controls:document.querySelectorAll('input,button,select').length},'*');},1200);});})();<\/script>`;
+  const bodyOpen = html.match(/<body[^>]*>/i);
+  if (bodyOpen) {
+    const at = bodyOpen.index + bodyOpen[0].length;
+    return html.slice(0, at) + reporter + html.slice(at);
+  }
+  const bodyClose = html.search(/<\/body>/i);
+  if (bodyClose !== -1) return html.slice(0, bodyClose) + reporter + html.slice(bodyClose);
+  return html + reporter;
+}
+
+function probeSimHTML(html) {
+  return new Promise((resolve) => {
+    const frame = document.createElement('iframe');
+    frame.setAttribute('sandbox', 'allow-scripts');
+    frame.setAttribute('aria-hidden', 'true');
+    // Off-screen rather than display:none so canvas sizing code behaves
+    frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;height:600px;visibility:hidden;border:none;';
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      window.removeEventListener('message', onMessage);
+      frame.remove();
+      resolve(result);
+    };
+    const onMessage = (e) => {
+      if (e.source !== frame.contentWindow || !e.data || e.data.simProbe !== 1) return;
+      if (e.data.error) {
+        finish({ ok: false, error: `Runtime error: ${String(e.data.error).slice(0, 300)}` });
+      } else if (e.data.ok) {
+        if (!e.data.controls) {
+          finish({ ok: false, error: 'The page loaded but has no interactive controls (no inputs, buttons or selects).' });
+        } else {
+          finish({ ok: true, hasCanvas: !!e.data.hasCanvas, controls: e.data.controls });
+        }
+      }
+    };
+    const timer = setTimeout(() => finish({
+      ok: false,
+      error: 'No signal from the simulation — the document likely failed to parse or crashed before it could load.'
+    }), PROBE_TIMEOUT_MS);
+    window.addEventListener('message', onMessage);
+    frame.srcdoc = injectProbeReporter(html);
+    document.body.appendChild(frame);
+  });
+}
+
+const REPAIR_SYSTEM_PROMPT = 'You repair broken self-contained HTML simulations. Fix the reported problem while preserving the layout, science and styling of everything else. Return the COMPLETE corrected HTML document only — no markdown fences, no commentary.';
+
+/* Probe → on failure, ONE automatic repair pass → re-probe.
+ * Returns { ok, html, error? } — html is the best candidate either way. */
+async function gateSimHTML(html, { repairContext = '', model, onStage } = {}) {
+  onStage?.('Testing the build…');
+  const first = await probeSimHTML(html);
+  if (first.ok) return { ok: true, html };
+  onStage?.('Check failed — attempting an automatic repair…');
+  try {
+    const text = await sendChat(
+      [{ role: 'user', content: `This self-contained HTML simulation failed an automated check.\nPROBLEM: ${first.error}\n${repairContext ? `CONTEXT: ${repairContext}\n` : ''}\nFULL HTML:\n${html}\n\nReturn the corrected COMPLETE HTML document.` }],
+      { trackLabel: 'customSimulationRepair', systemPrompt: REPAIR_SYSTEM_PROMPT, temperature: 0.2, maxTokens: 16000, model }
+    );
+    let repaired = extractHTML(text);
+    if (!isCompleteHTML(repaired)) repaired = await completeTruncatedHTML(repaired, repairContext || 'Repair the simulation.', model);
+    onStage?.('Re-testing the repaired build…');
+    const second = await probeSimHTML(repaired);
+    if (second.ok) return { ok: true, html: repaired };
+    return { ok: false, html: repaired, error: second.error };
+  } catch {
+    return { ok: false, html, error: first.error };
+  }
+}
+
+/* Honest choice when the repair pass also fails: the teacher decides. */
+function askProbeFailChoice(errorMsg) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (value, close) => {
+      if (settled) return;
+      settled = true;
+      close?.();
+      resolve(value);
+    };
+    const { backdrop, close } = openModal({
+      title: 'Simulation failed its check',
+      body: `
+        <p style="font-size:0.875rem;color:var(--ink-secondary);line-height:1.6;">Co-Cher test-ran the generated simulation and it did not pass, even after one automatic repair:</p>
+        <p style="font-size:0.8125rem;color:var(--danger);background:var(--bg-subtle);border-radius:8px;padding:10px 12px;line-height:1.5;">${escapeHtml(errorMsg || 'Unknown failure.')}</p>
+        <p style="font-size:0.875rem;color:var(--ink-secondary);line-height:1.6;">Retry the build, keep it anyway (it will be labelled <strong>experimental</strong>), or discard it.</p>`,
+      footer: `
+        <button class="btn btn-secondary" data-action="discard">Discard</button>
+        <button class="btn btn-secondary" data-action="save">Save anyway (experimental)</button>
+        <button class="btn btn-primary" data-action="retry">Retry</button>`,
+      onClose: () => settle('discard')
+    });
+    backdrop.querySelector('[data-action="discard"]').addEventListener('click', () => settle('discard', close));
+    backdrop.querySelector('[data-action="save"]').addEventListener('click', () => settle('save', close));
+    backdrop.querySelector('[data-action="retry"]').addEventListener('click', () => settle('retry', close));
+  });
+}
+
 /* ── Derive a short title from the prompt ── */
 function deriveTitle(prompt) {
   const cleaned = prompt.replace(/^(create|build|make|generate|design)\s+(a|an|the)?\s*/i, '').trim();
   const first = cleaned.split(/[.\n]/)[0].trim();
   return first.length > 60 ? first.slice(0, 57) + '...' : first || 'Custom Simulation';
 }
+
+/* ── Spec-then-build: Stage 1 designs the pedagogy, Stage 2 compiles it ── */
+const SPEC_SYSTEM_PROMPT = `You are LabSim Planner. Before any code is written, you design the pedagogical specification for an interactive science simulation for Singapore secondary / JC students. Respond with ONE JSON object only — no markdown fences, no commentary — in exactly this shape:
+{
+  "title": "short display title",
+  "learningObjective": "one sentence, student-facing",
+  "prediction": "ONE question students answer BEFORE running the simulation",
+  "guidingQuestions": ["2-3 questions students explore WHILE running it"],
+  "debrief": "ONE reflection question for after the simulation",
+  "variables": [{ "name": "", "symbol": "", "unit": "SI unit", "min": 0, "max": 0, "default": 0, "step": 0, "rationale": "why this range suits the level" }],
+  "representations": ["animation", "graph"],
+  "governingEquations": ["plain-text equations the simulation must implement"],
+  "modelNotes": "integration scheme and timestep, e.g. semi-implicit Euler, fixed dt = 1/120 s"
+}
+Rules: variable ranges MUST be pedagogically targeted at the stated student level (values students meet in their syllabus, not arbitrary numbers); representations MUST include "animation" and "graph"; use SI units throughout; 2-6 variables; keep every string concise.`;
+
+function parseSpecJson(text) {
+  let t = String(text).trim().replace(/^```(?:json)?\s*\n?/, '').replace(/```\s*$/, '');
+  try { return JSON.parse(t); } catch { /* fall through */ }
+  const braced = t.match(/\{[\s\S]*\}/);
+  if (braced) {
+    try { return JSON.parse(braced[0]); } catch { /* fall through */ }
+  }
+  return null;
+}
+
+/* Coerce a parsed spec into the exact shape the builder relies on;
+ * throws a teacher-readable Error when the essentials are missing. */
+function normalizeSpec(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('The model did not return a valid simulation spec — try again.');
+  }
+  const str = (v, fb = '') => (typeof v === 'string' && v.trim()) ? v.trim() : fb;
+  const num = (v, fb) => Number.isFinite(Number(v)) ? Number(v) : fb;
+  const spec = {
+    title: str(raw.title, 'Custom Simulation'),
+    learningObjective: str(raw.learningObjective),
+    prediction: str(raw.prediction),
+    guidingQuestions: (Array.isArray(raw.guidingQuestions) ? raw.guidingQuestions : [])
+      .map(q => str(q)).filter(Boolean).slice(0, 3),
+    debrief: str(raw.debrief),
+    variables: (Array.isArray(raw.variables) ? raw.variables : []).map(v => ({
+      name: str(v && v.name, 'variable'),
+      symbol: str(v && v.symbol),
+      unit: str(v && v.unit),
+      min: num(v && v.min, 0),
+      max: num(v && v.max, 100),
+      default: num(v && v.default, num(v && v.min, 0)),
+      step: num(v && v.step, 1),
+      rationale: str(v && v.rationale)
+    })),
+    representations: [...new Set(
+      (Array.isArray(raw.representations) ? raw.representations : [])
+        .map(r => str(r).toLowerCase()).filter(Boolean)
+        .concat(['animation', 'graph'])   // non-negotiable pair
+    )],
+    governingEquations: (Array.isArray(raw.governingEquations) ? raw.governingEquations : [])
+      .map(e => str(e)).filter(Boolean),
+    modelNotes: str(raw.modelNotes)
+  };
+  if (spec.variables.length === 0) {
+    throw new Error('The spec came back without any variables — regenerate it.');
+  }
+  return spec;
+}
+
+/* Stage 1 call: api.js sendChat supports options.jsonMode (it sets Gemini's
+ * responseMimeType to application/json), with one parse-repair attempt. */
+async function generateSpec(prompt, model) {
+  const raw = await sendChat(
+    [{ role: 'user', content: prompt }],
+    { trackLabel: 'customSimulationSpec', systemPrompt: SPEC_SYSTEM_PROMPT, jsonMode: true, model }
+  );
+  let parsed = parseSpecJson(raw);
+  if (!parsed) {
+    const fixed = await sendChat(
+      [{ role: 'user', content: `Convert the following into ONE valid JSON object with exactly the keys the schema requires. Output ONLY the JSON.\n\n${raw}` }],
+      { trackLabel: 'customSimulationSpecRepair', systemPrompt: SPEC_SYSTEM_PROMPT, jsonMode: true, model }
+    );
+    parsed = parseSpecJson(fixed);
+  }
+  if (!parsed) throw new Error('Could not get a valid simulation spec from the model — please try again.');
+  return normalizeSpec(parsed);
+}
+
+/* Stage 2 contract, in priority order: model fidelity > controls >
+ * representations > accessibility > visuals. */
+const BUILD_SYSTEM_PROMPT = `You are LabSim Builder. Compile the provided SPEC into ONE complete, self-contained HTML page (embedded CSS + JS, no external libraries, no CDN, no images). Priorities, in this order:
+
+1. MODEL FIDELITY (most important)
+- Implement the SPEC's governingEquations exactly; cite each equation in a code comment where it is used.
+- FIXED-timestep integration: accumulate elapsed real time, advance the physics in fixed steps (e.g. const DT = 1/120; acc += dt; while (acc >= DT) { step(DT); acc -= DT; }). Follow the SPEC's modelNotes for the scheme.
+- SI units everywhere — in state, in calculations, in displayed values.
+
+2. CONTROLS (mandatory for any time-evolving sim)
+- One slider per SPEC variable with a unit-labelled live readout, using exactly the SPEC's min/max/default/step.
+- Pause/Play, Step (advance one fixed step while paused), a simulation-speed slider, and Reset.
+
+3. REPRESENTATIONS
+- Canvas animation of the system (at least 600x450 px, the main element), drawn with requestAnimationFrame.
+- At least one live-updating graph driven by the SAME state, axes labelled with quantities and units.
+- A data table that accumulates recorded readings (Record button).
+
+4. ACCESSIBILITY
+- Pointer events (touch + mouse) for anything draggable; all controls keyboard-operable; ARIA labels on controls and canvas.
+
+5. VISUALS (last, and briefly)
+- Dark theme: background #1a1a2e, panels #252540, text #e8e8f0, accent #4361ee. Rounded panels, system-ui font, canvas + graph centre with controls beside or below. Clarity over decoration.
+
+Return ONLY the raw HTML document. No markdown fences, no explanation.`;
+
+/* Centre-panel placeholder for the builder (also restored by "Back") */
+const BYO_PLACEHOLDER = `
+  <div class="sim-byo-placeholder">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
+    <p>Configure your simulation on the left, then click <strong>Generate</strong>.<br/>Your interactive simulation will appear here.</p>
+  </div>`;
 
 /* ── Filter / display state ── */
 const SIM_DISPLAY_LIMIT_KEY = 'cocher_sim_display_limit';
@@ -995,6 +1322,16 @@ export function render(container) {
           color: var(--ink-muted, #888);
           margin-bottom: 12px;
         }
+        .sim-meta-badge {
+          display: inline-block;
+          font-size: 0.625rem;
+          font-weight: 600;
+          color: #fff;
+          padding: 2px 8px;
+          border-radius: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
         .sim-custom-actions {
           display: flex;
           gap: 8px;
@@ -1253,12 +1590,7 @@ export function render(container) {
 
               <!-- CENTRE PANEL: Preview / placeholder -->
               <div class="sim-byo-centre" id="sim-byo-preview">
-                <div class="sim-byo-placeholder">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                  </svg>
-                  <p>Configure your simulation on the left, then click <strong>Generate</strong>.<br/>Your interactive simulation will appear here.</p>
-                </div>
+                ${BYO_PLACEHOLDER}
               </div>
 
               <!-- RIGHT PANEL: Tips & guidance -->
@@ -1301,12 +1633,20 @@ export function render(container) {
                 <div class="sim-custom-card" data-custom-id="${sim.id}">
                   <div class="sim-custom-title" title="${escapeHtml(sim.title)}">${escapeHtml(sim.title)}</div>
                   <div class="sim-custom-date">${new Date(sim.createdAt).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-                  <div class="sim-custom-actions">
+                  ${(sim.subject || sim.level || sim.simType || sim.experimental) ? `
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin:-6px 0 12px;">
+                    ${sim.subject ? `<span class="sim-meta-badge" style="background:${subjectColor(sim.subject)};">${escapeHtml(sim.subject)}</span>` : ''}
+                    ${sim.level ? `<span class="sim-meta-badge" style="background:#64748b;">${escapeHtml(sim.level)}</span>` : ''}
+                    ${sim.simType ? `<span class="sim-meta-badge" style="background:#0e7490;">${escapeHtml(String(sim.simType).replace(/-/g, ' '))}</span>` : ''}
+                    ${sim.experimental ? `<span class="sim-meta-badge" style="background:#b45309;" title="Saved without passing the automated check">Experimental</span>` : ''}
+                  </div>` : ''}
+                  <div class="sim-custom-actions" style="flex-wrap:wrap;">
                     <button class="sim-custom-launch" data-custom-launch="${sim.id}">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline;vertical-align:-1px;margin-right:4px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                       Launch
                     </button>
                     <button class="sim-custom-delete" data-custom-refine="${sim.id}" title="Preview & refine with AI">Refine</button>
+                    <button class="sim-custom-delete" data-custom-duplicate="${sim.id}" title="Copy this simulation so you can remix it">Duplicate</button>
                     <button class="sim-custom-delete" data-custom-attach="${sim.id}" title="Link under a lesson's resources">Attach</button>
                     <button class="sim-custom-delete" data-custom-rename="${sim.id}">Rename</button>
                     <button class="sim-custom-delete" data-custom-export="${sim.id}" title="Download as standalone .html">Export</button>
@@ -1469,14 +1809,32 @@ export function render(container) {
       });
     });
 
-    // Launch custom sims
+    // Launch custom sims (sims with a spec get the pedagogical shell)
     container.querySelectorAll('[data-custom-launch]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const sim = getCustomSims().find(s => s.id === btn.dataset.customLaunch);
         if (!sim) return;
         const rec = await loadSimRecord(sim.id);
-        if (rec) openOverlay(container, sim.title, { srcdoc: rec.html });
+        if (rec) openOverlay(container, sim.title, { srcdoc: rec.html, spec: sim.spec || null });
         else showToast('Could not load this simulation’s content.', 'danger');
+      });
+    });
+
+    // Duplicate a custom sim (fresh id + html copy) so teachers can remix
+    container.querySelectorAll('[data-custom-duplicate]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const sim = getCustomSims().find(s => s.id === btn.dataset.customDuplicate);
+        if (!sim) return;
+        const rec = await loadSimRecord(sim.id);
+        if (!rec) { showToast('Could not load this simulation’s content.', 'danger'); return; }
+        const copy = { ...sim, id: generateId(), title: `${sim.title} (copy)`, createdAt: Date.now(), updatedAt: Date.now() };
+        delete copy.html; // legacy inline payloads must not duplicate into localStorage
+        storeSimRecord(copy.id, rec.html, []);
+        const sims = getCustomSims();
+        sims.unshift(copy);
+        saveCustomSims(sims);
+        showToast('Duplicated — refine the copy freely.', 'success');
+        renderView();
       });
     });
 
@@ -1579,12 +1937,21 @@ export function render(container) {
       });
     });
 
-    // Generate simulation
+    // Generate simulation — Stage 1 drafts a pedagogical SPEC for review;
+    // Stage 2 compiles the approved spec into HTML and probe-tests it.
     const generateBtn = container.querySelector('#sim-generate-btn');
     const promptArea = container.querySelector('#sim-prompt');
     const loadingEl = container.querySelector('#sim-loading');
+    const loadingText = loadingEl.querySelector('span');
+    const setLoading = (on, text) => {
+      generateBtn.disabled = on;
+      loadingEl.style.display = on ? 'flex' : 'none';
+      if (text && loadingText) loadingText.textContent = text;
+      // No parallel stages: the spec card's buttons wait for the current call
+      container.querySelectorAll('#sim-byo-preview button').forEach(b => { b.disabled = on; });
+    };
 
-    generateBtn.addEventListener('click', async () => {
+    function readBuilderForm() {
       const subject = container.querySelector('#byo-subject')?.value || '';
       const level = container.querySelector('#byo-level')?.value || '';
       const simType = container.querySelector('#byo-type')?.value || '';
@@ -1598,7 +1965,7 @@ export function render(container) {
       if (!selectedTopic && !objective) {
         showToast('Please select a topic or enter a learning objective.', 'danger');
         container.querySelector('#byo-topic')?.focus();
-        return;
+        return null;
       }
 
       // Build the structured prompt from scaffold fields
@@ -1609,68 +1976,121 @@ export function render(container) {
       if (simType) parts.push(`Simulation style: ${simType.replace(/-/g, ' ')}`);
       if (variables) parts.push(`Key variables/parameters: ${variables}`);
       if (extra) parts.push(`Additional instructions: ${extra}`);
-      const prompt = parts.join('\n');
+      const model = container.querySelector('#byo-model')?.value || '';
+      return { prompt: parts.join('\n'), subject, level, simType, model };
+    }
 
-      // Show loading state with staged progress (generation takes 30-60s)
-      generateBtn.disabled = true;
-      loadingEl.style.display = 'flex';
-      const loadingText = loadingEl.querySelector('span');
-      const stages = ['Sketching the apparatus…', 'Wiring up your variables…', 'Calibrating the science…', 'Building data tables…', 'Polishing pixels…', 'Almost there…'];
+    generateBtn.addEventListener('click', () => {
+      const ctx = readBuilderForm();
+      if (ctx) runSpecStage(ctx);
+    });
+
+    async function runSpecStage(ctx) {
+      setLoading(true, 'Drafting the model spec…');
+      try {
+        const spec = await generateSpec(ctx.prompt, ctx.model || undefined);
+        renderSpecReview(spec, ctx);
+      } catch (err) {
+        console.error('Simulation spec error:', err);
+        showToast(`Spec failed: ${err.message}`, 'danger');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Compact review card: teacher approves the pedagogy before any code
+    function renderSpecReview(spec, ctx) {
+      const pane = container.querySelector('#sim-byo-preview');
+      if (!pane) return;
+      pane.innerHTML = `
+        <div style="width:100%;max-width:640px;max-height:100%;overflow-y:auto;text-align:left;border:1px solid var(--border, #e2e5ea);border-radius:12px;padding:18px 20px;background:var(--bg-card, #fff);">
+          <div style="font-size:0.6875rem;font-weight:700;color:#4361ee;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Spec review — nothing is built yet</div>
+          <div style="font-size:1.0625rem;font-weight:700;color:var(--ink, #1a1a2e);margin-bottom:4px;">${escapeHtml(spec.title)}</div>
+          <div style="font-size:0.8125rem;color:var(--ink-secondary, #555);line-height:1.5;margin-bottom:12px;">${escapeHtml(spec.learningObjective)}</div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.75rem;margin-bottom:12px;">
+            <thead>
+              <tr style="color:var(--ink-muted, #888);text-align:left;">
+                <th style="padding:4px 6px;">Variable</th><th style="padding:4px 6px;">Unit</th><th style="padding:4px 6px;">Range</th><th style="padding:4px 6px;">Default</th><th style="padding:4px 6px;">Step</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${spec.variables.map(v => `
+                <tr style="border-top:1px solid var(--border-light, #f0f0f4);color:var(--ink, #1a1a2e);">
+                  <td style="padding:4px 6px;">${escapeHtml(v.name)}${v.symbol ? ` <em style="color:var(--ink-muted,#888);">(${escapeHtml(v.symbol)})</em>` : ''}</td>
+                  <td style="padding:4px 6px;">${escapeHtml(v.unit || '—')}</td>
+                  <td style="padding:4px 6px;">${v.min} – ${v.max}</td>
+                  <td style="padding:4px 6px;">${v.default}</td>
+                  <td style="padding:4px 6px;">${v.step}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+          ${spec.governingEquations.length ? `
+            <div style="font-size:0.6875rem;font-weight:700;color:var(--ink-muted, #888);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Governing equations</div>
+            <ul style="margin:0 0 14px;padding-left:18px;font-size:0.8125rem;color:var(--ink, #1a1a2e);font-family:ui-monospace,monospace;">
+              ${spec.governingEquations.map(eq => `<li>${escapeHtml(eq)}</li>`).join('')}
+            </ul>` : ''}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="sim-generate-btn" id="spec-build-btn" style="margin-top:0;">Build simulation</button>
+            <button class="sim-custom-delete" id="spec-regen-btn">Regenerate spec</button>
+            <button class="sim-custom-delete" id="spec-back-btn">Back</button>
+          </div>
+        </div>`;
+      pane.querySelector('#spec-build-btn').addEventListener('click', () => runBuildStage(spec, ctx));
+      pane.querySelector('#spec-regen-btn').addEventListener('click', () => runSpecStage(ctx));
+      pane.querySelector('#spec-back-btn').addEventListener('click', () => { pane.innerHTML = BYO_PLACEHOLDER; });
+    }
+
+    async function runBuildStage(spec, ctx) {
+      // Honest staged progress (a build takes 30-60s)
+      const stages = ['Drafting the model…', 'Building controls…', 'Wiring the graph…', 'Writing the data table…', 'Still generating…'];
       let stageIdx = 0;
-      if (loadingText) loadingText.textContent = stages[0];
+      setLoading(true, stages[0]);
       const stageTimer = setInterval(() => {
         stageIdx = Math.min(stageIdx + 1, stages.length - 1);
         if (loadingText) loadingText.textContent = stages[stageIdx];
       }, 9000);
 
       try {
-        const systemPrompt = `You are LabSim Builder, an expert at creating visually rich, interactive science simulations for Singapore secondary / JC students. Generate a COMPLETE, self-contained HTML page with embedded CSS and JavaScript.
-
-VISUAL QUALITY — CRITICAL:
-- Use HTML5 Canvas 2D API for ALL apparatus and equipment visuals — do NOT use plain HTML divs for the simulation area.
-- Draw realistic apparatus: use ctx.createLinearGradient, ctx.createRadialGradient, ctx.arc, ctx.bezierCurveTo, shadows (ctx.shadowBlur), and layered strokes+fills.
-- Lab glassware: semi-transparent glass rgba(200,225,255,0.25) with white highlights, graduation marks, meniscus curves, rounded test-tube bottoms.
-- Metals/equipment: linear gradients light-to-dark grey, bevelled edges, proper proportions.
-- Liquids: semi-transparent coloured fills, meniscus at surface, colour-change animations for reactions.
-- Physics apparatus: clean vector drawings with labelled force arrows, proper circuit symbols, realistic pendulum bobs with shadows.
-- Canvas must be at least 600x450 px and visually prominent — it is the MAIN element.
-- Add smooth animations using requestAnimationFrame for dynamic elements.
-
-LAYOUT:
-- Preferred 3-section layout: LEFT guide panel (200px), CENTRE large canvas (flexible, fills space), RIGHT data+controls panel (260px).
-- Alternative 2-column: LEFT canvas 65-70%, RIGHT controls 30-35%.
-- Dark theme: background #1a1a2e, panels #252540, text #e8e8f0, accent #4361ee, success #22c55e, danger #ef4444.
-- Rounded panels (12px radius), subtle borders rgba(255,255,255,0.08), system-ui font.
-
-CONTROLS & DATA:
-- Labelled sliders/buttons/dropdowns for each variable with live numeric readout.
-- Data table that accumulates recorded readings.
-- Reset button. Brief instruction text at top.
-
-SCIENCE: Accurate equations, correct SI units, reasonable significant figures, annotated labels on canvas.
-
-TECHNICAL:
-- Fully self-contained: NO external libraries, NO CDN, NO images.
-- requestAnimationFrame for animations.
-- Return ONLY the raw HTML. No markdown fences, no explanation.`;
-
-        const model = container.querySelector('#byo-model')?.value || undefined;
+        const model = ctx.model || undefined;
+        const buildPrompt = `Compile this SPEC into a complete interactive simulation.\n\nSPEC (JSON):\n${JSON.stringify(spec, null, 2)}\n\nORIGINAL REQUEST (context only — the SPEC is authoritative):\n${ctx.prompt}`;
         const text = await sendChat(
-          [{ role: 'user', content: prompt }],
-          { trackLabel: 'customSimulation', systemPrompt, temperature: 0.5, maxTokens: 16000, model }
+          [{ role: 'user', content: buildPrompt }],
+          { trackLabel: 'customSimulation', systemPrompt: BUILD_SYSTEM_PROMPT, temperature: 0.2, maxTokens: 16000, model }
         );
 
         let html = extractHTML(text);
         if (!isCompleteHTML(html)) {
-          if (loadingText) loadingText.textContent = 'Response was cut off — asking Gemini to finish it…';
-          html = await completeTruncatedHTML(html, prompt, model);
+          if (loadingText) loadingText.textContent = 'Response was cut off — asking the model to finish it…';
+          html = await completeTruncatedHTML(html, buildPrompt, model);
+        }
+        clearInterval(stageTimer);
+
+        // Quality gate: probe in a sandboxed iframe, one auto-repair on failure
+        const gate = await gateSimHTML(html, {
+          repairContext: `The simulation was built from this SPEC: ${JSON.stringify(spec)}`,
+          model,
+          onStage: t => { if (loadingText) loadingText.textContent = t; }
+        });
+        html = gate.html;
+        let experimental = false;
+        if (!gate.ok) {
+          setLoading(false);
+          const choice = await askProbeFailChoice(gate.error);
+          if (choice === 'discard') { showToast('Discarded — nothing was saved.', 'default'); return; }
+          if (choice === 'retry') { return runBuildStage(spec, ctx); }
+          experimental = true; // save anyway, honestly labelled
         }
 
-        const title = deriveTitle(prompt);
         const newSim = {
           id: generateId(),
-          title: title,
-          prompt: prompt,
+          title: spec.title || deriveTitle(ctx.prompt),
+          prompt: ctx.prompt,
+          subject: ctx.subject,
+          level: ctx.level,
+          simType: ctx.simType,
+          model: ctx.model || '',
+          spec,
+          experimental,
           createdAt: Date.now(),
           updatedAt: Date.now()
         };
@@ -1680,7 +2100,9 @@ TECHNICAL:
         sims.unshift(newSim);
         saveCustomSims(sims);
 
-        showToast('Simulation generated! Preview it below — you can refine it with follow-up instructions.', 'success');
+        showToast(experimental
+          ? 'Saved as experimental — it did not pass the automated check. Refine it below.'
+          : 'Simulation built and checked! Preview it below — you can refine it with follow-up instructions.', 'success');
 
         // Re-render, then show the refine workbench with the new sim
         renderView();
@@ -1689,14 +2111,13 @@ TECHNICAL:
         container.querySelector('#sim-byo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
       } catch (err) {
-        console.error('Simulation generation error:', err);
-        showToast(`Generation failed: ${err.message}`, 'danger');
+        console.error('Simulation build error:', err);
+        showToast(`Build failed: ${err.message}`, 'danger');
       } finally {
         clearInterval(stageTimer);
-        generateBtn.disabled = false;
-        loadingEl.style.display = 'none';
+        setLoading(false);
       }
-    });
+    }
   }
 
   /* ── Refine workbench: live preview + conversational refinement ── */
@@ -1726,7 +2147,7 @@ TECHNICAL:
     pane.querySelector('#sim-preview-frame').srcdoc = rec.html;
 
     pane.querySelector('#sim-open-full').addEventListener('click', () => {
-      openOverlay(container, sim.title, { srcdoc: rec.html });
+      openOverlay(container, sim.title, { srcdoc: rec.html, spec: sim.spec || null });
     });
 
     pane.querySelector('#sim-version-select')?.addEventListener('change', (e) => {
@@ -1749,28 +2170,53 @@ TECHNICAL:
     const refineBtn = pane.querySelector('#sim-refine-btn');
     const refineInput = pane.querySelector('#sim-refine-input');
     const refineLoading = pane.querySelector('#sim-refine-loading');
+    const refineStage = refineLoading.querySelector('span');
     const doRefine = async () => {
       const instruction = refineInput.value.trim();
       if (!instruction) { refineInput.focus(); return; }
       refineBtn.disabled = true;
       refineLoading.style.display = 'flex';
+      if (refineStage) refineStage.textContent = 'Applying your changes…';
       try {
+        // Refine on the same model the sim was built with, not the app default
+        const model = sim.model || undefined;
         const text = await sendChat(
           [{ role: 'user', content: `CURRENT SIMULATION HTML:\n${rec.html}\n\nREQUESTED CHANGE:\n${instruction}` }],
           {
             trackLabel: 'customSimulationRefine',
             systemPrompt: 'You refine existing self-contained HTML simulations. Apply ONLY the requested change while preserving everything else (layout, science, styling conventions). Return the COMPLETE updated HTML document. No markdown fences, no commentary.',
             temperature: 0.4,
-            maxTokens: 16000
+            maxTokens: 16000,
+            model
           }
         );
         let html = extractHTML(text);
-        if (!isCompleteHTML(html)) html = await completeTruncatedHTML(html, instruction);
+        if (!isCompleteHTML(html)) html = await completeTruncatedHTML(html, instruction, model);
+
+        // Refined output goes through the same probe gate as fresh builds
+        const gate = await gateSimHTML(html, {
+          repairContext: `The requested refinement was: ${instruction}`,
+          model,
+          onStage: t => { if (refineStage) refineStage.textContent = t; }
+        });
+        html = gate.html;
+        let experimental = false;
+        if (!gate.ok) {
+          refineLoading.style.display = 'none';
+          const choice = await askProbeFailChoice(gate.error);
+          if (choice === 'discard') { showToast('Change discarded — the current version is untouched.', 'default'); return; }
+          if (choice === 'retry') { return doRefine(); }
+          experimental = true;
+        }
+
         const newRec = storeSimRecord(sim.id, html, [...(rec.versions || []), rec.html]);
         const sims = getCustomSims();
         const target = sims.find(s => s.id === sim.id);
-        if (target) { target.updatedAt = Date.now(); saveCustomSims(sims); }
-        showToast('Refined! Previous version kept in history.', 'success');
+        if (target) { target.updatedAt = Date.now(); target.experimental = experimental; saveCustomSims(sims); }
+        sim.experimental = experimental;
+        showToast(experimental
+          ? 'Saved as experimental — previous version kept in history.'
+          : 'Refined and checked! Previous version kept in history.', 'success');
         renderPreviewPane(container, sim, newRec);
       } catch (err) {
         showToast(`Refine failed: ${err.message}`, 'danger');
@@ -1785,4 +2231,21 @@ TECHNICAL:
 
   migrateLegacySimHtml();
   renderView();
+
+  // Deep link from a lesson's Linked Resources chip: open that sim directly
+  const openSimId = sessionStorage.getItem('cocher_open_sim_id');
+  if (openSimId) {
+    sessionStorage.removeItem('cocher_open_sim_id');
+    (async () => {
+      const custom = getCustomSims().find(s => s.id === openSimId);
+      if (custom) {
+        const rec = await loadSimRecord(custom.id);
+        if (rec) openOverlay(container, custom.title, { srcdoc: rec.html, spec: custom.spec || null });
+        else showToast('Could not load this simulation’s content.', 'danger');
+        return;
+      }
+      const builtIn = SIMULATIONS.find(s => s.id === openSimId);
+      if (builtIn) openOverlay(container, builtIn.title, { src: builtIn.path });
+    })();
+  }
 }

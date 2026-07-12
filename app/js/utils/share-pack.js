@@ -10,15 +10,40 @@
 
 import { Store, generateId } from '../state.js';
 import { getCurrentUser, getPreferredName } from '../components/login.js';
+import { idbGet, idbPut } from './storage.js';
 
-const ITEM_KEYS = ['lessons', 'stimulus', 'sources', 'layouts', 'uploads'];
+const ITEM_KEYS = ['lessons', 'stimulus', 'sources', 'layouts', 'uploads', 'simulations'];
 const ITEM_LABELS = {
   lessons: ['lesson', 'lessons'],
   stimulus: ['stimulus material', 'stimulus materials'],
   sources: ['source', 'sources'],
   layouts: ['layout', 'layouts'],
-  uploads: ['resource upload', 'resource uploads']
+  uploads: ['resource upload', 'resource uploads'],
+  simulations: ['simulation', 'simulations']
 };
+
+/* ── Custom simulations travel with their lessons ──
+ * Same storage contract as views/simulations.js: sim metadata (title, spec,
+ * subject/level/type, model) lives in localStorage 'cocher_custom_sims';
+ * the heavy HTML payload lives in IndexedDB store 'custom_sims' (legacy
+ * records may still carry .html inline). Packs bundle the FULL record —
+ * html + spec — so a colleague's import runs with no regeneration. */
+function getCustomSims() {
+  try {
+    const raw = localStorage.getItem('cocher_custom_sims');
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveCustomSims(sims) {
+  localStorage.setItem('cocher_custom_sims', JSON.stringify(sims));
+}
+
+async function loadSimHtml(sim) {
+  const rec = await idbGet('custom_sims', sim.id);
+  if (rec && typeof rec.html === 'string') return rec.html;
+  return typeof sim.html === 'string' ? sim.html : null; // legacy inline fallback
+}
 
 /** The sharing author, resolved from the signed-in teacher. */
 function packAuthor() {
@@ -60,9 +85,26 @@ function dedupeKey(title, author) {
 /**
  * Bundle selected content into a Department Pack and trigger a .json
  * download. Every argument except `title` is an array (default empty).
+ * Simulations attached to the selected lessons are bundled automatically
+ * (full record incl. html + spec, pulled from IndexedDB — hence async).
  * Returns the pack object so callers can preview or test it.
  */
-export function exportPack({ title, lessons = [], stimulus = [], sources = [], layouts = [], uploads = [] }) {
+export async function exportPack({ title, lessons = [], stimulus = [], sources = [], layouts = [], uploads = [] }) {
+  const simIds = new Set();
+  lessons.forEach(l => (l.attachedResources || []).forEach(r => {
+    if (r.type === 'simulation' && r.id) simIds.add(r.id);
+  }));
+  const allSims = getCustomSims();
+  const simulations = [];
+  for (const id of simIds) {
+    const sim = allSims.find(s => s.id === id);
+    if (!sim) continue; // built-in or deleted sim — the chip still names it
+    const html = await loadSimHtml(sim);
+    if (typeof html !== 'string' || !html) continue;
+    const { html: _inline, ...meta } = travelItem(sim);
+    simulations.push({ ...meta, html });
+  }
+
   const pack = {
     deptpack: 1,
     version: 1,
@@ -74,7 +116,8 @@ export function exportPack({ title, lessons = [], stimulus = [], sources = [], l
       stimulus: stimulus.map(travelItem),
       sources: sources.map(travelItem),
       layouts: layouts.map(travelItem),
-      uploads: uploads.map(travelItem)
+      uploads: uploads.map(travelItem),
+      simulations
     }
   };
   const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
@@ -131,7 +174,7 @@ export function importPack(json) {
   };
 
   function apply() {
-    const added = { lessons: 0, stimulus: 0, sources: 0, layouts: 0, uploads: 0 };
+    const added = Object.fromEntries(ITEM_KEYS.map(k => [k, 0]));
     let skipped = 0;
 
     /** Provenance stamp every merged item carries. */
@@ -183,14 +226,52 @@ export function importPack(json) {
     mergeList('sourceLibrary', items.sources, 'sources');
     mergeList('knowledgeUploads', items.uploads, 'uploads');
 
+    /* Simulations before lessons — lessons reference them through
+     * attachedResources, so build an old→new id map (like layouts). The
+     * html payload goes to IndexedDB ('custom_sims'); when IDB is
+     * unavailable it stays inline in localStorage, mirroring the
+     * fallback in views/simulations.js. */
+    const simIdMap = {};
+    const existingSims = getCustomSims();
+    const simKeys = new Set(existingSims.map(s => dedupeKey(s.title, s.sharedBy)));
+    const newSims = [];
+    (items.simulations || []).forEach(raw => {
+      const key = dedupeKey(raw.title, author);
+      if (simKeys.has(key)) {
+        skipped++;
+        const match = existingSims.find(s => dedupeKey(s.title, s.sharedBy) === key);
+        if (raw.id && match) simIdMap[raw.id] = match.id; // relink, don't duplicate
+        return;
+      }
+      const { html, ...meta } = travelItem(raw);
+      if (typeof html !== 'string' || !html) { skipped++; return; }
+      simKeys.add(key);
+      const sim = { ...meta, ...stamp(raw.id), id: generateId(), createdAt: Date.now(), updatedAt: Date.now() };
+      if (raw.id) simIdMap[raw.id] = sim.id;
+      idbPut('custom_sims', sim.id, { html, versions: [] }).then(ok => {
+        if (!ok) {
+          const sims = getCustomSims();
+          const target = sims.find(s => s.id === sim.id);
+          if (target) { target.html = html; saveCustomSims(sims); }
+        }
+      }).catch(() => {});
+      newSims.push(sim);
+      added.simulations++;
+    });
+    if (newSims.length) saveCustomSims([...existingSims, ...newSims]);
+
     /* Lessons last: Store.addLesson mints the fresh id, forces status
-     * 'draft', clears the reflection and drops isExemplar; then stamp. */
+     * 'draft', clears the reflection and drops isExemplar; then stamp.
+     * Attached simulation ids are remapped to their freshly minted ids. */
     const lessonKeys = new Set(Store.getLessons().map(l => dedupeKey(l.title, l.sharedBy)));
     (items.lessons || []).forEach(raw => {
       const key = dedupeKey(raw.title, author);
       if (lessonKeys.has(key)) { skipped++; return; }
       lessonKeys.add(key);
       const clean = travelLesson(raw);
+      const attached = (clean.attachedResources || []).map(r =>
+        (r && r.type === 'simulation' && r.id && simIdMap[r.id]) ? { ...r, id: simIdMap[r.id] } : r
+      );
       const lesson = Store.addLesson({
         title: clean.title,
         classId: null,
@@ -200,7 +281,7 @@ export function importPack(json) {
         objectives: clean.objectives || '',
         lessonHook: clean.lessonHook || '',
         e21ccFocus: clean.e21ccFocus || [],
-        attachedResources: clean.attachedResources || [],
+        attachedResources: attached,
         components: clean.components || {}
       });
       Store.updateLesson(lesson.id, stamp(raw.id));
