@@ -77,6 +77,69 @@ const CCA_CATEGORIES = [
   { key: 'clubs', label: 'Clubs & Societies', color: '#3b82f6' },
 ];
 
+/* ── Canned training-plan exemplars (non-AI) ──
+   Keyed by exact CCA name. Rendered through the same renderCCAMarkdown()
+   pipeline as real AI output, so the section structure below must match
+   the AI prompt's required format exactly: "## Session Plan: <name>"
+   followed by the five "###" sections (Warm-Up, Main Session,
+   Cool-Down & Reflection, Skill Focus, Safety). Only CCA names present
+   as keys here get a "View Example" button in the UI. */
+const CCA_EXEMPLARS = {
+  'Basketball': `## Session Plan: Basketball
+
+### Warm-Up (5-10 min)
+- **Dynamic stretching circuit** (3 min): High knees, butt kicks, walking lunges with a twist, and arm circles down and back up the length of the court in two lines.
+- **Layup lines** (5-7 min): Two lines from the wings feed a ball handler who finishes off the glass — right side works right-hand layups, left side works left-hand layups. Switch to weak-hand-only for the last 2 minutes to force players out of their comfort zone.
+
+### Main Session (30-40 min)
+- **3-Man Weave** (8 min) — Setup: three players spread across the width of the court at half-court, ball starting in the middle. Execution: pass and follow your pass, weaving across to the opposite lane, finishing with a layup at the far end — no dribbling allowed. Coaching points: call for the ball, lead the receiver with the pass, communicate on every catch. Progression: walking pace with no defence first, then add a trailing defender sprinting from half-court to contest the finish once passing is clean.
+- **Box-Out Rebounding Drill** (8 min) — Setup: pair up, one offence one defence, coach shoots from the free-throw line. Execution: on the shot release, the defender pivots and makes contact with the offensive player (chest to back), holds a wide stance, and pursues the rebound only after sealing the box-out. Coaching points: "find a body, make contact, chin the ball" — hands up ready to secure it, not just watching the flight. Progression: contact-and-hold only (no live rebound) first, then live rebounding once technique is consistent, then run it live 2-on-2 under the boards.
+- **2-on-1 Fast Break** (8 min) — Setup: two offensive players start at half-court against one recovering defender starting under the basket. Execution: offence pushes the ball up court quickly, using width to force the defender to commit, then passes to the open player for an uncontested finish. Coaching points: don't pass too early — make the defender commit first; the ball-handler should attack the rim to draw help before dishing. Progression: walk through cold to fix spacing and passing lanes, then run at game speed, then extend to 3-on-2 for advanced groups.
+- **Defensive Slide Shuffle with Cone Progression** (6-8 min) — Setup: five cones in a zig-zag pattern along the free-throw lane. Execution: players shuffle laterally between cones in a low defensive stance, staying low with hands active, without crossing their feet. Coaching points: stay low with hips back ("chair sit"), keep the chest facing the imaginary ball-handler, quick choppy steps rather than long strides. Progression: slow technique-focused pass first, then react to a coach calling out directions, then mirror a live dribbler moving up the lane.
+
+### Cool-Down & Reflection (5-10 min)
+- Static stretch: quads, hamstrings, calves, hip flexors, and shoulders, holding each for 20-30 seconds per side.
+- **Free-throw routine**: in pairs, each player shoots 10 free throws while their partner rebounds, focusing on repeating the exact same pre-shot routine every attempt — not just tracking makes and misses.
+- Debrief question in a seated circle: "What's one thing you did well today that you want to repeat at the next training or match?"
+
+### Skill Focus (for this term)
+- Consistent box-out technique on every rebound attempt (contact, pivot, chin the ball) — milestone: players box out automatically without being reminded by Week 4.
+- Reading the fast break — making the right read (pass vs. drive) in 2-on-1, progressing to 3-on-2 — milestone: 70%+ successful conversion in 2-on-1 reps by mid-term.
+- Free-throw consistency under fatigue, by shooting immediately after conditioning drills to simulate match pressure — milestone: staying within 10% of resting free-throw percentage.
+
+### Safety
+- Check the court surface for slippery patches, dust, or loose debris before play begins, especially near entrances and under the baskets.
+- Emphasise proper landing mechanics after rebounds and jump shots (land on two feet, knees soft and slightly bent) to reduce ankle and knee ligament injuries.
+- Schedule hydration breaks every 15-20 minutes — this matters even more in non-air-conditioned halls; remind players to bring their own water bottles.
+- Tape or brace the ankles of players with a history of sprains, and keep the first-aid kit and ice packs accessible courtside.`,
+
+  'Scouts': `## Session Plan: Scouts
+
+### Warm-Up (5-10 min)
+- **Knot-tying relay** (7-8 min): Split the troop into patrols of 4-6 with three rope stations per patrol. On "go", the first scout runs to Station 1 and ties a reef knot, tags the next scout who runs to Station 2 to tie a clove hitch around a pole, then the third scout runs to Station 3 to tie a bowline. First patrol to complete all three knots correctly (checked by the Patrol Leader) wins — keeps hands and minds warm for the campcraft work ahead.
+
+### Main Session (30-40 min)
+- **Map & Compass Bearing Exercise** (12-15 min) — Setup: mark 4-5 points around the school field or a nearby park with flags or cones, each at a known bearing and pace-count from a central start point. Execution: in patrols, scouts take a compass bearing to the first point, pace out the distance, confirm arrival, then take the next bearing from a card. Coaching points: hold the compass flat and steady at waist height, sight along the direction-of-travel arrow, and re-check the bearing if the needle "wanders". Progression: walk the course as a full patrol together first; once confident, split into pairs racing each other on a slightly longer course.
+- **Campcraft: Lashing a Tripod / Pitching a Tent** (12-15 min) — Setup: bamboo poles, sisal twine, and a practice tent per patrol. Execution: one sub-group practises a square lashing to join two poles at a right angle, then a tripod lashing to build a free-standing tripod (useful for a camp gadget like a washstand); a second sub-group pitches a two-person tent, focusing on guy-line tension and peg angle. Coaching points: "wrapping turns first, then frapping turns to tighten" for lashings; peg tents at a 45-degree angle away from the tent for grip. Progression: demonstrate the lashing slowly step-by-step, let scouts practise on short offcuts, then apply it to full-length poles for the final structure.
+- **Patrol-Based Team Challenge** (8-10 min) — Setup: using the tripod or tent just built, plus a length of rope and a raw egg (or water balloon as a substitute). Execution: each patrol designs and builds a simple device using their lashed structure and rope to lower the egg from a height (e.g. a bench) without it breaking, working entirely as a patrol with the Patrol Leader coordinating. Coaching points: emphasise planning before building, and that every scout should have a role — this is where leadership and teamwork are actually tested, not just knot skill.
+
+### Cool-Down & Reflection (5-10 min)
+- Gather the whole troop into a seated circle, campfire-style, even without an actual fire, to cool down from the physical activity.
+- Each Patrol Leader shares one thing their patrol did well and one thing to work on next time.
+- Close with a short reflection tying back to the Scout Law — e.g. "A Scout is helpful" linked to how patrol members supported each other during the team challenge, or "A Scout is thrifty" linked to using materials carefully during lashing.
+
+### Skill Focus (for this term)
+- Pioneering: progress toward the lashing requirements for the pioneering badge — square lashing, diagonal lashing, and tripod lashing, each demonstrated independently by end of term.
+- Navigation: taking and following a compass bearing accurately (within 5 degrees) and estimating distance by pacing, working toward the map-reading badge requirement.
+- Milestone check-in: a practical test in Week 8 where each scout ties all three core knots and one lashing from memory, and completes a short bearing course unassisted.
+
+### Safety
+- Knife/parang and tool-handling briefing before any lashing or bamboo work — enforce a "blood circle" (arm's length, no one within reach when a blade is out), safe carrying with the blade sheathed, and adult or Patrol Leader supervision at all times.
+- Sun and heat exposure during outdoor field work — hats and sunscreen encouraged, water bottles topped up beforehand, and a shaded rest point identified before starting.
+- Buddy system and clear check-in points for the map-and-compass exercise, especially if working beyond the immediate school field — headcount before dispersing and again on return.
+- Check the pitching/lashing area for uneven ground, roots, or low branches before structures go up, and flag or tape guy-lines so they aren't a trip hazard.`,
+};
+
 const E21CC_DIM_META = {
   criticalThinking: { label: 'Critical Thinking', color: '#6366f1' },
   creativeThinking: { label: 'Creative Thinking', color: '#8b5cf6' },
@@ -164,6 +227,8 @@ const CCA_STYLES = `
   .cca-training-output ul { padding-left: 1.5em; }
   .cca-training-output li { margin-bottom: 2px; }
   .dark .cca-training-output { background: var(--bg-subtle, #16161e); }
+  .cca-example-banner { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; background: var(--bg-subtle, #f0f0f4); border: 1px dashed var(--border, #cbd0d9); color: var(--ink-muted); font-size: 0.75rem; font-weight: 600; margin-bottom: 10px; }
+  .dark .cca-example-banner { background: var(--bg-subtle, #16161e); border-color: var(--border, #2e2e3e); }
 
   .cca-category-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e2e5ea); border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s; cursor: pointer; }
   .cca-category-card:hover { box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.06)); }
@@ -293,6 +358,7 @@ function renderCCAItem(cca, cat) {
   placeholder="e.g. Match prep for upcoming tournament, team-building for new members..."
   style="width:100%;font-size:0.8125rem;margin-bottom:10px;" />
           <button class="btn btn-sm btn-primary cca-generate-training-btn" data-cca="${cca.id}">Generate Training Plan</button>
+          ${CCA_EXEMPLARS[cca.name] ? `<button class="btn btn-sm btn-secondary cca-view-example-btn" data-cca="${cca.id}" data-cca-name="${escHtml(cca.name)}">View Example</button>` : ''}
         </div>
         <div class="cca-training-output" id="training-output-${cca.id}" style="display:none;"></div>
       </div>
@@ -452,6 +518,34 @@ Use real drill names and techniques specific to ${cca.name}. Be direct and pract
         outputEl.innerHTML = `<span style="color:var(--danger);">Error: ${err.message}. Check your API key in Settings.</span>`;
         config.style.display = '';
       }
+    });
+  });
+
+  // View Example (canned, non-AI) — quick reference session plan for select CCAs
+  area.querySelectorAll('.cca-view-example-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ccaId = btn.dataset.cca;
+      const exemplar = CCA_EXEMPLARS[btn.dataset.ccaName];
+      const config = content.querySelector(`#training-config-${ccaId}`);
+      const outputEl = content.querySelector(`#training-output-${ccaId}`);
+      if (!exemplar || !config || !outputEl) return;
+
+      config.style.display = 'none';
+      outputEl.style.display = '';
+      outputEl.innerHTML =
+        `<div class="cca-example-banner">Example session plan — not AI-generated. Click "Generate Training Plan" above for one tailored to your own goals.</div>` +
+        renderCCAMarkdown(exemplar) +
+        `<div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-ghost btn-sm cca-back-to-options-btn" data-cca="${ccaId}" style="font-size:0.75rem;">Back to training options</button>
+        </div>`;
+
+      // Wire "back to training options"
+      outputEl.querySelector('.cca-back-to-options-btn')?.addEventListener('click', () => {
+        config.style.display = '';
+        outputEl.style.display = 'none';
+        outputEl.innerHTML = '';
+      });
     });
   });
 

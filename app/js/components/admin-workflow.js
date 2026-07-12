@@ -122,8 +122,13 @@ export function bindAdminWorkflowClicks(container) {
       const taskKey = step.dataset.taskKey;
       if (!taskKey) return;
 
-      // Find the matching task panel and scroll to it
-      const panel = container.querySelector(`[data-task-key="${taskKey}"]`);
+      // Find the matching task panel and scroll to it.
+      // Scoped to #task-panels: the status board above it renders
+      // approval-badge elements with the SAME data-task-key values, and
+      // an unscoped querySelector would match those first (they carry no
+      // .task-body/.task-chevron, so the panel would silently fail to
+      // expand — this is the bug behind "the first step won't click").
+      const panel = container.querySelector(`#task-panels [data-task-key="${taskKey}"]`);
       if (panel) {
         panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Auto-expand if collapsed

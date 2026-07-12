@@ -11,18 +11,16 @@ import { openModal } from './modals.js';
 const SEEN_KEY = 'cocher_whatsnew_seen';
 
 const CHANGES = [
-  { icon: '&#127968;', title: 'A new look: the Staffroom Desk',
-    text: 'Warm paper, serif titles, and your highlighter — yellow now marks what\'s happening NOW. Prefer the old look? Settings → Appearance → Classic restores it exactly, one click.' },
-  { icon: '&#128100;', title: 'Co-Cher now knows your class',
-    text: 'Attach a class and the AI designs for the learners you actually have — their E21CC spread, your observations, engagement trends. Each class page has a living Class Portrait.' },
-  { icon: '&#9986;&#65039;', title: 'Your call, Cher',
-    text: 'Real design decisions now come back to you as one-tap choices inside the plan, and a 🖊 Critical Friend reads your plan with a red pen through the curriculum lens you choose.' },
-  { icon: '&#127793;', title: 'My Practice: reflection becomes practice',
-    text: 'Your reflections and rehearsals now build a practice profile with ONE micro-goal at a time — and Co-Cher quietly shapes lessons to give you practice at it.' },
-  { icon: '&#129309;', title: 'Department Packs',
-    text: 'Export a pack of lessons and resources, drop it in the staffroom chat, and colleagues import with attribution — remix chains included.' },
-  { icon: '&#9974;', title: 'Focus mode & a calmer morning',
-    text: 'Ctrl+. hides everything but your plan. The dashboard now opens with one decision, your day as a ribbon, and everything else tucked under More.' },
+  { icon: '&#128300;', title: 'A rebuilt Simulation Builder',
+    text: 'Every generated sim is now test-run before you see it — broken ones get an automatic repair pass instead of shipping silently. New sims come with a reviewable spec (equations, targeted variable ranges), a predict-first gate, guiding questions, and real controls: pause, step, speed, and a live graph.' },
+  { icon: '&#128295;', title: 'A deep accuracy sweep',
+    text: 'Fixed TOS mark allocation, spatial/kitchen presets that no longer fit real classrooms, an Admin One-Stop click that silently failed, a crashing Parent Digest, and corrected MOE terminology (STP, Cyber Wellness, E21CC) across the app.' },
+  { icon: '&#127891;', title: 'New CCE lessons for Sec 1 & 2',
+    text: 'Total Defence’s six pillars for Sec 1, plus two new Sec 2 discussions — digital footprint and naming stress signals — join the CCE library.' },
+  { icon: '&#127936;', title: 'CCA training exemplars',
+    text: 'Basketball and Scouts now have a ready-to-run example session plan one click away, no API key needed to see what a good one looks like. Scouts also joins the CCA list.' },
+  { icon: '&#128197;', title: 'Two new demo activities',
+    text: 'An Inter-School Basketball Championship (fresh, nothing filled in yet) and a Sec 2 VIA Beach Cleanup (partway through) join Admin One-Stop to show the full range of the event workflow.' },
 ];
 
 export function maybeShowWhatsNew() {
