@@ -11,16 +11,18 @@ import { openModal } from './modals.js';
 const SEEN_KEY = 'cocher_whatsnew_seen';
 
 const CHANGES = [
-  { icon: '&#129504;', title: 'A design partner, not a vending machine',
-    text: 'Ask for a lesson without saying who it\'s for and Co-Cher now checks in first — pick a class or tell it about your students, so plans fit your learners.' },
-  { icon: '&#128218;', title: 'Lesson lifecycle & "Up next"',
-    text: 'Every lesson now moves through Design → Rehearse → Teach → Reflect, with one clear next step. The dashboard leads with your most actionable lesson.' },
-  { icon: '&#128302;', title: 'Simulation workbench',
-    text: 'Build Your Own Simulation now previews live and lets you refine it in plain English, keep versions, attach it to a lesson, and export it.' },
-  { icon: '&#9881;&#65039;', title: 'Co-Cher+ that builds real things',
-    text: 'The autopilot pauses for your review between steps, saves outputs as real lessons and Knowledge Base entries, and can generate a hook visual or concept diagram.' },
-  { icon: '&#127890;', title: 'New Labs & exemplars',
-    text: 'Report Comment Drafter, Question Bank Builder, and Relief Lesson Kit join the Labs — plus ready-made exemplar lessons across subjects to explore.' },
+  { icon: '&#127968;', title: 'A new look: the Staffroom Desk',
+    text: 'Warm paper, serif titles, and your highlighter — yellow now marks what\'s happening NOW. Prefer the old look? Settings → Appearance → Classic restores it exactly, one click.' },
+  { icon: '&#128100;', title: 'Co-Cher now knows your class',
+    text: 'Attach a class and the AI designs for the learners you actually have — their E21CC spread, your observations, engagement trends. Each class page has a living Class Portrait.' },
+  { icon: '&#9986;&#65039;', title: 'Your call, Cher',
+    text: 'Real design decisions now come back to you as one-tap choices inside the plan, and a 🖊 Critical Friend reads your plan with a red pen through the curriculum lens you choose.' },
+  { icon: '&#127793;', title: 'My Practice: reflection becomes practice',
+    text: 'Your reflections and rehearsals now build a practice profile with ONE micro-goal at a time — and Co-Cher quietly shapes lessons to give you practice at it.' },
+  { icon: '&#129309;', title: 'Department Packs',
+    text: 'Export a pack of lessons and resources, drop it in the staffroom chat, and colleagues import with attribution — remix chains included.' },
+  { icon: '&#9974;', title: 'Focus mode & a calmer morning',
+    text: 'Ctrl+. hides everything but your plan. The dashboard now opens with one decision, your day as a ribbon, and everything else tucked under More.' },
 ];
 
 export function maybeShowWhatsNew() {

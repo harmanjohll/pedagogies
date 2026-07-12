@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pendulum &amp; Oscillations – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="pendulum.css?v=5">
+</head>
+<body>
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../../index.html">Practicals</a>
+      <span class="separator">/</span>
+      Physics
+      <span class="separator">/</span>
+      Pendulum
+    </span>
+    <div class="topbar-actions">
+      <div id="record-mode-slot"></div>
+      <button id="btn-toggle-guide" class="btn btn-ghost btn-sm">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+        Guide
+      </button>
+      <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+    </div>
+  </nav>
+
+  <!-- Main layout -->
+  <div class="pend-layout">
+
+    <!-- Left: Guide -->
+    <aside id="guide-panel" class="pend-guide-panel">
+      <div class="panel">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <ol class="procedure-list">
+            <li class="procedure-step active" data-step="setup">
+              <strong>Setup</strong> — Adjust the pendulum length using the slider above the simulation. The length is measured from the pivot to the centre of the bob.
+            </li>
+            <li class="procedure-step" data-step="release">
+              <strong>Release</strong> — Pull the bob to one side (small angle &lt; 10°) and click "Release" to start the pendulum swinging.
+            </li>
+            <li class="procedure-step" data-step="time">
+              <strong>Time 10 oscillations</strong> — Click "Start Timer" as the bob passes the rest position. Click "Stop" after 10 complete oscillations.
+            </li>
+            <li class="procedure-step" data-step="record">
+              <strong>Record</strong> — Click "Record" to log the time and calculate the period T.
+            </li>
+            <li class="procedure-step" data-step="repeat">
+              <strong>Repeat</strong> — Change the length and repeat. Collect at least 5 data points.
+            </li>
+            <li class="procedure-step" data-step="graph">
+              <strong>Graph</strong> — Plot T² vs L. The gradient = 4π²/g. Calculate g.
+            </li>
+          </ol>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Centre: Simulation -->
+    <section class="pend-workbench-panel">
+      <!-- Setup controls — always visible above the canvas -->
+      <div class="pend-setup-bar">
+        <div class="pend-setup-control">
+          <label for="length-slider">String length</label>
+          <input type="range" id="length-slider" min="0.20" max="1.20" step="0.01" value="0.50" class="slider">
+          <span id="length-display" class="config-value">0.50 m</span>
+        </div>
+        <div class="pend-setup-control">
+          <label for="angle-slider">Release angle</label>
+          <input type="range" id="angle-slider" min="3" max="15" step="1" value="8" class="slider">
+          <span id="angle-display" class="config-value">8°</span>
+        </div>
+      </div>
+      <div class="pend-workbench">
+        <canvas id="pendulum-canvas" width="500" height="480"></canvas>
+
+        <!-- Controls overlay -->
+        <div class="pend-controls">
+          <button id="btn-release" class="btn btn-primary btn-sm">Release</button>
+          <button id="btn-stop-pend" class="btn btn-ghost btn-sm" disabled>Stop Pendulum</button>
+          <div class="timer-display">
+            <span class="timer-label">Timer</span>
+            <span class="timer-value" id="timer-display">0.00 s</span>
+          </div>
+          <button id="btn-start-timer" class="btn btn-success btn-sm" disabled>Start Timer</button>
+          <button id="btn-stop-timer" class="btn btn-danger btn-sm" disabled>Stop Timer</button>
+          <div class="osc-display">
+            <span class="timer-label">Oscillations</span>
+            <span class="timer-value" id="osc-count">0</span>
+          </div>
+          <button id="btn-record" class="btn btn-ghost btn-sm" disabled>Record</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Data + Graph -->
+    <aside class="pend-data-panel">
+      <div class="panel">
+        <div class="panel-header">Data Table</div>
+        <div class="panel-body">
+          <table class="data-table" id="data-table">
+            <thead>
+              <tr>
+                <th>L / m</th>
+                <th>t(10) / s</th>
+                <th>T / s</th>
+                <th>T² / s²</th>
+              </tr>
+            </thead>
+            <tbody id="data-tbody"></tbody>
+          </table>
+          <p id="data-empty" class="text-sm text-muted text-center mt-2">
+            No data recorded yet.
+          </p>
+        </div>
+      </div>
+
+      <!-- Graph -->
+      <div class="panel mt-4">
+        <div class="panel-header">T² vs L Graph</div>
+        <div class="panel-body graph-container">
+          <canvas id="graph-canvas" width="260" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Calculations -->
+      <div class="panel mt-4">
+        <div class="panel-header">Calculate g</div>
+        <div class="panel-body" id="calc-panel">
+          <p class="text-sm text-muted">Collect at least 3 data points to calculate g from the gradient.</p>
+        </div>
+      </div>
+
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="pendulum"></div>
+    </aside>
+
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="pendulum.js?v=5"></script>
+</body>
+</html>

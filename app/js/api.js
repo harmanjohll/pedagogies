@@ -71,6 +71,7 @@ Align with the 4 areas: Lesson Preparation, Lesson Enactment, Monitoring & Feedb
 10. For CCE lessons, always connect to the Big Ideas (Identity, Relationships, Choices) and relevant R3ICH values
 11. Every lesson plan MUST begin with a real-world lesson hook — a compelling opener that connects the topic to students' lives. Frame it as a provocative question: "What if I told you...", "Did you ever wonder...", "Why do you think...". Root the hook in real-world context or application. This is the first thing students hear
 12. When a lesson activity develops E21CC competencies, name the specific domain (CAIT, CCI, CGC). When EdTech is relevant, name the tool or platform. When STP alignment is clear, reference the specific area. When CCE values connect naturally, mention them. Be explicit — teachers value seeing these connections clearly
+13. TEACHER'S CALL: when a design decision genuinely belongs to the teacher (hook variant, grouping format, assessment format, pacing trade-off), do NOT decide it for them. Present it on its own line in exactly this form: [CHOICE: first option | second option]. Use at most 2 per response, and only when the decision meaningfully shapes the lesson — never for trivia
 
 Respond conversationally. Help the teacher think through their lesson experience holistically.`;
 
@@ -1200,6 +1201,41 @@ export async function generateSVGDiagram(description) {
   const m = text.match(/<svg[\s\S]*<\/svg>/i);
   if (!m) throw new Error('No diagram returned — try rephrasing the topic.');
   return m[0];
+}
+
+/* ── Critical Friend ──
+ * Critiques a plan through a chosen curriculum ideology. Returns markdown:
+ * pointed questions + one trade-off + one concrete move. The voice is a
+ * trusted colleague with a red pen, not a cheerleader. */
+const IDEOLOGY_LENSES = {
+  'learner-centred': 'Learner-Centred: student agency, interests, choice, self-direction. Ask whose curiosity drives each segment.',
+  'scholar-academic': 'Scholar-Academic: disciplinary rigour, canonical knowledge, intellectual tradition. Ask where the discipline\'s real thinking happens.',
+  'social-efficiency': 'Social Efficiency: clear outcomes, transferable skills, readiness. Ask what students can DO afterwards and how you would know.',
+  'social-reconstructivist': 'Social Reconstructivist: justice, voice, critical consciousness. Ask whose perspectives are present, absent, or unchallenged.'
+};
+
+export async function critiquePlan(planText, ideology) {
+  const lens = IDEOLOGY_LENSES[ideology] || 'Balanced: weigh all four curriculum orientations and challenge the weakest dimension of the plan.';
+  return sendChat(
+    [{ role: 'user', content: `Critique this lesson plan through the lens below.\n\nLENS: ${lens}\n\nPLAN:\n${planText.slice(0, 6000)}` }],
+    {
+      trackLabel: 'criticalFriend',
+      systemPrompt: `You are the teacher's critical friend — a trusted, seasoned colleague reviewing a lesson plan with a red pen. Be pointed but collegial; critique the PLAN, never the teacher. Output EXACTLY this markdown structure and nothing else:
+
+### Three questions worth sitting with
+1. (a pointed question the plan does not answer)
+2. (a second, different angle)
+3. (the bravest question — the one a polite colleague would not ask)
+
+### The trade-off you're making
+(2-3 sentences naming what this plan gains and what it silently gives up)
+
+### One concrete move
+(a single, specific, doable change — not a list)`,
+      temperature: 0.7,
+      maxTokens: 1200
+    }
+  );
 }
 
 export function validateApiKey(key) {

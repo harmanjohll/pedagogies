@@ -138,6 +138,16 @@ export function md(text) {
       if (m.includes('<ul') || m.includes('<ol')) return m;
       return `<ol style="padding-left:1.25rem;margin:4px 0;">${m}</ol>`;
     })
+    // Teacher's-call choice blocks: [CHOICE: option A | option B]
+    // (escaped text — options are already HTML-safe; quotes escaped for the attr)
+    .replace(/\[CHOICE:\s*([^\]]+)\]/g, (m, inner) => {
+      const opts = inner.split('|').map(o => o.trim()).filter(Boolean);
+      if (opts.length < 2) return m;
+      return `<div class="md-choice">
+        <div class="md-choice-label">&#9986; Your call, Cher</div>
+        ${opts.map(o => `<button type="button" class="md-choice-opt" data-choice="${o.replace(/"/g, '&quot;')}">${o}</button>`).join('')}
+      </div>`;
+    })
     // Blockquotes (for "copy this prompt" sections)
     .replace(/&gt; (.+)/g, '<blockquote style="border-left:3px solid var(--accent);padding:8px 12px;margin:6px 0;background:var(--accent-light,rgba(67,97,238,0.06));border-radius:0 6px 6px 0;font-size:0.8125rem;color:var(--ink-secondary);">$1</blockquote>')
     // Paragraphs

@@ -177,7 +177,9 @@ export function renderSidebar(container) {
         navHTML += `</div>`; // close .sidebar-section-items
       }
       currentSection = item.section;
-      const displayLabel = item.sectionDisplay || currentSection;
+      const rawLabel = item.sectionDisplay || currentSection;
+      // Highlighter treatment on the section word (no-op in Classic theme)
+      const displayLabel = `<span class="hl-word">${rawLabel}</span>`;
       const isCollapsed = collapsedSections.includes(currentSection);
       navHTML += `
         <div class="sidebar-section-label" data-section="${currentSection}" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;">
@@ -215,7 +217,7 @@ export function renderSidebar(container) {
     <a class="sidebar-brand" href="#/" style="text-decoration:none;cursor:pointer;">
       <div class="sidebar-brand-icon">C</div>
       <div class="sidebar-brand-text">
-        <div class="sidebar-brand-name">Co-Cher</div>
+        <div class="sidebar-brand-name serif-voice">Co-Cher</div>
         <div class="sidebar-brand-tagline">Your Co-Teaching Assistant</div>
       </div>
     </a>

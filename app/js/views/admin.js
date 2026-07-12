@@ -265,16 +265,18 @@ function openAdminOverlay(title, href) {
   document.body.appendChild(overlay);
 
   const close = () => {
+    document.removeEventListener('keydown', escHandler);
     overlay.style.opacity = '0';
     overlay.style.transition = 'opacity 0.2s';
     setTimeout(() => overlay.remove(), 200);
   };
+  function escHandler(e) {
+    if (e.key === 'Escape') close();
+  }
 
   topBar.querySelector('#admin-overlay-close').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  document.addEventListener('keydown', function esc(e) {
-    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
-  });
+  document.addEventListener('keydown', escHandler);
 }
 
 /* ══════════ Main render ══════════ */

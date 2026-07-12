@@ -96,6 +96,15 @@
   padding: var(--sp-3) var(--sp-2) var(--sp-1);
 }
 
+.sidebar-section-label .hl-word { color: var(--ink-muted); }
+
+/* ═══════════ Focus mode (lesson planner: hide chrome, keep the work) ═══════════ */
+
+.focus-mode .sidebar,
+.focus-mode .sidebar-overlay,
+.focus-mode .mobile-header { display: none !important; }
+.focus-mode .main-content { height: 100vh; }
+
 .sidebar-item {
   display: flex;
   align-items: center;

@@ -369,6 +369,51 @@ export function render(container) {
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
             Customize the visual theme.
           </p>
+
+          <div style="margin-bottom: var(--sp-5);">
+            <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 8px; color: var(--ink-secondary);">Design</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 460px;">
+              ${[
+                { id: 'staffroom', label: 'Staffroom Desk', desc: 'Warm paper, serif titles, highlighter accents (new default)' },
+                { id: 'classic', label: 'Classic', desc: 'The previous Co-Cher look, exactly as it was' }
+              ].map(t => {
+                const active = (localStorage.getItem('cocher_theme_classic') === '1') === (t.id === 'classic');
+                return `
+                  <button class="design-theme-choice" data-design="${t.id}" style="
+                    text-align: left; padding: 12px 14px; border-radius: 10px; cursor: pointer;
+                    border: 2px solid ${active ? 'var(--accent)' : 'var(--border-light)'};
+                    background: ${active ? 'var(--accent-light)' : 'var(--bg-card)'};
+                    transition: border-color 0.15s, background 0.15s;">
+                    <div style="font-weight: 600; font-size: 0.8125rem; color: var(--ink); ${t.id === 'staffroom' ? 'font-family: var(--font-serif);' : ''}">${t.label}${active ? ' ✓' : ''}</div>
+                    <div style="font-size: 0.6875rem; color: var(--ink-muted); margin-top: 2px; line-height: 1.4;">${t.desc}</div>
+                  </button>`;
+              }).join('')}
+            </div>
+          </div>
+
+          <div style="margin-bottom: var(--sp-5);">
+            <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 8px; color: var(--ink-secondary);">Dashboard Layout</label>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              ${(() => {
+                const style = (getDashPrefs().layoutStyle || 'calm');
+                return [
+                  { id: 'calm', label: 'Calm (new)', desc: 'One decision, day ribbon, quiet panels' },
+                  { id: 'classic', label: 'Classic widgets', desc: 'The full widget grid' }
+                ].map(l => `
+                  <button class="dash-layout-choice" data-layout="${l.id}" style="
+                    text-align: left; padding: 10px 14px; border-radius: 10px; cursor: pointer; min-width: 180px;
+                    border: 2px solid ${style === l.id ? 'var(--accent)' : 'var(--border-light)'};
+                    background: ${style === l.id ? 'var(--accent-light)' : 'var(--bg-card)'};">
+                    <div style="font-weight: 600; font-size: 0.8125rem; color: var(--ink);">${l.label}${style === l.id ? ' ✓' : ''}</div>
+                    <div style="font-size: 0.6875rem; color: var(--ink-muted); margin-top: 2px;">${l.desc}</div>
+                  </button>`).join('');
+              })()}
+            </div>
+            <button class="btn btn-ghost btn-sm" id="revert-look-btn" style="margin-top: 10px; color: var(--ink-muted);">
+              ↩ Revert everything to the previous look (Classic design + Classic dashboard)
+            </button>
+          </div>
+
           <label class="toggle">
             <input type="checkbox" class="toggle-input" id="settings-dark" ${darkMode ? 'checked' : ''} />
             <span class="toggle-track"></span>
@@ -502,6 +547,34 @@ export function render(container) {
             <input type="checkbox" id="vigilance-toggle" ${isVigilanceEnabled() ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: var(--brand-navy, #000C53);" />
             Ask about my class before generating from vague prompts
           </label>
+        </div>
+
+        <!-- Teaching orientation (espoused ideology — feeds the practice mirror) -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">My Teaching Orientation</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            The curriculum orientation you <em>aspire</em> to. My Learning &rarr; My Practice will gently compare
+            this against what your saved plans actually look like.
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px;">
+            ${(() => {
+              let current = '';
+              try { current = localStorage.getItem('cocher_espoused_ideology') || ''; } catch { /* ignore */ }
+              return [
+                { id: 'learner-centred', label: 'Learner-Centred', desc: 'Student agency, interests, choice' },
+                { id: 'scholar-academic', label: 'Scholar-Academic', desc: 'Disciplinary rigour and tradition' },
+                { id: 'social-efficiency', label: 'Social Efficiency', desc: 'Skills, outcomes, readiness' },
+                { id: 'social-reconstructivist', label: 'Social Reconstructivist', desc: 'Justice, voice, transformation' }
+              ].map(o => `
+                <button class="ideology-choice" data-ideology="${o.id}" style="
+                  text-align: left; padding: 10px 12px; border-radius: 10px; cursor: pointer;
+                  border: 2px solid ${current === o.id ? 'var(--accent)' : 'var(--border-light)'};
+                  background: ${current === o.id ? 'var(--accent-light)' : 'var(--bg-card)'};">
+                  <div style="font-weight: 600; font-size: 0.8125rem; color: var(--ink);">${o.label}${current === o.id ? ' ✓' : ''}</div>
+                  <div style="font-size: 0.6875rem; color: var(--ink-muted); margin-top: 2px;">${o.desc}</div>
+                </button>`).join('');
+            })()}
+          </div>
         </div>
 
         <!-- EEE: Enactment Enhancement Marketplace -->
@@ -939,6 +1012,51 @@ export function render(container) {
   container.querySelector('#vigilance-toggle')?.addEventListener('change', (e) => {
     setVigilanceEnabled(e.target.checked);
     showToast(e.target.checked ? 'Design-partner nudges on.' : 'Design-partner nudges off.', 'success');
+  });
+
+  // Design theme (Staffroom default / Classic revert)
+  container.querySelectorAll('.design-theme-choice').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const classic = btn.dataset.design === 'classic';
+      try {
+        if (classic) localStorage.setItem('cocher_theme_classic', '1');
+        else localStorage.removeItem('cocher_theme_classic');
+      } catch { /* ignore */ }
+      document.documentElement.classList.toggle('theme-classic', classic);
+      showToast(classic ? 'Classic look restored.' : 'Staffroom Desk look on.', 'success');
+      render(container);
+    });
+  });
+
+  // Dashboard layout (calm default / classic widgets)
+  container.querySelectorAll('.dash-layout-choice').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = getDashPrefs();
+      p.layoutStyle = btn.dataset.layout;
+      saveDashPrefs(p);
+      showToast(`Dashboard layout: ${btn.dataset.layout === 'calm' ? 'Calm' : 'Classic widgets'}.`, 'success');
+      render(container);
+    });
+  });
+
+  // One-click full revert to the pre-v4 experience
+  container.querySelector('#revert-look-btn')?.addEventListener('click', () => {
+    try { localStorage.setItem('cocher_theme_classic', '1'); } catch { /* ignore */ }
+    document.documentElement.classList.add('theme-classic');
+    const p = getDashPrefs();
+    p.layoutStyle = 'classic';
+    saveDashPrefs(p);
+    showToast('Reverted to the previous Co-Cher look. Switch back anytime.', 'success');
+    render(container);
+  });
+
+  // Espoused teaching orientation (feeds the ideology mirror in My Practice)
+  container.querySelectorAll('.ideology-choice').forEach(btn => {
+    btn.addEventListener('click', () => {
+      try { localStorage.setItem('cocher_espoused_ideology', btn.dataset.ideology); } catch { /* ignore */ }
+      showToast('Teaching orientation saved.', 'success');
+      render(container);
+    });
   });
 
   // Export

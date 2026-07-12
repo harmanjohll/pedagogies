@@ -1042,6 +1042,16 @@ async function endRehearsal(container) {
     );
 
     debriefContent = response;
+
+    // Feed the coaching debrief into the teacher's practice log (My Practice)
+    const lesson = selectedLessonId ? Store.getLesson(selectedLessonId) : null;
+    Store.addPracticeEntry({
+      source: 'rehearsal',
+      lessonTitle: lesson?.title || 'Unscripted rehearsal',
+      classId: null,
+      text: String(response || '').slice(0, 600)
+    });
+
     isGenerating = false;
     renderView(container);
   } catch (err) {

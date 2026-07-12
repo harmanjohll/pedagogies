@@ -9,7 +9,7 @@ import { idbSetContent, idbDeleteContent, idbGetAllContent, idbClearContent } fr
 
 const STORAGE_KEY = 'cocher_app_data';
 
-function generateId() {
+export function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
@@ -113,6 +113,8 @@ const DEFAULT_STATE = {
   sourceLibrary: [],
   departmentSchemes: [],
   assessmentBlueprints: [],
+  practiceLog: [],
+  practiceGoal: null,
   onboardingComplete: false
 };
 
@@ -191,6 +193,20 @@ if (!_state.apiKey && localStorage.getItem('cocher_api_key')) {
   }
 })();
 
+/* ── E21CC dimensions & rubric levels (string values) ──
+ * Shared by the Class Portrait synthesis below; keep in sync with the
+ * migration IIFE above and the dim metadata in views/classes.js. */
+const E21CC_DIM_LABELS = {
+  criticalThinking: 'Critical Thinking',
+  creativeThinking: 'Creative Thinking',
+  communication: 'Communication',
+  collaboration: 'Collaboration',
+  socialConnectedness: 'Social Connectedness',
+  selfRegulation: 'Self-Regulation'
+};
+const E21CC_DIM_KEYS = Object.keys(E21CC_DIM_LABELS);
+const E21CC_LEVEL_KEYS = ['developing', 'applying', 'extending', 'leading'];
+
 export const Store = {
   /* ── Read ── */
   get(key) {
@@ -246,8 +262,11 @@ export const Store = {
       sourceLibrary: _state.sourceLibrary || [],
       departmentSchemes: _state.departmentSchemes || [],
       assessmentBlueprints: _state.assessmentBlueprints || [],
+      practiceLog: _state.practiceLog || [],
+      practiceGoal: _state.practiceGoal || null,
       schoolProfile: _state.schoolProfile || { name: '', values: '' },
       onboardingComplete: _state.onboardingComplete || false,
+      apiKeyDeferred: _state.apiKeyDeferred || false,
       recentActivity: _state.recentActivity
     });
     // Also keep legacy keys in sync
@@ -402,6 +421,136 @@ export const Store = {
     });
   },
 
+  /* ══════════ Class Portrait ══════════ */
+
+  /**
+   * Synthesize a learner-centric portrait of a class: E21CC level
+   * distribution, weakest/strongest dimensions, recent observations,
+   * recent lesson reflections and the engagement trend. Returns null
+   * when the class doesn't exist.
+   */
+  getClassPortrait(classId) {
+    const cls = this.getClass(classId);
+    if (!cls) return null;
+    const students = cls.students || [];
+
+    // Per-dimension counts of each rubric level across students
+    const e21ccDistribution = {};
+    E21CC_DIM_KEYS.forEach(dim => {
+      const counts = { developing: 0, applying: 0, extending: 0, leading: 0 };
+      students.forEach(s => {
+        const lv = s.e21cc?.[dim];
+        counts[E21CC_LEVEL_KEYS.includes(lv) ? lv : 'developing']++;
+      });
+      e21ccDistribution[dim] = counts;
+    });
+
+    const weakestDims = [...E21CC_DIM_KEYS]
+      .sort((a, b) => e21ccDistribution[b].developing - e21ccDistribution[a].developing)
+      .slice(0, 2);
+    const strongestDims = [...E21CC_DIM_KEYS]
+      .sort((a, b) =>
+        (e21ccDistribution[b].leading + e21ccDistribution[b].extending) -
+        (e21ccDistribution[a].leading + e21ccDistribution[a].extending))
+      .slice(0, 2);
+
+    // Last 5 observation texts across students, newest first
+    // (observation shape: { id, text, tags, ts })
+    const recentObservations = students
+      .flatMap(s => (s.observations || []).map(o => ({ ts: o.ts || 0, text: o.text || '' })))
+      .filter(o => o.text)
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, 5)
+      .map(o => o.text);
+
+    // Lesson reflections for this class, newest first. Legacy string
+    // reflections are normalized into the freeform field.
+    const reflected = this.getLessonsForClass(classId)
+      .map((l, idx) => {
+        const raw = l.reflection;
+        if (!raw) return null;
+        const ref = typeof raw === 'string'
+          ? { whatWorked: '', whatToAdjust: '', engagement: 0, e21ccObservations: '', freeform: raw }
+          : raw;
+        const hasContent = ['whatWorked', 'whatToAdjust', 'e21ccObservations', 'freeform']
+          .some(k => String(ref[k] || '').trim()) || (ref.engagement || 0) > 0;
+        return hasContent ? { lesson: l, ref, idx } : null;
+      })
+      .filter(Boolean)
+      // Newest first; break same-millisecond ties by insertion order
+      .sort((a, b) => ((b.lesson.updatedAt || 0) - (a.lesson.updatedAt || 0)) || (b.idx - a.idx));
+
+    const recentReflections = reflected.slice(0, 3).map(({ lesson, ref }) => ({
+      lessonTitle: lesson.title || 'Untitled Lesson',
+      whatWorked: ref.whatWorked || '',
+      whatToAdjust: ref.whatToAdjust || '',
+      engagement: ref.engagement || 0
+    }));
+
+    // Engagement trend: avg of the last 3 rated reflections vs the previous 3
+    const rated = reflected.filter(x => (x.ref.engagement || 0) > 0);
+    let engagementTrend = null;
+    const previous = rated.slice(3, 6);
+    if (previous.length > 0) {
+      const avg = arr => arr.reduce((sum, x) => sum + x.ref.engagement, 0) / arr.length;
+      const diff = avg(rated.slice(0, 3)) - avg(previous);
+      engagementTrend = diff >= 0.5 ? 'rising' : diff <= -0.5 ? 'dipping' : 'steady';
+    }
+
+    return {
+      className: cls.name || '',
+      subject: cls.subject || '',
+      level: cls.level || '',
+      studentCount: students.length,
+      e21ccDistribution,
+      weakestDims,
+      strongestDims,
+      recentObservations,
+      recentReflections,
+      engagementTrend
+    };
+  },
+
+  /**
+   * Render the class portrait as a compact plain-text block (<= ~180 words)
+   * for injection into an AI system prompt. Returns '' when classId is
+   * missing or the class doesn't exist.
+   */
+  getPortraitPromptText(classId) {
+    if (!classId) return '';
+    const p = this.getClassPortrait(classId);
+    if (!p) return '';
+    const short = t => {
+      const s = String(t).replace(/\s+/g, ' ').trim();
+      return s.length > 70 ? s.slice(0, 70) + '…' : s;
+    };
+    const lines = [];
+    const detail = [p.level, p.subject].filter(Boolean).join(', ');
+    lines.push(`CLASS PORTRAIT — ${p.className}${detail ? ` (${detail})` : ''}, ${p.studentCount} student${p.studentCount === 1 ? '' : 's'}.`);
+    if (p.studentCount > 0) {
+      lines.push('E21CC levels (developing/applying/extending/leading): ' +
+        E21CC_DIM_KEYS.map(k => {
+          const c = p.e21ccDistribution[k];
+          return `${E21CC_DIM_LABELS[k]} ${c.developing}/${c.applying}/${c.extending}/${c.leading}`;
+        }).join('; ') + '.');
+      lines.push(`Weakest: ${p.weakestDims.map(k => E21CC_DIM_LABELS[k]).join(', ')}. Strongest: ${p.strongestDims.map(k => E21CC_DIM_LABELS[k]).join(', ')}.`);
+    }
+    if (p.engagementTrend) lines.push(`Engagement trend across recent lessons: ${p.engagementTrend}.`);
+    if (p.recentObservations.length) {
+      lines.push('Recent observations: ' + p.recentObservations.map(short).join(' | '));
+    }
+    if (p.recentReflections.length) {
+      lines.push('Recent lesson reflections: ' + p.recentReflections.map(r => {
+        const bits = [];
+        if (r.whatWorked) bits.push(`worked: ${short(r.whatWorked)}`);
+        if (r.whatToAdjust) bits.push(`adjust: ${short(r.whatToAdjust)}`);
+        if (r.engagement) bits.push(`engagement ${r.engagement}/5`);
+        return `"${short(r.lessonTitle)}"${bits.length ? ` (${bits.join('; ')})` : ''}`;
+      }).join(' | '));
+    }
+    return lines.join('\n');
+  },
+
   /* ══════════ Lessons CRUD ══════════ */
 
   getLessons() {
@@ -445,6 +594,29 @@ export const Store = {
     _state.lessons = (_state.lessons || []).map(l =>
       l.id === id ? { ...l, ...data, updatedAt: Date.now() } : l
     );
+    // A saved reflection also feeds the teacher's practice log
+    if (data.reflection && typeof data.reflection === 'object' && !Array.isArray(data.reflection)) {
+      const r = data.reflection;
+      const hasText = ['whatWorked', 'whatToAdjust', 'e21ccObservations', 'freeform']
+        .some(k => String(r[k] || '').trim());
+      if (hasText) {
+        const lesson = (_state.lessons || []).find(l => l.id === id);
+        const lessonTitle = lesson?.title || 'Untitled Lesson';
+        // Dedupe: skip if the last entry is the same lesson's reflection
+        // saved within the past 5 minutes (e.g. repeated "Save Reflection")
+        const log = _state.practiceLog || [];
+        const last = log[log.length - 1];
+        const isRecentDupe = last && last.source === 'reflection' &&
+          last.lessonTitle === lessonTitle && (Date.now() - last.createdAt) < 5 * 60 * 1000;
+        if (!isRecentDupe) {
+          const parts = [];
+          if (String(r.whatWorked || '').trim()) parts.push(`Worked: ${String(r.whatWorked).trim()}`);
+          if (String(r.whatToAdjust || '').trim()) parts.push(`Adjust: ${String(r.whatToAdjust).trim()}`);
+          const text = parts.join(' — ') || String(r.freeform || r.e21ccObservations || '').trim();
+          this.addPracticeEntry({ source: 'reflection', lessonTitle, classId: lesson?.classId || null, text });
+        }
+      }
+    }
     this._persist();
     this._notify();
   },
@@ -731,6 +903,39 @@ export const Store = {
     this._notify();
   },
 
+  /* ══════════ Practice Log (Teacher Growth Engine) ══════════ */
+
+  addPracticeEntry(data) {
+    const entry = {
+      id: generateId(),
+      source: data.source || 'capture',
+      lessonTitle: data.lessonTitle || '',
+      classId: data.classId || null,
+      text: data.text || '',
+      createdAt: Date.now()
+    };
+    _state.practiceLog = [...(_state.practiceLog || []), entry];
+    this._persist();
+    this._notify();
+    return entry;
+  },
+
+  getPracticeLog() {
+    return _state.practiceLog || [];
+  },
+
+  /* ── Active practice goal — { text, focus, createdAt } | null ── */
+
+  getPracticeGoal() {
+    return _state.practiceGoal || null;
+  },
+
+  setPracticeGoal(goal) {
+    _state.practiceGoal = goal || null;
+    this._persist();
+    this._notify();
+  },
+
   /* ══════════ Activity Feed ══════════ */
 
   _addActivity(type, description) {
@@ -768,6 +973,8 @@ export const Store = {
       sourceLibrary: srcLib,
       departmentSchemes: _state.departmentSchemes || [],
       assessmentBlueprints: _state.assessmentBlueprints || [],
+      practiceLog: _state.practiceLog || [],
+      practiceGoal: _state.practiceGoal || null,
       recentActivity: _state.recentActivity
     }, null, 2);
   },
@@ -780,7 +987,7 @@ export const Store = {
   previewImportData(jsonStr) {
     const ARRAY_KEYS = ['classes', 'lessons', 'savedLayouts', 'adminEvents', 'knowledgeUploads',
       'pdFolders', 'assessmentRoutines', 'savedTOS', 'assessmentChecklists', 'stimulusLibrary',
-      'sourceLibrary', 'departmentSchemes', 'assessmentBlueprints', 'recentActivity'];
+      'sourceLibrary', 'departmentSchemes', 'assessmentBlueprints', 'practiceLog', 'recentActivity'];
     let data;
     try { data = JSON.parse(jsonStr); } catch { return { ok: false, error: 'This file is not valid JSON.' }; }
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -821,6 +1028,8 @@ export const Store = {
       if (Array.isArray(data.sourceLibrary)) _state.sourceLibrary = data.sourceLibrary;
       if (Array.isArray(data.departmentSchemes)) _state.departmentSchemes = data.departmentSchemes;
       if (Array.isArray(data.assessmentBlueprints)) _state.assessmentBlueprints = data.assessmentBlueprints;
+      if (Array.isArray(data.practiceLog)) _state.practiceLog = data.practiceLog;
+      if (data.practiceGoal && typeof data.practiceGoal === 'object' && !Array.isArray(data.practiceGoal)) _state.practiceGoal = data.practiceGoal;
       if (Array.isArray(data.recentActivity)) _state.recentActivity = data.recentActivity;
       // Also sync to legacy localStorage keys for backwards compat
       if (Array.isArray(data.stimulusLibrary)) localStorage.setItem('cocher_stimulus_library', JSON.stringify(data.stimulusLibrary));
@@ -847,6 +1056,8 @@ export const Store = {
     _state.sourceLibrary = [];
     _state.departmentSchemes = [];
     _state.assessmentBlueprints = [];
+    _state.practiceLog = [];
+    _state.practiceGoal = null;
     _state.recentActivity = [];
     _state.chatHistory = [];
     // Clear legacy keys too
@@ -894,5 +1105,3 @@ if (_state.darkMode) {
 if (_state.palette) {
   document.documentElement.classList.add(`palette-${_state.palette}`);
 }
-
-export { generateId };
