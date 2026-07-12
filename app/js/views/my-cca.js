@@ -20,8 +20,9 @@ const LEAPS_DOMAINS = [
     levels: [
       'Participated in any CCA for at least 2 years',
       'Participated in any CCA for at least 3 years',
-      'Participated in any CCA for at least 4 years, with at least 75% attendance',
-      'Participated in the same CCA for 4–5 years, with at least 75% attendance'
+      'Participated in any CCA for 4–5 years',
+      'Participated in the same CCA for 4–5 years, with at least 75% attendance each year',
+      'Participated in the same CCA for 4–5 years, with at least 75% attendance each year, exemplary conduct and active contribution to the CCA'
     ]
   },
   {
@@ -31,10 +32,11 @@ const LEAPS_DOMAINS = [
     icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
     desc: 'Leadership development — taking charge of personal development, working in a team, and assuming responsibilities in service of others.',
     levels: [
-      'Completed 1 student leadership module/workshop',
-      'Completed 2 modules OR held a sectional/committee leadership role',
-      'Held a CCA leadership role (e.g. Vice-Captain) or completed NYAA Silver',
-      'Held a CCA captaincy/chairperson role, led student-initiated projects, or NYAA Gold'
+      'Member of a CCA, demonstrating teamwork and followership (or completed a basic student leadership module)',
+      'Completed further leadership modules OR held a class/CCA sub-committee role, or attained NYAA Bronze',
+      'Held a committee or captain-level leadership position in school (e.g. CCA committee member, class chairperson, prefect), or attained NYAA Silver',
+      'Held a key student leadership position (e.g. CCA Captain/Vice-Chairperson, student councillor) with sustained responsibility for leading peers or school events',
+      'Held a top student leadership position (e.g. President of Student Council/CCA, Head Prefect), or attained NYAA Gold or equivalent'
     ]
   },
   {
@@ -44,10 +46,11 @@ const LEAPS_DOMAINS = [
     icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
     desc: 'Social responsibility through Values-In-Action (VIA) projects. Minimum 6 hours of community service per year.',
     levels: [
-      'Completed at least 24 hours of VIA over 4 years',
+      'Completed at least 24 hours of VIA/community service over the course of study',
       'Completed at least 30 hours, with reflection on service learning',
-      'Completed at least 36 hours, with some role in planning/organising',
-      'Led or initiated VIA projects, completed 40+ hours with deep reflection'
+      'Completed at least 36 hours AND participated in at least one community/VIA project',
+      'Completed at least 40 hours, with a role in planning/organising a community/VIA project',
+      'Led or initiated a community/VIA project with significant service hours (50+), with deep reflection on impact'
     ]
   },
   {
@@ -57,10 +60,11 @@ const LEAPS_DOMAINS = [
     icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>`,
     desc: 'Representation and accomplishment in CCA at various levels — school, zone, national, and international.',
     levels: [
-      'Represented class/CCA at internal school events',
-      'Represented school at zone/cluster-level competitions or events',
-      'Represented school at national-level events or achieved top 4 at zone level',
-      'Represented school at national/international level, or won national-level awards'
+      'Represented class/house/CCA at internal school events or performances',
+      'Represented school at local/zone/cluster-level competitions, events or performances',
+      'Represented school at zonal/national-level events, or achieved a top placing (e.g. top 4) at zone level',
+      'Won an award or accolade at national level, or represented school with distinction at national events',
+      'Attained a top national accolade (e.g. national champion) or represented Singapore at international level'
     ]
   }
 ];
@@ -693,8 +697,8 @@ function renderLEAPS(content, leapsProgress) {
       <div class="cca-section-title">LEAPS 2.0 Development Framework</div>
       <div class="cca-section-desc">
         The LEAPS 2.0 framework (MOE, 2014) recognises students' holistic development across four domains:
-        <strong>Leadership</strong>, <strong>Enrichment</strong> (folded into other domains), <strong>Achievement</strong>,
-        <strong>Participation</strong>, and <strong>Service</strong>.
+        <strong>Leadership</strong>, <strong>Achievement</strong>, <strong>Participation</strong> and <strong>Service</strong>
+        (the legacy 'Enrichment' domain was folded into the others under LEAPS 2.0).
         At graduation, co-curricular attainment is graded as Excellent, Good, or Fair, translating to bonus points for post-secondary admissions.
       </div>
 

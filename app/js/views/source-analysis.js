@@ -50,7 +50,7 @@ function questionTypeColor(type) {
 }
 
 function frameworkLabel(fw) {
-  const map = { 'SBQ': 'SBQ', 'SEQ': 'SEQ', 'OPCVL': 'OPCVL', 'CRR': 'CRR' };
+  const map = { 'SBQ': 'SBQ', 'SEQ': 'SEQ', 'OPCVL': 'OPCVL', 'CER': 'CER', 'CRR': 'CER' };
   return map[fw] || fw;
 }
 
@@ -680,7 +680,7 @@ export function render(container) {
               <option value="SBQ">SBQ - Source-Based Questions</option>
               <option value="SEQ">SEQ - Structured Essay</option>
               <option value="OPCVL">OPCVL</option>
-              <option value="CRR">CRR</option>
+              <option value="CER">CER - Claim, Evidence, Reasoning</option>
             </select>
           </div>
         </div>
@@ -1351,7 +1351,7 @@ QUESTION FORMATS:
 - SBQ (Source-Based Questions): Follow Singapore O/N-Level and A-Level SBQ format
 - SEQ (Structured Essay Questions): Progressive difficulty from describe to explain to evaluate
 - OPCVL: Origin, Purpose, Content, Value, Limitation analysis framework
-- CRR: Claim, Reason, Reasoning framework
+- CER: Claim, Evidence, Reasoning framework
 
 MARK SCHEME:
 - Use L1/L2/L3 level descriptors for each question
@@ -1361,9 +1361,9 @@ MARK SCHEME:
 - Include sample answers for each level
 
 E21CC COMPETENCIES (map where relevant):
-- Critical and Inventive Thinking
-- Communication, Collaboration and Information Skills
-- Civic Literacy, Global Awareness and Cross-Cultural Skills
+- Critical, Adaptive and Inventive Thinking (CAIT)
+- Communication, Collaboration and Information (CCI)
+- Civic, Global and Cross-Cultural Literacy (CGC)
 
 RESPONSE FORMAT:
 You MUST respond with valid JSON only. No markdown, no explanation, just the JSON object. Use this exact structure:
@@ -1372,7 +1372,7 @@ You MUST respond with valid JSON only. No markdown, no explanation, just the JSO
   "subject": "string - the subject",
   "level": "string - the level",
   "topic": "string - the topic/theme",
-  "framework": "string - SBQ/SEQ/OPCVL/CRR",
+  "framework": "string - SBQ/SEQ/OPCVL/CER",
   "sources": [
     {
       "title": "string - source title",

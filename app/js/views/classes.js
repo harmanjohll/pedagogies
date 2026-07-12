@@ -1363,11 +1363,11 @@ async function showParentDigestModal(cls) {
 
   // Gather recent lesson summaries (last 7 days or last 5 lessons, whichever is more)
   const recent = lessons
-    .sort((a, b) => (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || ''))
+    .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))
     .slice(0, 5);
 
   const recentNotes = notes
-    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
     .slice(0, 3);
 
   const { backdrop, close } = openModal({
