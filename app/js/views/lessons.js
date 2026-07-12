@@ -9,6 +9,7 @@ import { navigate } from '../router.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { showToast, showActionToast } from '../components/toast.js';
 import { processLatex } from '../utils/latex.js';
+import { md as mdFull } from '../utils/markdown.js';
 import { exportPack, importPack } from '../utils/share-pack.js';
 import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
@@ -700,6 +701,23 @@ function showDeptPackModal(container) {
   });
 }
 
+/* ── Student Pack ──
+ * The student-facing components a lesson carries, in hand-out order.
+ * Teacher-mediated by design: the teacher prints and distributes; nothing
+ * here is exposed to students directly by the app. */
+const STUDENT_PACK_COMPONENTS = [
+  { key: 'lisc', label: 'Learning Intentions & Success Criteria' },
+  { key: 'exitTicket', label: 'Exit Ticket' },
+  { key: 'rubric', label: 'Rubric' }
+];
+
+function studentPackParts(lesson) {
+  const comps = lesson.components || {};
+  return STUDENT_PACK_COMPONENTS
+    .filter(c => typeof comps[c.key]?.content === 'string' && comps[c.key].content.trim())
+    .map(c => ({ label: c.label, content: comps[c.key].content }));
+}
+
 /* ══════════ Lesson Detail ══════════ */
 
 export function renderDetail(container, { id }) {
@@ -751,6 +769,11 @@ export function renderDetail(container, { id }) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
             Share
           </button>
+          ${studentPackParts(lesson).length > 0 ? `
+          <button class="btn btn-ghost btn-sm" id="student-pack-btn" title="Print every student-facing handout in one go">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
+            Student Pack
+          </button>` : ''}
         </div>
 
         <div class="card" style="margin-bottom:var(--sp-6);">
@@ -973,6 +996,7 @@ export function renderDetail(container, { id }) {
     if (aiMsgs.length === 0) { showToast('No lesson content to print.', 'danger'); return; }
     const planHtml = aiMsgs.map(m => mdBasic(m.content)).join('<hr style="margin:24px 0;">');
     const printWin = window.open('', '_blank');
+    if (!printWin) { showToast('Pop-up blocked — allow pop-ups for this site to print.', 'danger'); return; }
     printWin.document.write(`<!DOCTYPE html><html><head><title>${esc(lesson.title)} — Co-Cher</title>
       <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.7;font-size:14px}
       h1{font-size:18px;border-bottom:2px solid #000c53;padding-bottom:8px;color:#000c53}
@@ -1007,6 +1031,39 @@ export function renderDetail(container, { id }) {
       </body></html>`);
     printWin.document.close();
     printWin.print();
+  });
+
+  // Student Pack — every student-facing handout, one print job, teacher-mediated
+  container.querySelector('#student-pack-btn')?.addEventListener('click', () => {
+    const parts = studentPackParts(lesson);
+    if (parts.length === 0) { showToast('No student-facing components yet — generate LI/SC, an exit ticket or a rubric in the Planner first.', 'danger'); return; }
+    const pw = window.open('', '_blank');
+    if (!pw) { showToast('Pop-up blocked — allow pop-ups for this site to print.', 'danger'); return; }
+    pw.document.write(`<!DOCTYPE html><html><head><title>${esc(lesson.title)} — Student Pack</title>
+      <style>:root{--ink:#1e293b;--ink-secondary:#334155;--ink-muted:#64748b;--border:#cbd5e1;--border-light:#e2e8f0;--bg-subtle:#f1f5f9;--accent:#000c53;--accent-light:#eef1ff}
+      body{font-family:Georgia,'Times New Roman',serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.75;font-size:14px}
+      header{border-bottom:3px solid #000c53;padding-bottom:10px;margin-bottom:24px}
+      h1{font-size:20px;color:#000c53;margin:0}
+      .meta{font-size:12px;color:#64748b;font-family:system-ui,sans-serif;margin-top:4px}
+      section{margin-bottom:28px}
+      section+section{page-break-before:always}
+      h2{font-size:15px;font-family:system-ui,sans-serif;text-transform:uppercase;letter-spacing:0.05em;color:#000c53;border-bottom:1px solid #e2e8f0;padding-bottom:6px}
+      h3,h4{margin:14px 0 6px}strong{font-weight:600}ul,ol{padding-left:22px}
+      table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}th,td{text-align:left;padding:6px 10px;border:1px solid #cbd5e1;vertical-align:top}th{font-weight:600;background:#f1f5f9;font-family:system-ui,sans-serif}
+      .name-line{margin:16px 0 0;font-family:system-ui,sans-serif;font-size:12px;color:#475569}
+      footer{color:#94a3b8;font-size:11px;margin-top:32px;font-family:system-ui,sans-serif}
+      @media print{body{margin:0;padding:16px}}</style></head>
+      <body>
+        <header>
+          <h1>${esc(lesson.title)}</h1>
+          <div class="meta">${cn ? `${esc(cn)} &middot; ` : ''}${new Date().toLocaleDateString('en-SG')}</div>
+          <div class="name-line">Name: ______________________________ &nbsp;&nbsp; Class: ____________ &nbsp;&nbsp; Date: ____________</div>
+        </header>
+        ${parts.map(p => `<section><h2>${esc(p.label)}</h2>${mdFull(p.content)}</section>`).join('')}
+        <footer>Prepared by your teacher with Co-Cher</footer>
+      </body></html>`);
+    pw.document.close();
+    pw.print();
   });
 
   // Export / Share

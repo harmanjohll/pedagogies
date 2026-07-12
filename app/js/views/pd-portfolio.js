@@ -107,7 +107,113 @@ function renderPracticeSection() {
         <button class="btn btn-primary btn-sm" id="practice-profile-btn" style="margin-bottom:var(--sp-3);">Generate my practice profile</button>
       `}
       <div id="practice-profile-output">${practiceProfileMd ? renderPracticeProfile() : ''}</div>
-      <div id="practice-mirror-slot" style="margin-top:var(--sp-3);padding:var(--sp-3);border:1px dashed var(--border);border-radius:var(--radius-md);font-size:0.75rem;color:var(--ink-faint);font-style:italic;">Ideology mirror coming after your next few plans.</div>
+      <div id="practice-mirror-slot" style="margin-top:var(--sp-3);">${renderIdeologyMirror()}</div>
+    </div>`;
+}
+
+/* ── Espoused vs enacted: the ideology mirror ──
+ * The teacher names the orientation they ASPIRE to in Settings
+ * (cocher_espoused_ideology). Here we keyword-classify their actual saved
+ * plans and hold the two up against each other. Deliberately a heuristic —
+ * the point is a moment of honest reflection, not a verdict, so the copy
+ * stays in the critical-friend voice and the method is disclosed. */
+
+const IDEOLOGY_META = {
+  'learner-centred': { label: 'Learner-Centred' },
+  'scholar-academic': { label: 'Scholar-Academic' },
+  'social-efficiency': { label: 'Social Efficiency' },
+  'social-reconstructivist': { label: 'Social Reconstructivist' }
+};
+
+const IDEOLOGY_LEXICON = {
+  'learner-centred': ['student choice', 'choice board', 'their interests', 'student interests', 'agency', 'self-directed', 'inquiry', 'student-led', 'student voice', 'personalised', 'personalized', 'differentiat', 'explore', 'curiosity', 'ownership', 'wonder', 'own pace', 'passion'],
+  'scholar-academic': ['direct instruction', 'worked example', 'content mastery', 'disciplinary', 'canon', 'lecture', 'definitions', 'key concepts', 'subject knowledge', 'notes', 'textbook', 'theory', 'rigour', 'rigor', 'derivation', 'proof', 'terminology'],
+  'social-efficiency': ['learning objectives', 'success criteria', 'measurable', 'assessment', 'exam', 'test', 'drill', 'practice questions', 'performance', 'standards', 'competenc', 'skills', 'outcomes', 'efficiency', 'readiness', 'timed', 'checklist', 'mastery check'],
+  'social-reconstructivist': ['justice', 'equity', 'inequality', 'community', 'real-world issue', 'social issue', 'debate', 'perspectives', 'take action', 'advocacy', 'sustainability', 'empathy', 'ethics', 'service learning', 'civic', 'activism', 'marginalised', 'marginalized']
+};
+
+/** Count lexicon hits for one plan text; returns {ideology: hits}. */
+function classifyPlanText(text) {
+  const t = String(text || '').toLowerCase();
+  const scores = {};
+  for (const [id, words] of Object.entries(IDEOLOGY_LEXICON)) {
+    let n = 0;
+    for (const w of words) {
+      let i = t.indexOf(w);
+      while (i !== -1) { n++; i = t.indexOf(w, i + w.length); }
+    }
+    scores[id] = n;
+  }
+  return scores;
+}
+
+/** The plannable text of a lesson: latest AI plan message, else lesson.plan. */
+function lessonPlanText(l) {
+  const aiMsgs = (l.chatHistory || []).filter(m => m.role === 'assistant' || m.role === 'model');
+  const latest = aiMsgs.length ? aiMsgs[aiMsgs.length - 1].content : '';
+  return `${latest || ''}\n${l.plan || ''}`;
+}
+
+function renderIdeologyMirror() {
+  let espoused = '';
+  try { espoused = localStorage.getItem('cocher_espoused_ideology') || ''; } catch { /* ignore */ }
+
+  const hint = (msg) => `
+    <div style="padding:var(--sp-3);border:1px dashed var(--border);border-radius:var(--radius-md);font-size:0.75rem;color:var(--ink-faint);font-style:italic;">${msg}</div>`;
+
+  if (!espoused || !IDEOLOGY_META[espoused]) {
+    return hint('Name your teaching orientation in <a href="#/settings" style="color:var(--accent);">Settings &rarr; Planner</a> and this mirror will compare it against what your plans actually look like.');
+  }
+
+  // Aggregate keyword signal across recent plans that carry any text
+  const lessons = Store.getLessons()
+    .filter(l => !l.isExemplar)
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+    .slice(0, 12);
+  const totals = { 'learner-centred': 0, 'scholar-academic': 0, 'social-efficiency': 0, 'social-reconstructivist': 0 };
+  let plansWithSignal = 0;
+  for (const l of lessons) {
+    const scores = classifyPlanText(lessonPlanText(l));
+    const sum = Object.values(scores).reduce((a, b) => a + b, 0);
+    if (sum === 0) continue;
+    plansWithSignal++;
+    for (const id of Object.keys(totals)) totals[id] += scores[id];
+  }
+
+  if (plansWithSignal < 3) {
+    return hint(`Mirror ready after 3 plans with enough to read — ${plansWithSignal} so far. Keep designing.`);
+  }
+
+  const grand = Object.values(totals).reduce((a, b) => a + b, 0) || 1;
+  const enacted = Object.keys(totals).sort((a, b) => totals[b] - totals[a])[0];
+  const aligned = enacted === espoused;
+
+  const bars = Object.keys(IDEOLOGY_META).map(id => {
+    const pct = Math.round((totals[id] / grand) * 100);
+    const isEspoused = id === espoused;
+    const isEnacted = id === enacted;
+    return `
+      <div style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.6875rem;">
+        <span style="width:132px;flex-shrink:0;color:var(--ink-secondary);${isEspoused ? 'font-weight:700;' : ''}">${IDEOLOGY_META[id].label}${isEspoused ? ' <span style="background:var(--marker-wash,#FFF6BF);padding:0 4px;border-radius:3px;">aspires</span>' : ''}</span>
+        <div style="flex:1;height:10px;border-radius:5px;background:var(--bg-subtle);overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${isEnacted ? 'var(--brand-navy,#000C53)' : 'var(--border)'};"></div>
+        </div>
+        <span style="width:32px;text-align:right;color:var(--ink-muted);">${pct}%</span>
+      </div>`;
+  }).join('');
+
+  const verdict = aligned
+    ? `<p style="font-size:0.8125rem;color:var(--growth,#2c7a4b);line-height:1.6;margin-top:var(--sp-2);font-family:var(--font-serif, Georgia, serif);">Your plans walk your talk — the ${IDEOLOGY_META[espoused].label} orientation you named shows up strongest in what you actually design.</p>`
+    : `<p class="redpen-note" style="font-size:0.8125rem;color:var(--redpen,#C94F4F);line-height:1.6;margin-top:var(--sp-2);font-family:var(--font-serif, Georgia, serif);">You aspire to ${IDEOLOGY_META[espoused].label}, but your recent plans lean ${IDEOLOGY_META[enacted].label}. Not a verdict — just a mirror. Worth one deliberate ${IDEOLOGY_META[espoused].label.toLowerCase()} design move in your next plan?</p>`;
+
+  return `
+    <div style="border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--sp-4);">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-3);">
+        <span style="font-weight:600;font-size:0.875rem;color:var(--ink);">Espoused vs enacted</span>
+        <span style="font-size:0.6875rem;color:var(--ink-faint);">keyword read of your last ${plansWithSignal} readable plans</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">${bars}</div>
+      ${verdict}
     </div>`;
 }
 
