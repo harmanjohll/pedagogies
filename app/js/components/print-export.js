@@ -134,7 +134,7 @@ export function printStimulusMaterial(item, mode = 'student') {
 
   ${item.questions ? `
     <div class="section-title">Questions</div>
-    <div class="questions">${esc(item.questions).split('\\n').filter(Boolean).map((q, i) =>
+    <div class="questions">${esc(item.questions).split(/\r?\n/).filter(Boolean).map((q, i) =>
       `<div class="question"><strong>${i+1}.</strong> ${q.trim()}${!isTeacher ? '<div class="answer-space"></div>' : ''}</div>`
     ).join('')}</div>
   ` : ''}

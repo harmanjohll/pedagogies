@@ -27,7 +27,7 @@ export function processLatex(element) {
         { left: '\\(', right: '\\)', display: false }
       ],
       throwOnError: false,
-      trust: true
+      trust: (ctx) => !/^\s*(javascript|data|vbscript):/i.test(ctx.url || '')
     });
   } else {
     // KaTeX not loaded yet — wait and retry once
@@ -41,7 +41,7 @@ export function processLatex(element) {
             { left: '\\(', right: '\\)', display: false }
           ],
           throwOnError: false,
-          trust: true
+          trust: (ctx) => !/^\s*(javascript|data|vbscript):/i.test(ctx.url || '')
         });
       }
     }, 500);

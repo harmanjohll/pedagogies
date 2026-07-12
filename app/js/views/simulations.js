@@ -227,7 +227,8 @@ function generateId() {
  * payload lives in IndexedDB ('custom_sims' store) as { html, versions }
  * so generated sims stop eating the ~5MB localStorage budget. Legacy sims
  * that still carry .html inline migrate on first render. */
-const _simHtmlCache = new Map();  // id -> { html, versions: [] }
+const _simHtmlCache = new Map();
+let _menuCloser = null;  // id -> { html, versions: [] }
 
 async function loadSimRecord(id) {
   if (_simHtmlCache.has(id)) return _simHtmlCache.get(id);
@@ -249,7 +250,15 @@ async function loadSimRecord(id) {
 function storeSimRecord(id, html, versions) {
   const rec = { html, versions: (versions || []).slice(-3) };
   _simHtmlCache.set(id, rec);
-  idbPut('custom_sims', id, rec).catch(() => {});
+  idbPut('custom_sims', id, rec).then(ok => {
+    if (!ok) {
+      // No IndexedDB (private browsing etc.) — keep the HTML inline in
+      // localStorage so the sim survives a reload (quota costs apply)
+      const sims = getCustomSims();
+      const target = sims.find(s => s.id === id);
+      if (target) { target.html = html; saveCustomSims(sims); }
+    }
+  }).catch(() => {});
   return rec;
 }
 
@@ -301,7 +310,7 @@ function openOverlay(container, title, opts) {
   const topBar = document.createElement('div');
   topBar.style.cssText = 'display:flex;align-items:center;gap:12px;padding:6px 16px;background:#12122a;color:#fff;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.08);user-select:none;';
   topBar.innerHTML = `
-    <span style="font-weight:600;font-size:0.9375rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${title}</span>
+    <span style="font-weight:600;font-size:0.9375rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${escapeHtml(title)}</span>
     <span style="font-size:0.6875rem;color:rgba(255,255,255,0.3);">Drag edges to resize</span>
     <button id="sim-overlay-close" style="background:none;border:none;color:#fff;cursor:pointer;padding:4px 10px;font-size:1.25rem;line-height:1;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='none'">&times;</button>
   `;
@@ -1443,7 +1452,10 @@ export function render(container) {
         e.stopPropagation();
         moreMenu.classList.toggle('open');
       });
-      document.addEventListener('click', () => moreMenu.classList.remove('open'), { once: false });
+      // One document-level closer, re-pointed at the current menu each render
+      if (_menuCloser) document.removeEventListener('click', _menuCloser);
+      _menuCloser = () => moreMenu.classList.remove('open');
+      document.addEventListener('click', _menuCloser);
     }
 
     // Launch built-in sims (cards + dropdown items)
