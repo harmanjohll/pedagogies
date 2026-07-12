@@ -296,7 +296,10 @@ export function render(container) {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     </div>
                     <div style="flex:1;min-width:0;">
-                      <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(u.title)}</div>
+                      <div style="display:flex;align-items:center;gap:var(--sp-2);min-width:0;">
+                        <span style="font-size:0.8125rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(u.title)}</span>
+                        ${u.sharedBy ? `<span class="badge badge-violet" style="flex-shrink:0;" title="Shared via Department Pack">From ${esc(u.sharedBy)}</span>` : ''}
+                      </div>
                       <div style="font-size:0.6875rem;color:var(--ink-muted);">${u.subject || 'General'} · ${formatSize(u.contentLength)} · ${formatDate(u.createdAt)}</div>
                     </div>
                   </div>
@@ -429,7 +432,10 @@ function renderUploads(el, uploads, detailEl) {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
             <div style="min-width:0;">
-              <div style="font-size:0.875rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(u.title)}</div>
+              <div style="display:flex;align-items:center;gap:var(--sp-2);min-width:0;">
+                <span style="font-size:0.875rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(u.title)}</span>
+                ${u.sharedBy ? `<span class="badge badge-violet" style="flex-shrink:0;" title="Shared via Department Pack">From ${esc(u.sharedBy)}</span>` : ''}
+              </div>
               <div style="font-size:0.6875rem;color:var(--ink-muted);">
                 ${u.category} · ${u.subject || 'General'} · ${formatSize(u.contentLength)} · ${formatDate(u.createdAt)}
               </div>

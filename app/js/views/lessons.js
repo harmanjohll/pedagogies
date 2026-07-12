@@ -6,9 +6,10 @@
 
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
-import { confirmDialog } from '../components/modals.js';
+import { openModal, confirmDialog } from '../components/modals.js';
 import { showToast, showActionToast } from '../components/toast.js';
 import { processLatex } from '../utils/latex.js';
+import { exportPack, importPack } from '../utils/share-pack.js';
 import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
@@ -102,12 +103,12 @@ function lifecycleStepperHTML(lesson) {
           <div style="display:flex;align-items:center;">
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.6875rem;font-weight:700;${
-                i < idx ? 'background:var(--accent);color:#fff;'
+                i < idx ? 'background:var(--growth,#2c7a4b);color:#fff;'
                 : i === idx ? 'background:var(--brand-navy,#000C53);color:var(--brand-yellow,#FFE200);box-shadow:0 0 0 3px rgba(0,12,83,0.12);'
                 : 'background:var(--bg-subtle);color:var(--ink-faint);'}">${i < idx ? '&#10003;' : i + 1}</span>
               <span style="font-size:0.75rem;font-weight:${i === idx ? 700 : 500};color:${i <= idx ? 'var(--ink)' : 'var(--ink-faint)'};">${s.label}</span>
             </div>
-            ${i < LIFECYCLE_STAGES.length - 1 ? `<span style="width:20px;height:2px;background:${i < idx ? 'var(--accent)' : 'var(--border-light)'};margin:0 8px;border-radius:2px;"></span>` : ''}
+            ${i < LIFECYCLE_STAGES.length - 1 ? `<span style="width:20px;height:2px;background:${i < idx ? 'var(--growth,#2c7a4b)' : 'var(--border-light)'};margin:0 8px;border-radius:2px;"></span>` : ''}
           </div>`).join('')}
         <span style="flex:1;min-width:12px;"></span>
         <button class="btn btn-primary btn-sm" id="lifecycle-cta" data-action="${next.action}">${next.label}</button>
@@ -177,6 +178,10 @@ export function renderList(container) {
             <p class="page-subtitle">Your saved lesson plans and conversations with Co-Cher.</p>
           </div>
           <div style="display:flex;gap:var(--sp-2);">
+            <button class="btn btn-secondary btn-sm" id="dept-pack-btn" title="Share or import a Department Pack">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              Department Pack
+            </button>
             <button class="btn btn-secondary btn-sm" id="import-lesson-btn" title="Import a shared lesson">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Import
@@ -280,6 +285,9 @@ export function renderList(container) {
 
   (container.querySelector('#new-lesson-btn') || container.querySelector('#new-lesson-empty'))
     ?.addEventListener('click', () => navigate('/lesson-planner'));
+
+  // Department Pack — share/import a bundle with the department
+  container.querySelector('#dept-pack-btn')?.addEventListener('click', () => showDeptPackModal(container));
 
   // Import lesson — file or paste JSON
   container.querySelector('#import-lesson-btn')?.addEventListener('click', () => {
@@ -394,10 +402,11 @@ function renderCards(grid, lessons, classMap) {
               <span style="color:var(--ink-faint);cursor:grab;margin-right:2px;" title="Drag to reorder">&#9776;</span>
               <span class="badge ${s.badge} badge-dot">${s.label}</span>
               ${l.isExemplar ? `<span class="badge badge-violet" title="Sample lesson you can explore or duplicate">&#9733; Exemplar</span>` : ''}
+              ${l.sharedBy ? `<span class="badge badge-violet" title="Shared via Department Pack">From ${esc(l.sharedBy)}</span>` : ''}
               ${cn ? `<span class="badge badge-gray">${esc(cn)}</span>` : ''}
               ${(l.e21ccFocus || []).map(f => `<span class="badge ${e21Badge(f)}">${e21Label(f)}</span>`).join('')}
             </div>
-            <h3 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:2px;">${esc(l.title)}</h3>
+            <h3 style="font-family:var(--font-serif, Georgia);font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:2px;">${esc(l.title)}</h3>
             <p style="font-size:0.8125rem;color:var(--ink-muted);">
               ${ex} exchange${ex !== 1 ? 's' : ''} &middot; ${timeAgo(l.updatedAt)}${hasReflection(l.reflection) ? ' &middot; Has reflection' : ''}
             </p>
@@ -442,6 +451,8 @@ function renderCards(grid, lessons, classMap) {
         plan: original.plan || '',
         e21ccFocus: [...(original.e21ccFocus || [])]
       });
+      // Carry the remix chain onto the copy
+      Store.updateLesson(dup.id, { remixedFrom: { author: original.sharedBy || 'you', title: original.title } });
       showToast(`Duplicated "${original.title}"`, 'success');
       navigate(`/lesson-planner/${dup.id}`);
     });
@@ -527,6 +538,168 @@ function renderCards(grid, lessons, classMap) {
   });
 }
 
+/* ══════════ Department Pack Modal ══════════
+ * File-based collegiality: EXPORT bundles chosen lessons + library
+ * resources into one .json for the school drive / WhatsApp; IMPORT
+ * previews a colleague's pack, then merges it in with fresh ids. */
+
+function showDeptPackModal(container) {
+  const myLessons = Store.getLessons().sort((a, b) => b.updatedAt - a.updatedAt);
+  const stimulus = Store.get('stimulusLibrary') || [];
+  const sources = Store.get('sourceLibrary') || [];
+  const layouts = Store.get('savedLayouts') || [];
+  const uploads = Store.get('knowledgeUploads') || [];
+
+  const extraToggles = [
+    { key: 'stimulus', label: 'Stimulus materials', items: stimulus },
+    { key: 'sources', label: 'Source analyses', items: sources },
+    { key: 'layouts', label: 'Classroom layouts', items: layouts },
+    { key: 'uploads', label: 'Knowledge Base uploads', items: uploads }
+  ];
+
+  const { backdrop, close } = openModal({
+    title: 'Department Pack',
+    width: 560,
+    body: `
+      <div class="tab-group" style="margin-bottom:var(--sp-4);">
+        <button class="tab active" data-pack-tab="export">Export</button>
+        <button class="tab" data-pack-tab="import">Import</button>
+      </div>
+
+      <div id="pack-export-panel">
+        <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">
+          Bundle lessons and resources into a single <strong>.json</strong> file to pass around on the school drive or WhatsApp.
+        </p>
+        <div class="input-group">
+          <label class="input-label">Pack Title</label>
+          <input class="input" id="pack-title" value="Department Pack — ${fmtDate(Date.now())}" />
+        </div>
+        <div class="input-group">
+          <label class="input-label">Lessons (${myLessons.length})</label>
+          ${myLessons.length === 0
+            ? `<p style="font-size:0.75rem;color:var(--ink-faint);">No lessons saved yet.</p>`
+            : `<div style="max-height:180px;overflow-y:auto;border:1px solid var(--border-light);border-radius:var(--radius-md);padding:var(--sp-2) var(--sp-3);display:flex;flex-direction:column;gap:var(--sp-1);">
+                ${myLessons.map(l => `
+                  <label style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;color:var(--ink);cursor:pointer;">
+                    <input type="checkbox" class="pack-lesson" value="${l.id}" checked />
+                    <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(l.title)}</span>
+                    <span class="badge ${(STATUS_MAP[l.status] || STATUS_MAP.draft).badge}" style="flex-shrink:0;">${(STATUS_MAP[l.status] || STATUS_MAP.draft).label}</span>
+                  </label>`).join('')}
+              </div>`}
+        </div>
+        <div class="input-group">
+          <label class="input-label">Also include</label>
+          <div style="display:flex;flex-direction:column;gap:var(--sp-1);">
+            ${extraToggles.map(t => `
+              <label style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;color:${t.items.length ? 'var(--ink)' : 'var(--ink-faint)'};cursor:pointer;">
+                <input type="checkbox" class="pack-extra" value="${t.key}" ${t.items.length ? '' : 'disabled'} />
+                ${t.label} (${t.items.length})
+              </label>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div id="pack-import-panel" style="display:none;">
+        <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">
+          Choose a <strong>.json</strong> Department Pack a colleague shared with you. Everything merges in as drafts — nothing of yours is overwritten.
+        </p>
+        <button class="btn btn-secondary btn-sm" id="pack-file-btn" style="width:100%;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Choose Pack File
+        </button>
+        <div id="pack-import-summary" style="margin-top:var(--sp-4);"></div>
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="pack-export">Export Pack</button>
+      <button class="btn btn-primary" data-action="pack-import" style="display:none;" disabled>Import Pack</button>
+    `
+  });
+
+  const exportPanel = backdrop.querySelector('#pack-export-panel');
+  const importPanel = backdrop.querySelector('#pack-import-panel');
+  const exportBtn = backdrop.querySelector('[data-action="pack-export"]');
+  const importBtn = backdrop.querySelector('[data-action="pack-import"]');
+  let pendingImport = null;
+
+  backdrop.querySelectorAll('[data-pack-tab]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      backdrop.querySelectorAll('[data-pack-tab]').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const isExport = tab.dataset.packTab === 'export';
+      exportPanel.style.display = isExport ? '' : 'none';
+      importPanel.style.display = isExport ? 'none' : '';
+      exportBtn.style.display = isExport ? '' : 'none';
+      importBtn.style.display = isExport ? 'none' : '';
+    });
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+
+  exportBtn.addEventListener('click', () => {
+    const ids = new Set([...backdrop.querySelectorAll('.pack-lesson:checked')].map(cb => cb.value));
+    const extras = new Set([...backdrop.querySelectorAll('.pack-extra:checked')].map(cb => cb.value));
+    const selection = {
+      title: backdrop.querySelector('#pack-title').value.trim(),
+      lessons: myLessons.filter(l => ids.has(l.id)),
+      stimulus: extras.has('stimulus') ? stimulus : [],
+      sources: extras.has('sources') ? sources : [],
+      layouts: extras.has('layouts') ? layouts : [],
+      uploads: extras.has('uploads') ? uploads : []
+    };
+    const count = selection.lessons.length + selection.stimulus.length + selection.sources.length
+      + selection.layouts.length + selection.uploads.length;
+    if (count === 0) { showToast('Select at least one lesson or resource to share.', 'danger'); return; }
+    exportPack(selection);
+    showToast('Pack exported! Drop it on the school drive or WhatsApp it to your department.', 'success');
+    close();
+  });
+
+  // Import: choose file → preview summary → confirm merge
+  backdrop.querySelector('#pack-file-btn').addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const summaryEl = backdrop.querySelector('#pack-import-summary');
+        try {
+          pendingImport = importPack(reader.result);
+          const { summary } = pendingImport;
+          summaryEl.innerHTML = `
+            <div style="background:var(--marker-wash,#FFF6BF);border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);font-size:0.8125rem;color:var(--ink);line-height:1.6;">
+              <strong style="font-family:var(--font-serif, Georgia);">${esc(summary.title)}</strong><br>
+              From ${esc(summary.sharedBy)}: ${esc(summary.breakdown)}${summary.sharedAt ? ` &middot; shared ${fmtDate(summary.sharedAt)}` : ''}
+            </div>`;
+          importBtn.disabled = false;
+        } catch (err) {
+          pendingImport = null;
+          importBtn.disabled = true;
+          summaryEl.innerHTML = `<p style="font-size:0.8125rem;color:var(--danger);">${esc(err.message || 'Invalid pack file.')}</p>`;
+        }
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  });
+
+  importBtn.addEventListener('click', () => {
+    if (!pendingImport) return;
+    const result = pendingImport.apply();
+    if (result.addedTotal === 0) {
+      showToast('Everything in this pack is already in your library.');
+    } else {
+      showToast(`Merged ${result.breakdown} from ${pendingImport.summary.sharedBy}${result.skipped ? ` (${result.skipped} duplicate${result.skipped !== 1 ? 's' : ''} skipped)` : ''}`, 'success');
+    }
+    close();
+    renderList(container);
+  });
+}
+
 /* ══════════ Lesson Detail ══════════ */
 
 export function renderDetail(container, { id }) {
@@ -552,11 +725,13 @@ export function renderDetail(container, { id }) {
         <div style="margin-bottom:var(--sp-6);">
           <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-2);flex-wrap:wrap;">
             <span class="badge ${s.badge} badge-dot">${s.label}</span>
+            ${lesson.sharedBy ? `<span class="badge badge-violet" title="Shared via Department Pack">From ${esc(lesson.sharedBy)}</span>` : ''}
             ${cn ? `<span class="badge badge-gray">${esc(cn)}</span>` : ''}
             ${(lesson.e21ccFocus || []).map(f => `<span class="badge ${e21Badge(f)}">${e21Label(f)}</span>`).join('')}
           </div>
-          <h1 class="page-title">${esc(lesson.title)}</h1>
+          <h1 class="page-title" style="font-family:var(--font-serif, Georgia);">${esc(lesson.title)}</h1>
           <p class="page-subtitle">Created ${fmtDate(lesson.createdAt)} &middot; Updated ${fmtDate(lesson.updatedAt)}</p>
+          ${lesson.remixedFrom?.author ? `<p style="font-size:0.75rem;color:var(--ink-muted);font-style:italic;margin-top:2px;">${lesson.remixedFrom.author === 'you' ? 'Remixed from your original' : `Remixed from ${esc(lesson.remixedFrom.author)}'s original`}</p>` : ''}
         </div>
 
         ${lifecycleStepperHTML(lesson)}
@@ -723,6 +898,8 @@ export function renderDetail(container, { id }) {
       plan: lesson.plan || '',
       e21ccFocus: [...(lesson.e21ccFocus || [])]
     });
+    // Carry the remix chain onto the copy
+    Store.updateLesson(dup.id, { remixedFrom: { author: lesson.sharedBy || 'you', title: lesson.title } });
     showToast(`Duplicated "${lesson.title}"`, 'success');
     navigate(`/lesson-planner/${dup.id}`);
   });
