@@ -4,7 +4,7 @@
  * Classes list + class detail with students and notes.
  */
 
-import { Store } from '../state.js';
+import { Store, generateId } from '../state.js';
 import { navigate } from '../router.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { showToast } from '../components/toast.js';
@@ -188,6 +188,11 @@ export function renderDetail(container, { id }) {
 
   let activeTab = 'students';
 
+  // Quick Capture state — survives re-renders within this detail view
+  let qcOpen = false;
+  let qcDim = null;
+  let qcLevels = {}; // studentId -> tapped level (only levels the teacher touched)
+
   function renderInner() {
     const freshCls = Store.getClass(id);
     if (!freshCls) return;
@@ -230,6 +235,12 @@ export function renderDetail(container, { id }) {
               <div class="stat-value">${Store.getLessonsForClass(id).length}</div>
             </div>
           </div>
+
+          <!-- Class Portrait -->
+          ${renderPortraitCard(Store.getClassPortrait(id))}
+
+          <!-- Quick Capture -->
+          ${students.length > 0 ? renderQuickCaptureCard(students, qcOpen, qcDim, qcLevels) : ''}
 
           <!-- Quick Actions for this class -->
           <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-6);flex-wrap:wrap;">
@@ -293,6 +304,93 @@ export function renderDetail(container, { id }) {
       sessionStorage.setItem('cocher_plan_class_subject', freshCls.subject || '');
       sessionStorage.setItem('cocher_plan_class_level', freshCls.level || '');
       navigate('/lesson-planner');
+    });
+
+    // Class Portrait CTA — same handoff keys the lesson planner reads
+    container.querySelector('#portrait-plan-btn')?.addEventListener('click', () => {
+      sessionStorage.setItem('cocher_plan_class_id', freshCls.id);
+      sessionStorage.setItem('cocher_plan_class_name', freshCls.name);
+      sessionStorage.setItem('cocher_plan_class_subject', freshCls.subject || '');
+      sessionStorage.setItem('cocher_plan_class_level', freshCls.level || '');
+      navigate('/lesson-planner');
+    });
+
+    // Quick Capture
+    container.querySelector('#qc-toggle')?.addEventListener('click', () => {
+      qcOpen = !qcOpen;
+      if (!qcOpen) { qcDim = null; qcLevels = {}; }
+      renderInner();
+    });
+
+    container.querySelectorAll('.qc-dim-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        qcDim = chip.dataset.dim;
+        qcLevels = {};
+        renderInner();
+      });
+    });
+
+    container.querySelectorAll('.qc-student-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!qcDim) return;
+        const s = students.find(x => x.id === btn.dataset.studentId);
+        if (!s) return;
+        const saved = s.e21cc?.[qcDim] || 'developing';
+        const current = qcLevels[s.id] || saved;
+        const order = E21CC_LEVELS.map(l => l.key);
+        const next = order[(order.indexOf(current) + 1) % order.length];
+        qcLevels[s.id] = next;
+        // Update the tapped button in place — no full re-render per tap
+        const meta = levelMeta(next);
+        const changed = next !== saved;
+        btn.style.borderColor = changed ? meta.color : 'var(--border)';
+        btn.style.background = changed ? 'var(--marker-wash, #FFF9C9)' : 'transparent';
+        const badge = btn.querySelector('.qc-level-badge');
+        if (badge) {
+          badge.textContent = meta.short;
+          badge.style.background = meta.color + '15';
+          badge.style.color = meta.color;
+        }
+      });
+    });
+
+    container.querySelector('#qc-save-btn')?.addEventListener('click', () => {
+      if (!qcDim) return;
+      const dimMeta = E21CC_DIMS.find(d => d.key === qcDim);
+      const fresh = Store.getClass(id);
+      if (!fresh) return;
+      const now = Date.now();
+      let changedCount = 0;
+      const updatedStudents = (fresh.students || []).map(s => {
+        const next = qcLevels[s.id];
+        const saved = s.e21cc?.[qcDim] || 'developing';
+        if (!next || next === saved) return s;
+        changedCount++;
+        const newE21cc = { ...(s.e21cc || {}) };
+        E21CC_DIMS.forEach(d => { if (!newE21cc[d.key]) newE21cc[d.key] = 'developing'; });
+        newE21cc[qcDim] = next;
+        // History entries are full level snapshots (see Batch Update above)
+        const history = [...(s.e21ccHistory || [])];
+        history.push({ ts: now, ...newE21cc });
+        if (history.length > 20) history.splice(0, history.length - 20);
+        // One observation per changed student per save
+        const observations = [...(s.observations || []), {
+          id: generateId(),
+          text: `Quick capture: ${dimMeta?.label || qcDim} updated`,
+          tags: [qcDim],
+          ts: now
+        }];
+        return { ...s, e21cc: newE21cc, e21ccHistory: history, observations };
+      });
+      if (changedCount === 0) {
+        showToast('No level changes to save.', 'danger');
+        return;
+      }
+      Store.updateClass(id, { students: updatedStudents });
+      showToast(`Quick capture saved — ${changedCount} student${changedCount !== 1 ? 's' : ''} updated`, 'success');
+      qcDim = null;
+      qcLevels = {};
+      renderInner();
     });
 
     // Batch E21CC update
@@ -511,6 +609,7 @@ export function renderDetail(container, { id }) {
           </tr>`;
         }).join('');
         const pw = window.open('', '_blank');
+        if (!pw) { showToast('Pop-up blocked — allow pop-ups for this site to print.', 'danger'); return; }
         pw.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(fc.name)} — E21CC Trends</title>
           <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.7;font-size:14px}
           h1{font-size:18px;border-bottom:2px solid #000c53;padding-bottom:8px;color:#000c53}
@@ -529,6 +628,98 @@ export function renderDetail(container, { id }) {
   }
 
   renderInner();
+}
+
+/* ── Class Portrait Card ── */
+function renderPortraitCard(p) {
+  if (!p) return '';
+  const dimLabel = k => E21CC_DIMS.find(d => d.key === k)?.label || k;
+  const total = p.studentCount;
+
+  const bars = total === 0 ? '' : E21CC_DIMS.map(d => {
+    const counts = p.e21ccDistribution[d.key] || {};
+    const segments = E21CC_LEVELS.map(lv => {
+      const n = counts[lv.key] || 0;
+      if (!n) return '';
+      return `<div title="${lv.label}: ${n}" style="width:${(n / total) * 100}%;background:${lv.color};"></div>`;
+    }).join('');
+    return `
+      <div style="display:flex;align-items:center;gap:var(--sp-2);">
+        <span style="width:36px;flex-shrink:0;font-size:0.6875rem;font-weight:600;color:${d.color};" title="${d.label}">${d.short}</span>
+        <div style="flex:1;display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--bg-subtle);">${segments}</div>
+      </div>`;
+  }).join('');
+
+  const legend = `
+    <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;margin-top:var(--sp-2);">
+      ${E21CC_LEVELS.map(lv => `<span style="display:flex;align-items:center;gap:4px;font-size:0.6875rem;color:var(--ink-muted);"><span style="width:8px;height:8px;border-radius:2px;background:${lv.color};"></span>${lv.label}</span>`).join('')}
+    </div>`;
+
+  const weakSentence = total > 0 && p.weakestDims.length
+    ? `Most students are still developing in ${p.weakestDims.map(dimLabel).join(' and ')}.` : '';
+  const strongSentence = total > 0 && p.strongestDims.length
+    ? `The class is furthest ahead in ${p.strongestDims.map(dimLabel).join(' and ')}.` : '';
+  const trendSentence = p.engagementTrend === 'rising' ? 'Engagement across recent lessons is rising.'
+    : p.engagementTrend === 'dipping' ? 'Engagement across recent lessons is dipping — worth designing for re-engagement.'
+    : p.engagementTrend === 'steady' ? 'Engagement across recent lessons is holding steady.'
+    : 'Not enough lesson reflections yet to read an engagement trend.';
+
+  return `
+    <div class="card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #FFE200);">
+      <h3 style="font-family:var(--font-serif, Georgia, serif);font-size:1.125rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-1);">Class Portrait</h3>
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);">Who this class is right now — so every lesson starts from the learners.</p>
+      ${total === 0 ? `
+        <p style="font-size:0.8125rem;color:var(--ink-faint);font-style:italic;margin-bottom:var(--sp-4);">Add students to build this class's portrait.</p>
+      ` : `
+        <div style="display:flex;flex-direction:column;gap:6px;">${bars}</div>
+        ${legend}
+        <div style="font-family:var(--font-serif, Georgia, serif);font-size:0.875rem;line-height:1.7;margin:var(--sp-4) 0;">
+          ${weakSentence ? `<p style="color:var(--redpen, #C94F4F);">${escapeHtml(weakSentence)}</p>` : ''}
+          ${strongSentence ? `<p style="color:var(--ink-secondary);">${escapeHtml(strongSentence)}</p>` : ''}
+          <p style="color:var(--ink-secondary);">${escapeHtml(trendSentence)}</p>
+        </div>
+      `}
+      <button class="btn btn-primary" id="portrait-plan-btn">Design a lesson for this class &rarr;</button>
+    </div>`;
+}
+
+/* ── Quick Capture Card ── */
+function renderQuickCaptureCard(students, open, dim, levels) {
+  return `
+    <div class="card" style="margin-bottom:var(--sp-6);">
+      <button id="qc-toggle" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;cursor:pointer;padding:0;text-align:left;">
+        <span style="font-family:var(--font-serif, Georgia, serif);font-size:1rem;font-weight:600;color:var(--ink);">Quick Capture</span>
+        <span style="font-size:0.75rem;color:var(--ink-muted);">${open ? 'Hide &#9652;' : 'Open &#9662;'}</span>
+      </button>
+      ${open ? `
+        <div style="margin-top:var(--sp-4);">
+          <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">Pick a dimension, then tap a student to cycle their level. Only changed students are saved.</p>
+          <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-4);">
+            ${E21CC_DIMS.map(d => `
+              <button class="qc-dim-chip" data-dim="${d.key}" style="padding:4px 10px;border-radius:var(--radius-full, 999px);font-size:0.75rem;font-weight:600;cursor:pointer;border:2px solid ${dim === d.key ? d.color : 'var(--border)'};background:${dim === d.key ? d.color + '15' : 'transparent'};color:${dim === d.key ? d.color : 'var(--ink-muted)'};transition:all 0.15s;">${d.label}</button>
+            `).join('')}
+          </div>
+          ${dim ? `
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--sp-2);margin-bottom:var(--sp-4);">
+              ${students.map(s => {
+                const saved = s.e21cc?.[dim] || 'developing';
+                const current = levels[s.id] || saved;
+                const meta = levelMeta(current);
+                const changed = current !== saved;
+                return `
+                <button class="qc-student-btn" data-student-id="${s.id}" title="Tap to cycle level" style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);padding:6px 10px;border-radius:var(--radius-md);border:1px solid ${changed ? meta.color : 'var(--border)'};background:${changed ? 'var(--marker-wash, #FFF9C9)' : 'transparent'};cursor:pointer;text-align:left;transition:all 0.15s;">
+                  <span style="font-size:0.75rem;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.name)}</span>
+                  <span class="qc-level-badge" style="padding:2px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${meta.color}15;color:${meta.color};flex-shrink:0;">${meta.short}</span>
+                </button>`;
+              }).join('')}
+            </div>
+            <div style="display:flex;justify-content:flex-end;">
+              <button class="btn btn-primary btn-sm" id="qc-save-btn">Save Quick Capture</button>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
+    </div>`;
 }
 
 /* ── Student Tab ── */
@@ -1017,6 +1208,7 @@ function showBatchE21CCModal(classId, onUpdate) {
     }
 
     const freshCls = Store.getClass(classId);
+    if (!freshCls) { showToast('Class no longer exists.', 'danger'); close(); return; }
     const now = Date.now();
     const updatedStudents = (freshCls.students || []).map(s => {
       const newE21cc = { ...(s.e21cc || {}) };
@@ -1260,7 +1452,7 @@ async function showParentDigestModal(cls) {
 
     const formatMap = {
       whatsapp: 'Plain text suitable for WhatsApp or SMS. Use line breaks, emojis sparingly, and keep it under 300 words. No HTML.',
-      email: 'Structured HTML email format with a greeting, sections (What We Learned, Looking Ahead, How to Help at Home), and a sign-off. Keep it professional but warm.',
+      email: 'Structured email in MARKDOWN (headings, bold, lists — no HTML tags) with a greeting, sections (What We Learned, Looking Ahead, How to Help at Home), and a sign-off. Keep it professional but warm.',
       pg: 'Parents Gateway format — concise, 150 words max, no HTML, no emojis. Official MOE tone.'
     };
 

@@ -10,6 +10,8 @@ import { navigate } from '../router.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { showToast } from '../components/toast.js';
 import { createFileUploadZone } from '../components/pdf-upload.js';
+import { sendChat } from '../api.js';
+import { md } from '../utils/markdown.js';
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function fmtDate(ts) { return new Date(ts).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' }); }
@@ -47,6 +49,125 @@ const CATEGORY_LABELS = {
   other: 'Other'
 };
 
+/* ══════════ My Practice (Teacher Growth Engine) ══════════ */
+
+const PRACTICE_COACH_PROMPT = `You are a teacher-development coach. Frame your analysis with Duckworth's deliberate-practice principles (goals just beyond current ability, focused effort, immediate feedback, reflective repetition) and Hattie's Visible Learning evidence (e.g. teacher clarity d=0.75, feedback d=0.70). Be concise and concrete — quote or reference the teacher's own entries.
+
+Respond in markdown with exactly this structure:
+### Strengths
+Two bullet points, each naming a strength with evidence from the entries.
+### Growth edge
+One short paragraph naming the single most promising area to work on.
+### Suggested micro-goal
+One sentence — a specific, observable action the teacher can attempt in their next 2 lessons. End your response with a final line formatted exactly as:
+MICRO-GOAL: <that one sentence>`;
+
+// Kept across re-renders this session so the profile survives goal changes
+let practiceProfileMd = null;
+let practiceGoalSuggestion = '';
+
+function renderPracticeProfile() {
+  return `
+    <div style="border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--sp-4);margin-bottom:var(--sp-3);">
+      <div style="font-size:0.8125rem;line-height:1.7;color:var(--ink-secondary);">${md(practiceProfileMd)}</div>
+      ${!Store.getPracticeGoal() && practiceGoalSuggestion ? `
+        <div style="display:flex;justify-content:flex-end;margin-top:var(--sp-3);">
+          <button class="btn btn-secondary btn-sm" id="practice-set-goal-btn">Set as my goal</button>
+        </div>
+      ` : ''}
+    </div>`;
+}
+
+function renderPracticeSection() {
+  const log = Store.getPracticeLog();
+  const goal = Store.getPracticeGoal();
+  const last = log[log.length - 1];
+  return `
+    <div class="card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #FFE200);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-2);">
+        <h3 style="font-family:var(--font-serif, Georgia, serif);font-size:1.125rem;font-weight:600;color:var(--ink);">My Practice</h3>
+        <span class="badge badge-gray">${log.length} entr${log.length === 1 ? 'y' : 'ies'}${last ? ` &middot; last ${fmtDate(last.createdAt)}` : ''}</span>
+      </div>
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">Every lesson reflection, rehearsal debrief and capture feeds this record of your teaching practice.</p>
+
+      ${goal ? `
+        <div style="background:var(--marker-wash, #FFF9C9);border-left:3px solid var(--marker, #FFE200);border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3);">
+          <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-muted);margin-bottom:2px;">Current practice goal &middot; set ${fmtDate(goal.createdAt)}</div>
+          <div style="font-family:var(--font-serif, Georgia, serif);font-size:0.9375rem;color:var(--ink);line-height:1.6;">${esc(goal.text)}</div>
+          <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-2);">
+            <button class="btn btn-secondary btn-sm" id="practice-goal-achieved-btn">Mark achieved</button>
+            <button class="btn btn-ghost btn-sm" id="practice-goal-change-btn">Change goal</button>
+          </div>
+        </div>
+      ` : ''}
+
+      ${log.length === 0 ? `
+        <p style="font-size:0.8125rem;color:var(--ink-faint);font-style:italic;margin-bottom:var(--sp-3);">No practice entries yet — save a lesson reflection or run a rehearsal to start building your profile.</p>
+      ` : `
+        <button class="btn btn-primary btn-sm" id="practice-profile-btn" style="margin-bottom:var(--sp-3);">Generate my practice profile</button>
+      `}
+      <div id="practice-profile-output">${practiceProfileMd ? renderPracticeProfile() : ''}</div>
+      <div id="practice-mirror-slot" style="margin-top:var(--sp-3);padding:var(--sp-3);border:1px dashed var(--border);border-radius:var(--radius-md);font-size:0.75rem;color:var(--ink-faint);font-style:italic;">Ideology mirror coming after your next few plans.</div>
+    </div>`;
+}
+
+function bindSetGoalBtn(container) {
+  container.querySelector('#practice-set-goal-btn')?.addEventListener('click', () => {
+    Store.setPracticeGoal({ text: practiceGoalSuggestion, focus: '', createdAt: Date.now() });
+    showToast('Practice goal set!', 'success');
+    render(container);
+  });
+}
+
+function wirePracticeSection(container) {
+  container.querySelector('#practice-profile-btn')?.addEventListener('click', async () => {
+    const btn = container.querySelector('#practice-profile-btn');
+    const out = container.querySelector('#practice-profile-output');
+    const entries = Store.getPracticeLog().slice(-12);
+    if (entries.length === 0 || !btn || !out) return;
+    btn.disabled = true;
+    out.innerHTML = '<div class="chat-typing" style="padding:var(--sp-3) 0;">Reading your practice log...</div>';
+    const input = entries.map(e => {
+      const where = e.lessonTitle ? ` — ${e.lessonTitle}` : '';
+      return `- [${e.source}, ${fmtDate(e.createdAt)}${where}] ${String(e.text || '').replace(/\s+/g, ' ').slice(0, 400)}`;
+    }).join('\n');
+    try {
+      const response = await sendChat(
+        [{ role: 'user', content: `Here are my last ${entries.length} practice entries (lesson reflections, rehearsal debriefs, captures):\n\n${input}` }],
+        { systemPrompt: PRACTICE_COACH_PROMPT, temperature: 0.6, maxTokens: 1200, trackLabel: 'practice_profile' }
+      );
+      practiceProfileMd = response;
+      const match = response.match(/MICRO-GOAL:\s*(.+)/i);
+      practiceGoalSuggestion = (match ? match[1] : (response.trim().split('\n').filter(l => l.trim()).pop() || ''))
+        .replace(/[*_#>`]/g, '').trim();
+      out.innerHTML = renderPracticeProfile();
+      bindSetGoalBtn(container);
+    } catch (err) {
+      out.innerHTML = '';
+      showToast(err.message, 'danger');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  container.querySelector('#practice-goal-achieved-btn')?.addEventListener('click', () => {
+    const goal = Store.getPracticeGoal();
+    if (!goal) return;
+    Store.addPracticeEntry({ source: 'capture', lessonTitle: '', classId: null, text: `Goal achieved: ${goal.text}` });
+    Store.setPracticeGoal(null);
+    showToast('Goal achieved — logged to your practice record!', 'success');
+    render(container);
+  });
+
+  container.querySelector('#practice-goal-change-btn')?.addEventListener('click', () => {
+    Store.setPracticeGoal(null);
+    showToast('Goal cleared — generate a new profile to set another.');
+    render(container);
+  });
+
+  bindSetGoalBtn(container);
+}
+
 /* ══════════ Main View ══════════ */
 
 export function render(container) {
@@ -66,6 +187,8 @@ export function render(container) {
             New Folder
           </button>
         </div>
+
+        ${renderPracticeSection()}
 
         ${lessonReflections.length > 0 ? `
           <div class="card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--accent);">
@@ -110,6 +233,8 @@ export function render(container) {
   `;
 
   // Handlers
+  wirePracticeSection(container);
+
   (container.querySelector('#new-folder-btn') || container.querySelector('#new-folder-empty'))
     ?.addEventListener('click', () => showNewFolderModal(container));
 
