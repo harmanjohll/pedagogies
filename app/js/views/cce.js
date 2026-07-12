@@ -190,6 +190,9 @@ Be sharp and concise. Use bullet points. Give options where possible.
 ### Lesson Overview
 Big Idea | Values | SEL | Content Area | Level | Format (one line each, as bullets)
 
+### Timing
+One line: a timing budget for a single 30-min CCE period covering hook, scenario, questions, and reflection (e.g. "Hook 3 min · Scenario 3 min · Questions 15 min · Reflection 5 min · buffer 4 min"). Adapt the split to the discussion format if it genuinely needs it (e.g. Four Corners needs more movement time than Circle Structure), but the total must stay realistic for one period.
+
 ### Hook Options (pick 2-3)
 Short, punchy openers — 1-2 sentences each. Scenario, video prompt, news headline, or provocative question.
 
@@ -818,12 +821,13 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
         const id = btn.dataset.id;
         const discussion = getSavedDiscussions().find(d => d.id === id);
         if (!discussion) return;
-        openModal({
+        const { backdrop, close } = openModal({
           title: discussion.title || 'Discussion',
           width: 720,
           body: `<div style="font-size:0.875rem;line-height:1.7;color:var(--ink);">${renderMarkdown(discussion.content || '')}</div>`,
           footer: `<button class="btn btn-secondary" data-action="cancel">Close</button>`
         });
+        backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
       });
     });
 
