@@ -4,6 +4,11 @@
  * Context-aware landing page: "What would you like to do?"
  * Surfaces smart suggestions, admin tasks, and recent lessons.
  * Customisable widget system with show/hide, collapse, reorder, and pinned links.
+ *
+ * Two layouts, chosen by prefs.layoutStyle (written by Settings, read here):
+ *  - 'calm' (default): serif greeting, quiet Up-Next card, day ribbon,
+ *    lessons/insights panels, and a "More" toggle hiding the widget grid.
+ *  - 'classic': the original greeting card + full widget grid.
  */
 
 import { Store } from '../state.js';
@@ -63,7 +68,11 @@ function getDashPrefs() {
         pinnedLinks: p.pinnedLinks || [],
         defaultView: p.defaultView || 'full',
         widgetNames: p.widgetNames || {},
-        widgetSizes: p.widgetSizes || {}
+        widgetSizes: p.widgetSizes || {},
+        /* Layout style is WRITTEN by the Settings view; the dashboard only
+         * reads it. 'calm' is the default when unset. */
+        layoutStyle: p.layoutStyle || 'calm',
+        calmMoreOpen: !!p.calmMoreOpen
       };
     }
   } catch {}
@@ -74,7 +83,9 @@ function getDashPrefs() {
     pinnedLinks: [],
     defaultView: 'full',
     widgetNames: {},
-    widgetSizes: {}
+    widgetSizes: {},
+    layoutStyle: 'calm',
+    calmMoreOpen: false
   };
 }
 
@@ -1195,7 +1206,9 @@ function showCustomiseModal(container) {
       pinnedLinks: [],
       defaultView: 'full',
       widgetNames: {},
-      widgetSizes: {}
+      widgetSizes: {},
+      layoutStyle: prefs.layoutStyle, // owned by Settings; never reset here
+      calmMoreOpen: false
     });
     overlay.remove();
     render(container);
@@ -1244,7 +1257,9 @@ function showCustomiseModal(container) {
       pinnedLinks: pins,
       defaultView: viewMode,
       widgetNames: names,
-      widgetSizes: prefs.widgetSizes || {}
+      widgetSizes: prefs.widgetSizes || {},
+      layoutStyle: prefs.layoutStyle, // owned by Settings; pass through untouched
+      calmMoreOpen: prefs.calmMoreOpen
     });
     overlay.remove();
     render(container);
@@ -1304,18 +1319,40 @@ function fmtEventDate(raw) {
  * needing reflection → drafts), most recently touched wins ties. */
 const STAGE_PRIORITY = { ready: 0, rehearsed: 1, taught: 2, draft: 3 };
 
-function buildUpNextHero(lessons, classes) {
+function buildUpNextHero(lessons, classes, calm = false) {
+  /* calm=true swaps the navy gradient for a quiet white card with a
+   * highlighter-yellow spine and a serif title (navy CTA, yellow text).
+   * calm=false (classic) emits the original markup byte-for-byte. */
+  const cardStyle = calm
+    ? 'margin-bottom:var(--sp-5);padding:var(--sp-5);cursor:pointer;background:var(--surface,#fff);color:var(--ink);border:1px solid var(--border-light,#e5e7eb);border-left:4px solid var(--marker,#FFE200);'
+    : 'margin-bottom:var(--sp-5);padding:var(--sp-5);cursor:pointer;background:linear-gradient(135deg,var(--brand-navy,#000C53),#1e3a8a);color:#fff;border:none;';
+  const kickerStyle = calm
+    ? 'font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-muted);margin-bottom:4px;'
+    : 'font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.7;margin-bottom:4px;';
+  const subStyle = calm
+    ? 'font-size:0.8125rem;color:var(--ink-muted);margin-top:2px;'
+    : 'font-size:0.8125rem;opacity:0.75;margin-top:2px;';
+  const ctaStyle = calm
+    ? 'background:var(--brand-navy,#000C53);color:var(--brand-yellow,#FFE200);font-weight:700;border:none;'
+    : 'background:var(--brand-yellow,#FFE200);color:var(--brand-navy,#000C53);font-weight:700;border:none;';
+  const titlePlain = calm
+    ? 'font-family:var(--font-serif, Georgia, serif);font-size:1.25rem;font-weight:600;'
+    : 'font-size:1rem;font-weight:600;';
+  const titleTrunc = calm
+    ? 'font-family:var(--font-serif, Georgia, serif);font-size:1.25rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
+    : 'font-size:1rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+
   const active = (lessons || []).filter(l => lessonStage(l) !== 'reflected');
   if (active.length === 0) {
     return `
-      <div class="card up-next-hero" data-hero-route="/lesson-planner" style="margin-bottom:var(--sp-5);padding:var(--sp-5);cursor:pointer;background:linear-gradient(135deg,var(--brand-navy,#000C53),#1e3a8a);color:#fff;border:none;">
+      <div class="card up-next-hero" data-hero-route="/lesson-planner" style="${cardStyle}">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;">
           <div>
-            <div style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.7;margin-bottom:4px;">Up next</div>
-            <div style="font-size:1rem;font-weight:600;">Design your first lesson with Co-Cher</div>
-            <div style="font-size:0.8125rem;opacity:0.75;margin-top:2px;">Chat through an idea and the plan builds itself alongside.</div>
+            <div style="${kickerStyle}">Up next</div>
+            <div style="${titlePlain}">Design your first lesson with Co-Cher</div>
+            <div style="${subStyle}">Chat through an idea and the plan builds itself alongside.</div>
           </div>
-          <span class="btn btn-sm" style="background:var(--brand-yellow,#FFE200);color:var(--brand-navy,#000C53);font-weight:700;border:none;">Open Lesson Planner &rarr;</span>
+          <span class="btn btn-sm" style="${ctaStyle}">Open Lesson Planner &rarr;</span>
         </div>
       </div>`;
   }
@@ -1330,16 +1367,187 @@ function buildUpNextHero(lessons, classes) {
   const next = lessonNextStep(pick);
   const cls = pick.classId ? (classes || []).find(c => c.id === pick.classId) : null;
   return `
-    <div class="card up-next-hero" data-hero-route="/lessons/${pick.id}" style="margin-bottom:var(--sp-5);padding:var(--sp-5);cursor:pointer;background:linear-gradient(135deg,var(--brand-navy,#000C53),#1e3a8a);color:#fff;border:none;">
+    <div class="card up-next-hero" data-hero-route="/lessons/${pick.id}" style="${cardStyle}">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;">
         <div style="min-width:0;">
-          <div style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.7;margin-bottom:4px;">Up next &middot; ${stageLabel}</div>
-          <div style="font-size:1rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(pick.title || 'Untitled Lesson')}</div>
-          <div style="font-size:0.8125rem;opacity:0.75;margin-top:2px;">${cls ? escapeHtml(cls.name) + ' &middot; ' : ''}${active.length > 1 ? `${active.length - 1} more lesson${active.length > 2 ? 's' : ''} in the pipeline` : 'Your only lesson in progress'}</div>
+          <div style="${kickerStyle}">Up next &middot; ${stageLabel}</div>
+          <div style="${titleTrunc}">${escapeHtml(pick.title || 'Untitled Lesson')}</div>
+          <div style="${subStyle}">${cls ? escapeHtml(cls.name) + ' &middot; ' : ''}${active.length > 1 ? `${active.length - 1} more lesson${active.length > 2 ? 's' : ''} in the pipeline` : 'Your only lesson in progress'}</div>
         </div>
-        <button class="btn btn-sm" id="up-next-cta" data-lesson-id="${pick.id}" data-action="${next.action}" style="background:var(--brand-yellow,#FFE200);color:var(--brand-navy,#000C53);font-weight:700;border:none;white-space:nowrap;">${next.label}</button>
+        <button class="btn btn-sm" id="up-next-cta" data-lesson-id="${pick.id}" data-action="${next.action}" style="${ctaStyle}white-space:nowrap;">${next.label}</button>
       </div>
     </div>`;
+}
+
+/* ═══════════════════════ CALM LAYOUT (default) ═══════════════════════
+ * A quieter, editorial dashboard: serif greeting, restyled Up-Next hero,
+ * a day ribbon of periods, two panels (this week's lessons / worth a look),
+ * and a "More" toggle that reveals the full classic widget grid.
+ * The classic layout path below is untouched and selected via
+ * prefs.layoutStyle === 'classic'. */
+
+/* Scoped styles for the calm layout. Injected once inside the calm markup
+ * (style elements added via innerHTML are applied by browsers). */
+const CALM_STYLE_BLOCK = `
+  <style>
+    .calm-two-col { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:var(--sp-5); align-items:start; }
+    @media (max-width: 760px) { .calm-two-col { grid-template-columns:minmax(0,1fr); } }
+    .calm-panel-label { font-variant:small-caps; letter-spacing:0.08em; font-size:0.875rem; font-weight:700; color:var(--ink-muted); margin-bottom:var(--sp-3); }
+    .calm-hl { background:linear-gradient(transparent 55%, var(--marker-wash,#FFF9C9) 55%); padding:0 2px; }
+    .calm-lesson-row:hover { background:var(--bg-subtle,#f7f7f8); }
+    .calm-lesson-row:last-child { border-bottom:none !important; }
+    /* Shrink the shared status banner markup without touching its builder */
+    .calm-status-banner > div { padding:var(--sp-3) var(--sp-4) !important; margin-bottom:var(--sp-5) !important; }
+    .calm-status-banner div { font-size:0.8125rem !important; }
+    .calm-status-banner > div > div:first-child { width:32px !important; height:32px !important; }
+    .calm-status-banner svg { width:16px; height:16px; }
+  </style>`;
+
+/* First line of the calm greeting: day- and time-aware, e.g.
+ * "Friday, before Period 3." Falls back to a plain greeting on weekends
+ * or non-teaching weeks. */
+function calmHeadline(firstName) {
+  const pk = getTTPeriodKey();
+  if (!pk) return `${getGreeting()}, ${firstName}.`;
+  const dayFull = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday' }[pk.dayStr] || pk.dayStr;
+  if (pk.mins < 450) return `${dayFull}, before Period 1.`;
+  if (pk.mins >= 910) return `${dayFull}, after school.`;
+  if (pk.period) {
+    // Within 10 minutes of the next period's start, phrase it as "before Pn"
+    const starts = [0, 450, 490, 530, 570, 620, 660, 700, 740, 790, 830, 870];
+    const nextP = pk.period < 11 ? pk.period + 1 : null;
+    if (nextP && starts[nextP] - pk.mins > 0 && starts[nextP] - pk.mins <= 10) {
+      return `${dayFull}, before Period ${nextP}.`;
+    }
+    return `${dayFull}, Period ${pk.period}.`;
+  }
+  return `${getGreeting()}, ${firstName}.`;
+}
+
+/* One clause about lessons needing attention, derived from the lifecycle. */
+function calmLessonAttentionText(lessons) {
+  const active = (lessons || []).filter(l => lessonStage(l) !== 'reflected');
+  const count = (stage) => active.filter(l => lessonStage(l) === stage).length;
+  const ready = count('ready'), taught = count('taught'), drafts = count('draft');
+  if (ready > 0) return ready === 1 ? 'one lesson still needs a rehearsal' : `${ready} lessons still need a rehearsal`;
+  if (taught > 0) return taught === 1 ? 'one lesson is waiting on a reflection' : `${taught} lessons are waiting on a reflection`;
+  if (drafts > 0) return drafts === 1 ? 'one draft is waiting to be finished' : `${drafts} drafts are waiting to be finished`;
+  return 'your lesson pipeline is all clear';
+}
+
+/* Second line of the calm greeting: teaching load today + lesson attention.
+ * Called sync with teacherRow=null for the placeholder, then again once the
+ * async timetable resolves. Plain text (set via textContent). */
+function calmOrientationText(teacherRow, lessons) {
+  const lessonBit = calmLessonAttentionText(lessons);
+  const pk = getTTPeriodKey();
+  if (!pk) return `No school day today — ${lessonBit}.`;
+  if (!teacherRow) return `No timetable found — ${lessonBit}.`;
+  let n = 0;
+  for (let p = 1; p <= 11; p++) {
+    const val = teacherRow[`${pk.weekType}${pk.dayStr}${p}`];
+    if (val && val !== '0') n++;
+  }
+  const teachBit = n === 0 ? 'No teaching periods today'
+    : n === 1 ? '1 teaching period today'
+    : `${n} teaching periods today`;
+  return `${teachBit} — ${lessonBit}.`;
+}
+
+/* Day ribbon: all 11 periods as small cards. Current period gets the
+ * marker wash + NOW tag; past periods are dimmed. Same column parsing as
+ * buildMyTimetable (`${weekType}${dayStr}${p}`). */
+function buildCalmRibbon(teacherRow) {
+  if (!teacherRow) return '';
+  const pk = getTTPeriodKey();
+  if (!pk) return ''; // Weekend / non-teaching week
+  const { dayStr, period, weekType } = pk;
+  const cells = [];
+  for (let p = 1; p <= 11; p++) {
+    const val = teacherRow[`${weekType}${dayStr}${p}`];
+    const hasClass = val && val !== '0';
+    const classCode = hasClass ? (val.split(' / ')[0] || '').trim() : '';
+    const isNow = period === p;
+    const isPast = period !== null && p < period;
+    const nowTag = isNow
+      ? '<span style="margin-left:4px;padding:0 4px;border-radius:3px;background:var(--brand-navy,#000C53);color:var(--brand-yellow,#FFE200);font-size:0.5rem;font-weight:700;vertical-align:1px;">NOW</span>'
+      : '';
+    cells.push(`<div style="flex:0 0 auto;min-width:64px;padding:6px 10px;border:1px solid ${isNow ? 'var(--marker,#FFE200)' : 'var(--border-light,#e5e7eb)'};border-radius:8px;background:${isNow ? 'var(--marker-wash,#FFF9C9)' : 'var(--surface,#fff)'};text-align:center;${isPast ? 'opacity:0.45;' : ''}">
+      <div style="font-size:0.625rem;font-weight:700;color:var(--ink-muted);letter-spacing:0.04em;">P${p}${nowTag}</div>
+      <div style="font-size:0.75rem;font-weight:${hasClass ? '600' : '400'};color:${hasClass ? 'var(--ink)' : 'var(--ink-faint)'};white-space:nowrap;">${hasClass ? escapeHtml(classCode) : 'Free'}</div>
+    </div>`);
+  }
+  return `<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;">${cells.join('')}</div>`;
+}
+
+/* Left panel: up to 5 non-reflected lessons, lifecycle priority then
+ * recency (same STAGE_PRIORITY ordering as the hero). */
+function buildCalmWeekLessons(lessons, classes) {
+  const active = (lessons || []).filter(l => lessonStage(l) !== 'reflected');
+  const rows = [...active].sort((a, b) => {
+    const pa = STAGE_PRIORITY[lessonStage(a)] ?? 4;
+    const pb = STAGE_PRIORITY[lessonStage(b)] ?? 4;
+    if (pa !== pb) return pa - pb;
+    return (b.updatedAt || 0) - (a.updatedAt || 0);
+  }).slice(0, 5);
+  if (rows.length === 0) {
+    return `<div style="font-size:0.8125rem;color:var(--ink-muted);padding:var(--sp-2) 0;">Nothing in flight. <a href="#/lesson-planner" style="color:var(--accent);">Plan a lesson &rarr;</a></div>`;
+  }
+  const stageColors = { draft: '#6b7280', ready: '#2563eb', rehearsed: '#7c3aed', taught: '#d97706' };
+  return rows.map(l => {
+    const stage = lessonStage(l);
+    const stageLabel = (LIFECYCLE_STAGES.find(s => s.key === stage) || {}).label || stage;
+    const cls = l.classId ? (classes || []).find(c => c.id === l.classId) : null;
+    const color = stageColors[stage] || '#6b7280';
+    return `<div class="calm-lesson-row" data-calm-lesson-id="${l.id}" style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-2);border-bottom:1px solid var(--border-light,#eee);border-radius:var(--radius,6px);cursor:pointer;">
+      <div style="flex:1;min-width:0;font-weight:600;font-size:0.875rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.title || 'Untitled Lesson')}</div>
+      ${cls ? `<span class="badge badge-blue" style="flex-shrink:0;font-size:0.625rem;">${escapeHtml(cls.name)}</span>` : ''}
+      <span style="flex-shrink:0;padding:2px 8px;border-radius:999px;font-size:0.625rem;font-weight:700;background:${color}18;color:${color};">${stageLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+/* Right panel: up to 3 short insight lines from real data — no AI calls. */
+function buildCalmWorthALook(classes, lessons) {
+  const items = [];
+
+  // (a) Practice goal, if the Store method exists (may land in a parallel change)
+  const goal = Store.getPracticeGoal?.();
+  if (goal && goal.text) items.push(`Your focus: ${escapeHtml(goal.text)}`);
+
+  // (b) Engagement dip: a class whose last 2 rated reflections are <= 2
+  for (const cls of (classes || [])) {
+    const rated = (lessons || [])
+      .filter(l => l.classId === cls.id && l.reflection && typeof l.reflection === 'object' && (l.reflection.engagement || 0) > 0)
+      .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+    if (rated.length >= 2 && rated[0].reflection.engagement <= 2 && rated[1].reflection.engagement <= 2) {
+      items.push(`${escapeHtml(cls.name)}&rsquo;s engagement dipped two lessons running &mdash; try a different layout?`);
+      break;
+    }
+  }
+
+  // (c) Draft nudge: oldest draft older than 7 days
+  const staleDrafts = (lessons || [])
+    .filter(l => l.status === 'draft')
+    .map(l => ({ l, age: Date.now() - (l.updatedAt || l.createdAt || Date.now()) }))
+    .filter(x => x.age > 7 * 86400000)
+    .sort((a, b) => b.age - a.age);
+  if (staleDrafts.length > 0 && items.length < 3) {
+    const days = Math.floor(staleDrafts[0].age / 86400000);
+    items.push(`&ldquo;${escapeHtml(staleDrafts[0].l.title || 'Untitled')}&rdquo; has been a draft for ${days} days &mdash; finish or archive?`);
+  }
+
+  // (d) Fallback tips to keep the panel from feeling empty
+  const fallbacks = [
+    'A quick reflection right after class captures details you’ll forget by evening.',
+    'Rehearsing a lesson aloud once surfaces timing issues before the students do.',
+    'Pin your most-used tools from the dashboard’s customise menu to save clicks.'
+  ];
+  for (const tip of fallbacks) {
+    if (items.length >= 3) break;
+    items.push(tip);
+  }
+  return items.slice(0, 3);
 }
 
 export function render(container) {
@@ -1690,6 +1898,69 @@ export function render(container) {
     return widgetWrap(wId, getWidgetLabel(wId, prefs), content, prefs);
   }).join('');
 
+  // ── Layout branch: 'calm' (default) vs 'classic' (the original markup) ──
+  const isCalm = prefs.layoutStyle !== 'classic';
+
+  if (isCalm) {
+    const firstName = getFirstName() || 'Cher';
+    const ribbonSkeleton = Array.from({ length: 8 }).map(() =>
+      '<div style="flex:0 0 auto;width:64px;height:46px;border-radius:8px;background:var(--bg-subtle,#f3f4f6);animation:pulse-soft 1.6s ease-in-out infinite;"></div>'
+    ).join('');
+    const worthItems = buildCalmWorthALook(classes, lessons);
+
+    container.innerHTML = `
+      <div class="main-scroll">
+        <div class="page-container">
+          ${CALM_STYLE_BLOCK}
+
+          <!-- Serif greeting (no card) -->
+          <div class="animate-fade-in-up" style="padding:var(--sp-2) 0 var(--sp-5);">
+            <div style="font-family:var(--font-serif, Georgia, serif);font-size:1.5rem;font-weight:600;line-height:1.3;color:var(--ink);">${escapeHtml(calmHeadline(firstName))}</div>
+            <div id="calm-orient" style="margin-top:var(--sp-2);font-size:0.875rem;color:var(--ink-muted);">Checking today&rsquo;s timetable &mdash; ${escapeHtml(calmLessonAttentionText(lessons))}.</div>
+          </div>
+
+          <!-- Up Next hero, calm styling -->
+          ${buildUpNextHero(lessons, classes, true)}
+
+          <!-- Day ribbon (skeleton until the async timetable resolves) -->
+          <div id="calm-ribbon" style="margin-bottom:var(--sp-4);">
+            <div style="display:flex;gap:6px;overflow:hidden;">${ribbonSkeleton}</div>
+          </div>
+
+          <!-- Status banner (kept in calm; shrunk via .calm-status-banner) -->
+          <div id="tt-status-banner" class="calm-status-banner"></div>
+
+          <!-- Two-column: this week's lessons / worth a look -->
+          <div class="calm-two-col" style="margin-bottom:var(--sp-6);">
+            <div class="card" style="padding:var(--sp-4) var(--sp-5);">
+              <div class="calm-panel-label">This week&rsquo;s <span class="calm-hl">lessons</span></div>
+              ${buildCalmWeekLessons(lessons, classes)}
+            </div>
+            <div class="card" style="padding:var(--sp-4) var(--sp-5);">
+              <div class="calm-panel-label">Worth a <span class="calm-hl">look</span></div>
+              ${worthItems.map(t => `
+                <div style="display:flex;gap:var(--sp-2);padding:var(--sp-2) 0;font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;">
+                  <span style="width:7px;height:7px;border-radius:50%;background:var(--marker,#FFE200);border:1px solid var(--border,#d1d5db);margin-top:6px;flex-shrink:0;"></span>
+                  <span>${t}</span>
+                </div>`).join('')}
+            </div>
+          </div>
+
+          <!-- Pinned Links (above More) -->
+          ${renderPinnedLinks(prefs.pinnedLinks)}
+
+          <!-- More: reveals the full classic widget grid below -->
+          <div style="text-align:center;margin:var(--sp-4) 0 var(--sp-5);">
+            <button class="btn btn-ghost btn-sm" id="calm-more-btn" style="padding:6px 18px;border:1px dashed var(--border,#d1d5db);border-radius:var(--radius-full,999px);color:var(--ink-muted);font-size:0.8125rem;">${prefs.calmMoreOpen ? 'Less &#9652;' : 'More &#9662;'}</button>
+          </div>
+          <div id="calm-more-container" style="${prefs.calmMoreOpen ? '' : 'display:none;'}">
+            ${widgetsHTML}
+          </div>
+
+        </div>
+      </div>
+    `;
+  } else {
   container.innerHTML = `
     <div class="main-scroll">
       <div class="page-container">
@@ -1725,10 +1996,28 @@ export function render(container) {
       </div>
     </div>
   `;
+  }
 
   // Customise Dashboard button
   container.querySelector('#customise-dashboard-btn')?.addEventListener('click', () => {
     showCustomiseModal(container);
+  });
+
+  // ── Calm layout wiring (elements absent in classic; all guarded) ──
+  const calmMoreBtn = container.querySelector('#calm-more-btn');
+  const calmMoreContainer = container.querySelector('#calm-more-container');
+  if (calmMoreBtn && calmMoreContainer) {
+    calmMoreBtn.addEventListener('click', () => {
+      const open = calmMoreContainer.style.display === 'none';
+      calmMoreContainer.style.display = open ? '' : 'none';
+      calmMoreBtn.innerHTML = open ? 'Less &#9652;' : 'More &#9662;';
+      const p = getDashPrefs();
+      p.calmMoreOpen = open;
+      saveDashPrefs(p);
+    });
+  }
+  container.querySelectorAll('[data-calm-lesson-id]').forEach(el => {
+    el.addEventListener('click', () => navigate(`/lessons/${el.dataset.calmLessonId}`));
   });
 
   // Up Next hero: card opens the lesson; the CTA jumps straight to the next step
@@ -1908,13 +2197,28 @@ export function render(container) {
     });
   });
 
-  // Async TT schedule card + status banner + My Timetable + Weekly Overview + Prep Checklist
+  // Async TT schedule card + status banner + My Timetable + Weekly Overview
+  // + Prep Checklist (+ calm orientation line and day ribbon)
   (async () => {
     try {
       const user = getCurrentUser();
-      if (!user?.email) return;
-      const [ttData] = await Promise.all([loadTT(), ensureCalendar()]);
-      const teacherRow = findTeacherRow(ttData, user.email);
+      let teacherRow = null;
+      if (user?.email) {
+        const [ttData] = await Promise.all([loadTT(), ensureCalendar()]);
+        teacherRow = findTeacherRow(ttData, user.email);
+      }
+
+      // Calm-only elements (null in classic, so this is a no-op there).
+      // These update even without a teacher row so placeholders resolve.
+      const orientEl = container.querySelector('#calm-orient');
+      if (orientEl) orientEl.textContent = calmOrientationText(teacherRow, lessons);
+      const ribbonEl = container.querySelector('#calm-ribbon');
+      if (ribbonEl) {
+        const ribbonHTML = buildCalmRibbon(teacherRow);
+        if (ribbonHTML) ribbonEl.innerHTML = ribbonHTML;
+        else ribbonEl.style.display = 'none'; // weekend / no timetable row
+      }
+
       if (!teacherRow) return;
 
       // Status banner
