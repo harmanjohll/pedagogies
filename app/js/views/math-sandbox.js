@@ -365,8 +365,8 @@ export function render(container) {
         const text = await sendChat([{
           role: 'user',
           content: [
-            { type: 'text', text: 'Extract ALL mathematical equations and expressions from this image. Return each equation as LaTeX, using $...$ for inline and $$...$$ for display. If there is handwritten working, reproduce each step. Format the output as clean LaTeX that can be rendered.' },
-            { type: 'image', source: { type: 'base64', media_type: scannerBase64.match(/data:(.*?);/)?.[1] || 'image/png', data: scannerBase64.split(',')[1] } }
+            { text: 'Extract ALL mathematical equations and expressions from this image. Return each equation as LaTeX, using $...$ for inline and $$...$$ for display. If there is handwritten working, reproduce each step. Format the output as clean LaTeX that can be rendered.' },
+            { inlineData: { mimeType: scannerBase64.match(/data:(.*?);/)?.[1] || 'image/png', data: scannerBase64.split(',')[1] } }
           ]
         }], {
           trackLabel: 'equationScanner',

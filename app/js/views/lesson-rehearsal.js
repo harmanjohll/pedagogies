@@ -20,7 +20,7 @@ const PERSONA_PRESETS = [
   { id: 'curious_questioner', label: 'Curious questioner', desc: 'Asks tangential but interesting questions',                       color: '#0ea5e9' },
   { id: 'struggling_student', label: 'Struggling student', desc: 'Has misconceptions, needs scaffolding',                           color: '#f59e0b' },
   { id: 'disengaged',        label: 'Disengaged',          desc: 'Off-task, needs motivation',                                      color: '#ef4444' },
-  { id: 'esl_learner',       label: 'ESL learner',         desc: 'Understands concepts but struggles with academic English',        color: '#10b981' },
+  { id: 'esl_learner',       label: 'Needs support with academic English', desc: 'Understands concepts but is still building academic English', color: '#10b981' },
 ];
 
 const STUDENT_NAMES = [
@@ -40,27 +40,27 @@ const FEEDBACK_FRAMES = [
     id: 'stp',
     label: 'STP-Aligned',
     color: '#3b82f6',
-    desc: 'Feedback organised under the 4 areas of the Singapore Teaching Practice',
-    promptBlock: `Organise your feedback under the four areas of the Singapore Teaching Practice (STP):
+    desc: 'Feedback organised under the four Teaching Processes of the Singapore Teaching Practice',
+    promptBlock: `Organise your feedback under the four Teaching Processes of the Singapore Teaching Practice (STP) — these are non-hierarchical:
 
-### Area 1 — Lesson Preparation
+### Positive Classroom Culture
+Was the environment safe and supportive? Were routines clear? Was student agency encouraged?
+
+### Lesson Preparation
 Did the teacher demonstrate understanding of learners, set clear objectives, and plan resources effectively?
 
-### Area 2 — Lesson Enactment
+### Lesson Enactment
 Evaluate teaching actions, interaction patterns, and classroom discourse quality.
 
-### Area 3 — Monitoring & Feedback
-How well did the teacher use formative assessment, provide effective feedback, and offer differentiated support?
-
-### Area 4 — Positive Learning Culture
-Was the environment safe and supportive? Were routines clear? Was student agency encouraged?`
+### Assessment and Feedback
+How well did the teacher use formative assessment, provide effective feedback, and offer differentiated support?`
   },
   {
     id: 'grow_coaching',
     label: 'GROW Coaching',
     color: '#10b981',
     desc: 'Whitmore\'s Goal → Reality → Options → Will structure for teacher development',
-    promptBlock: `Structure your feedback using the GROW coaching model (Whitmore). NOTE: This is the coaching GROW (Goal, Reality, Options, Will) — NOT Beatty's GROW for student metacognition.
+    promptBlock: `Structure your feedback using the GROW coaching model (Whitmore). NOTE: This is the coaching GROW (Goal, Reality, Options, Will) — NOT Co-Cher's GROW by Reflecting routine for student metacognition.
 
 ### Goal
 What was the teacher trying to achieve in this lesson? How clearly was the learning intent communicated?
@@ -76,10 +76,10 @@ What specific, actionable next steps should the teacher commit to before the rea
   },
   {
     id: 'grow_reflection',
-    label: 'Beatty\'s GROW Reflection',
+    label: 'GROW by Reflecting',
     color: '#8b5cf6',
     desc: 'Self-reflection using Gift, Rise, Own, Watch — metacognition applied to your own practice',
-    promptBlock: `Add a personal reflection section using Beatty's GROW by Reflecting framework. NOTE: This is Beatty's GROW for metacognition (Gift, Rise, Own, Watch) — NOT Whitmore's coaching GROW.
+    promptBlock: `Add a personal reflection section using Co-Cher's GROW by Reflecting routine. NOTE: This is the metacognitive GROW routine (Gift, Rise, Own, Watch) — NOT Whitmore's coaching GROW.
 
 ### Teacher Self-Reflection (GROW by Reflecting)
 Frame these as prompts the teacher can use to reflect on their own practice:
@@ -121,7 +121,7 @@ let selectedPersonas = ['high_achiever', 'quiet_learner', 'curious_questioner', 
 let rehearsalActive = false;
 let rehearsalEnded = false;
 let chatMessages = [];    // { role: 'teacher' | 'student', name?: string, text: string, color?: string }
-let apiMessages = [];     // messages array sent to Anthropic API
+let apiMessages = [];     // messages array sent to the Gemini API
 let isGenerating = false;
 let debriefContent = null;
 let assignedStudents = []; // { name, persona, color }
@@ -149,8 +149,13 @@ function buildSystemPrompt(lesson) {
 
   const user = getCurrentUser();
   const fullName = user?.name || '';
-  const surname = fullName.split(' ').filter(Boolean).pop() || 'Teacher';
-  const salutation = fullName.toLowerCase().startsWith('mr') ? fullName.split(' ')[0] : (fullName.toLowerCase().startsWith('ms') || fullName.toLowerCase().startsWith('mdm') || fullName.toLowerCase().startsWith('mrs')) ? fullName.split(' ')[0] : 'Mr/Ms';
+  const tokens = fullName.split(' ').filter(Boolean);
+  const isSalutation = (t) => ['mr', 'ms', 'mrs', 'mdm', 'dr'].includes(t.toLowerCase().replace(/\.$/, ''));
+  const salutation = tokens.length && isSalutation(tokens[0]) ? tokens[0] : 'Mr/Ms';
+  const nameTokens = tokens.length && isSalutation(tokens[0]) ? tokens.slice(1) : tokens;
+  // Chinese Singaporean names place the surname first — use the first
+  // non-salutation token ("Mr Tan Ah Kow" → "Mr Tan", not "Mr Kow").
+  const surname = nameTokens[0] || 'Teacher';
   const teacherAddress = `${salutation} ${surname}`;
 
   return `You are simulating a classroom of students for a teacher rehearsal. The teacher is practising delivering a lesson before teaching it to a real class.
@@ -179,13 +184,13 @@ ${roster}
    - Disengaged students may be off-task, whispering, or distracted.
    - High achievers volunteer frequently.
    - Struggling students may give wrong answers or show misconceptions.
-   - ESL learners understand but may use simpler language or ask for clarification of vocabulary.
+   - Students still building academic English understand the concepts but may use simpler language or ask for clarification of vocabulary.
    - Curious questioners ask "what if" or "why" questions that go beyond the immediate topic.
 3. Keep each student's response brief and natural — like real student speech, not essays.
 4. If the teacher asks the class a question, have a realistic number of students respond (not everyone at once).
 5. If the teacher calls on a specific student by name, that student should respond.
 6. React to the lesson content naturally. If the teacher explains something confusing, the struggling student might look confused. If the teacher shares something interesting, the curious questioner might ask a follow-up.
-7. Occasionally show classroom dynamics: side conversations, one student helping another, a student asking to go to the bathroom, etc.
+7. Occasionally show classroom dynamics: side conversations, one student helping another, a student asking to go to the toilet, etc.
 8. Format each student's speech on its own line, preceded by their name in brackets.`;
 }
 

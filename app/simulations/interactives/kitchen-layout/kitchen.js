@@ -10,32 +10,33 @@
    * Equipment Catalogue
    * ══════════════════════════════════════════ */
 
+  // Footprints are realistic at 40px/m (e.g. hob 26px = 0.65m, fridge 28px = 0.7m).
   const EQUIPMENT = {
     cooking: [
-      { id: 'hob',       icon: '🔥', label: 'Hob / Stove', w: 70, h: 50, color: '#78716c', safetyType: 'hot' },
-      { id: 'oven',      icon: '♨️',  label: 'Oven',        w: 60, h: 50, color: '#78716c', safetyType: 'hot' },
-      { id: 'microwave', icon: '📡', label: 'Microwave',   w: 50, h: 40, color: '#78716c' },
-      { id: 'wok',       icon: '🥘', label: 'Wok Station', w: 60, h: 50, color: '#78716c', safetyType: 'hot' },
-      { id: 'grill',     icon: '🥩', label: 'Grill',       w: 60, h: 40, color: '#78716c', safetyType: 'hot' },
+      { id: 'hob',       icon: '🔥', label: 'Hob / Stove', w: 26, h: 24, color: '#78716c', safetyType: 'hot' },
+      { id: 'oven',      icon: '♨️',  label: 'Oven',        w: 24, h: 24, color: '#78716c', safetyType: 'hot' },
+      { id: 'microwave', icon: '📡', label: 'Microwave',   w: 20, h: 14, color: '#78716c' },
+      { id: 'wok',       icon: '🥘', label: 'Wok Station', w: 24, h: 24, color: '#78716c', safetyType: 'hot' },
+      { id: 'grill',     icon: '🥩', label: 'Grill',       w: 24, h: 20, color: '#78716c', safetyType: 'hot' },
     ],
     prep: [
-      { id: 'chopping',  icon: '🔪', label: 'Chopping',    w: 70, h: 45, color: '#a3896b' },
-      { id: 'counter',   icon: '🧱', label: 'Counter',     w: 80, h: 40, color: '#a3896b' },
-      { id: 'mixer',     icon: '🍰', label: 'Mixer',       w: 45, h: 45, color: '#a8a29e' },
-      { id: 'scale',     icon: '⚖️',  label: 'Scale',       w: 40, h: 35, color: '#a8a29e' },
-      { id: 'sink',      icon: '🚰', label: 'Sink',        w: 55, h: 45, color: '#94a3b8', safetyType: 'wet' },
+      { id: 'chopping',  icon: '🔪', label: 'Chopping',    w: 20, h: 14, color: '#a3896b' },
+      { id: 'counter',   icon: '🧱', label: 'Counter',     w: 48, h: 24, color: '#a3896b' },
+      { id: 'mixer',     icon: '🍰', label: 'Mixer',       w: 16, h: 16, color: '#a8a29e' },
+      { id: 'scale',     icon: '⚖️',  label: 'Scale',       w: 12, h: 10, color: '#a8a29e' },
+      { id: 'sink',      icon: '🚰', label: 'Sink',        w: 24, h: 20, color: '#94a3b8', safetyType: 'wet' },
     ],
     storage: [
-      { id: 'fridge',    icon: '🧊', label: 'Fridge',      w: 55, h: 60, color: '#d6d3d1' },
-      { id: 'pantry',    icon: '🗄️',  label: 'Pantry',      w: 60, h: 50, color: '#c4b5a0' },
-      { id: 'rack',      icon: '🍽️',  label: 'Dish Rack',   w: 50, h: 35, color: '#a8a29e' },
-      { id: 'bin',       icon: '🗑️',  label: 'Waste Bin',   w: 35, h: 35, color: '#78716c' },
+      { id: 'fridge',    icon: '🧊', label: 'Fridge',      w: 28, h: 28, color: '#d6d3d1' },
+      { id: 'pantry',    icon: '🗄️',  label: 'Pantry',      w: 32, h: 20, color: '#c4b5a0' },
+      { id: 'rack',      icon: '🍽️',  label: 'Dish Rack',   w: 20, h: 16, color: '#a8a29e' },
+      { id: 'bin',       icon: '🗑️',  label: 'Waste Bin',   w: 16, h: 16, color: '#78716c' },
     ],
     safety: [
-      { id: 'extinguisher', icon: '🧯', label: 'Extinguisher', w: 30, h: 30, color: '#dc2626' },
-      { id: 'firstaid',    icon: '🩹', label: 'First Aid',    w: 30, h: 30, color: '#f43f5e' },
+      { id: 'extinguisher', icon: '🧯', label: 'Extinguisher', w: 16, h: 16, color: '#dc2626' },
+      { id: 'firstaid',    icon: '🩹', label: 'First Aid',    w: 16, h: 16, color: '#f43f5e' },
       { id: 'exit',        icon: '🚪', label: 'Exit',         w: 40, h: 45, color: '#22d3ee' },
-      { id: 'apron',       icon: '🧤', label: 'Apron Hook',   w: 30, h: 35, color: '#f59e0b' },
+      { id: 'apron',       icon: '🧤', label: 'Apron Hook',   w: 14, h: 16, color: '#f59e0b' },
     ],
   };
 
@@ -84,14 +85,14 @@
       ctx.strokeStyle = '#a8a29e'; ctx.lineWidth = 1;
       ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
       // Door window
-      const dw = w * 0.6, dh = h * 0.7;
+      const dw = w * 0.55, dh = h * 0.7;
       ctx.strokeStyle = '#78716c';
-      ctx.strokeRect(4, (h - dh) / 2, dw, dh);
+      ctx.strokeRect(2, (h - dh) / 2, dw, dh);
       ctx.fillStyle = 'rgba(68,64,60,0.15)';
-      ctx.fillRect(4, (h - dh) / 2, dw, dh);
+      ctx.fillRect(2, (h - dh) / 2, dw, dh);
       // Control panel
       ctx.fillStyle = '#78716c';
-      ctx.fillRect(dw + 8, h * 0.25, w - dw - 12, h * 0.5);
+      ctx.fillRect(dw + 4, h * 0.25, w - dw - 6, h * 0.5);
     },
     wok(ctx, w, h) {
       // Body
@@ -156,7 +157,7 @@
       ctx.beginPath(); ctx.arc(w / 2, h / 2, Math.min(w, h) * 0.28, 0, Math.PI * 2); ctx.stroke();
       // Arm
       ctx.strokeStyle = '#57534e'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(w / 2, 4); ctx.lineTo(w / 2, h / 2 - 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w / 2, 2); ctx.lineTo(w / 2, h / 2 - 2); ctx.stroke();
     },
     scale(ctx, w, h) {
       ctx.fillStyle = '#e7e5e4';
@@ -165,13 +166,13 @@
       ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
       // Platform
       ctx.fillStyle = '#d6d3d1';
-      const pad = 5;
+      const pad = 2;
       ctx.fillRect(pad, pad, w - pad * 2, h - pad * 2);
       ctx.strokeStyle = '#78716c';
       ctx.strokeRect(pad, pad, w - pad * 2, h - pad * 2);
       // Display
       ctx.fillStyle = '#1e293b';
-      ctx.fillRect(w / 2 - 8, h - pad - 6, 16, 5);
+      ctx.fillRect(w / 2 - 4, h - pad - 4, 8, 3);
     },
     sink(ctx, w, h) {
       // Counter body
@@ -267,7 +268,7 @@
       ctx.strokeRect(2, 2, w - 4, h - 4);
       // Red cross
       ctx.fillStyle = '#ef4444';
-      const cx = w / 2, cy = h / 2, arm = 4, len = 8;
+      const cx = w / 2, cy = h / 2, arm = Math.max(2, w * 0.12), len = Math.max(4, w * 0.3);
       ctx.fillRect(cx - arm, cy - len, arm * 2, len * 2);
       ctx.fillRect(cx - len, cy - arm, len * 2, arm * 2);
     },
@@ -314,7 +315,14 @@
   let dragOffset = { x: 0, y: 0 };
   let nextItemId = 1;
 
-  const WALL = 10;            // wall inset in px
+  const WALL = 10;            // wall thickness in px
+
+  /* Fixed room: 14m x 8m usable floor at 40px/m, letterboxed in the canvas.
+   * All item / marker coordinates are relative to the room's inner top-left. */
+  const ROOM_W_M = 14, ROOM_H_M = 8;
+  const ROOM_W = ROOM_W_M * PX_PER_METRE;   // 560px usable floor width
+  const ROOM_H = ROOM_H_M * PX_PER_METRE;   // 320px usable floor depth
+  let roomX = 0, roomY = 0;                 // outer wall top-left in canvas px
 
   const canvas = document.getElementById('kitchen-canvas');
   const ctx = canvas.getContext('2d');
@@ -324,10 +332,23 @@
    * Canvas sizing
    * ══════════════════════════════════════════ */
 
+  function layoutRoom() {
+    roomX = Math.max(0, Math.round((canvas.width - (ROOM_W + WALL * 2)) / 2));
+    roomY = Math.max(0, Math.round((canvas.height - (ROOM_H + WALL * 2)) / 2));
+    // Anchor the placed-items layer to the room's inner floor so item
+    // coordinates stay room-relative regardless of window size.
+    placedContainer.style.inset = 'auto';
+    placedContainer.style.left = (roomX + WALL) + 'px';
+    placedContainer.style.top = (roomY + WALL) + 'px';
+    placedContainer.style.width = ROOM_W + 'px';
+    placedContainer.style.height = ROOM_H + 'px';
+  }
+
   function resizeCanvas() {
     const wrap = canvas.parentElement;
     canvas.width = wrap.clientWidth;
     canvas.height = wrap.clientHeight;
+    layoutRoom();
     draw();
   }
   window.addEventListener('resize', resizeCanvas);
@@ -358,13 +379,13 @@
         e.dataTransfer.effectAllowed = 'copy';
       });
 
-      // Click to add at centre
+      // Click to add at room centre
       btn.addEventListener('click', () => {
         const cat = btn.dataset.cat;
         const equipId = btn.dataset.equip;
         const eq = EQUIPMENT[cat].find(e => e.id === equipId);
         if (!eq) return;
-        addItem(eq, canvas.width / 2 - eq.w / 2, canvas.height / 2 - eq.h / 2);
+        addItem(eq, ROOM_W / 2 - eq.w / 2, ROOM_H / 2 - eq.h / 2);
       });
     });
   }
@@ -377,8 +398,8 @@
     const item = {
       id: nextItemId++,
       equipId: eq.id,
-      x: Math.round(x),
-      y: Math.round(y),
+      x: Math.max(0, Math.min(Math.round(x), ROOM_W - eq.w)),
+      y: Math.max(0, Math.min(Math.round(y), ROOM_H - eq.h)),
       w: eq.w,
       h: eq.h,
       color: eq.color,
@@ -432,7 +453,10 @@
         if (!item.safetyType) return;
         const zone = document.createElement('div');
         zone.className = `safety-zone ${item.safetyType} visible`;
-        const size = Math.max(item.w, item.h) * 3;
+        // Zone = item footprint + the stated minimum clearance on every side
+        // (0.9m for hot zones, 0.6m for wet — matches the info panel)
+        const clearanceM = item.safetyType === 'hot' ? 0.9 : 0.6;
+        const size = Math.max(item.w, item.h) + 2 * clearanceM * PX_PER_METRE;
         zone.style.cssText = `width:${size}px;height:${size}px;left:${item.x + item.w/2 - size/2}px;top:${item.y + item.h/2 - size/2}px;`;
         placedContainer.appendChild(zone);
       });
@@ -519,9 +543,8 @@
 
   document.addEventListener('pointermove', (e) => {
     if (!dragItem) return;
-    const rect = canvas.getBoundingClientRect();
-    dragItem.x = Math.max(0, Math.min(e.clientX - dragOffset.x, rect.width - (dragItem.w || 28)));
-    dragItem.y = Math.max(0, Math.min(e.clientY - dragOffset.y, rect.height - (dragItem.h || 28)));
+    dragItem.x = Math.max(0, Math.min(e.clientX - dragOffset.x, ROOM_W - (dragItem.w || 28)));
+    dragItem.y = Math.max(0, Math.min(e.clientY - dragOffset.y, ROOM_H - (dragItem.h || 28)));
     renderPlacedItems();
     draw();
   });
@@ -539,7 +562,7 @@
       const data = JSON.parse(e.dataTransfer.getData('text/plain'));
       const eq = EQUIPMENT[data.cat]?.find(eq => eq.id === data.equipId);
       if (!eq) return;
-      const rect = floorPlan.getBoundingClientRect();
+      const rect = placedContainer.getBoundingClientRect(); // room-relative drop point
       addItem(eq, e.clientX - rect.left - eq.w / 2, e.clientY - rect.top - eq.h / 2);
     } catch {}
   });
@@ -560,99 +583,105 @@
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    // ── Floor: warm tile pattern ──
-    ctx.fillStyle = '#f5f0e8';
+    const wt = WALL;
+    // Room rectangle (fixed 14m x 8m floor), centred in the canvas
+    const rx = roomX, ry = roomY;                 // outer wall top-left
+    const ix = rx + wt, iy = ry + wt;             // inner floor top-left
+    const ow = ROOM_W + wt * 2, oh = ROOM_H + wt * 2;
+
+    // ── Letterbox area outside the room ──
+    ctx.fillStyle = '#e9e4d9';
     ctx.fillRect(0, 0, w, h);
+
+    // ── Floor: warm tile pattern (inside the room only) ──
+    ctx.fillStyle = '#f5f0e8';
+    ctx.fillRect(ix, iy, ROOM_W, ROOM_H);
 
     // Tile grid
     const gridSize = PX_PER_METRE;
     ctx.strokeStyle = 'rgba(0,0,0,0.06)';
     ctx.lineWidth = 0.5;
-    for (let x = gridSize; x < w; x += gridSize) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    for (let x = ix + gridSize; x < ix + ROOM_W; x += gridSize) {
+      ctx.beginPath(); ctx.moveTo(x, iy); ctx.lineTo(x, iy + ROOM_H); ctx.stroke();
     }
-    for (let y = gridSize; y < h; y += gridSize) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    for (let y = iy + gridSize; y < iy + ROOM_H; y += gridSize) {
+      ctx.beginPath(); ctx.moveTo(ix, y); ctx.lineTo(ix + ROOM_W, y); ctx.stroke();
     }
 
     // Half-tile offset lines (subtler)
     ctx.strokeStyle = 'rgba(0,0,0,0.025)';
-    for (let x = gridSize / 2; x < w; x += gridSize) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    for (let x = ix + gridSize / 2; x < ix + ROOM_W; x += gridSize) {
+      ctx.beginPath(); ctx.moveTo(x, iy); ctx.lineTo(x, iy + ROOM_H); ctx.stroke();
     }
-    for (let y = gridSize / 2; y < h; y += gridSize) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    for (let y = iy + gridSize / 2; y < iy + ROOM_H; y += gridSize) {
+      ctx.beginPath(); ctx.moveTo(ix, y); ctx.lineTo(ix + ROOM_W, y); ctx.stroke();
     }
 
     // ── Walls: thick architectural lines with hatching ──
-    const wt = WALL; // wall thickness
     ctx.fillStyle = '#57534e';
     // Top wall
-    ctx.fillRect(0, 0, w, wt);
+    ctx.fillRect(rx, ry, ow, wt);
     // Bottom wall
-    ctx.fillRect(0, h - wt, w, wt);
+    ctx.fillRect(rx, ry + oh - wt, ow, wt);
     // Left wall
-    ctx.fillRect(0, 0, wt, h);
+    ctx.fillRect(rx, ry, wt, oh);
     // Right wall
-    ctx.fillRect(w - wt, 0, wt, h);
+    ctx.fillRect(rx + ow - wt, ry, wt, oh);
 
     // Wall hatching (exterior side)
     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 0.5;
     const hatchSpacing = 6;
     // Top wall hatching
-    for (let x = 0; x < w; x += hatchSpacing) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + wt, wt); ctx.stroke();
+    for (let x = rx; x < rx + ow; x += hatchSpacing) {
+      ctx.beginPath(); ctx.moveTo(x, ry); ctx.lineTo(x + wt, ry + wt); ctx.stroke();
     }
     // Bottom wall hatching
-    for (let x = 0; x < w; x += hatchSpacing) {
-      ctx.beginPath(); ctx.moveTo(x, h); ctx.lineTo(x + wt, h - wt); ctx.stroke();
+    for (let x = rx; x < rx + ow; x += hatchSpacing) {
+      ctx.beginPath(); ctx.moveTo(x, ry + oh); ctx.lineTo(x + wt, ry + oh - wt); ctx.stroke();
     }
     // Left wall hatching
-    for (let y = 0; y < h; y += hatchSpacing) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(wt, y + wt); ctx.stroke();
+    for (let y = ry; y < ry + oh; y += hatchSpacing) {
+      ctx.beginPath(); ctx.moveTo(rx, y); ctx.lineTo(rx + wt, y + wt); ctx.stroke();
     }
     // Right wall hatching
-    for (let y = 0; y < h; y += hatchSpacing) {
-      ctx.beginPath(); ctx.moveTo(w, y); ctx.lineTo(w - wt, y + wt); ctx.stroke();
+    for (let y = ry; y < ry + oh; y += hatchSpacing) {
+      ctx.beginPath(); ctx.moveTo(rx + ow, y); ctx.lineTo(rx + ow - wt, y + wt); ctx.stroke();
     }
 
     // Inner wall edge (clean line)
     ctx.strokeStyle = '#44403c';
     ctx.lineWidth = 1;
-    ctx.strokeRect(wt, wt, w - wt * 2, h - wt * 2);
+    ctx.strokeRect(ix, iy, ROOM_W, ROOM_H);
 
-    // ── Dimension labels ──
+    // ── Dimension labels (from the fixed room, not the window) ──
     ctx.font = '10px Inter, sans-serif';
     ctx.fillStyle = '#78716c';
     ctx.textAlign = 'center';
 
-    const roomW = ((w - wt * 2) / PX_PER_METRE).toFixed(1);
-    const roomH = ((h - wt * 2) / PX_PER_METRE).toFixed(1);
-
     // Top dimension
-    drawDimension(ctx, wt, wt / 2, w - wt, wt / 2, `${roomW}m`, 'top');
+    drawDimension(ctx, ix, ry + wt / 2, ix + ROOM_W, ry + wt / 2, `${ROOM_W_M.toFixed(1)}m`, 'top');
     // Left dimension
-    drawDimension(ctx, wt / 2, wt, wt / 2, h - wt, `${roomH}m`, 'left');
+    drawDimension(ctx, rx + wt / 2, iy, rx + wt / 2, iy + ROOM_H, `${ROOM_H_M.toFixed(1)}m`, 'left');
 
     // ── Room label ──
     ctx.font = '11px Inter, sans-serif';
     ctx.fillStyle = 'rgba(0,0,0,0.12)';
     ctx.textAlign = 'left';
-    ctx.fillText('NFS Food Lab', wt + 8, wt + 16);
+    ctx.fillText('NFS Food Lab', ix + 8, iy + 16);
 
     // ── Scale bar ──
     ctx.fillStyle = '#78716c';
     ctx.font = '9px Inter, sans-serif';
     ctx.textAlign = 'left';
-    const scaleX = wt + 6, scaleY = h - wt - 8;
+    const scaleX = ix + 6, scaleY = iy + ROOM_H - 8;
     ctx.fillRect(scaleX, scaleY, PX_PER_METRE, 2);
     ctx.fillRect(scaleX, scaleY - 3, 1, 6);
     ctx.fillRect(scaleX + PX_PER_METRE, scaleY - 3, 1, 6);
     ctx.fillText('1m', scaleX + PX_PER_METRE + 4, scaleY + 3);
 
     // ── Compass rose ──
-    const compassX = w - wt - 24, compassY = h - wt - 22;
+    const compassX = ix + ROOM_W - 24, compassY = iy + ROOM_H - 22;
     ctx.strokeStyle = '#a8a29e'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(compassX, compassY - 10); ctx.lineTo(compassX, compassY + 10); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(compassX - 10, compassY); ctx.lineTo(compassX + 10, compassY); ctx.stroke();
@@ -665,7 +694,7 @@
     ctx.font = '9px Inter, sans-serif';
     ctx.fillStyle = 'rgba(0,0,0,0.08)';
     ctx.textAlign = 'right';
-    ctx.fillText('Kitchen Layout Planner — Co-Cher', w - wt - 6, h - wt - 6);
+    ctx.fillText('Kitchen Layout Planner — Co-Cher', ix + ROOM_W - 6, iy + ROOM_H - 6);
     ctx.textAlign = 'left';
   }
 
@@ -828,7 +857,7 @@
     placedItems = [];
     studentMarkers = [];
     selectedItem = null;
-    const w = canvas.width, h = canvas.height;
+    // All template coordinates are in fixed-room space (0..ROOM_W x 0..ROOM_H)
 
     const templates = {
       blank: () => {},
@@ -836,29 +865,29 @@
         // MasterChef style: 4 cooking stations facing centre judge area
         const stations = [
           // Station 1 — top left
-          { equipId: 'hob', x: 80, y: 40 },
-          { equipId: 'chopping', x: 160, y: 40 },
-          { equipId: 'sink', x: 240, y: 40 },
+          { equipId: 'hob', x: 40, y: 20 },
+          { equipId: 'chopping', x: 80, y: 24 },
+          { equipId: 'sink', x: 112, y: 22 },
           // Station 2 — top right
-          { equipId: 'hob', x: w - 320, y: 40 },
-          { equipId: 'chopping', x: w - 240, y: 40 },
-          { equipId: 'sink', x: w - 150, y: 40 },
+          { equipId: 'hob', x: 410, y: 20 },
+          { equipId: 'chopping', x: 450, y: 24 },
+          { equipId: 'sink', x: 482, y: 22 },
           // Station 3 — bottom left
-          { equipId: 'oven', x: 80, y: h - 100 },
-          { equipId: 'counter', x: 150, y: h - 100 },
-          { equipId: 'chopping', x: 240, y: h - 100 },
+          { equipId: 'oven', x: 40, y: 272 },
+          { equipId: 'counter', x: 80, y: 274 },
+          { equipId: 'chopping', x: 140, y: 278 },
           // Station 4 — bottom right
-          { equipId: 'oven', x: w - 310, y: h - 100 },
-          { equipId: 'counter', x: w - 220, y: h - 100 },
-          { equipId: 'chopping', x: w - 130, y: h - 100 },
+          { equipId: 'oven', x: 400, y: 272 },
+          { equipId: 'counter', x: 440, y: 274 },
+          { equipId: 'chopping', x: 500, y: 278 },
           // Centre shared area
-          { equipId: 'fridge', x: w/2 - 28, y: h/2 - 30 },
-          { equipId: 'pantry', x: w/2 - 90, y: h/2 - 25 },
-          { equipId: 'bin', x: w/2 + 40, y: h/2 - 18 },
+          { equipId: 'fridge', x: 266, y: 132 },
+          { equipId: 'pantry', x: 220, y: 136 },
+          { equipId: 'bin', x: 308, y: 138 },
           // Safety
-          { equipId: 'extinguisher', x: 20, y: h/2 - 15 },
-          { equipId: 'firstaid', x: w - 50, y: h/2 - 15 },
-          { equipId: 'exit', x: w/2 - 20, y: h - 50 },
+          { equipId: 'extinguisher', x: 12, y: 150 },
+          { equipId: 'firstaid', x: 532, y: 150 },
+          { equipId: 'exit', x: 260, y: 275 },
         ];
         stations.forEach(s => {
           const allEquip = [...EQUIPMENT.cooking, ...EQUIPMENT.prep, ...EQUIPMENT.storage, ...EQUIPMENT.safety];
@@ -868,14 +897,14 @@
         // Student markers (2 per station)
         const studentNum = parseInt(document.getElementById('students-select').value) || 8;
         const positions = [
-          { x: 130, y: 100 }, { x: 200, y: 100 },
-          { x: w - 260, y: 100 }, { x: w - 190, y: 100 },
-          { x: 130, y: h - 160 }, { x: 200, y: h - 160 },
-          { x: w - 260, y: h - 160 }, { x: w - 190, y: h - 160 },
-          { x: w/2 - 40, y: h/2 + 50 }, { x: w/2 + 20, y: h/2 + 50 },
-          { x: 60, y: h/2 + 50 }, { x: w - 80, y: h/2 + 50 },
-          { x: 130, y: h/2 }, { x: w - 150, y: h/2 },
-          { x: w/2 - 80, y: 140 }, { x: w/2 + 50, y: 140 },
+          { x: 60, y: 60 }, { x: 110, y: 60 },
+          { x: 420, y: 60 }, { x: 470, y: 60 },
+          { x: 60, y: 230 }, { x: 110, y: 230 },
+          { x: 420, y: 230 }, { x: 470, y: 230 },
+          { x: 236, y: 190 }, { x: 296, y: 190 },
+          { x: 40, y: 146 }, { x: 490, y: 146 },
+          { x: 160, y: 146 }, { x: 372, y: 146 },
+          { x: 200, y: 90 }, { x: 332, y: 90 },
         ];
         for (let i = 0; i < Math.min(studentNum, positions.length); i++) {
           studentMarkers.push({ id: `s${i+1}`, x: positions[i].x, y: positions[i].y, num: i + 1 });
@@ -885,50 +914,51 @@
         const allEquip = [...EQUIPMENT.cooking, ...EQUIPMENT.prep, ...EQUIPMENT.storage, ...EQUIPMENT.safety];
         const find = id => allEquip.find(e => e.id === id);
         [find('hob'), find('hob'), find('oven')].forEach((eq, i) => {
-          if (eq) addItem(eq, 20, 60 + i * 80);
+          if (eq) addItem(eq, 12, 40 + i * 50);
         });
         [find('counter'), find('sink'), find('counter'), find('chopping')].forEach((eq, i) => {
-          if (eq) addItem(eq, 120 + i * 100, h - 70);
+          if (eq) addItem(eq, 80 + i * 62, 288);
         });
         [find('fridge'), find('pantry'), find('rack')].forEach((eq, i) => {
-          if (eq) addItem(eq, w - 80, 60 + i * 80);
+          if (eq) addItem(eq, 516, 40 + i * 50);
         });
-        addItem(find('extinguisher'), w/2, 20);
-        addItem(find('exit'), w/2 - 20, h - 50);
+        addItem(find('extinguisher'), 272, 12);
+        addItem(find('exit'), 400, 275);
       },
       island: () => {
         const allEquip = [...EQUIPMENT.cooking, ...EQUIPMENT.prep, ...EQUIPMENT.storage, ...EQUIPMENT.safety];
         const find = id => allEquip.find(e => e.id === id);
         [find('counter'), find('chopping'), find('counter')].forEach((eq, i) => {
-          if (eq) addItem(eq, w/2 - 130 + i * 90, h/2 - 22);
+          if (eq) addItem(eq, 196 + i * 58, 148);
         });
         [find('hob'), find('hob'), find('oven')].forEach((eq, i) => {
-          if (eq) addItem(eq, 30 + i * 90, 30);
+          if (eq) addItem(eq, 40 + i * 50, 16);
         });
         [find('fridge'), find('pantry')].forEach((eq, i) => {
-          if (eq) addItem(eq, w - 80, 40 + i * 80);
+          if (eq) addItem(eq, 514, 30 + i * 50);
         });
         [find('sink'), find('rack')].forEach((eq, i) => {
-          if (eq) addItem(eq, 30 + i * 80, h - 70);
+          if (eq) addItem(eq, 30 + i * 44, 288);
         });
-        addItem(find('extinguisher'), w - 50, h - 50);
+        addItem(find('extinguisher'), 532, 290);
+        addItem(find('exit'), 260, 275); // fire exit — every layout needs one
       },
       pairs: () => {
         const allEquip = [...EQUIPMENT.cooking, ...EQUIPMENT.prep, ...EQUIPMENT.storage, ...EQUIPMENT.safety];
         const find = id => allEquip.find(e => e.id === id);
         for (let row = 0; row < 2; row++) {
           for (let col = 0; col < 3; col++) {
-            const bx = 60 + col * 240;
-            const by = 60 + row * 240;
+            const bx = 40 + col * 160;
+            const by = 40 + row * 150;
             addItem(find('hob'), bx, by);
-            addItem(find('chopping'), bx + 80, by);
-            addItem(find('sink'), bx + 40, by + 60);
+            addItem(find('chopping'), bx + 40, by + 4);
+            addItem(find('sink'), bx + 16, by + 40);
           }
         }
-        addItem(find('fridge'), w - 70, 30);
-        addItem(find('pantry'), w - 70, 100);
-        addItem(find('extinguisher'), 20, h - 50);
-        addItem(find('exit'), w/2, h - 50);
+        addItem(find('fridge'), 500, 30);
+        addItem(find('pantry'), 498, 80);
+        addItem(find('extinguisher'), 12, 290);
+        addItem(find('exit'), 260, 275);
       },
     };
 
@@ -1031,24 +1061,24 @@
     printCanvas.height = canvas.height * scale;
     const pCtx = printCanvas.getContext('2d');
     pCtx.scale(scale, scale);
-    // Redraw floor
-    const origCtx = ctx;
     // Draw the base floor plan onto print canvas
     pCtx.drawImage(canvas, 0, 0);
+    // Item coordinates are room-relative; offset to canvas space
+    const ox = roomX + WALL, oy = roomY + WALL;
     // Draw placed equipment onto print canvas
     placedItems.forEach(item => {
       const equipCanvas = drawEquipmentCanvas(item.equipId, item.w, item.h);
-      pCtx.drawImage(equipCanvas, item.x, item.y);
+      pCtx.drawImage(equipCanvas, ox + item.x, oy + item.y);
       // Label
       pCtx.font = '8px Inter, sans-serif';
       pCtx.fillStyle = '#57534e';
       pCtx.textAlign = 'center';
-      pCtx.fillText(item.label, item.x + item.w / 2, item.y + item.h + 10);
+      pCtx.fillText(item.label, ox + item.x + item.w / 2, oy + item.y + item.h + 10);
     });
     // Draw student markers
     studentMarkers.forEach(s => {
       pCtx.beginPath();
-      pCtx.arc(s.x + 14, s.y + 14, 14, 0, Math.PI * 2);
+      pCtx.arc(ox + s.x + 14, oy + s.y + 14, 14, 0, Math.PI * 2);
       pCtx.fillStyle = 'rgba(139,92,246,0.2)';
       pCtx.fill();
       pCtx.strokeStyle = '#7c3aed';
@@ -1058,7 +1088,7 @@
       pCtx.font = 'bold 9px Inter, sans-serif';
       pCtx.textAlign = 'center';
       pCtx.textBaseline = 'middle';
-      pCtx.fillText(`S${s.num}`, s.x + 14, s.y + 14);
+      pCtx.fillText(`S${s.num}`, ox + s.x + 14, oy + s.y + 14);
     });
     // Open print window
     const pw = window.open('', '_blank');

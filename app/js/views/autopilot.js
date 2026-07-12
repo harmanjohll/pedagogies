@@ -109,7 +109,7 @@ IMPORTANT: Output in this EXACT structure:
 [OVERVIEW]
 Duration: (e.g. 60 min)
 E21CC Focus: (domain)
-STP Area: (area)
+STP Teaching Process: (process)
 
 [LEARNING_INTENTIONS]
 - (intention 1)
@@ -261,7 +261,7 @@ Understanding indicators: (what to look for, 1-2 sentences)
 - (what to revisit if needed)
 
 [GROWTH_CONNECTION]
-STP area strengthened: (area)
+STP teaching process strengthened: (process)
 Try next time: (one concrete strategy)
 
 Warm, encouraging. Terse.`,
@@ -1054,21 +1054,34 @@ export function render(container) {
       yearSelect.addEventListener('change', () => {
         const type = schoolType.value;
         const year = yearSelect.value;
+        const prevDemand = demandSelect.value;
         let demands = [];
 
         if (type === 'primary' && ['P5', 'P6'].includes(year)) {
           demands = ['Standard', 'Foundation'];
         } else if (type === 'secondary') {
-          demands = ['G1', 'G2', 'G3'];
+          // Full Subject-Based Banding: G1/G2/G3 applies from the 2024 Sec 1
+          // cohort, i.e. Sec 1-3 in 2026. Sec 4-5 are the last legacy
+          // streamed cohorts (Express / N(A) / N(T)).
+          demands = ['Sec 4', 'Sec 5'].includes(year)
+            ? ['Express', 'N(A)', 'N(T)']
+            : ['G1', 'G2', 'G3'];
         } else if (type === 'jc') {
           demands = ['H1', 'H2', 'H3'];
+        }
+
+        // Backward compatibility: keep a previously selected value visible
+        // even if it is no longer offered for this year (e.g. an old 'G3'
+        // selection carried into Sec 4).
+        if (prevDemand && demands.length > 0 && !demands.includes(prevDemand)) {
+          demands.push(prevDemand);
         }
 
         if (demands.length === 0) {
           demandSelect.innerHTML = '<option value="">N/A</option>';
         } else {
           demandSelect.innerHTML = '<option value="">Select...</option>' +
-            demands.map(d => `<option value="${d}">${d}</option>`).join('');
+            demands.map(d => `<option value="${d}"${d === prevDemand ? ' selected' : ''}>${d}</option>`).join('');
         }
       });
     }

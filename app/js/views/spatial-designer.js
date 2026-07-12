@@ -210,7 +210,7 @@ const PRESETS = [
   { id: 'hiit', label: 'HIIT / Interval', desc: 'High-intensity work-rest intervals', icon: '⏱️', pe: true },
   { id: 'skills_stations', label: 'Skills Stations', desc: 'Sport-specific drill stations', icon: '🎯', pe: true },
   // NFS presets
-  { id: 'kitchen', label: 'Kitchen Layout', desc: 'NFS cooking workstation setup', icon: '🍳', nfs: true },
+  { id: 'kitchen', label: 'Kitchen Layout', desc: 'NFS cooking workstations — walls open (full F&N room)', icon: '🍳', nfs: true },
 ];
 
 /* ═══════════ Preset Insights (E21CC + STP ties) ═══════════ */
@@ -611,49 +611,33 @@ export function render(container) {
       const border = document.createElementNS(SVG_NS, 'rect');
       setAttrs(border, { x: 30, y: 30, width: VB_W - 60, height: VB_H - 60, rx: 4, ...lineAttr });
       overlay.appendChild(border);
-      // Court 1 (left half)
-      const courtW = 560, courtH = 500;
-      const c1x = VB_W / 4 - courtW / 2, c1y = VB_H / 2 - courtH / 2;
-      const c1 = document.createElementNS(SVG_NS, 'rect');
-      setAttrs(c1, { x: c1x, y: c1y, width: courtW, height: courtH, ...lineAttr });
-      overlay.appendChild(c1);
-      // Court 1 centre line
-      const c1h = document.createElementNS(SVG_NS, 'line');
-      setAttrs(c1h, { x1: c1x, y1: VB_H / 2, x2: c1x + courtW, y2: VB_H / 2, ...lineAttr });
-      overlay.appendChild(c1h);
-      // Court 1 net
-      const c1net = document.createElementNS(SVG_NS, 'line');
-      setAttrs(c1net, { x1: c1x, y1: VB_H / 2, x2: c1x + courtW, y2: VB_H / 2, stroke: '#6d28d9', 'stroke-width': 3, opacity: 0.6 });
-      overlay.appendChild(c1net);
-      // Court 1 service boxes
-      const svcW = courtW * 0.38;
-      [c1y, VB_H / 2].forEach(sy => {
-        const left = document.createElementNS(SVG_NS, 'rect');
-        setAttrs(left, { x: c1x + courtW / 2 - svcW, y: sy, width: svcW, height: courtH / 2, ...lineAttr });
-        overlay.appendChild(left);
-        const right = document.createElementNS(SVG_NS, 'rect');
-        setAttrs(right, { x: c1x + courtW / 2, y: sy, width: svcW, height: courtH / 2, ...lineAttr });
-        overlay.appendChild(right);
-      });
-
-      // Court 2 (right half)
-      const c2x = 3 * VB_W / 4 - courtW / 2;
-      const c2 = document.createElementNS(SVG_NS, 'rect');
-      setAttrs(c2, { x: c2x, y: c1y, width: courtW, height: courtH, ...lineAttr });
-      overlay.appendChild(c2);
-      const c2h = document.createElementNS(SVG_NS, 'line');
-      setAttrs(c2h, { x1: c2x, y1: VB_H / 2, x2: c2x + courtW, y2: VB_H / 2, ...lineAttr });
-      overlay.appendChild(c2h);
-      const c2net = document.createElementNS(SVG_NS, 'line');
-      setAttrs(c2net, { x1: c2x, y1: VB_H / 2, x2: c2x + courtW, y2: VB_H / 2, stroke: '#6d28d9', 'stroke-width': 3, opacity: 0.6 });
-      overlay.appendChild(c2net);
-      [c1y, VB_H / 2].forEach(sy => {
-        const left = document.createElementNS(SVG_NS, 'rect');
-        setAttrs(left, { x: c2x + courtW / 2 - svcW, y: sy, width: svcW, height: courtH / 2, ...lineAttr });
-        overlay.appendChild(left);
-        const right = document.createElementNS(SVG_NS, 'rect');
-        setAttrs(right, { x: c2x + courtW / 2, y: sy, width: svcW, height: courtH / 2, ...lineAttr });
-        overlay.appendChild(right);
+      // Two badminton courts, real proportions: 13.4m x 6.1m (long axis ~2.2:1),
+      // long axis vertical with the net across the SHORT dimension at mid-length.
+      const courtW = 260, courtH = 570;
+      const courtY = VB_H / 2 - courtH / 2;
+      const svcGap = 84; // short service line ~1.98m from the net (scaled)
+      [VB_W / 4, 3 * VB_W / 4].forEach(cxMid => {
+        const cx = cxMid - courtW / 2;
+        // Court boundary
+        const court = document.createElementNS(SVG_NS, 'rect');
+        setAttrs(court, { x: cx, y: courtY, width: courtW, height: courtH, ...lineAttr });
+        overlay.appendChild(court);
+        // Net across the short dimension at mid-length
+        const net = document.createElementNS(SVG_NS, 'line');
+        setAttrs(net, { x1: cx, y1: VB_H / 2, x2: cx + courtW, y2: VB_H / 2, stroke: '#6d28d9', 'stroke-width': 3, opacity: 0.6 });
+        overlay.appendChild(net);
+        // Short service lines on either side of the net
+        [VB_H / 2 - svcGap, VB_H / 2 + svcGap].forEach(sy => {
+          const svc = document.createElementNS(SVG_NS, 'line');
+          setAttrs(svc, { x1: cx, y1: sy, x2: cx + courtW, y2: sy, ...lineAttr });
+          overlay.appendChild(svc);
+        });
+        // Service-court centre lines: from each short service line to the back boundary
+        [[courtY, VB_H / 2 - svcGap], [VB_H / 2 + svcGap, courtY + courtH]].forEach(([sy1, sy2]) => {
+          const mid = document.createElementNS(SVG_NS, 'line');
+          setAttrs(mid, { x1: cxMid, y1: sy1, x2: cxMid, y2: sy2, ...lineAttr });
+          overlay.appendChild(mid);
+        });
       });
     }
 
@@ -1677,8 +1661,13 @@ export function render(container) {
       }
     } else if (name === 'pods') {
       const pods = Math.ceil(count / 6);
-      const centers = [[UNIT * 5, UNIT * 3], [UNIT * 9, UNIT * 3], [UNIT * 13, UNIT * 3],
-                       [UNIT * 5, UNIT * 7.5], [UNIT * 9, UNIT * 7.5], [UNIT * 13, UNIT * 7.5]];
+      // Two rows of five pod centres — seats up to 60 students (6 per pod)
+      const centers = [];
+      for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 5; c++) {
+          centers.push([UNIT * (3 + c * 4.5), UNIT * (3.5 + r * 4.5)]);
+        }
+      }
       for (let i = 0; i < pods && i < centers.length; i++) {
         const [cx, cy] = centers[i];
         const radius = TRI_H * 0.6;
@@ -1689,6 +1678,8 @@ export function render(container) {
           place(find('desk_tri'), x, y, angle - 90);
         }
       }
+      const podSeats = Math.min(count, centers.length * 6);
+      if (podSeats < count) showToast(`Preset seats ${podSeats} of ${count} students`, 'warning');
       place(find('whiteboard'), UNIT * 1.2, UNIT * 1.2, 90);
     } else if (name === 'stations') {
       place(find('teacher_desk'), UNIT * 11.5, UNIT * 10, 180);
@@ -1708,12 +1699,24 @@ export function render(container) {
       place(find('desk_trap'), UNIT * 11.5, UNIT * 8, 0);
       place(find('desk_trap'), UNIT * 13, UNIT * 8, 0);
     } else if (name === 'ushape') {
+      // Horseshoe: 270-degree sweep with a 90-degree opening facing the whiteboard
+      // (front, left wall). Desks sit >=66px apart along each arc; the outer arc
+      // fills first and larger classes add inner arcs (double horseshoe).
       const cx = UNIT * 12, cy = UNIT * 6;
-      const radius = Math.min(UNIT * 5, (count / 18) * UNIT * 5);
-      for (let i = 0; i < count; i++) {
-        const angle = (i / count) * 2 * Math.PI;
-        place(find('desk_rect'), cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, deg(angle) + 90);
+      const sweep = Math.PI * 1.5;
+      const arcStart = Math.PI * 1.25; // opening centred on the left (front)
+      const minGap = UNIT * 1.1;       // >=66px between desk centres along the arc
+      let seated = 0;
+      for (let radius = UNIT * 4.5; radius >= UNIT * 1.5 && seated < count; radius -= UNIT * 1.4) {
+        const capacity = Math.floor((radius * sweep) / minGap) + 1;
+        const n = Math.min(capacity, count - seated);
+        for (let i = 0; i < n; i++) {
+          const angle = arcStart + (n === 1 ? sweep / 2 : (i / (n - 1)) * sweep);
+          place(find('desk_rect'), cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius, deg(angle) + 90);
+        }
+        seated += n;
       }
+      if (seated < count) showToast(`Preset seats ${seated} of ${count} students`, 'warning');
       place(find('whiteboard'), UNIT * 1.2, UNIT * 2, 90);
     } else if (name === 'quiet') {
       place(find('teacher_desk'), UNIT * 1.2, UNIT * 3, 90);
@@ -1729,10 +1732,13 @@ export function render(container) {
         if (i < 5) place(find('whiteboard'), UNIT * 1.5 + i * UNIT * 2.5, UNIT * 1.5, 0);
         else place(find('whiteboard'), UNIT * 1.5 + (i - 5) * UNIT * 2.5, VB_H - UNIT * 1.5, 180);
       }
-      // Central chairs
-      for (let i = 0; i < Math.min(count, 20); i++) {
-        const angle = (i / Math.min(count, 20)) * Math.PI * 2;
-        place(find('chair'), VB_W / 3 + Math.cos(angle) * UNIT * 3.5, VB_H / 2 + Math.sin(angle) * UNIT * 2.5);
+      // Central chairs — rows of 10 until everyone is seated
+      const gCols = 10;
+      const gRows = Math.ceil(count / gCols);
+      const gYSpacing = gRows > 5 ? 1 : 1.2; // tighten rows for very large classes
+      for (let i = 0; i < count; i++) {
+        const gr = Math.floor(i / gCols), gc = i % gCols;
+        place(find('chair'), UNIT * (6 + gc * 1.3), UNIT * (3.6 + gr * gYSpacing));
       }
     } else if (name === 'fishbowl') {
       const innerCount = Math.min(8, Math.floor(count / 3));
@@ -1760,62 +1766,34 @@ export function render(container) {
       place(find('tablet_cart'), UNIT * 1.5, UNIT * 9);
       place(find('vr_station'), UNIT * 18, UNIT * 9);
     } else if (name === 'circuit') {
-      // Circuit training: 8 stations around the perimeter with varied equipment
+      // Circuit training: station count scales with class size (~4 students per station)
       stackWall('A'); stackWall('B');
-      // Station 1: Push-up mat (top-left)
-      place(find('cone_large'), UNIT * 2.5, UNIT * 1.5);
-      place(find('gym_mat'), UNIT * 3.5, UNIT * 1.8);
-      place(find('marker_flat'), UNIT * 5.6, UNIT * 1.8);
-      // Station 2: Agility hoops (top-centre-left)
-      place(find('cone_large'), UNIT * 7, UNIT * 1.5);
-      place(find('hoop'), UNIT * 8, UNIT * 1.8);
-      place(find('hoop'), UNIT * 9.3, UNIT * 1.8);
-      place(find('hoop'), UNIT * 8.6, UNIT * 2.8);
-      // Station 3: Core mat (top-centre-right)
-      place(find('cone_large'), UNIT * 11.5, UNIT * 1.5);
-      place(find('gym_mat'), UNIT * 12.5, UNIT * 1.8);
-      place(find('marker_flat'), UNIT * 14.6, UNIT * 1.8);
-      // Station 4: Shuttle run (top-right)
-      place(find('cone_large'), UNIT * 16.5, UNIT * 1.5);
-      place(find('cone_small'), UNIT * 17.5, UNIT * 1.8);
-      place(find('cone_small'), UNIT * 20, UNIT * 1.8);
-      place(find('marker_flat'), UNIT * 18.7, UNIT * 1.8);
-      // Station 5: Balance bench (right side)
-      place(find('cone_large'), UNIT * 20.5, UNIT * 4);
-      place(find('bench'), UNIT * 20, UNIT * 5);
-      place(find('marker_flat'), UNIT * 21, UNIT * 6.2);
-      // Station 6: Skipping / jump zone (bottom-right)
-      place(find('cone_large'), UNIT * 16.5, UNIT * 8.5);
-      place(find('hoop'), UNIT * 17.5, UNIT * 8.8);
-      place(find('hoop'), UNIT * 18.8, UNIT * 8.8);
-      place(find('marker_flat'), UNIT * 20, UNIT * 8.8);
-      // Station 7: Burpee mat (bottom-centre)
-      place(find('cone_large'), UNIT * 11.5, UNIT * 8.5);
-      place(find('gym_mat'), UNIT * 12.5, UNIT * 8.8);
-      place(find('gym_mat'), UNIT * 12.5, UNIT * 10);
-      // Station 8: Star jumps / cone weave (bottom-left)
-      place(find('cone_large'), UNIT * 2.5, UNIT * 8.5);
-      place(find('cone_small'), UNIT * 3.5, UNIT * 9);
-      place(find('cone_small'), UNIT * 4.5, UNIT * 8.5);
-      place(find('cone_small'), UNIT * 5.5, UNIT * 9);
-      place(find('cone_small'), UNIT * 6.5, UNIT * 8.5);
-      // Left side: stretching/rest
-      place(find('gym_mat'), UNIT * 1, UNIT * 4.5);
-      place(find('gym_mat'), UNIT * 1, UNIT * 6);
-      // Directional arrows (flat markers showing rotation)
-      place(find('marker_flat'), UNIT * 6, UNIT * 0.8);
-      place(find('marker_flat'), UNIT * 15, UNIT * 0.8);
-      place(find('marker_flat'), UNIT * 15, UNIT * 10.2);
-      place(find('marker_flat'), UNIT * 6, UNIT * 10.2);
-      // Centre: instructor, timer, water
-      place(find('speaker'), UNIT * 10.5, UNIT * 5.5);
+      const stations = Math.min(8, Math.max(4, Math.ceil(count / 4)));
+      // Perimeter anchors — corners first, then centres, then the right side
+      const anchors = [
+        [2.5, 1.5], [16.5, 1.5], [16.5, 8.5], [2.5, 8.5], // corners
+        [9.5, 1.5], [9.5, 8.5],                            // top/bottom centre
+        [20.5, 4.5], [20.5, 7]                             // right side
+      ];
+      const kit = ['gym_mat', 'hoop', 'bench'];
+      for (let i = 0; i < stations; i++) {
+        const [ax, ay] = anchors[i];
+        place(find('cone_large'), UNIT * ax, UNIT * ay);                 // station cone
+        place(find(kit[i % 3]), UNIT * (ax + 1.4), UNIT * (ay + 0.3));   // activity equipment
+        place(find('marker_flat'), UNIT * (ax + 3), UNIT * (ay + 0.3)); // direction marker
+      }
+      // Stretching / rest area — only when the circuit leaves the left side free
+      if (stations <= 6) {
+        place(find('gym_mat'), UNIT * 1, UNIT * 4.5);
+        place(find('gym_mat'), UNIT * 1, UNIT * 6);
+      }
+      // Hydration: one water station, two for larger classes
       place(find('water_station'), UNIT * 9, UNIT * 5.5);
-      place(find('bench'), UNIT * 10, UNIT * 7);
-      place(find('bench'), UNIT * 10, UNIT * 4);
-      // Equipment storage & bibs
+      if (count > 30) place(find('water_station'), UNIT * 0.5, UNIT * 0.5);
+      // Instructor & shared equipment
+      place(find('speaker'), UNIT * 10.5, UNIT * 5.5);
       place(find('equipment_box'), UNIT * 22, UNIT * 10.5);
       place(find('bib_stack'), UNIT * 22, UNIT * 9.5);
-      place(find('water_station'), UNIT * 0.5, UNIT * 0.5);
     } else if (name === 'team_game') {
       // Two-team setup with a net/barrier down the middle
       stackWall('A'); stackWall('B');
@@ -1847,11 +1825,14 @@ export function render(container) {
       stackWall('A'); stackWall('B');
       // Instructor at front
       place(find('speaker'), UNIT * 11, UNIT * 1.5);
-      // Students in rows (cones as markers)
-      const cols = 5, rows = Math.ceil(count / cols);
+      // Students in rows (cones as markers) — at most 4 rows so every row fits
+      // the 720px room; columns widen with count and spacing tightens to fit.
+      const rows = Math.min(4, Math.ceil(count / 8));
+      const cols = Math.ceil(count / rows);
+      const xSpacing = Math.min(3.5, 21 / Math.max(cols - 1, 1));
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols && r * cols + c < count; c++) {
-          place(find('cone_large'), UNIT * (3.5 + c * 3.5), UNIT * (3.5 + r * 2.5));
+          place(find('cone_large'), UNIT * (1.5 + c * xSpacing), UNIT * (3.5 + r * 2.5));
         }
       }
       // Equipment at the side
@@ -1990,20 +1971,26 @@ export function render(container) {
       place(find('bib_stack'), UNIT * 0.5, UNIT * 10.5);
       place(find('bib_stack'), UNIT * 22, UNIT * 0.5);
     } else if (name === 'kitchen') {
-      // NFS kitchen layout: 6 cooking workstations, demo station, washing area
-      closeWall('A'); closeWall('B');
+      // NFS kitchen layout: cooking workstations, demo station, washing area.
+      // Walls stay OPEN (stacked) — this preset spans the full-width F&N room,
+      // with the washing area and hygiene station beyond both wall tracks.
+      stackWall('A'); stackWall('B');
       // Teacher demo station (front)
       place(find('teacher_desk'), UNIT * 10, UNIT * 1.5);
       place(find('writable_tv'), UNIT * 13, UNIT * 1.5, 0);
-      // 6 workstations (2 rows of 3)
-      for (let r = 0; r < 2; r++) {
-        for (let c = 0; c < 3; c++) {
-          place(find('group_table'), UNIT * (3 + c * 6.5), UNIT * (4 + r * 3.5));
-          place(find('chair'), UNIT * (2 + c * 6.5), UNIT * (3.5 + r * 3.5));
-          place(find('chair'), UNIT * (4 + c * 6.5), UNIT * (3.5 + r * 3.5));
-          place(find('chair'), UNIT * (3 + c * 6.5), UNIT * (5 + r * 3.5));
-        }
+      // Workstations sized to the class: 4 chairs per group table
+      const stations = Math.min(10, Math.max(4, Math.ceil(count / 4)));
+      const perRow = Math.ceil(stations / 2);
+      for (let i = 0; i < stations; i++) {
+        const r = Math.floor(i / perRow), c = i % perRow;
+        const sx = 3 + c * 3.5, sy = 4 + r * 3.5;
+        place(find('group_table'), UNIT * sx, UNIT * sy);
+        place(find('chair'), UNIT * (sx - 1), UNIT * (sy - 1));
+        place(find('chair'), UNIT * (sx + 1), UNIT * (sy - 1));
+        place(find('chair'), UNIT * (sx - 1), UNIT * (sy + 1));
+        place(find('chair'), UNIT * (sx + 1), UNIT * (sy + 1));
       }
+      if (stations * 4 < count) showToast(`Preset seats ${stations * 4} of ${count} students`, 'warning');
       // Washing/cleaning area (back right)
       place(find('stand_table'), UNIT * 20, UNIT * 4);
       place(find('stand_table'), UNIT * 20, UNIT * 6);
