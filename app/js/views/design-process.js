@@ -2,7 +2,7 @@
  * Design Process — View
  * =====================
  * Dedicated page for the Design Process teaching tool.
- * Launches the 5-stage D&T design thinking workflow in a fullscreen overlay.
+ * Launches the 5-stage Design Thinking (d.school model) workflow in a fullscreen overlay.
  */
 
 import { openOverlay } from '../components/overlay.js';
@@ -18,17 +18,21 @@ export function render(container) {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg>
               Design Process
             </h1>
-            <p class="page-subtitle">D&T design thinking framework with integrated CAD, 3D printing, and ML tools.</p>
+            <p class="page-subtitle">Design Thinking (d.school model) with integrated CAD, 3D printing, and ML tools.</p>
           </div>
         </div>
 
         <div class="card" style="margin-bottom:var(--sp-5);padding:var(--sp-5);">
           <div style="display:flex;gap:var(--sp-5);align-items:flex-start;">
             <div style="flex:1;">
-              <h3 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-2);">5-Stage Design Thinking</h3>
+              <h3 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-2);">5-Stage Design Thinking (d.school model)</h3>
               <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-3);">
-                Guide students through the design thinking cycle: <strong>Empathise → Define → Ideate → Prototype → Test</strong>.
+                Guide students through the Stanford d.school design thinking cycle: <strong>Empathise → Define → Ideate → Prototype → Test</strong>.
                 Each stage has guided prompts, phase-specific tools, image upload, and links to external CAD and ML tools.
+              </p>
+              <p style="font-size:0.75rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-3);padding:8px 12px;border-left:3px solid #14b8a6;background:rgba(20,184,166,0.06);border-radius:0 6px 6px 0;">
+                <strong>Note for D&amp;T teachers:</strong> this page uses the d.school model, not the syllabus design process.
+                For O/N-Level D&amp;T coursework, map the stages to: identify problem/need → design brief &amp; specifications → ideation → development → prototyping → evaluation against specs.
               </p>
               <ul style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.8;padding-left:20px;margin-bottom:var(--sp-4);">
                 <li>5-stage guided workflow with prompts and templates</li>

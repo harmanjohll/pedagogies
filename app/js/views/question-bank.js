@@ -138,7 +138,8 @@ export function render(container) {
             <button id="qb-generate" class="btn btn-primary" ${isGenerating ? 'disabled' : ''}>${isGenerating ? 'Generating...' : 'Generate Questions'}</button>
             ${items.length ? `
               <button id="qb-blueprint" class="btn btn-secondary">Send to AoL Blueprint</button>
-              <button id="qb-print" class="btn btn-ghost">Print / Export</button>
+              <button id="qb-print-student" class="btn btn-ghost" title="Answer key is excluded from the printout">Print Student Copy</button>
+              <button id="qb-print-teacher" class="btn btn-ghost" title="Includes the answer key in the printout">Print Teacher Copy (with answers)</button>
             ` : ''}
           </div>
 
@@ -192,7 +193,8 @@ export function render(container) {
     });
     container.querySelector('#qb-generate')?.addEventListener('click', generateBank);
     container.querySelector('#qb-blueprint')?.addEventListener('click', sendToBlueprint);
-    container.querySelector('#qb-print')?.addEventListener('click', printBank);
+    container.querySelector('#qb-print-student')?.addEventListener('click', () => printBank(false));
+    container.querySelector('#qb-print-teacher')?.addEventListener('click', () => printBank(true));
     container.querySelectorAll('.qb-regen').forEach(btn => {
       btn.addEventListener('click', () => regenerateItem(parseInt(btn.dataset.idx, 10)));
     });
@@ -293,16 +295,18 @@ export function render(container) {
     showToast(`Blueprint "${bp.title}" saved — find it under Assessment → AoL.`, 'success');
   }
 
-  function printBank() {
+  /* withAnswers=false prints a student worksheet (answer key hidden via .no-print);
+   * withAnswers=true prints a teacher copy including the answer key. */
+  function printBank(withAnswers = false) {
     if (!items.length) return;
     const w = window.open('', '_blank');
     if (!w) { showToast('Pop-up blocked — allow pop-ups for this site to print.', 'warning'); return; }
-    trackEvent('export', 'print_question_bank', `${items.length} questions`, [subject, level].filter(Boolean).join(' '));
+    trackEvent('export', 'print_question_bank', `${items.length} questions (${withAnswers ? 'teacher copy' : 'student copy'})`, [subject, level].filter(Boolean).join(' '));
     const totalMarks = items.reduce((s, q) => s + q.marks, 0);
     w.document.write(`<!DOCTYPE html>
 <html>
 <head>
-  <title>${escapeHtml(subject)} Question Bank</title>
+  <title>${escapeHtml(subject)} Question Bank${withAnswers ? ' (Teacher Copy)' : ''}</title>
   <style>
     @media print { @page { margin: 2cm; } .no-print { display: none !important; } }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px; color: #1e1e2e; }
@@ -324,6 +328,7 @@ export function render(container) {
   </style>
 </head>
 <body>
+  ${withAnswers ? `<div style="border: 2px solid #b45309; color: #b45309; text-align: center; font-weight: 700; font-size: 0.8125rem; letter-spacing: 0.06em; padding: 8px 12px; margin-bottom: 16px;">TEACHER COPY &mdash; INCLUDES ANSWERS</div>` : ''}
   <div class="header">
     <h1>${escapeHtml(subject)}${level ? ' | ' + escapeHtml(level) : ''}${topic ? ' | ' + escapeHtml(topic) : ''}</h1>
     <p>Total Marks: ${totalMarks} | Questions: ${items.length}</p>
@@ -342,7 +347,7 @@ export function render(container) {
       <div class="q-text">${escapeHtml(q.question)}</div>
       ${Array.from({ length: Math.max(2, Math.ceil(q.marks * 1.5)) }, () => '<div class="q-lines"></div>').join('')}
     </div>`).join('')}
-  <div class="answer-section no-print">
+  <div class="answer-section${withAnswers ? '' : ' no-print'}">
     <h2>Answer Key</h2>
     ${items.map((q, i) => `
       <div class="answer"><strong>Q${i + 1} (${escapeHtml(q.bloom)}, ${escapeHtml(q.difficulty)}, ${q.marks}m):</strong> ${escapeHtml(q.answer || 'No answer provided')}</div>
