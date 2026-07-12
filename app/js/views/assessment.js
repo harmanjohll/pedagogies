@@ -112,11 +112,13 @@ const SRL_STRATEGIES = [
     }},
 ];
 
-/* ── Hattie's AfL Strategies ── */
+/* ── Hattie's AfL Strategies ──
+ * Indicative effect sizes from Hattie's Visible Learning research;
+ * values vary across editions and meta-analyses. */
 const HATTIE_STRATEGIES = [
-  { strategy: 'Feedback',                    effect: 0.70, desc: 'Specific information about task performance relative to success criteria.' },
-  { strategy: 'Formative Evaluation',        effect: 0.48, desc: 'Using assessment evidence to adapt teaching in real-time.' },
-  { strategy: 'Self-Reported Grades',        effect: 1.33, desc: 'Students estimating their own performance, calibrating expectations.' },
+  { strategy: 'Feedback',                    effect: 0.62, desc: 'Specific information about task performance relative to success criteria.' },
+  { strategy: 'Providing formative evaluation', effect: 0.90, desc: 'Using assessment evidence to adapt teaching in real-time.' },
+  { strategy: 'Self-reported grades / student expectations', effect: 1.33, desc: 'Students estimating their own performance, calibrating expectations.' },
   { strategy: 'Classroom Discussion',        effect: 0.82, desc: 'Purposeful dialogue that makes thinking visible.' },
   { strategy: 'Teacher Clarity',             effect: 0.75, desc: 'Clear learning intentions, success criteria, and task expectations.' },
   { strategy: 'Metacognitive Strategies',    effect: 0.60, desc: 'Teaching students to think about their own thinking.' },
@@ -428,10 +430,14 @@ export function renderAoL(container) {
                 <strong>I have reviewed and verified all questions.</strong> I confirm that each question is accurate, appropriate for my students, and aligned with the Table of Specifications.
               </span>
             </label>
-            <div style="display:flex;gap:8px;">
-              <button class="btn btn-primary btn-sm" id="aol-export-btn" disabled>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" id="aol-export-btn" disabled title="Answer key is excluded from the printout">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Export / Print
+                Print Student Copy
+              </button>
+              <button class="btn btn-primary btn-sm" id="aol-export-teacher-btn" disabled title="Includes the answer key / marking scheme in the printout">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Print Teacher Copy (with answers)
               </button>
               <button class="btn btn-secondary btn-sm" id="aol-copy-btn" disabled>
                 Copy to Clipboard
@@ -571,7 +577,7 @@ function render2DInputs(lessons) {
     </div>
     <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:12px;">
       The 2D grid maps <strong>Knowledge Dimension</strong> (rows) against <strong>Cognitive Process</strong> (columns).
-      ${`Add objectives above to create a richer table with objectives mapped to each knowledge dimension, or leave blank for the standard 4\u00d76 grid.`}
+      ${`Objectives you add above are listed beside the grid for reference \u2014 you decide which knowledge dimension(s) each objective assesses.`}
     </p>
   `;
 }
@@ -619,7 +625,7 @@ function build1DTOSTable(objectives, totalMarks) {
         <tr>
           <td style="text-align:left;font-weight:600;">% of Paper</td>
           ${BLOOMS.map(b => `<td data-col-pct="${b.key}">0%</td>`).join('')}
-          <td>100%</td><td>-</td>
+          <td data-total-pct>0%</td><td>-</td>
         </tr>
       </tbody>
     </table>
@@ -628,48 +634,51 @@ function build1DTOSTable(objectives, totalMarks) {
   `;
 }
 
-/* \u2500\u2500 2D TOS table (Knowledge \u00d7 Cognitive Process) with objectives support \u2500\u2500 */
+/* \u2500\u2500 2D TOS table (Knowledge \u00d7 Cognitive Process) \u2500\u2500
+ * Objectives are listed above the grid as a reference only: deciding which
+ * knowledge dimension(s) an objective assesses is the teacher's judgement,
+ * so no automatic objective-to-dimension mapping is applied. */
 function build2DTOSTable(totalMarks, objectives) {
   const hasObj = objectives && objectives.length > 0;
   return `
+    ${hasObj ? `
+      <div style="margin-bottom:12px;padding:12px 14px;border:1px solid var(--border,#e2e5ea);border-radius:8px;background:var(--bg-subtle,#f8f9fa);">
+        <div style="font-size:0.6875rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;margin-bottom:6px;">Learning Objectives (for reference)</div>
+        ${objectives.map(o => `<div style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:2px;">\u2022 ${escHtml(o)}</div>`).join('')}
+        <div style="font-size:0.6875rem;color:var(--ink-faint);margin-top:6px;">Use your professional judgement to decide which knowledge dimension(s) each objective assesses as you allocate marks below.</div>
+      </div>` : ''}
     <div class="tos-table-wrap">
     <table class="tos-table" style="table-layout:fixed;width:100%;">
       <colgroup>
-        <col style="width:${hasObj ? '22%' : '18%'};" />
-        ${hasObj ? '<col style="width:22%;" />' : ''}
-        ${BLOOMS.map(() => `<col style="width:${hasObj ? '8%' : '11%'};" />`).join('')}
-        <col style="width:${hasObj ? '5%' : '7%'};" />
-        <col style="width:${hasObj ? '5%' : '7%'};" />
+        <col style="width:18%;" />
+        ${BLOOMS.map(() => `<col style="width:11%;" />`).join('')}
+        <col style="width:7%;" />
+        <col style="width:7%;" />
       </colgroup>
       <thead><tr>
         <th style="text-align:left;">Knowledge \\ Process</th>
-        ${hasObj ? '<th style="text-align:left;">Objectives</th>' : ''}
         ${BLOOMS.map(b => `<th title="${b.desc}\n${b.verbs}" style="font-size:0.6875rem;">${b.label}</th>`).join('')}
         <th>Total</th><th>%</th>
       </tr></thead>
       <tbody>
-        ${KNOWLEDGE_DIMS.map((dim, i) => {
-          const dimObjs = hasObj ? objectives.filter((_, idx) => idx % KNOWLEDGE_DIMS.length === i) : [];
-          return `<tr>
+        ${KNOWLEDGE_DIMS.map((dim, i) => `<tr>
           <td class="tos-dim-cell" title="${dim.desc}">
             <span class="tos-2d-obj-label">${dim.label}</span>
             <span class="tos-dim-desc">${dim.desc}</span>
           </td>
-          ${hasObj ? `<td class="tos-2d-obj-cell">${dimObjs.length ? dimObjs.map(o => `<div style="margin-bottom:2px;">\u2022 ${escHtml(o)}</div>`).join('') : '<span style="color:var(--ink-faint);font-size:0.75rem;">-</span>'}</td>` : ''}
           ${BLOOMS.map(b => `<td title="${dim.ex[b.key]}"><input type="number" class="tos-cell" data-row="${i}" data-col="${b.key}" value="0" min="0" /></td>`).join('')}
           <td class="tos-total" data-row-total="${i}">0</td>
           <td class="tos-total" data-row-pct="${i}">0%</td>
-        </tr>`;
-        }).join('')}
+        </tr>`).join('')}
         <tr style="font-weight:700;">
-          <td style="text-align:left;" ${hasObj ? 'colspan="2"' : ''}>Column Total</td>
+          <td style="text-align:left;">Column Total</td>
           ${BLOOMS.map(b => `<td data-col-total="${b.key}">0</td>`).join('')}
           <td data-grand-total>0</td><td>-</td>
         </tr>
         <tr>
-          <td style="text-align:left;font-weight:600;" ${hasObj ? 'colspan="2"' : ''}>% of Paper</td>
+          <td style="text-align:left;font-weight:600;">% of Paper</td>
           ${BLOOMS.map(b => `<td data-col-pct="${b.key}">0%</td>`).join('')}
-          <td>100%</td><td>-</td>
+          <td data-total-pct>0%</td><td>-</td>
         </tr>
       </tbody>
     </table>
@@ -711,11 +720,11 @@ function wireAoLEvents(container, lessons) {
       const objs = objArea ? objArea.value.split('\n').map(o => o.trim()).filter(Boolean) : [];
       if (!objs.length) { showToast('Enter at least one learning objective.', 'warning'); return; }
       output.innerHTML = build1DTOSTable(objs, total);
-      attachTOSCalc(container, objs.length, total);
+      attachTOSCalc(container, objs.length);
     } else {
       const objs2d = obj2dArea ? obj2dArea.value.split('\n').map(o => o.trim()).filter(Boolean) : [];
       output.innerHTML = build2DTOSTable(total, objs2d.length ? objs2d : null);
-      attachTOSCalc(container, KNOWLEDGE_DIMS.length, total);
+      attachTOSCalc(container, KNOWLEDGE_DIMS.length);
     }
   });
 
@@ -744,7 +753,7 @@ function wireAoLEvents(container, lessons) {
         if (jsonMatch) {
           const data = JSON.parse(jsonMatch[0]);
           output.innerHTML = build1DTOSTable(objs, total);
-          attachTOSCalc(container, objs.length, total);
+          attachTOSCalc(container, objs.length);
           data.forEach((row, i) => {
             BLOOMS.forEach(b => {
               const inp = container.querySelector(`.tos-cell[data-row="${i}"][data-col="${b.key}"]`);
@@ -773,7 +782,7 @@ function wireAoLEvents(container, lessons) {
         if (jsonMatch) {
           const data = JSON.parse(jsonMatch[0]);
           output.innerHTML = build2DTOSTable(total, objs2d.length ? objs2d : null);
-          attachTOSCalc(container, KNOWLEDGE_DIMS.length, total);
+          attachTOSCalc(container, KNOWLEDGE_DIMS.length);
           data.forEach((row, i) => {
             BLOOMS.forEach(b => {
               const inp = container.querySelector(`.tos-cell[data-row="${i}"][data-col="${b.key}"]`);
@@ -805,21 +814,25 @@ function wireAoLEvents(container, lessons) {
 
   const genQBtn = container.querySelector('#aol-generate-questions-btn');
   if (genQBtn) {
-    // Monitor TOS cell changes to enable the button
-    tosCellObserver = new MutationObserver(() => {
+    // Enable only when the allocated grand total matches the target total —
+    // the generation prompt demands the full target, so a partial TOS would mislead
+    const updateGenBtn = () => {
       const cells = container.querySelectorAll('.tos-cell');
-      const hasData = [...cells].some(c => parseInt(c.value) > 0);
-      genQBtn.disabled = !hasData;
-    });
+      const allocated = [...cells].reduce((s, c) => s + (parseInt(c.value) || 0), 0);
+      const target = getTOSTargetMarks(container);
+      const ready = cells.length > 0 && allocated === target;
+      genQBtn.disabled = !ready;
+      genQBtn.title = ready ? '' : `Allocate all ${target} marks first (${allocated} allocated)`;
+    };
+    updateGenBtn();
+
+    // Monitor TOS table rebuilds
+    tosCellObserver = new MutationObserver(updateGenBtn);
     tosCellObserver.observe(container.querySelector('#tos-output') || container, { childList: true, subtree: true });
 
-    // Also enable on input changes
+    // Also re-check on cell edits and target-total edits
     tosCellInputHandler = (e) => {
-      if (e.target.classList.contains('tos-cell')) {
-        const cells = container.querySelectorAll('.tos-cell');
-        const hasData = [...cells].some(c => parseInt(c.value) > 0);
-        genQBtn.disabled = !hasData;
-      }
+      if (e.target.classList.contains('tos-cell') || e.target.id === 'tos-total-marks') updateGenBtn();
     };
     tosCellInputTarget = container;
     tosCellInputTarget.addEventListener('input', tosCellInputHandler);
@@ -833,15 +846,18 @@ function wireAoLEvents(container, lessons) {
     confirmCb.addEventListener('change', () => {
       const enabled = confirmCb.checked;
       const exportBtn = container.querySelector('#aol-export-btn');
+      const exportTeacherBtn = container.querySelector('#aol-export-teacher-btn');
       const copyBtn = container.querySelector('#aol-copy-btn');
       if (exportBtn) exportBtn.disabled = !enabled;
+      if (exportTeacherBtn) exportTeacherBtn.disabled = !enabled;
       if (copyBtn) copyBtn.disabled = !enabled;
       updateAoLStepper(container);
     });
   }
 
   // ── Export / Print ──
-  container.querySelector('#aol-export-btn')?.addEventListener('click', () => exportQuestions(container));
+  container.querySelector('#aol-export-btn')?.addEventListener('click', () => exportQuestions(container, false));
+  container.querySelector('#aol-export-teacher-btn')?.addEventListener('click', () => exportQuestions(container, true));
   container.querySelector('#aol-copy-btn')?.addEventListener('click', () => copyQuestions(container));
 }
 
@@ -892,9 +908,9 @@ async function generateDraftQuestions(container) {
     higher: 'Focus heavily on Analyse, Evaluate, and Create levels (60-70% higher order). Include fewer Remember/Understand questions.'
   };
 
-  // Build the TOS summary for the prompt
+  // Build the TOS summary for the prompt (only cells with marks allocated)
   const tosSummary = tosData.map(row => {
-    const parts = BLOOMS.map(b => `${b.label}: ${row.marks[b.key] || 0} marks`).filter(p => !p.endsWith('0 marks'));
+    const parts = BLOOMS.filter(b => (row.marks[b.key] || 0) > 0).map(b => `${b.label}: ${row.marks[b.key]} marks`);
     return `- ${row.label}: ${parts.join(', ')}`;
   }).join('\n');
 
@@ -1128,8 +1144,10 @@ function renderGeneratedQuestions(container, questions) {
   processLatex(output);
 }
 
-/* ── Export Questions (print-ready with watermark) ── */
-function exportQuestions(container) {
+/* ── Export Questions (print-ready with watermark) ──
+ * withAnswers=false prints a student copy (answer key hidden via .no-print);
+ * withAnswers=true prints a teacher copy including the answer key. */
+function exportQuestions(container, withAnswers = false) {
   const questions = (container._aolQuestions || []).filter(q => !q._deleted);
   if (questions.length === 0) {
     showToast('No questions to export.', 'warning');
@@ -1137,7 +1155,7 @@ function exportQuestions(container) {
   }
   const subject = container.querySelector('#aol-subject')?.value?.trim() || 'Assessment';
   const level = container.querySelector('#aol-level')?.value?.trim() || '';
-  trackEvent('export', 'print_questions', `${questions.length} questions`, [subject, level].filter(Boolean).join(' '));
+  trackEvent('export', 'print_questions', `${questions.length} questions (${withAnswers ? 'teacher copy' : 'student copy'})`, [subject, level].filter(Boolean).join(' '));
   const totalMarks = questions.reduce((s, q) => s + (Number(q.marks) || 0), 0);
 
   // Detect formula-heavy subjects; use blank working space instead of lines
@@ -1145,10 +1163,14 @@ function exportQuestions(container) {
   const isFormulaSubject = formulaSubjects.test(subject);
 
   const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    showToast('Pop-up blocked — allow pop-ups for this site to print.', 'warning');
+    return;
+  }
   printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
-  <title>${escHtml(subject)} Assessment</title>
+  <title>${escHtml(subject)} Assessment${withAnswers ? ' (Teacher Copy)' : ''}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"><\/script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
@@ -1175,6 +1197,7 @@ function exportQuestions(container) {
   </style>
 </head>
 <body>
+  ${withAnswers ? `<div style="border:2px solid #b45309;color:#b45309;text-align:center;font-weight:700;font-size:0.8125rem;letter-spacing:0.06em;padding:8px 12px;margin-bottom:16px;">TEACHER COPY &mdash; INCLUDES ANSWERS</div>` : ''}
   <div class="header">
     <h1>${escHtml(subject)}${level ? ' | ' + escHtml(level) : ''}</h1>
     <p>Total Marks: ${totalMarks} | Questions: ${questions.length}</p>
@@ -1199,7 +1222,7 @@ function exportQuestions(container) {
     </div>`;
   }).join('')}
 
-  <div class="answer-section no-print">
+  <div class="answer-section${withAnswers ? '' : ' no-print'}">
     <h2>Answer Key / Marking Scheme</h2>
     ${questions.map((q, i) => `
       <div class="answer">
@@ -1249,10 +1272,24 @@ function resetAIBtn(btn) {
   btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> AI Suggest Distribution';
 }
 
-function attachTOSCalc(container, rowCount, totalMarks) {
+/* Read the live target total so later edits to #tos-total-marks are reflected */
+function getTOSTargetMarks(container) {
+  return parseInt(container.querySelector('#tos-total-marks')?.value) || 50;
+}
+
+function attachTOSCalc(container, rowCount) {
+  const recalc = () => recalcTOS(container, rowCount, getTOSTargetMarks(container));
   container.querySelectorAll('.tos-cell').forEach(input => {
-    input.addEventListener('input', () => recalcTOS(container, rowCount, totalMarks));
+    input.addEventListener('input', recalc);
   });
+  // Re-validate when the target total itself changes (the input outlives table rebuilds,
+  // so swap out any handler from a previous Build to avoid stacking listeners)
+  const totalInput = container.querySelector('#tos-total-marks');
+  if (totalInput) {
+    if (totalInput._tosRecalcHandler) totalInput.removeEventListener('input', totalInput._tosRecalcHandler);
+    totalInput._tosRecalcHandler = recalc;
+    totalInput.addEventListener('input', recalc);
+  }
 }
 
 function recalcTOS(container, rowCount, totalMarks) {
@@ -1285,6 +1322,14 @@ function recalcTOS(container, rowCount, totalMarks) {
   if (grandEl) {
     grandEl.textContent = grandTotal;
     grandEl.style.color = grandTotal === totalMarks ? 'var(--success, #22c55e)' : (grandTotal > totalMarks ? 'var(--danger, #ef4444)' : 'var(--ink)');
+  }
+
+  // Total "% of Paper" reflects what is actually allocated, not an assumed 100%
+  const totalPctEl = container.querySelector('[data-total-pct]');
+  if (totalPctEl) {
+    const totalPct = totalMarks ? Math.round(grandTotal / totalMarks * 100) : 0;
+    totalPctEl.textContent = totalPct + '%';
+    totalPctEl.style.color = totalPct === 100 ? 'var(--success, #22c55e)' : 'var(--danger, #ef4444)';
   }
 
   // Show match / mismatch indicator
@@ -2188,20 +2233,13 @@ export function renderAfL(container) {
                 </div>`;
             }).join('')}
           </div>
-          <p style="font-size:0.75rem;color:var(--ink-muted);margin-top:8px;">Source: Hattie, J. (2023). <em>Visible Learning: The Sequel.</em> Effect sizes are indicative and context-dependent.</p>
+          <p style="font-size:0.75rem;color:var(--ink-muted);margin-top:8px;">Indicative effect sizes drawn from Hattie's <em>Visible Learning</em> research (values vary across editions/meta-analyses) and are context-dependent.</p>
 
           <div style="margin-top:16px;padding:14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-card);">
             <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:8px;">Try a strategy in your next lesson</div>
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
               <select class="input" id="afl-strategy-select" style="flex:1;font-size:0.8125rem;">
-                <option value="Feedback (d=0.70)">Feedback (d=0.70)</option>
-                <option value="Classroom Discussion (d=0.82)">Classroom Discussion (d=0.82)</option>
-                <option value="Teacher Clarity (d=0.75)">Teacher Clarity (d=0.75)</option>
-                <option value="Metacognitive Strategies (d=0.60)">Metacognitive Strategies (d=0.60)</option>
-                <option value="Questioning (d=0.48)">Questioning (d=0.48)</option>
-                <option value="Peer Tutoring (d=0.53)">Peer Tutoring (d=0.53)</option>
-                <option value="Self-Assessment (d=0.54)">Self-Assessment (d=0.54)</option>
-                <option value="Worked Examples (d=0.57)">Worked Examples (d=0.57)</option>
+                ${sorted.map(s => `<option value="${s.strategy} (d=${s.effect.toFixed(2)})">${s.strategy} (d=${s.effect.toFixed(2)})</option>`).join('')}
               </select>
               <button class="btn btn-sm btn-primary" id="afl-try-strategy-btn">Try it</button>
             </div>
@@ -2504,23 +2542,21 @@ function renderBlueprintCoverage(bp) {
   });
 
   const totalQ = questions.length;
+  const presentComp = E21CC_COMPETENCIES.filter(c => compMap[c.key] > 0);
   const missingComp = E21CC_COMPETENCIES.filter(c => compMap[c.key] === 0);
+  const presentDiff = DIFFICULTY_LEVELS.filter(d => diffMap[d] > 0);
   const missingDiff = DIFFICULTY_LEVELS.filter(d => diffMap[d] === 0);
-  const hasGaps = missingComp.length > 0 || missingDiff.length > 0;
 
   return `
     <div style="padding:16px;border:1px solid var(--border,#e2e5ea);border-radius:10px;background:var(--bg-subtle,#f8f9fa);">
       <div style="font-weight:700;font-size:0.875rem;color:var(--ink);margin-bottom:12px;">Coverage Analysis: ${escHtml(bp.title)}</div>
 
-      ${hasGaps ? `
-        <div style="padding:10px 14px;border-radius:8px;background:#fef3c7;border:1px solid #f59e0b;margin-bottom:14px;">
-          <div style="font-size:0.8125rem;font-weight:600;color:#92400e;margin-bottom:4px;">Coverage Gaps Detected</div>
-          ${missingComp.length ? `<div style="font-size:0.75rem;color:#78350f;">Missing competencies: ${missingComp.map(c => c.label + ' (' + c.desc + ')').join(', ')}</div>` : ''}
-          ${missingDiff.length ? `<div style="font-size:0.75rem;color:#78350f;margin-top:2px;">Missing difficulty levels: ${missingDiff.join(', ')}</div>` : ''}
-        </div>` : `
-        <div style="padding:10px 14px;border-radius:8px;background:#d1fae5;border:1px solid #22c55e;margin-bottom:14px;">
-          <div style="font-size:0.8125rem;font-weight:600;color:#065f46;">Full coverage across competencies and difficulty levels.</div>
-        </div>`}
+      <div style="padding:10px 14px;border-radius:8px;background:rgba(67,97,238,0.06);border:1px solid var(--border,#e2e5ea);margin-bottom:14px;">
+        <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Coverage summary</div>
+        <div style="font-size:0.75rem;color:var(--ink-muted);">E21CC competencies sampled: ${presentComp.length ? presentComp.map(c => c.label).join(', ') : 'none tagged'}${missingComp.length ? ` &middot; not sampled: ${missingComp.map(c => c.label).join(', ')}` : ''}</div>
+        <div style="font-size:0.75rem;color:var(--ink-muted);margin-top:2px;">Difficulty levels sampled: ${presentDiff.length ? presentDiff.join(', ') : 'none tagged'}${missingDiff.length ? ` &middot; not sampled: ${missingDiff.join(', ')}` : ''}</div>
+        <div style="font-size:0.6875rem;color:var(--ink-faint);margin-top:4px;">A single assessment need not sample every competency or difficulty level &mdash; coverage should match the assessment's purpose.</div>
+      </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
         <div>
@@ -2537,12 +2573,12 @@ function renderBlueprintCoverage(bp) {
           ${E21CC_COMPETENCIES.map(c => {
             const count = compMap[c.key];
             const pct = totalQ ? Math.round((count / totalQ) * 100) : 0;
-            const barColor = count === 0 ? '#ef4444' : '#22c55e';
+            const barColor = '#22c55e';
             return `
               <div style="margin-bottom:8px;">
                 <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:2px;">
                   <span style="color:var(--ink);">${c.label}</span>
-                  <span style="font-weight:600;color:${count === 0 ? '#ef4444' : 'var(--ink)'};">${count} (${pct}%)</span>
+                  <span style="font-weight:600;color:${count === 0 ? 'var(--ink-muted)' : 'var(--ink)'};">${count} (${pct}%)</span>
                 </div>
                 <div style="height:6px;background:var(--border-light,#e5e7eb);border-radius:3px;overflow:hidden;">
                   <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;transition:width 0.3s;"></div>
@@ -2555,12 +2591,12 @@ function renderBlueprintCoverage(bp) {
           ${DIFFICULTY_LEVELS.map(d => {
             const count = diffMap[d];
             const pct = totalQ ? Math.round((count / totalQ) * 100) : 0;
-            const barColor = count === 0 ? '#ef4444' : (d === 'Easy' ? '#3b82f6' : d === 'Medium' ? '#f59e0b' : '#ef4444');
+            const barColor = d === 'Easy' ? '#3b82f6' : d === 'Medium' ? '#f59e0b' : '#ef4444';
             return `
               <div style="margin-bottom:8px;">
                 <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:2px;">
                   <span style="color:var(--ink);">${d}</span>
-                  <span style="font-weight:600;color:${count === 0 ? '#ef4444' : 'var(--ink)'};">${count} (${pct}%)</span>
+                  <span style="font-weight:600;color:${count === 0 ? 'var(--ink-muted)' : 'var(--ink)'};">${count} (${pct}%)</span>
                 </div>
                 <div style="height:6px;background:var(--border-light,#e5e7eb);border-radius:3px;overflow:hidden;">
                   <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;transition:width 0.3s;"></div>
