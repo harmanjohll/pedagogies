@@ -525,6 +525,32 @@ export function render(container) {
   let awaitingAt = null;          // next step index while paused at a checkpoint
   const stepAdjustments = {};     // step id → teacher instruction for re-runs
   const savedToLibrary = {};      // step id → true once saved
+  let pendingRefinement = null;   // { text, type, subject?, level?, topic? } handed off from a deep-dive "refine"
+  let pendingRefinementPrefilled = false;
+
+  /* Consume the cocher_plus_refinement handoff (written by the deep-dive
+   * "Ask Co-Cher to refine this"). It used to navigate to the lesson planner,
+   * where nothing read it — a dead end. Now it feeds straight back into this
+   * Co-Cher+ form as a refinement. The key is always cleared, even when the
+   * payload is missing or unusable. */
+  function consumePendingRefinement() {
+    let raw = null;
+    try { raw = sessionStorage.getItem('cocher_plus_refinement'); } catch { raw = null; }
+    if (!raw) return;
+    try { sessionStorage.removeItem('cocher_plus_refinement'); } catch { /* ignore */ }
+    let data = null;
+    try { data = JSON.parse(raw); } catch { return; } // unusable → cleared silently
+    if (!data || typeof data !== 'object' || !data.text) return;
+    pendingRefinement = data;
+    pendingRefinementPrefilled = false;
+    // Carry the original context so a re-run stays on-topic.
+    if (data.subject) params.subject = data.subject;
+    if (data.level)   params.level = data.level;
+    if (data.topic)   params.topic = data.topic;
+  }
+
+  // Consume any refinement handed off from a previous view/navigation on load.
+  consumePendingRefinement();
 
   /* Per-step action row: save to library, adjust & re-run, visuals (lesson) */
   function buildStepActionsHTML(s) {
@@ -690,6 +716,18 @@ export function render(container) {
             <h1>Co-Cher+<span class="ap-beta">BETA</span></h1>
             <p>Full-workflow autopilot — SoW to Reflection in one pass.</p>
           </div>
+
+          ${pendingRefinement ? `
+            <div class="ap-refine-banner" style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:16px;border-radius:10px;background:var(--accent-light);border:1px solid var(--accent);">
+              <span style="flex-shrink:0;color:var(--accent);">${I.edit}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:2px;">Refining a selection from Co-Cher+</div>
+                <div style="font-size:0.75rem;color:var(--ink-secondary);line-height:1.5;">We’ve dropped it into <strong>Additional Notes</strong>. Pick a Subject &amp; Level, then run the workflow to fold it in.</div>
+                <div style="font-size:0.75rem;color:var(--ink-muted);font-style:italic;margin-top:6px;line-height:1.5;">“${escapeHtml((pendingRefinement.text || '').replace(/\s+/g, ' ').trim().slice(0, 160))}${(pendingRefinement.text || '').length > 160 ? '…' : ''}”</div>
+              </div>
+              <button id="ap-refine-dismiss" class="btn btn-ghost btn-sm" style="flex-shrink:0;color:var(--ink-faint);padding:2px 8px;">Dismiss</button>
+            </div>
+          ` : ''}
 
           <div class="ap-form" id="ap-form">
             <div>
@@ -901,18 +939,24 @@ export function render(container) {
         } else if (action === 'copy') {
           navigator.clipboard.writeText(expandedDive?.text || '').then(() => showToast('Copied!', 'success'));
         } else if (action === 'refine') {
-          // Store the text and navigate to lesson planner with pre-filled context
+          // Feed the selection back into the Co-Cher+ form (the refinement flow
+          // it was meant for) instead of dead-ending on the lesson planner. The
+          // handoff key is written then immediately consumed + cleared here.
           if (expandedDive?.text) {
-            sessionStorage.setItem('cocher_plus_refinement', JSON.stringify({
-              text: expandedDive.text,
-              type: expandedDive.type,
-              subject: params.subject,
-              level: params.level,
-              topic: params.topic
-            }));
+            try {
+              sessionStorage.setItem('cocher_plus_refinement', JSON.stringify({
+                text: expandedDive.text,
+                type: expandedDive.type,
+                subject: params.subject,
+                level: params.level,
+                topic: params.topic
+              }));
+            } catch { /* quota — ignore */ }
           }
           expandedDive = null;
-          navigate('/lesson-planner');
+          consumePendingRefinement();
+          renderView();
+          showToast('Loaded into the Co-Cher+ form below — pick Subject & Level, then run.', 'success');
         }
       });
     });
@@ -1033,6 +1077,26 @@ export function render(container) {
     // Render LaTeX in all output cards
     processLatex(container);
 
+    // Refinement handoff: prefill the form once with the carried-over selection
+    // so a re-run folds it in. Guarded so later edits aren't clobbered.
+    if (pendingRefinement && !pendingRefinementPrefilled) {
+      pendingRefinementPrefilled = true;
+      const subjEl = container.querySelector('#ap-subject');
+      if (subjEl && pendingRefinement.subject) subjEl.value = pendingRefinement.subject; // no-op if not an option
+      const topicEl = container.querySelector('#ap-topic');
+      if (topicEl) topicEl.value = pendingRefinement.topic || params.topic || '';
+      const notesEl = container.querySelector('#ap-notes');
+      if (notesEl) {
+        const rfType = (pendingRefinement.type || 'section').replace(/-/g, ' ');
+        const rfText = (pendingRefinement.text || '').replace(/\s+/g, ' ').trim().slice(0, 500);
+        notesEl.value = `Refine this ${rfType}: ${rfText}`;
+      }
+    }
+    container.querySelector('#ap-refine-dismiss')?.addEventListener('click', () => {
+      pendingRefinement = null;
+      renderView();
+    });
+
     // Cascading level selectors
     const schoolType = container.querySelector('#ap-school-type');
     const yearSelect = container.querySelector('#ap-year');
@@ -1104,6 +1168,7 @@ export function render(container) {
     }
 
     params = { subject, level, topic, duration, notes };
+    pendingRefinement = null; // folded into this run's notes; banner clears
     aborted = false;
     awaitingAt = null;
     for (const key of Object.keys(outputs)) delete outputs[key];

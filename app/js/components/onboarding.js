@@ -1,60 +1,68 @@
 /*
  * Co-Cher Onboarding Flow
  * =======================
- * Guided walkthrough for first-time users.
+ * A short first-run INTRO that hands off to the guided spotlight tour.
+ *
+ * Consolidation note (v5.1): the app used to fire four independent first-run
+ * overlays (welcome, onboarding, spotlight-tour, whats-new) that overlapped and
+ * each re-explained the navigation. This intro is now deliberately thin — it
+ * welcomes the teacher and OFFERS the interactive tour, which owns the actual
+ * sidebar walkthrough. app.js sequences the pieces: welcome → onboarding → tour
+ * for new users; whats-new only for returning users.
+ *
+ * `initOnboarding(onDone)` reports back so app.js can decide whether to launch
+ * the tour:  onDone({ shown, skipped }).
+ *   shown=false  → not a first-run (returning user); do nothing.
+ *   shown=true, skipped=false → teacher wants the tour → app starts it.
+ *   shown=true, skipped=true  → teacher opted to explore alone → no tour.
+ *
+ * First-run is gated on the persisted `onboardingComplete` flag ONLY. We do NOT
+ * gate on "has classes" because the app seeds sample classes on first launch,
+ * which would make every genuine new user look like a returning one.
  */
 
 import { Store } from '../state.js';
-import { navigate } from '../router.js';
 
 const STEPS = [
   {
-    title: 'Welcome to Co-Cher!',
-    body: 'Your AI-powered lesson design assistant, built for Singapore educators. Let\u2019s get you set up in 3 quick steps.',
     icon: '\u{1F44B}',
-    action: null
+    title: 'Welcome to Co-Cher!',
+    body: 'Your AI co-teacher for planning, teaching, assessment, and growth — built for Singapore educators. A few sample classes are already set up so you can explore right away.'
   },
   {
-    title: 'Step 1: Set Up Your Classes',
-    body: 'Create your classes with subject, level, and student names. This helps Co-Cher personalise lesson suggestions and track student progress.',
-    icon: '\u{1F393}',
-    action: { label: 'Go to Classes', route: '/classes' }
-  },
-  {
-    title: 'Step 2: Upload Your Scheme of Work',
-    body: 'Upload your SoW to the Knowledge Base. Co-Cher will use it to suggest lesson ideas, pacing, and content aligned to your teaching plan.',
-    icon: '\u{1F4DA}',
-    action: { label: 'Go to Knowledge Base', route: '/knowledge' }
-  },
-  {
-    title: 'Step 3: Design Your First Lesson',
-    body: 'Head to the Lesson Planner, pick a class, and start designing. Co-Cher will guide you through objectives, activities, and E21CC integration.',
-    icon: '\u{270F}\u{FE0F}',
-    action: { label: 'Go to Lesson Planner', route: '/lesson-planner' }
+    icon: '\u{1F9ED}',
+    title: 'Want a quick tour?',
+    body: 'We’ll point out the key areas in the sidebar so you know where everything lives. It takes about a minute — or you can dive straight in.'
   }
 ];
 
-export function initOnboarding() {
-  // Only show for first-time users
-  if (Store.get('onboardingComplete')) return;
+export function initOnboarding(onDone) {
+  const done = (payload) => { try { onDone && onDone(payload); } catch { /* ignore */ } };
 
-  // Don't show if user already has data (returning user who upgraded)
-  const hasData = (Store.get('classes') || []).length > 0 ||
-                  (Store.get('lessons') || []).length > 0;
-  if (hasData) {
-    Store.set('onboardingComplete', true);
+  // First-run only. Returning users (flag already set) skip straight through.
+  if (Store.get('onboardingComplete')) {
+    done({ shown: false, skipped: false });
     return;
   }
 
-  // Delay slightly to let the dashboard render first
-  setTimeout(() => showOnboarding(), 600);
+  // Delay slightly so the dashboard renders behind the overlay first.
+  setTimeout(() => showOnboarding(done), 600);
 }
 
-function showOnboarding() {
+function showOnboarding(done) {
   let step = 0;
+  let settled = false;
 
   const overlay = document.createElement('div');
   overlay.id = 'onboarding-overlay';
+
+  function finish(skipped) {
+    if (settled) return;
+    settled = true;
+    Store.set('onboardingComplete', true);
+    overlay.remove();
+    done({ shown: true, skipped: !!skipped });
+  }
 
   function renderStep() {
     const s = STEPS[step];
@@ -91,28 +99,21 @@ function showOnboarding() {
         <p style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;margin-bottom:20px;">${s.body}</p>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
           ${!isFirst ? '<button class="btn btn-ghost btn-sm" id="ob-back">Back</button>' : ''}
-          ${s.action ? `<button class="btn btn-secondary btn-sm" id="ob-action">${s.action.label}</button>` : ''}
           ${isLast
-            ? '<button class="btn btn-primary btn-sm" id="ob-finish">Get Started!</button>'
+            ? '<button class="btn btn-primary btn-sm" id="ob-tour">Show me around</button>'
             : '<button class="btn btn-primary btn-sm" id="ob-next">Next</button>'}
-          ${isFirst ? '<button class="btn btn-ghost btn-sm" id="ob-skip" style="color:var(--ink-faint);">Skip tour</button>' : ''}
+          ${isLast
+            ? '<button class="btn btn-ghost btn-sm" id="ob-explore" style="color:var(--ink-faint);">I’ll explore on my own</button>'
+            : '<button class="btn btn-ghost btn-sm" id="ob-skip" style="color:var(--ink-faint);">Skip</button>'}
         </div>
       </div>
     `;
 
     overlay.querySelector('#ob-next')?.addEventListener('click', () => { step++; renderStep(); });
     overlay.querySelector('#ob-back')?.addEventListener('click', () => { step--; renderStep(); });
-    overlay.querySelector('#ob-skip')?.addEventListener('click', dismiss);
-    overlay.querySelector('#ob-finish')?.addEventListener('click', dismiss);
-    overlay.querySelector('#ob-action')?.addEventListener('click', () => {
-      dismiss();
-      navigate(s.action.route);
-    });
-  }
-
-  function dismiss() {
-    Store.set('onboardingComplete', true);
-    overlay.remove();
+    overlay.querySelector('#ob-skip')?.addEventListener('click', () => finish(true));
+    overlay.querySelector('#ob-explore')?.addEventListener('click', () => finish(true));
+    overlay.querySelector('#ob-tour')?.addEventListener('click', () => finish(false));
   }
 
   renderStep();

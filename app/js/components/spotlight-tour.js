@@ -5,8 +5,11 @@
  * highlighting specific UI elements. Inspired by Shepherd.js / Intro.js.
  */
 
-import { Store } from '../state.js';
-import { navigate } from '../router.js';
+/* Tour completion is persisted in its OWN localStorage key. The reactive Store
+ * only persists a fixed whitelist of keys in its snapshot, so an ad-hoc
+ * `tourComplete_*` written through it would silently vanish on reload and the
+ * tour would restart every visit. A dedicated key keeps "seen once" durable. */
+function tourKey(tourName) { return 'cocher_tour_complete_' + tourName; }
 
 /* ── Tour definitions ── */
 const TOURS = {
@@ -205,7 +208,7 @@ export function startTour(tourName = 'main') {
     cutout.remove();
     tooltip.remove();
     document.removeEventListener('keydown', onKeyDown);
-    Store.set('tourComplete_' + tourName, true);
+    try { localStorage.setItem(tourKey(tourName), '1'); } catch { /* quota — ignore */ }
   }
 
   function next() {
@@ -348,10 +351,10 @@ function positionTooltip(tooltip, targetRect, preferredPos) {
 
 /* ── Convenience: check if tour was completed ── */
 export function isTourComplete(tourName = 'main') {
-  return !!Store.get('tourComplete_' + tourName);
+  try { return localStorage.getItem(tourKey(tourName)) === '1'; } catch { return false; }
 }
 
 /* ── Reset tour (for replay from Settings) ── */
 export function resetTour(tourName = 'main') {
-  Store.set('tourComplete_' + tourName, false);
+  try { localStorage.removeItem(tourKey(tourName)); } catch { /* ignore */ }
 }
