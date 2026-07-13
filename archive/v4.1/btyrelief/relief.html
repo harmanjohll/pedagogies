@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="en" class="theme-dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BTY Smart Relief Platform</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* === THEME === */
+    :root {
+      --bg-color: #0F172A;      /* Slate 900 */
+      --card-bg: #1E293B;       /* Slate 800 */
+      --text-main: #F8FAFC;     /* Slate 50 */
+      --accent: #3B82F6;        /* Blue 500 */
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-color); }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    .glass-panel {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Tab Active State */
+    .tab-active {
+        background-color: #3B82F6;
+        color: white;
+        border-color: #2563EB;
+    }
+    .tab-inactive {
+        background-color: #1E293B;
+        color: #94A3B8;
+        border-color: #334155;
+    }
+
+    /* Toast */
+    #toast {
+      visibility: hidden;
+      min-width: 250px;
+      background-color: #10B981;
+      color: #fff;
+      text-align: center;
+      border-radius: 8px;
+      padding: 16px;
+      position: fixed;
+      z-index: 50;
+      left: 50%;
+      top: 30px;
+      transform: translateX(-50%);
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: opacity 0.3s, top 0.3s;
+    }
+    #toast.show { visibility: visible; opacity: 1; top: 50px; }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col p-4 md:p-8 pb-32">
+
+  <!-- TOAST -->
+  <div id="toast"><i class="ph ph-check-circle text-lg align-middle mr-2"></i> Action Successful</div>
+
+  <!-- HEADER -->
+  <header class="max-w-6xl mx-auto w-full mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+        <i class="ph ph-chalkboard-teacher text-blue-400"></i>
+        BTY Relief Platform <span class="text-xs bg-indigo-600 px-2 py-0.5 rounded text-white ml-2">v5.2 (Consolidated)</span>
+      </h1>
+      <p class="text-slate-400 mt-1">Integrated Absence Management & Relief Assignment</p>
+    </div>
+    <div class="flex flex-col items-end gap-2">
+        <div id="dataStatus" class="text-xs px-3 py-1 rounded-full bg-blue-900/30 text-blue-400 border border-blue-800 flex items-center gap-2">
+          <i class="ph ph-circle-notch animate-spin"></i> Loading Data...
+        </div>
+        <div id="timeWarning" class="hidden text-xs px-3 py-1 rounded-full bg-orange-900/30 text-orange-300 border border-orange-800 flex items-center gap-2">
+            <i class="ph ph-clock"></i> It is past 2:20 PM. Relief may no longer be required.
+        </div>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <div class="max-w-6xl mx-auto w-full mb-6 flex gap-4">
+    <button onclick="switchTab('teacher')" id="tabTeacher" class="flex-1 py-4 rounded-xl border text-lg font-bold flex items-center justify-center gap-2 transition-all tab-inactive">
+        <i class="ph ph-hand-waving"></i> I am Absent
+    </button>
+    <button onclick="switchTab('admin')" id="tabAdmin" class="flex-1 py-4 rounded-xl border text-lg font-bold flex items-center justify-center gap-2 transition-all tab-inactive">
+        <i class="ph ph-users-four"></i> Admin Portal
+    </button>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="max-w-6xl mx-auto w-full relative">
+
+    <!-- === TEACHER VIEW === -->
+    <div id="viewTeacher" class="hidden fade-in">
+        <div class="glass-panel p-8 rounded-xl shadow-lg max-w-3xl mx-auto">
+            <h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-4">Report Absence & Set Instructions</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Your Name</label>
+                    <select id="t_teacherSelect" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Date of Absence</label>
+                    <input type="date" id="t_dateInput" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div id="t_classList" class="space-y-4 mb-8">
+                <div class="text-center text-slate-500 py-8 italic">Select your name and date to see your classes.</div>
+            </div>
+            
+            <div class="mb-8">
+                <label class="block text-sm text-slate-400 mb-1">Link to Materials (Optional)</label>
+                <input type="text" id="t_materialLink" placeholder="e.g. OneDrive or Google Drive link..." class="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="notifyAdmin('email')" id="t_notifyBtnEmail" disabled class="flex-1 py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg flex justify-center items-center gap-2 transition-all">
+                    <i class="ph ph-envelope-simple text-xl"></i> Notify via Email
+                </button>
+                <button onclick="notifyAdmin('teams')" id="t_notifyBtnTeams" disabled class="flex-1 py-4 bg-purple-700 hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg flex justify-center items-center gap-2 transition-all">
+                    <i class="ph ph-chat-teardrop-text text-xl"></i> Notify via Teams
+                </button>
+            </div>
+            
+            <div id="t_fallbackLink" class="text-center mt-4 hidden">
+                <a href="#" id="t_manualLink" target="_blank" class="text-blue-400 hover:text-blue-300 underline text-sm">
+                    Link didn't open? Click here to open manually.
+                </a>
+            </div>
+            <p id="t_recipientDisplay" class="text-xs text-center text-slate-500 mt-2">Recipient will load automatically...</p>
+        </div>
+    </div>
+
+    <!-- === ADMIN VIEW === -->
+    <div id="viewAdmin" class="hidden fade-in grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Controls -->
+        <section class="lg:col-span-4 space-y-6">
+            <div class="glass-panel p-6 rounded-xl shadow-lg">
+                <h2 class="text-lg font-semibold mb-4 text-blue-300 flex items-center gap-2">
+                    <i class="ph ph-faders"></i> Configuration
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Absent Teacher</label>
+                        <select id="a_teacherSelect" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Date</label>
+                        <input type="date" id="a_dateInput" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <div id="a_weekType" class="text-xs text-right mt-1 text-emerald-400 font-mono"></div>
+                    </div>
+                    
+                    <!-- Pre-filled Instructions Viewer -->
+                    <div id="a_instructionsBox" class="hidden bg-slate-800 p-3 rounded border border-slate-600">
+                        <div class="text-xs text-orange-400 font-bold uppercase mb-1">Teacher Notes Detected</div>
+                        <div id="a_instructionsContent" class="text-sm text-slate-300 italic"></div>
+                        <div id="a_materialsLink" class="mt-2 text-sm"></div>
+                    </div>
+
+                    <button onclick="runAdminAnalysis()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-lg">
+                        Generate Relief Plan
+                    </button>
+                </div>
+            </div>
+
+            <!-- Draft Panel -->
+             <div class="glass-panel p-6 rounded-xl shadow-lg border-t-4 border-emerald-500">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                        <i class="ph ph-envelope-open"></i> Draft Plan
+                    </h2>
+                    <button onclick="clearDraft()" class="text-xs text-red-400 hover:text-red-300">Clear</button>
+                </div>
+                <div id="draftList" class="space-y-4 mb-6 text-sm text-slate-300">
+                    <div class="text-slate-500 italic">No assignments yet.</div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="sendAdminSummary('email')" id="btnAdminEmail" disabled class="flex-1 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white rounded text-sm font-medium flex justify-center items-center gap-2">
+                        <i class="ph ph-envelope-simple"></i> Email Staff Summary
+                    </button>
+                </div>
+
+                <div id="a_fallbackLink" class="text-center mt-2 hidden">
+                    <a href="#" id="a_manualLink" target="_blank" class="text-blue-400 hover:text-blue-300 underline text-xs">
+                        Click to open manually
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results -->
+        <section class="lg:col-span-8">
+            <div class="glass-panel p-6 rounded-xl shadow-lg min-h-[500px] flex flex-col">
+                <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                  <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <i class="ph ph-list-checks"></i> 
+                    <span id="resultsTitle">Relief Options</span>
+                  </h2>
+                </div>
+                <div id="resultsList" class="space-y-3 flex-1 overflow-y-auto pr-2">
+                    <div class="h-full flex flex-col items-center justify-center text-slate-500 opacity-60">
+                        <i class="ph ph-chalkboard text-6xl mb-4"></i>
+                        <p>Select teacher and date to view plan.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+  </main>
+
+  <script>
+    // --- CONSTANTS ---
+    const DATA_URLS = {
+        TIMETABLE: 'BTYTT_2026Sem1_v1.csv',
+        CALENDAR: 'CalendarReference.csv'
+    };
+    
+    // Emails
+    const EMAILS = {
+        FALLBACK_ADMIN: "harman_johll@schools.gov.sg",
+        TRACKING_BCC: "beattyadmin@btyss.moe.edu.sg"
+    };
+
+    const SUBJECT_MAP = {
+      'MA': 'Mathematics', 'SC': 'Science', 'EL': 'English', 'MT': 'Mother Tongue',
+      'HU': 'Humanities', 'AL': 'ALP', 'SE': 'SET', 'PE': 'Phys Ed',
+      'AT': 'Art', 'MU': 'Music', 'DT': 'D&T', 'FN': 'F&N', 'PO': 'POA/Social Studies'
+    };
+
+    // --- STATE ---
+    let teachersData = [];     
+    let calendarData = [];     
+    let currentWeekType = '';  
+    let currentDayName = '';
+    let draftAssignments = [];
+    let teacherInstructions = {}; 
+    let materialLink = "";
+
+    // --- DOM ELEMENTS ---
+    const els = {
+        status: document.getElementById('dataStatus'),
+        timeWarning: document.getElementById('timeWarning'),
+        toast: document.getElementById('toast'),
+        // Views
+        viewTeacher: document.getElementById('viewTeacher'),
+        viewAdmin: document.getElementById('viewAdmin'),
+        tabTeacher: document.getElementById('tabTeacher'),
+        tabAdmin: document.getElementById('tabAdmin'),
+        // Teacher Mode
+        t_teacherSelect: document.getElementById('t_teacherSelect'),
+        t_dateInput: document.getElementById('t_dateInput'),
+        t_classList: document.getElementById('t_classList'),
+        t_notifyBtnEmail: document.getElementById('t_notifyBtnEmail'),
+        t_notifyBtnTeams: document.getElementById('t_notifyBtnTeams'),
+        t_fallbackLink: document.getElementById('t_fallbackLink'),
+        t_manualLink: document.getElementById('t_manualLink'),
+        t_recipientDisplay: document.getElementById('t_recipientDisplay'),
+        t_materialLink: document.getElementById('t_materialLink'),
+        // Admin Mode
+        a_teacherSelect: document.getElementById('a_teacherSelect'),
+        a_dateInput: document.getElementById('a_dateInput'),
+        a_weekType: document.getElementById('a_weekType'),
+        a_instructionsBox: document.getElementById('a_instructionsBox'),
+        a_instructionsContent: document.getElementById('a_instructionsContent'),
+        a_materialsLink: document.getElementById('a_materialsLink'),
+        resultsList: document.getElementById('resultsList'),
+        resultsTitle: document.getElementById('resultsTitle'),
+        draftList: document.getElementById('draftList'),
+        btnAdminEmail: document.getElementById('btnAdminEmail'),
+        a_fallbackLink: document.getElementById('a_fallbackLink'),
+        a_manualLink: document.getElementById('a_manualLink')
+    };
+
+    // --- INITIALIZATION ---
+    window.addEventListener('DOMContentLoaded', async () => {
+        // Default Date
+        const today = new Date().toISOString().split('T')[0];
+        els.t_dateInput.value = today;
+        els.a_dateInput.value = today;
+
+        checkTimeWarning();
+        await fetchAllData();
+
+        // Magic Link Logic
+        const urlParams = new URLSearchParams(window.location.search);
+        const pTeacher = urlParams.get('teacher');
+        const pDate = urlParams.get('date');
+        const pInstr = urlParams.get('instr'); 
+        const pMat = urlParams.get('mat');
+
+        if(pTeacher && pDate) {
+            switchTab('admin');
+            els.a_teacherSelect.value = decodeURIComponent(pTeacher); 
+            els.a_dateInput.value = pDate;
+            
+            if(pInstr) {
+                try {
+                    const instrObj = JSON.parse(decodeURIComponent(pInstr));
+                    teacherInstructions = instrObj;
+                    materialLink = pMat ? decodeURIComponent(pMat) : "";
+                    displayAdminInstructions(instrObj, materialLink);
+                } catch(e) { console.error("Error parsing params", e); }
+            }
+
+            setTimeout(() => {
+                updateDateLogic('admin');
+                runAdminAnalysis();
+            }, 500);
+        } else {
+            switchTab('teacher'); 
+        }
+    });
+
+    function checkTimeWarning() {
+        const now = new Date();
+        const hour = now.getHours();
+        const min = now.getMinutes();
+        if (hour > 14 || (hour === 14 && min >= 20)) {
+            els.timeWarning.classList.remove('hidden');
+        }
+    }
+
+    // --- DATA FETCHING ---
+    async function fetchAllData() {
+        try {
+            const [ttRes, calRes] = await Promise.all([
+                fetch(DATA_URLS.TIMETABLE),
+                fetch(DATA_URLS.CALENDAR)
+            ]);
+
+            if(!ttRes.ok || !calRes.ok) throw new Error("Data fetch error");
+
+            teachersData = parseCSV(await ttRes.text());
+            calendarData = parseCalendarCSV(await calRes.text());
+
+            els.status.innerHTML = `<i class="ph ph-check-circle"></i> System Ready`;
+            els.status.className = "text-xs px-3 py-1 rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-800 flex items-center gap-2";
+            
+            populateTeacherSelects();
+        } catch (err) {
+            els.status.innerHTML = `<i class="ph ph-warning-circle"></i> Data Error`;
+            els.status.className = "text-xs px-3 py-1 rounded-full bg-red-900/30 text-red-400 border border-red-800 flex items-center gap-2";
+        }
+    }
+
+    // --- PARSERS ---
+    function parseCalendarCSV(text) {
+        const rows = text.split('\n').map(r => r.trim()).filter(r => r);
+        const startIdx = rows[0].toLowerCase().includes('start') ? 1 : 0;
+        return rows.slice(startIdx).map(row => {
+            const cols = row.split(',');
+            return { dateStr: cols[0], type: cols[1] }; 
+        });
+    }
+
+    function parseCSV(csvText) {
+      const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      const idxName = headers.findIndex(h => h.toUpperCase().includes('NAME'));
+      const idxEmail = headers.findIndex(h => h.toUpperCase().includes('EMAIL') && !h.toUpperCase().includes('IP') && !h.toUpperCase().includes('RO'));
+      const idxIP = headers.findIndex(h => h.toUpperCase().includes('IP'));
+      const idxRO = headers.findIndex(h => h.toUpperCase().includes('RO'));
+      
+      const iName = idxName !== -1 ? idxName : 3;
+      const iEmail = idxEmail !== -1 ? idxEmail : 4;
+      const iIP = idxIP !== -1 ? idxIP : 5;
+      const iRO = idxRO !== -1 ? idxRO : 6;
+      
+      const startSchedule = Math.max(iName, iEmail, iIP, iRO) + 1;
+
+      const result = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.trim().replace(/^"|"$/g, ''));
+        if(cols.length < startSchedule) continue; 
+        
+        const obj = {};
+        obj.department = cols[0]; 
+        obj.name = cols[iName];
+        obj.email = cols[iEmail];
+        obj.emailIP = cols[iIP];
+        obj.emailRO = cols[iRO];
+        
+        obj.schedule = {};
+        for(let j=startSchedule; j<headers.length; j++) {
+            if(headers[j] && cols[j]) obj.schedule[headers[j].trim()] = cols[j].trim();
+        }
+        result.push(obj);
+      }
+      return result;
+    }
+
+    function findTeacherByEmail(email) {
+        if (!email) return null;
+        return teachersData.find(t => t.email && t.email.toLowerCase().trim() === email.toLowerCase().trim());
+    }
+
+    // --- VIEW SWITCHING ---
+    window.switchTab = (tab) => {
+        if(tab === 'teacher') {
+            els.viewTeacher.classList.remove('hidden');
+            els.viewAdmin.classList.add('hidden');
+            els.tabTeacher.classList.add('tab-active');
+            els.tabTeacher.classList.remove('tab-inactive');
+            els.tabAdmin.classList.remove('tab-active');
+            els.tabAdmin.classList.add('tab-inactive');
+        } else {
+            els.viewAdmin.classList.remove('hidden');
+            els.viewTeacher.classList.add('hidden');
+            els.tabAdmin.classList.add('tab-active');
+            els.tabAdmin.classList.remove('tab-inactive');
+            els.tabTeacher.classList.remove('tab-active');
+            els.tabTeacher.classList.add('tab-inactive');
+        }
+    }
+
+    function populateTeacherSelects() {
+        teachersData.sort((a,b) => {
+          if (a.department === b.department) return a.name.localeCompare(b.name);
+          return a.department.localeCompare(b.department);
+        });
+        
+        let html = '<option value="">-- Select Name --</option>';
+        let currentDept = '';
+        teachersData.forEach(t => {
+            if(t.department !== currentDept) {
+                if(currentDept !== '') html += '</optgroup>';
+                currentDept = t.department;
+                html += `<optgroup label="${currentDept}">`;
+            }
+            html += `<option value="${t.name}">${t.name}</option>`;
+        });
+        if(currentDept !== '') html += '</optgroup>';
+        
+        els.t_teacherSelect.innerHTML = html;
+        els.a_teacherSelect.innerHTML = html;
+    }
+
+    // --- TEACHER MODE LOGIC ---
+    els.t_teacherSelect.addEventListener('change', updateTeacherView);
+    els.t_dateInput.addEventListener('change', updateTeacherView);
+
+    function updateTeacherView() {
+        const name = els.t_teacherSelect.value;
+        const dateVal = els.t_dateInput.value;
+        els.t_fallbackLink.classList.add('hidden'); 
+
+        if(!name || !dateVal) {
+            els.t_classList.innerHTML = `<div class="text-center text-slate-500 py-8 italic">Select your name and date to see your classes.</div>`;
+            els.t_notifyBtnEmail.disabled = true;
+            els.t_notifyBtnTeams.disabled = true;
+            els.t_recipientDisplay.textContent = "";
+            return;
+        }
+
+        updateDateLogic('teacher'); 
+        const teacher = teachersData.find(t => t.name === name);
+        const ipHeadObj = findTeacherByEmail(teacher.emailIP);
+        const ipHeadName = ipHeadObj ? toTitleCase(ipHeadObj.name) : "IP Head";
+        const recipient = teacher.emailIP ? `${ipHeadName} (${teacher.emailIP})` : `Default Admin`;
+        
+        els.t_recipientDisplay.textContent = `Will notify: ${recipient}`;
+
+        let classesFound = false;
+        let html = '';
+
+        for(let p=1; p<=11; p++) {
+            const key = `${currentWeekType}${currentDayName}${p}`;
+            const code = teacher.schedule[key] || "0";
+            if(code !== "0") {
+                classesFound = true;
+                const timeStr = getTimeForPeriod(p, currentDayName);
+                const subjInfo = getSubjectInfo(code);
+                
+                html += `
+                    <div class="bg-slate-800 border border-slate-600 rounded-lg p-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
+                        <div class="w-full md:w-1/3">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">P${p}</span>
+                                <span class="text-slate-400 text-xs">${timeStr}</span>
+                            </div>
+                            <div class="text-white font-bold text-lg">${code}</div>
+                            <div class="text-blue-400 text-sm">${subjInfo.name}</div>
+                        </div>
+                        <div class="w-full md:w-2/3">
+                            <input type="text" id="instr_p${p}" placeholder="Enter instructions..." 
+                                class="w-full bg-slate-900 border border-slate-700 rounded p-3 text-sm text-slate-200 focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        if(!classesFound) {
+            html = `<div class="p-4 bg-emerald-900/20 border border-emerald-800 rounded text-center text-emerald-400">No classes found for this date. You are free!</div>`;
+            els.t_notifyBtnEmail.disabled = true;
+            els.t_notifyBtnTeams.disabled = true;
+        } else {
+            els.t_notifyBtnEmail.disabled = false;
+            els.t_notifyBtnTeams.disabled = false;
+        }
+        
+        els.t_classList.innerHTML = html;
+    }
+
+    // --- NOTIFICATION HANDLER (EMAIL & TEAMS) ---
+    window.notifyAdmin = (platform) => {
+        const name = els.t_teacherSelect.value;
+        const date = els.t_dateInput.value;
+        const matLink = els.t_materialLink.value;
+        const teacher = teachersData.find(t => t.name === name);
+
+        const instructions = {};
+        for(let p=1; p<=11; p++) {
+            const input = document.getElementById(`instr_p${p}`);
+            if(input && input.value.trim()) instructions[p] = input.value.trim();
+        }
+
+        const baseUrl = window.location.href.split('?')[0];
+        const instrParam = encodeURIComponent(JSON.stringify(instructions));
+        const matParam = encodeURIComponent(matLink);
+        const magicLink = `${baseUrl}?teacher=${encodeURIComponent(name)}&date=${date}&instr=${instrParam}&mat=${matParam}`;
+
+        const niceDate = formatReadableDate(date);
+        
+        const recipient = teacher.emailIP || EMAILS.FALLBACK_ADMIN;
+        const ipHeadObj = findTeacherByEmail(teacher.emailIP);
+        const ipHeadName = ipHeadObj ? toTitleCase(ipHeadObj.name) : "IP Head";
+        const senderName = toTitleCase(name);
+
+        const subject = `Request for Support - Relief for ${senderName} (${niceDate})`;
+        
+        let body = `Dear ${ipHeadName},%0D%0A%0D%0A${senderName} will be away on ${niceDate}.%0D%0A%0D%0AWe need your help to cover the following lessons. Some instructions are available for your reference, too.%0D%0A%0D%0ALink to Materials: ${matLink || "None"}%0D%0A%0D%0APlease click this link to assign relief:%0D%0A${encodeURIComponent(magicLink)}%0D%0A%0D%0AClasses:%0D%0A`;
+        
+        for(let p=1; p<=11; p++) {
+            const key = `${currentWeekType}${currentDayName}${p}`;
+            const code = teacher.schedule[key] || "0";
+            if(code !== "0") {
+                const instr = instructions[p] ? ` (Note: ${instructions[p]})` : "";
+                body += `- P${p} (${code})${instr}%0D%0A`;
+            }
+        }
+
+        body += `%0D%0AThank you so much for helping to cover the lessons. If you need anything, please check in with your IP Head/RO. Keep well, and have a lovely day ahead!`;
+
+        let finalUrl = "";
+        if(platform === 'email') {
+            finalUrl = `mailto:${recipient}?bcc=${EMAILS.TRACKING_BCC}&subject=${subject}&body=${body}`;
+        } else {
+            const decodedBody = decodeURIComponent(body).replace(/%0D%0A/g, '\n');
+            finalUrl = `https://teams.microsoft.com/l/chat/0/0?users=${recipient}&message=${encodeURIComponent("Subject: " + subject + "\n\n" + decodedBody)}`;
+        }
+        
+        triggerLink(finalUrl, els.t_fallbackLink, els.t_manualLink);
+        showToast(`Opening ${platform === 'email' ? 'Email Client' : 'Microsoft Teams'}...`);
+    };
+
+    // --- ADMIN MODE LOGIC ---
+    els.a_dateInput.addEventListener('change', () => updateDateLogic('admin'));
+
+    window.runAdminAnalysis = () => {
+        const name = els.a_teacherSelect.value;
+        if(!name || !currentWeekType) return;
+        
+        updateDateLogic('admin'); 
+        const teacher = teachersData.find(t => t.name === name);
+        
+        els.resultsTitle.textContent = `Relief Plan: ${toTitleCase(name)}`;
+        els.resultsList.innerHTML = '';
+
+        let tasksFound = 0;
+        for(let p=1; p<=11; p++) {
+            const key = `${currentWeekType}${currentDayName}${p}`;
+            const code = teacher.schedule[key] || "0";
+
+            if(code !== "0") {
+                tasksFound++;
+                const subjInfo = getSubjectInfo(code);
+                const results = findSubstitutes(teacher, key, subjInfo.code);
+                const timeStr = getTimeForPeriod(p, currentDayName);
+                const instr = teacherInstructions[p] || "None";
+                
+                renderAdminCard(p, timeStr, code, subjInfo.name, results, teacher, instr);
+            }
+        }
+        
+        if(tasksFound === 0) {
+            els.resultsList.innerHTML = `<div class="p-8 text-center text-slate-400">Teacher has no classes on this date.</div>`;
+        }
+    };
+
+    function displayAdminInstructions(instrObj, matLink) {
+        let hasInstr = Object.keys(instrObj).length > 0;
+        if(hasInstr || matLink) {
+            els.a_instructionsBox.classList.remove('hidden');
+            let html = '';
+            for(const [p, text] of Object.entries(instrObj)) {
+                html += `<div><span class="font-bold text-slate-400">P${p}:</span> ${text}</div>`;
+            }
+            els.a_instructionsContent.innerHTML = html;
+            if(matLink) {
+                els.a_materialsLink.innerHTML = `<span class="font-bold text-blue-400">Materials:</span> <a href="${matLink}" target="_blank" class="underline text-white truncate block">${matLink}</a>`;
+            }
+        }
+    }
+
+    function getWeeklyLoad(teacher, weekType) {
+        let count = 0;
+        for (const key in teacher.schedule) {
+            if (key.startsWith(weekType) && teacher.schedule[key] !== "0") count++;
+        }
+        return count;
+    }
+
+    function renderAdminCard(p, timeStr, code, subjName, results, absentTeacher, instr) {
+        const section = document.createElement('div');
+        section.className = "bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-4";
+        
+        const header = `
+            <div class="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
+                <div class="flex flex-col">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-blue-600 text-white font-bold px-2 py-1 rounded text-sm">Period ${p}</div>
+                        <span class="text-slate-400 text-xs font-mono">${timeStr}</span>
+                    </div>
+                    <div class="mt-1">
+                        <span class="text-white font-semibold mr-2">${code}</span>
+                        <span class="text-xs text-blue-300 bg-blue-900/40 px-2 py-0.5 rounded">${subjName}</span>
+                    </div>
+                    ${instr !== "None" ? `<div class="text-xs text-orange-400 mt-1 italic">Note: ${instr}</div>` : ''}
+                </div>
+            </div>
+        `;
+
+        let candidatesHtml = '';
+        if(results.length === 0) {
+            candidatesHtml = `<div class="text-xs text-red-400">No free teachers found.</div>`;
+        } else {
+            candidatesHtml = `<div class="space-y-2">`;
+            results.slice(0, 6).forEach(item => {
+                 const safeName = item.teacher.name.replace(/'/g, "\\'");
+                 const titleName = toTitleCase(item.teacher.name);
+                 const weeklyLoad = item.weeklyLoad;
+                 
+                 candidatesHtml += `
+                    <div class="flex justify-between items-center bg-slate-900/50 p-2 rounded border border-slate-700/50">
+                        <div>
+                             <div class="text-sm text-slate-200 font-medium">${titleName}</div>
+                             <div class="text-[10px] text-slate-400 flex gap-2">
+                                <span>${item.badges.map(b => `<span class="${b.color} mr-1">${b.text}</span>`).join('')}</span>
+                                <span class="text-slate-500">|</span>
+                                <span class="text-emerald-400">Loads: ${item.dailyLoad} today / ${weeklyLoad} week</span>
+                             </div>
+                        </div>
+                        <button onclick="addToDraft('${safeName}', '${code}', 'P${p}', '${timeStr}', '${subjName}')" 
+                            class="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors">
+                            Add
+                        </button>
+                    </div>
+                 `;
+            });
+            candidatesHtml += `</div>`;
+        }
+        section.innerHTML = header + candidatesHtml;
+        els.resultsList.appendChild(section);
+    }
+
+    // --- ALGORITHM ---
+    function findSubstitutes(absentTeacher, columnKey, neededSubjectCode) {
+        const results = [];
+        const dayPrefix = columnKey.replace(/\d+$/, ''); 
+        
+        teachersData.forEach(candidate => {
+            if(candidate.name === absentTeacher.name) return;
+            if(candidate.schedule[columnKey] !== "0") return;
+
+            let score = 0;
+            let badges = [];
+            let isMatch = false;
+
+            const teachesSubject = Object.values(candidate.schedule).some(v => v && v.includes(neededSubjectCode));
+            if(teachesSubject) {
+                score += 100;
+                isMatch = true;
+                badges.push({ text: `Teaches ${neededSubjectCode}`, color: "text-purple-400" });
+            }
+
+            if(candidate.department === absentTeacher.department) {
+                score += 40;
+                isMatch = true;
+                badges.push({ text: "Same Dept", color: "text-blue-400" });
+            }
+
+            let dailyLoad = 0;
+            for(let k in candidate.schedule) {
+                if(k.startsWith(dayPrefix) && candidate.schedule[k] !== "0") dailyLoad++;
+            }
+            if(dailyLoad > 6) {
+                score -= 500;
+                badges.push({ text: "Overloaded", color: "text-red-400" });
+            } else {
+                score -= (dailyLoad * 5);
+            }
+
+            const weeklyLoad = getWeeklyLoad(candidate, currentWeekType);
+            score -= weeklyLoad; 
+
+            results.push({ teacher: candidate, score, badges, isMatch, dailyLoad, weeklyLoad });
+        });
+
+        let filtered = results.filter(r => r.isMatch);
+        if(filtered.length === 0) {
+            results.sort((a,b) => b.score - a.score);
+            return results.slice(0, 6).map(r => {
+                r.badges.push({ text: "Non-Specialist", color: "text-slate-500" });
+                return r;
+            });
+        }
+        filtered.sort((a,b) => b.score - a.score);
+        return filtered;
+    }
+
+    // --- SHARED UTILS ---
+    function updateDateLogic(mode) {
+        const dateInput = mode === 'teacher' ? els.t_dateInput : els.a_dateInput;
+        const dateVal = new Date(dateInput.value);
+        if(isNaN(dateVal)) return;
+
+        const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        currentDayName = days[dateVal.getDay()];
+
+        const monday = getMonday(dateVal);
+        const dateStr = formatDateToCSVStyle(monday);
+        
+        let foundWeek = calendarData.find(w => w.dateStr === dateStr);
+        if (!foundWeek) {
+            foundWeek = calendarData.find(w => {
+                const parts = w.dateStr.split('-');
+                if(parts.length === 3) {
+                    const months = {Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11};
+                    const d = parseInt(parts[0]);
+                    const m = months[parts[1]];
+                    const y = 2000 + parseInt(parts[2]);
+                    const wDate = new Date(y, m, d);
+                    return wDate.toDateString() === monday.toDateString();
+                }
+                return false;
+            });
+        }
+        currentWeekType = foundWeek ? foundWeek.type : "Odd";
+        if(mode === 'admin') els.a_weekType.textContent = `${currentWeekType} Week`;
+    }
+
+    function getTimeForPeriod(p, day) {
+        let startMin = (7 * 60) + 55; 
+        let offset = (p - 1) * 35;
+        let pStartMin = startMin + offset;
+        let pEndMin = pStartMin + 35;
+        if(day === 'Wed' && p === 1) return "Assembly/N.A.";
+        return `${formatTime(pStartMin)} - ${formatTime(pEndMin)}`;
+    }
+
+    function formatTime(totalMinutes) {
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+
+    function getSubjectInfo(code) {
+        const match = code.match(/\d?([A-Z]{2})/);
+        const sCode = match ? match[1] : "??";
+        return { code: sCode, name: SUBJECT_MAP[sCode] || "Subject" };
+    }
+
+    function getMonday(d) {
+      d = new Date(d);
+      const day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6 : 1); 
+      return new Date(d.setDate(diff));
+    }
+
+    function formatDateToCSVStyle(date) {
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        return `${date.getDate()}-${months[date.getMonth()]}-${date.getFullYear().toString().slice(-2)}`;
+    }
+
+    function formatReadableDate(dateStr) {
+        const d = new Date(dateStr);
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    function toTitleCase(str) {
+        return str.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+    }
+
+    // --- DRAFT LOGIC ---
+    window.addToDraft = (subName, code, period, timeStr, subjName) => {
+        const absentName = els.a_teacherSelect.value;
+        const dateStr = els.a_dateInput.value;
+        const pNum = parseInt(period.replace('P',''));
+        const instr = teacherInstructions[pNum] || "";
+        const subTeacher = teachersData.find(t => t.name === subName);
+        const subEmail = subTeacher ? subTeacher.email : "";
+
+        draftAssignments.push({ subName, subEmail, code, period, timeStr, subjName, absentName, dateStr, instr });
+        renderDraft();
+        showToast("Added to Draft Plan");
+    };
+
+    // Updated renderDraft with Consolidated Logic
+    function renderDraft() {
+        if(draftAssignments.length === 0) {
+            els.draftList.innerHTML = `<div class="text-slate-500 italic">No assignments yet.</div>`;
+            els.btnAdminEmail.disabled = true;
+            return;
+        }
+
+        // Group Assignments by Relief Teacher
+        const grouped = {};
+        draftAssignments.forEach((item, index) => {
+            if (!grouped[item.subName]) {
+                grouped[item.subName] = { 
+                    name: item.subName, 
+                    email: item.subEmail, 
+                    absentName: item.absentName,
+                    dateStr: item.dateStr,
+                    tasks: [] 
+                };
+            }
+            grouped[item.subName].tasks.push({ ...item, index });
+        });
+
+        let html = '';
+        
+        Object.values(grouped).forEach(group => {
+            const niceDate = formatReadableDate(group.dateStr);
+            const absentNice = toTitleCase(group.absentName);
+            const subNice = toTitleCase(group.name);
+            const subject = `Request for Support - Relief for ${absentNice} (${niceDate})`;
+            
+            // Generate Consolidated Body
+            let taskListText = "";
+            let emailBodyTasks = "";
+            let teamsBodyTasks = "";
+
+            group.tasks.forEach(task => {
+                taskListText += `<div class="text-xs text-slate-300 ml-2 border-l-2 border-slate-600 pl-2 mb-1">
+                                    <span class="text-white font-bold">${task.period}</span> 
+                                    <span class="text-slate-400">(${task.timeStr})</span> - ${task.subjName}
+                                    <div class="text-[10px] text-orange-300 italic">Note: ${task.instr || "None"}</div>
+                                 </div>`;
+                
+                emailBodyTasks += `${task.period} (${task.timeStr}) - ${task.subjName} (${task.code})%0D%0ANotes: ${task.instr || "None"}%0D%0A%0D%0A`;
+                teamsBodyTasks += `${task.period} (${task.timeStr}) - ${task.subjName} (${task.code})\nNotes: ${task.instr || "None"}\n\n`;
+            });
+
+            // Email Link
+            const emailBody = `Dear ${subNice},%0D%0A%0D%0A${absentNice} will be away on ${niceDate}.%0D%0A%0D%0AWe need your help to cover the following lessons:%0D%0A%0D%0A${emailBodyTasks}Thank you so much for helping to cover the lessons. If you need anything, please check in with your IP Head/RO. Keep well, and have a lovely day ahead!`;
+            const mailto = `mailto:${group.email}?bcc=${EMAILS.TRACKING_BCC}&subject=${subject}&body=${emailBody}`;
+
+            // Teams Link
+            const teamsMsg = `Dear ${subNice},\n\n${absentNice} will be away on ${niceDate}.\n\nWe need your help to cover:\n\n${teamsBodyTasks}Thank you so much for helping!`;
+            const teamsUrl = `https://teams.microsoft.com/l/chat/0/0?users=${group.email}&message=${encodeURIComponent(teamsMsg)}`;
+
+            html += `
+                <div class="bg-slate-700/50 p-3 rounded border border-slate-600 mb-3">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-sm font-bold text-emerald-400">${subNice}</div>
+                        <button onclick="removeGroup('${group.name}')" class="text-red-400 hover:text-red-300 text-[10px] underline">Remove All</button>
+                    </div>
+                    
+                    <div class="mb-3">
+                        ${taskListText}
+                    </div>
+
+                    <div class="flex gap-2 justify-end">
+                        <button onclick="triggerLink('${teamsUrl}', document.getElementById('a_fallbackLink'), document.getElementById('a_manualLink'))" class="px-3 py-1 bg-purple-700 hover:bg-purple-600 text-white text-xs rounded flex items-center gap-1 transition-colors">
+                            <i class="ph ph-chat-teardrop-text"></i> Notify Teams
+                        </button>
+                        <button onclick="triggerLink('${mailto}', document.getElementById('a_fallbackLink'), document.getElementById('a_manualLink'))" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded flex items-center gap-1 transition-colors">
+                            <i class="ph ph-envelope"></i> Notify Email
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        els.draftList.innerHTML = html;
+        els.btnAdminEmail.disabled = false;
+    }
+
+    window.removeGroup = (subName) => {
+        draftAssignments = draftAssignments.filter(item => item.subName !== subName);
+        renderDraft();
+    };
+
+    window.clearDraft = () => {
+        draftAssignments = [];
+        renderDraft();
+    }
+
+    window.sendAdminSummary = (platform) => {
+        if(draftAssignments.length === 0) return;
+        const item = draftAssignments[0];
+        const niceDate = formatReadableDate(item.dateStr);
+        const absentNice = toTitleCase(item.absentName);
+        
+        const uniqueSubs = {};
+        draftAssignments.forEach(d => { if(d.subEmail) uniqueSubs[d.subEmail] = toTitleCase(d.subName); });
+        const recipientEmails = Object.keys(uniqueSubs).join(';'); 
+        const recipientNames = Object.values(uniqueSubs).join(', ');
+        
+        const finalTo = recipientEmails || EMAILS.FALLBACK_ADMIN;
+        const subject = `Request for Support - Relief for ${absentNice} (${niceDate})`;
+        
+        let body = `Dear ${recipientNames || "Colleagues"},%0D%0A%0D%0A${absentNice} will be away on ${niceDate}.%0D%0A%0D%0AWe need your help to cover the following lessons. Some instructions are available for your reference, too.%0D%0A%0D%0A`;
+        
+        // Group by time for summary logic, or list linearly? Linear is clearer for summary.
+        draftAssignments.forEach(d => {
+            body += `* ${d.period} (${d.timeStr}): ${d.subjName} (${d.code})%0D%0A`;
+            body += `   Covered by: ${toTitleCase(d.subName)}%0D%0A`;
+            if(d.instr) body += `   Instructions: ${d.instr}%0D%0A`;
+            body += `%0D%0A`;
+        });
+        body += `Thank you so much for helping to cover the lessons. If you need anything, please check in with your IP Head/RO. Keep well, and have a lovely day ahead!`;
+        
+        const mailtoUrl = `mailto:${finalTo}?bcc=${EMAILS.TRACKING_BCC}&subject=${subject}&body=${body}`;
+        
+        triggerLink(mailtoUrl, els.a_fallbackLink, els.a_manualLink);
+        showToast("Opening Email Client...");
+    }
+
+    // Improved Trigger Logic for Cross-Device
+    function triggerLink(url, fallbackContainer, linkElement) {
+        linkElement.href = url;
+        
+        // 1. Try standard window.open (Works best for Teams/Deep Links on desktop)
+        // 2. If it's a Mailto, try window.location (Better for Mobile mail apps)
+        
+        if (url.startsWith('mailto:')) {
+            window.location.href = url;
+            return;
+        }
+
+        // For Teams or others
+        try {
+            const win = window.open(url, '_blank');
+            if (!win || win.closed || typeof win.closed == 'undefined') {
+                console.warn("Popup blocked. Showing manual link.");
+                fallbackContainer.classList.remove('hidden');
+            }
+        } catch (e) {
+            console.error("Trigger failed", e);
+            fallbackContainer.classList.remove('hidden');
+        }
+    }
+
+    function showToast(msg) {
+        els.toast.innerHTML = `<i class="ph ph-check-circle text-lg align-middle mr-2"></i> ${msg}`;
+        els.toast.classList.add('show');
+        setTimeout(() => els.toast.classList.remove('show'), 3000);
+    }
+  </script>
+</body>
+</html>
