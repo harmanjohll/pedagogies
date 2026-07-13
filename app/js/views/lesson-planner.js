@@ -32,6 +32,33 @@ let attachedKBContext = [];   // attached knowledge base resources
 let lessonDateTime = null;    // { date, period, room, classCode } from timetable or manual
 let selectedIdeology = '';    // optional curriculum ideology lens
 
+/* ── Reference library picker ──
+ * Teacher-curated documents (My References, in My Learning) that can be toggled
+ * ON to inject as context — like a skill. Selection persists for the session. */
+const PLANNER_REF_KEY = 'cocher_planner_reference_ids';
+function loadSelectedReferenceIds() {
+  try { const r = sessionStorage.getItem(PLANNER_REF_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
+}
+function saveSelectedReferenceIds() {
+  try { sessionStorage.setItem(PLANNER_REF_KEY, JSON.stringify(selectedReferenceIds)); } catch {}
+}
+let selectedReferenceIds = loadSelectedReferenceIds();
+
+/* ── Consume a spatial layout linked before a lesson existed ──
+ * render() stashes cocher_pending_spatial_layout when a layout arrives from the
+ * Spatial Designer with no lesson to attach it to. Once a lesson exists we link
+ * it and clear the key; if the layout no longer exists we still clear the key so
+ * the handoff never lingers orphaned. */
+function consumePendingSpatialLayout() {
+  const pendingId = sessionStorage.getItem('cocher_pending_spatial_layout');
+  if (!pendingId || !currentLessonId) return;
+  sessionStorage.removeItem('cocher_pending_spatial_layout');
+  const exists = (Store.getSavedLayouts() || []).some(l => l.id === pendingId);
+  if (exists) {
+    Store.updateLesson(currentLessonId, { spatialLayout: pendingId });
+  }
+}
+
 /* ── Lesson Components: persistent AI tool results integrated into the plan ── */
 let lessonComponents = {};    // { review, rubric, grouping, timeline, exitTicket, differentiation, seatPlan }
 
@@ -842,6 +869,10 @@ export function render(container) {
     }
   }
 
+  // If a spatial layout was deferred earlier (no lesson yet) and we now have a
+  // lesson to attach it to, apply it and clear the handoff key.
+  consumePendingSpatialLayout();
+
   // Status badge for current lesson
   const statusBadgeHTML = currentLesson ? (() => {
     const colors = { draft: 'badge-gray', ready: 'badge-blue', completed: 'badge-green' };
@@ -906,6 +937,9 @@ export function render(container) {
             <div id="kb-chips" style="display:flex;gap:var(--sp-1);flex-wrap:wrap;"></div>
           </div>
         </div>
+
+        <!-- My References picker (toggle reusable context sources) -->
+        <div id="ref-picker-bar" style="flex-shrink:0;display:none;padding:var(--sp-2) var(--sp-4);background:var(--bg-subtle);border-bottom:1px solid var(--border-light);"></div>
 
         <div class="chat-messages" id="chat-messages" style="flex:1;min-height:0;overflow-y:auto;"></div>
 
@@ -1186,6 +1220,23 @@ export function render(container) {
         `[Reference — ${kb.title}]:\n${(kb.content || '').slice(0, 2000)}`
       ));
     }
+    // My References — teacher-curated library toggled on for this session.
+    // Token-bounded: inject the summary by default; inject raw content only when
+    // it is short (< ~2000 chars), falling back to a slice when no summary exists.
+    if (selectedReferenceIds.length > 0) {
+      const refs = Store.getReferences();
+      selectedReferenceIds.forEach(id => {
+        const r = refs.find(x => x.id === id);
+        if (!r) return;
+        const content = r.content || '';
+        let body;
+        if (content.length > 0 && content.length < 2000) body = content;
+        else if (r.summary) body = r.summary;
+        else body = content.slice(0, 2000);
+        if (!body) return;
+        contextParts.push(`[Reference — ${r.name}]:\n${body}`);
+      });
+    }
     // Auto-attach SoW if available and first message (background context)
     if (chatMessages.length === 0) {
       const sowUploads = (Store.get('knowledgeUploads') || []).filter(u => u.category === 'Scheme of Work');
@@ -1285,6 +1336,9 @@ export function render(container) {
 
   // KB context chips
   renderKBChips(container);
+
+  // My References picker chips
+  renderReferenceChips(container);
 
   // Attach KB context
   container.querySelector('#attach-kb-btn')?.addEventListener('click', () => {
@@ -2334,6 +2388,8 @@ function showSaveModal(classes) {
     } else {
       const lesson = Store.addLesson(data);
       currentLessonId = lesson.id;
+      // A spatial layout linked before the lesson was saved can now be attached.
+      consumePendingSpatialLayout();
       showToast('Lesson saved!', 'success');
     }
     close();
@@ -2763,6 +2819,44 @@ function renderKBChips(container) {
     btn.addEventListener('click', () => {
       attachedKBContext.splice(parseInt(btn.dataset.idx), 1);
       renderKBChips(container);
+    });
+  });
+}
+
+/* ── Reference library picker chip bar ──
+ * Lists the teacher's My References; each chip toggles the reference into the
+ * generation context. Selection persists for the session (sessionStorage). */
+function renderReferenceChips(container) {
+  const bar = container.querySelector('#ref-picker-bar');
+  if (!bar) return;
+
+  const refs = Store.getReferences();
+  if (!refs.length) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+
+  bar.style.display = '';
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
+      <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);">References:</span>
+      <div style="display:flex;gap:var(--sp-1);flex-wrap:wrap;">
+        ${refs.map(r => {
+          const on = selectedReferenceIds.includes(r.id);
+          const tip = r.summary ? r.summary.slice(0, 140) : (r.source?.filename || 'Reference');
+          return `<button class="ref-chip" data-ref-id="${esc(r.id)}" aria-pressed="${on}" title="${esc(tip)}" style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:var(--radius-full);font-size:0.75rem;font-weight:500;cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--border)'};background:${on ? 'var(--accent-light)' : 'var(--bg-card)'};color:${on ? 'var(--accent-dark)' : 'var(--ink-muted)'};">
+            <span style="width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${on ? 'var(--accent)' : 'var(--border)'};"></span>
+            ${esc(r.name.slice(0, 32))}
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  bar.querySelectorAll('.ref-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.refId;
+      const i = selectedReferenceIds.indexOf(id);
+      if (i >= 0) selectedReferenceIds.splice(i, 1);
+      else selectedReferenceIds.push(id);
+      saveSelectedReferenceIds();
+      renderReferenceChips(container);
     });
   });
 }

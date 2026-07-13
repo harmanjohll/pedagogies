@@ -10,6 +10,7 @@ import { navigate } from '../router.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { showToast } from '../components/toast.js';
 import { createFileUploadZone } from '../components/pdf-upload.js';
+import { extractText, fileExt } from '../utils/doc-extract.js';
 import { sendChat } from '../api.js';
 import { md } from '../utils/markdown.js';
 
@@ -274,6 +275,232 @@ function wirePracticeSection(container) {
   bindSetGoalBtn(container);
 }
 
+/* ══════════ My References (reusable AI context library, like a skill) ══════════ */
+
+const REFERENCE_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
+
+/** Human-readable size for a reference's stored content length. */
+function fmtSize(len) {
+  const n = len || 0;
+  return n >= 1000 ? `${Math.round(n / 1000)}K chars` : `${n} char${n === 1 ? '' : 's'}`;
+}
+
+function renderReferencesSection() {
+  const refs = Store.getReferences();
+  const list = refs.map(r => `
+    <div class="card" style="padding:var(--sp-4) var(--sp-5);border:1px solid var(--border-light);">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-3);">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:2px;">
+            <span style="color:#8b5cf6;flex-shrink:0;">${REFERENCE_ICON}</span>
+            <h4 style="font-weight:600;font-size:0.9375rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.name)}</h4>
+          </div>
+          <div style="font-size:0.6875rem;color:var(--ink-faint);margin-bottom:var(--sp-2);">
+            ${r.source && r.source.filename ? esc(r.source.filename) + ' &middot; ' : ''}${fmtSize(r.contentLength)} &middot; ${fmtDate(r.createdAt)}
+          </div>
+          ${r.summary
+            ? `<div style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;">${md(r.summary)}</div>`
+            : `<div style="font-size:0.75rem;color:var(--ink-faint);font-style:italic;">Stored as raw context — no summary${Store.get('apiKey') ? '' : ' (add a Gemini API key in Settings to auto-summarise new references)'}.</div>`}
+        </div>
+        <div style="display:flex;gap:var(--sp-1);flex-shrink:0;">
+          <button class="btn btn-ghost btn-sm ref-rename-btn" data-rid="${esc(r.id)}" title="Rename" style="padding:2px 4px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button class="btn btn-ghost btn-sm ref-delete-btn" data-rid="${esc(r.id)}" title="Delete" style="padding:2px 4px;color:var(--danger);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="card" style="margin-bottom:var(--sp-6);border-left:3px solid #8b5cf6;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-2);">
+        <h3 style="font-family:var(--font-serif, Georgia, serif);font-size:1.125rem;font-weight:600;color:var(--ink);">My References</h3>
+        <div style="display:flex;align-items:center;gap:var(--sp-2);">
+          <span class="badge badge-gray">${refs.length} reference${refs.length === 1 ? '' : 's'}</span>
+          <button class="btn btn-primary btn-sm" id="add-reference-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Reference
+          </button>
+        </div>
+      </div>
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">Upload documents (PDF, Word, PowerPoint, Excel, Markdown, CSV, text) into a reusable library. Toggle any reference on in the Lesson Planner to pull it into Co-Cher's context — like a teaching skill.</p>
+      ${refs.length === 0 ? `
+        <p style="font-size:0.8125rem;color:var(--ink-faint);font-style:italic;">No references yet — add a document and it becomes a toggleable context source in the Lesson Planner.</p>
+      ` : `
+        <div style="display:flex;flex-direction:column;gap:var(--sp-3);">${list}</div>
+      `}
+    </div>`;
+}
+
+function wireReferencesSection(container) {
+  container.querySelector('#add-reference-btn')?.addEventListener('click', () => showAddReferenceModal(container));
+
+  container.querySelectorAll('.ref-rename-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ref = Store.getReferences().find(r => r.id === btn.dataset.rid);
+      if (ref) showRenameReferenceModal(ref, container);
+    });
+  });
+
+  container.querySelectorAll('.ref-delete-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const ref = Store.getReferences().find(r => r.id === btn.dataset.rid);
+      if (!ref) return;
+      const ok = await confirmDialog({ title: 'Delete Reference', message: `Delete "${ref.name}" from your References library? This cannot be undone.` });
+      if (ok) {
+        Store.deleteReference(ref.id);
+        showToast('Reference deleted');
+        render(container);
+      }
+    });
+  });
+}
+
+function showRenameReferenceModal(ref, container) {
+  const { backdrop, close } = openModal({
+    title: 'Rename Reference',
+    body: `
+      <div class="input-group">
+        <label class="input-label">Reference Name</label>
+        <input class="input" id="ref-rename-input" value="${esc(ref.name)}" autofocus />
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save">Save</button>
+    `
+  });
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
+    const input = backdrop.querySelector('#ref-rename-input');
+    const name = input.value.trim();
+    if (!name) { input.style.borderColor = 'var(--danger)'; return; }
+    Store.updateReference(ref.id, { name });
+    showToast('Reference renamed', 'success');
+    close();
+    render(container);
+  });
+  setTimeout(() => backdrop.querySelector('#ref-rename-input')?.focus(), 100);
+}
+
+function showAddReferenceModal(container) {
+  let staged = null;  // { text, source }
+
+  const { backdrop, close } = openModal({
+    title: 'Add Reference',
+    width: 560,
+    body: `
+      <div class="input-group">
+        <label class="input-label">Reference Name</label>
+        <input class="input" id="ref-name" placeholder="e.g. Assessment Policy 2025" autofocus />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Upload (PDF, .txt, .md, .csv)</label>
+        <div id="ref-upload-mount"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--sp-2);margin:var(--sp-2) 0;color:var(--ink-faint);font-size:0.6875rem;">
+        <div style="flex:1;height:1px;background:var(--border-light);"></div>
+        or a Word / PowerPoint / Excel file
+        <div style="flex:1;height:1px;background:var(--border-light);"></div>
+      </div>
+      <div class="input-group">
+        <button type="button" class="btn btn-secondary btn-sm" id="ref-office-btn">Choose .docx / .pptx / .xlsx file</button>
+        <input type="file" id="ref-office-input" accept=".docx,.pptx,.xlsx,.xls,.md,.markdown,.csv,.txt,.text" style="display:none;" />
+      </div>
+      <div id="ref-status" style="font-size:0.75rem;color:var(--ink-muted);min-height:1.2em;margin-bottom:var(--sp-2);"></div>
+      <p style="font-size:0.6875rem;color:var(--ink-faint);line-height:1.5;">On save, Co-Cher writes a short summary of the document for use as teaching context${Store.get('apiKey') ? '' : ' (needs a Gemini API key — without one the reference is still stored, just without a summary)'}.</p>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save">Save Reference</button>
+    `
+  });
+
+  const nameInput = backdrop.querySelector('#ref-name');
+  const statusEl = backdrop.querySelector('#ref-status');
+
+  function stageReference(text, source) {
+    staged = { text, source };
+    if (!nameInput.value.trim() && source.filename) {
+      nameInput.value = source.filename.replace(/\.[^.]+$/, '');
+    }
+    statusEl.innerHTML = `<span style="color:var(--success);font-weight:600;">Loaded ${esc(source.filename || 'document')}</span> — ${fmtSize(text.length)} ready to summarise.`;
+  }
+
+  // Reuse the shared upload zone for drag-drop + PDF page-range extraction.
+  const uploadMount = backdrop.querySelector('#ref-upload-mount');
+  if (uploadMount) {
+    const zone = createFileUploadZone({
+      compact: true,
+      onContent: (text, meta) => {
+        stageReference(text, {
+          filename: meta.filename,
+          isPdf: !!meta.isPdf,
+          pageRange: meta.pageRange || null,
+          type: meta.isPdf ? 'pdf' : (fileExt({ name: meta.filename || '' }) || 'text')
+        });
+      }
+    });
+    uploadMount.appendChild(zone.el);
+  }
+
+  // Office / Excel formats route through extractText (JSZip / SheetJS).
+  const officeInput = backdrop.querySelector('#ref-office-input');
+  backdrop.querySelector('#ref-office-btn')?.addEventListener('click', () => officeInput.click());
+  officeInput?.addEventListener('change', async () => {
+    const file = officeInput.files[0];
+    if (!file) return;
+    statusEl.textContent = `Extracting ${file.name}...`;
+    try {
+      const { text, meta } = await extractText(file);
+      if (!text || !text.trim()) {
+        showToast('No text could be extracted from that file.', 'danger');
+        statusEl.textContent = '';
+        return;
+      }
+      stageReference(text, { filename: file.name, isPdf: false, pageRange: null, type: meta.type });
+    } catch (err) {
+      showToast(err.message, 'danger');
+      statusEl.textContent = '';
+    } finally {
+      officeInput.value = '';
+    }
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="save"]').addEventListener('click', async () => {
+    const name = nameInput.value.trim();
+    if (!name) { nameInput.style.borderColor = 'var(--danger)'; return; }
+    if (!staged || !staged.text.trim()) { showToast('Upload a document first.', 'danger'); return; }
+
+    const saveBtn = backdrop.querySelector('[data-action="save"]');
+    saveBtn.disabled = true;
+    saveBtn.textContent = Store.get('apiKey') ? 'Summarising...' : 'Saving...';
+
+    // One-time summarize-on-ingest. Degrade gracefully with no key / on error.
+    let summary = '';
+    if (Store.get('apiKey')) {
+      try {
+        summary = await sendChat(
+          [{ role: 'user', content: `Summarise the following reference document in about 150 words so a teacher can reuse it as lesson-planning context. Capture the key facts, ideas, and anything usable in a lesson. No preamble.\n\n${staged.text.slice(0, 12000)}` }],
+          { systemPrompt: 'You write concise, factual ~150-word summaries of teacher reference documents for later use as lesson-planning context. Plain prose, no preamble.', temperature: 0.4, maxTokens: 512, trackLabel: 'summarizeReference' }
+        );
+      } catch (err) {
+        showToast(`Saved without summary: ${err.message}`, 'danger');
+      }
+    }
+
+    Store.addReference({ name, source: staged.source, summary: (summary || '').trim(), content: staged.text });
+    showToast(`Reference "${name}" added`, 'success');
+    close();
+    render(container);
+  });
+
+  setTimeout(() => nameInput?.focus(), 100);
+}
+
 /* ══════════ Main View ══════════ */
 
 export function render(container) {
@@ -295,6 +522,8 @@ export function render(container) {
         </div>
 
         ${renderPracticeSection()}
+
+        ${renderReferencesSection()}
 
         ${lessonReflections.length > 0 ? `
           <div class="card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--accent);">
@@ -340,6 +569,7 @@ export function render(container) {
 
   // Handlers
   wirePracticeSection(container);
+  wireReferencesSection(container);
 
   (container.querySelector('#new-folder-btn') || container.querySelector('#new-folder-empty'))
     ?.addEventListener('click', () => showNewFolderModal(container));

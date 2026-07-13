@@ -5,13 +5,12 @@
  * anywhere else a teacher's document becomes AI context. Dispatches by file
  * extension.
  *
- * Implemented here: .txt / .md / .csv / .text (read as text) and .xlsx / .xls
- * (via the already-loaded SheetJS, window.XLSX — same path student-upload.js uses).
+ * Implemented here: .txt / .md / .csv / .text (read as text), .xlsx / .xls
+ * (via the already-loaded SheetJS, window.XLSX — same path student-upload.js uses),
+ * and .docx / .pptx (unzipped in-browser with JSZip, window.JSZip — a .docx/.pptx
+ * is just a ZIP of XML parts; we inflate the text-bearing parts and strip markup).
  * PDFs are handled by components/pdf-upload.js (pdf.js page-range extraction) —
  * this module intentionally does NOT duplicate that; callers route .pdf there.
- *
- * TODO(WS3): .docx (dependency-free unzip + word/document.xml) and .pptx
- * (small CDN lib) branches — see the throw stubs below.
  */
 
 /** Read a File as UTF-8 text. */
@@ -40,6 +39,72 @@ export function fileExt(file) {
   const i = name.lastIndexOf('.');
   return i >= 0 ? name.slice(i + 1).toLowerCase() : '';
 }
+
+/* ── DOCX / PPTX: minimal in-browser unzip via JSZip (window.JSZip) ──
+ * Both formats are ZIP archives of XML parts. We inflate the text-bearing
+ * part(s) and strip the markup, preserving paragraph / slide breaks. No server
+ * and no heavy Office parser — just the small JSZip lib loaded in app/cocher.html.
+ * Fails with a teacher-readable Error if JSZip isn't loaded. */
+
+/** Load a File as a JSZip archive. */
+async function loadZip(file) {
+  if (!window.JSZip) {
+    throw new Error('Document support is still loading — please try again in a moment.');
+  }
+  const buf = await readAsArrayBuffer(file);
+  try {
+    return await window.JSZip.loadAsync(buf);
+  } catch {
+    throw new Error('Could not open this file — it may be corrupted or not a valid Office document.');
+  }
+}
+
+/** Decode the handful of XML entities that appear in Office text runs. */
+function decodeXmlEntities(s) {
+  return s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, d) => { try { return String.fromCodePoint(parseInt(d, 10)); } catch { return ''; } })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch { return ''; } })
+    .replace(/&amp;/g, '&'); // ampersand last so decoded entities aren't re-decoded
+}
+
+/** Tidy extracted text: decode entities, trim trailing spaces, cap blank runs. */
+function normalizeExtracted(s) {
+  return decodeXmlEntities(s).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/**
+ * Word document.xml → text. Runs (<w:t>) concatenate; paragraph ends (</w:p>)
+ * and breaks (<w:br/>, <w:cr/>) become newlines; tabs (<w:tab/>) become tabs.
+ * Word can split a single word across several <w:t> runs, so runs join with no
+ * separator (joining with spaces would corrupt words).
+ */
+function docxXmlToText(xml) {
+  const s = String(xml)
+    .replace(/<w:tab\b[^>]*\/?>/g, '\t')
+    .replace(/<w:(?:br|cr)\b[^>]*\/?>/g, '\n')
+    .replace(/<\/w:p>/g, '\n')
+    .replace(/<[^>]+>/g, '');
+  return normalizeExtracted(s);
+}
+
+/**
+ * PowerPoint slideN.xml → text. Runs (<a:t>) concatenate; paragraph ends
+ * (</a:p>) and breaks (<a:br/>) become newlines.
+ */
+function pptxXmlToText(xml) {
+  const s = String(xml)
+    .replace(/<a:br\b[^>]*\/?>/g, '\n')
+    .replace(/<\/a:p>/g, '\n')
+    .replace(/<[^>]+>/g, '');
+  return normalizeExtracted(s);
+}
+
+/** Numeric order of a ppt/slides/slideN.xml part name. */
+const slideNumber = (name) => { const m = name.match(/slide(\d+)\.xml$/i); return m ? parseInt(m[1], 10) : 0; };
 
 /**
  * Extract plain text from a File.
@@ -76,11 +141,27 @@ export async function extractText(file) {
       // pdf.js page-range extraction lives in components/pdf-upload.js.
       throw new Error('For PDFs, use the PDF uploader (it lets you pick page ranges).');
 
-    // TODO(WS3): implement these two branches + load their libs in app/cocher.html.
-    case 'docx':
-      throw new Error('DOCX support is being wired up.');
-    case 'pptx':
-      throw new Error('PPTX support is being wired up.');
+    case 'docx': {
+      const zip = await loadZip(file);
+      const entry = zip.file('word/document.xml');
+      if (!entry) throw new Error('This .docx has no readable body (word/document.xml is missing).');
+      const text = docxXmlToText(await entry.async('string'));
+      return { text, meta: { type: 'docx' } };
+    }
+
+    case 'pptx': {
+      const zip = await loadZip(file);
+      const slideNames = Object.keys(zip.files)
+        .filter(n => /^ppt\/slides\/slide\d+\.xml$/i.test(n))
+        .sort((a, b) => slideNumber(a) - slideNumber(b));
+      if (slideNames.length === 0) throw new Error('This .pptx has no readable slides.');
+      const slides = [];
+      for (let i = 0; i < slideNames.length; i++) {
+        const t = pptxXmlToText(await zip.file(slideNames[i]).async('string'));
+        slides.push(`# Slide ${i + 1}${t ? `\n${t}` : ''}`);
+      }
+      return { text: slides.join('\n\n'), meta: { type: 'pptx', slides: slideNames.length } };
+    }
 
     default:
       throw new Error(`Unsupported file type ".${ext}". Try .txt, .md, .csv, .xlsx, .docx, .pptx or .pdf.`);
