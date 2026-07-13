@@ -17,6 +17,59 @@ import { getCurrentUser, getPreferredName, guessFirstName } from '../components/
 import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
 import { escapeHtml } from '../utils/markdown.js';
 import { lessonStage, lessonNextStep, LIFECYCLE_STAGES } from './lessons.js';
+import { getIdentity } from '../utils/identity.js';
+import { levelMeta, getPreset } from '../utils/tracking.js';
+
+/* ── Visual identity helpers (A3) ──
+ * The teacher's monogram + colour. Initials come from the chosen identity, else
+ * are derived from the preferred/account name; colour comes from a chosen avatar
+ * colour, else the same hash palette as the student avatars (classes.js) so the
+ * monogram sits in the same visual family. */
+function stringToColor(str) {
+  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#f43f5e', '#06b6d4', '#ec4899', '#14b8a6'];
+  let hash = 0;
+  for (let i = 0; i < String(str).length; i++) hash = String(str).charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function teacherInitials() {
+  const id = getIdentity();
+  if (id.avatar && id.avatar.initials) return String(id.avatar.initials).slice(0, 3).toUpperCase();
+  const user = getCurrentUser();
+  const full = (user && user.name) || getFirstName() || 'Cher';
+  const salutations = new Set(['MR', 'MS', 'MDM', 'MRS', 'DR', 'PROF', 'MISS']);
+  let words = String(full).trim().split(/\s+/).filter(Boolean);
+  if (words.length > 1 && salutations.has(words[0].toUpperCase())) words = words.slice(1);
+  const letters = words.slice(0, 2).map(w => w[0]).join('') || (getFirstName() || 'C')[0];
+  return letters.toUpperCase();
+}
+
+function teacherAvatarColor() {
+  const id = getIdentity();
+  if (id.avatar && id.avatar.color) return id.avatar.color;
+  const user = getCurrentUser();
+  return stringToColor((user && user.name) || getFirstName() || 'Cher');
+}
+
+/** Teacher monogram markup (reuses the .avatar component). */
+function teacherMonogramHTML(sizeClass = '') {
+  return `<div class="avatar ${sizeClass}" style="background:${teacherAvatarColor()};" aria-hidden="true">${escapeHtml(teacherInitials())}</div>`;
+}
+
+/* Any E21CC field shares the same level set, so it's a fine source for level
+ * colours — this routes dashboard student widgets through the centralised
+ * tracking colours instead of hardcoding hex. */
+const E21CC_LEVEL_FIELD = getPreset('e21cc').fields[0];
+function e21ccLevelColor(levelKey) {
+  return levelMeta(E21CC_LEVEL_FIELD, levelKey).color;
+}
+
+/* Count lessons whose loop has closed (reached `reflected`) in the last 14 days
+ * — deliberate practice, framed as cadence rather than points. */
+function loopClosedFortnight(lessons) {
+  const cutoff = Date.now() - 14 * 86400000;
+  return (lessons || []).filter(l => lessonStage(l) === 'reflected' && (l.updatedAt || 0) >= cutoff).length;
+}
 
 /*
  * Admin / tester accounts, present in the CSV (so they can log in and see
@@ -72,7 +125,8 @@ function getDashPrefs() {
         /* Layout style is WRITTEN by the Settings view; the dashboard only
          * reads it. 'calm' is the default when unset. */
         layoutStyle: p.layoutStyle || 'calm',
-        calmMoreOpen: !!p.calmMoreOpen
+        calmMoreOpen: !!p.calmMoreOpen,
+        calmPanelSwap: !!p.calmPanelSwap
       };
     }
   } catch {}
@@ -85,7 +139,8 @@ function getDashPrefs() {
     widgetNames: {},
     widgetSizes: {},
     layoutStyle: 'calm',
-    calmMoreOpen: false
+    calmMoreOpen: false,
+    calmPanelSwap: false
   };
 }
 
@@ -614,15 +669,10 @@ function buildStudentSpotlight(classes) {
     { key: 'selfRegulation', short: 'SR', color: '#f59e0b' },
   ];
   const _spotLvVal = (lv) => ({ developing: 1, applying: 2, extending: 3, leading: 4 }[lv] || 1);
-  const _spotLvMeta = (lv) => {
-    const levels = [
-      { key: 'developing', short: 'Dev', color: '#f59e0b' },
-      { key: 'applying', short: 'App', color: '#3b82f6' },
-      { key: 'extending', short: 'Ext', color: '#10b981' },
-      { key: 'leading', short: 'Lead', color: '#8b5cf6' },
-    ];
-    return levels.find(l => l.key === lv) || levels[0];
-  };
+  // Level colours are sourced from the centralised tracking accessor
+  // (levelMeta) rather than hardcoded hex; the short labels remain local.
+  const _spotShort = { developing: 'Dev', applying: 'App', extending: 'Ext', leading: 'Lead' };
+  const _spotLvMeta = (lv) => ({ short: _spotShort[lv] || 'Dev', color: e21ccLevelColor(lv) });
   const flagged = [];
   classes.forEach(cls => {
     if (!cls.students?.length) return;
@@ -702,15 +752,9 @@ function renderInsights(classes, lessons) {
     { key: 'selfRegulation',     short: 'SR',  color: '#f59e0b' },
   ];
 
-  const _insLvMeta = (lv) => {
-    const levels = [
-      { key: 'developing', short: 'Dev', color: '#f59e0b' },
-      { key: 'applying', short: 'App', color: '#3b82f6' },
-      { key: 'extending', short: 'Ext', color: '#10b981' },
-      { key: 'leading', short: 'Lead', color: '#8b5cf6' },
-    ];
-    return levels.find(l => l.key === lv) || levels[0];
-  };
+  // Level colours via the centralised tracking accessor (see buildStudentSpotlight).
+  const _insShort = { developing: 'Dev', applying: 'App', extending: 'Ext', leading: 'Lead' };
+  const _insLvMeta = (lv) => ({ short: _insShort[lv] || 'Dev', color: e21ccLevelColor(lv) });
   const _insLvVal = (lv) => ({ developing: 1, applying: 2, extending: 3, leading: 4 }[lv] || 1);
 
   // Count level distribution per dimension
@@ -1230,7 +1274,8 @@ function showCustomiseModal(container) {
       widgetNames: {},
       widgetSizes: {},
       layoutStyle: prefs.layoutStyle, // owned by Settings; never reset here
-      calmMoreOpen: false
+      calmMoreOpen: false,
+      calmPanelSwap: prefs.calmPanelSwap
     });
     overlay.remove();
     render(container);
@@ -1281,7 +1326,8 @@ function showCustomiseModal(container) {
       widgetNames: names,
       widgetSizes: prefs.widgetSizes || {},
       layoutStyle: prefs.layoutStyle, // owned by Settings; pass through untouched
-      calmMoreOpen: prefs.calmMoreOpen
+      calmMoreOpen: prefs.calmMoreOpen,
+      calmPanelSwap: prefs.calmPanelSwap
     });
     overlay.remove();
     render(container);
@@ -1484,6 +1530,11 @@ function buildCalmRibbon(teacherRow) {
   const pk = getTTPeriodKey();
   if (!pk) return ''; // Weekend / non-teaching week
   const { dayStr, period, weekType } = pk;
+  // A personal accent (when set) subtly tints teaching periods with a thin
+  // underline — enough to feel personal, not garish. Validated to a hex so it's
+  // safe to inline.
+  const accent = getIdentity().personalAccent;
+  const useAccent = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(accent || '').trim());
   const cells = [];
   for (let p = 1; p <= 11; p++) {
     const val = teacherRow[`${weekType}${dayStr}${p}`];
@@ -1494,7 +1545,9 @@ function buildCalmRibbon(teacherRow) {
     const nowTag = isNow
       ? '<span style="margin-left:4px;padding:0 4px;border-radius:3px;background:var(--brand-navy,#000C53);color:var(--brand-yellow,#FFE200);font-size:0.5rem;font-weight:700;vertical-align:1px;">NOW</span>'
       : '';
-    cells.push(`<div style="flex:0 0 auto;min-width:64px;padding:6px 10px;border:1px solid ${isNow ? 'var(--marker,#FFE200)' : 'var(--border-light,#e5e7eb)'};border-radius:8px;background:${isNow ? 'var(--marker-wash,#FFF9C9)' : 'var(--surface,#fff)'};text-align:center;${isPast ? 'opacity:0.45;' : ''}">
+    // Subtle accent underline on class-bearing, non-current cells.
+    const accentBar = (useAccent && hasClass && !isNow) ? `border-bottom:2px solid ${accent.trim()};` : '';
+    cells.push(`<div style="flex:0 0 auto;min-width:64px;padding:6px 10px;border:1px solid ${isNow ? 'var(--marker,#FFE200)' : 'var(--border-light,#e5e7eb)'};border-radius:8px;background:${isNow ? 'var(--marker-wash,#FFF9C9)' : 'var(--surface,#fff)'};text-align:center;${accentBar}${isPast ? 'opacity:0.45;' : ''}">
       <div style="font-size:0.625rem;font-weight:700;color:var(--ink-muted);letter-spacing:0.04em;">P${p}${nowTag}</div>
       <div style="font-size:0.75rem;font-weight:${hasClass ? '600' : '400'};color:${hasClass ? 'var(--ink)' : 'var(--ink-faint)'};white-space:nowrap;">${hasClass ? escapeHtml(classCode) : 'Free'}</div>
     </div>`);
@@ -1930,15 +1983,46 @@ export function render(container) {
     ).join('');
     const worthItems = buildCalmWorthALook(classes, lessons);
 
+    // A3.2 — a chosen mantra becomes the greeting sub-line (else the quiet
+    // orientation line stands on its own).
+    const calmMantra = getIdentity().chosenMantra;
+    // A1.3 — fortnight cadence rollup (deliberate practice, not points).
+    const loopN = loopClosedFortnight(lessons);
+    const fortnightLine = loopN > 0
+      ? `<div style="margin-top:var(--sp-2);font-size:0.8125rem;color:var(--growth,#2c7a4b);display:inline-flex;align-items:center;gap:6px;line-height:1.4;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><polyline points="22 4 12 14.01 9 11.01"/></svg>You&rsquo;ve closed the loop on ${loopN} lesson${loopN !== 1 ? 's' : ''} in the last fortnight &mdash; steady, deliberate practice.</div>`
+      : '';
+
+    // A3.4 — the two calm panels, in a teacher-chosen order (persisted pref).
+    const weekPanel = `
+      <div class="card" style="padding:var(--sp-4) var(--sp-5);">
+        <div class="calm-panel-label">This week&rsquo;s <span class="calm-hl">lessons</span></div>
+        ${buildCalmWeekLessons(lessons, classes)}
+      </div>`;
+    const lookPanel = `
+      <div class="card" style="padding:var(--sp-4) var(--sp-5);">
+        <div class="calm-panel-label">Worth a <span class="calm-hl">look</span></div>
+        ${worthItems.map(t => `
+          <div style="display:flex;gap:var(--sp-2);padding:var(--sp-2) 0;font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;">
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--marker,#FFE200);border:1px solid var(--border,#d1d5db);margin-top:6px;flex-shrink:0;"></span>
+            <span>${t}</span>
+          </div>`).join('')}
+      </div>`;
+    const orderedPanels = prefs.calmPanelSwap ? [lookPanel, weekPanel] : [weekPanel, lookPanel];
+
     container.innerHTML = `
       <div class="main-scroll">
         <div class="page-container">
           ${CALM_STYLE_BLOCK}
 
-          <!-- Serif greeting (no card) -->
-          <div class="animate-fade-in-up" style="padding:var(--sp-2) 0 var(--sp-5);">
-            <div style="font-family:var(--font-serif, Georgia, serif);font-size:1.5rem;font-weight:600;line-height:1.3;color:var(--ink);">${escapeHtml(calmHeadline(firstName))}</div>
-            <div id="calm-orient" style="margin-top:var(--sp-2);font-size:0.875rem;color:var(--ink-muted);">Checking today&rsquo;s timetable &mdash; ${escapeHtml(calmLessonAttentionText(lessons))}.</div>
+          <!-- Serif greeting (no card) with teacher monogram + optional mantra -->
+          <div class="animate-fade-in-up" style="padding:var(--sp-2) 0 var(--sp-5);display:flex;align-items:flex-start;gap:var(--sp-3);">
+            ${teacherMonogramHTML('avatar-lg')}
+            <div style="min-width:0;flex:1;">
+              <div style="font-family:var(--font-serif, Georgia, serif);font-size:1.5rem;font-weight:600;line-height:1.3;color:var(--ink);">${escapeHtml(calmHeadline(firstName))}</div>
+              ${calmMantra ? `<div class="calm-mantra" style="margin-top:var(--sp-1);font-size:0.9375rem;font-style:italic;color:var(--ink-secondary);font-family:var(--font-serif, Georgia, serif);line-height:1.4;">${escapeHtml(calmMantra)}</div>` : ''}
+              <div id="calm-orient" style="margin-top:var(--sp-2);font-size:0.875rem;color:var(--ink-muted);">Checking today&rsquo;s timetable &mdash; ${escapeHtml(calmLessonAttentionText(lessons))}.</div>
+              ${fortnightLine}
+            </div>
           </div>
 
           <!-- Up Next hero, calm styling -->
@@ -1952,20 +2036,15 @@ export function render(container) {
           <!-- Status banner (kept in calm; shrunk via .calm-status-banner) -->
           <div id="tt-status-banner" class="calm-status-banner"></div>
 
-          <!-- Two-column: this week's lessons / worth a look -->
+          <!-- Two-column: this week's lessons / worth a look (order is swappable) -->
+          <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:var(--sp-2);">
+            <button class="btn btn-ghost btn-sm" id="calm-swap-panels" title="Swap the order of these two panels" style="font-size:0.6875rem;color:var(--ink-muted);padding:2px 8px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              Swap panels
+            </button>
+          </div>
           <div class="calm-two-col" style="margin-bottom:var(--sp-6);">
-            <div class="card" style="padding:var(--sp-4) var(--sp-5);">
-              <div class="calm-panel-label">This week&rsquo;s <span class="calm-hl">lessons</span></div>
-              ${buildCalmWeekLessons(lessons, classes)}
-            </div>
-            <div class="card" style="padding:var(--sp-4) var(--sp-5);">
-              <div class="calm-panel-label">Worth a <span class="calm-hl">look</span></div>
-              ${worthItems.map(t => `
-                <div style="display:flex;gap:var(--sp-2);padding:var(--sp-2) 0;font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;">
-                  <span style="width:7px;height:7px;border-radius:50%;background:var(--marker,#FFE200);border:1px solid var(--border,#d1d5db);margin-top:6px;flex-shrink:0;"></span>
-                  <span>${t}</span>
-                </div>`).join('')}
-            </div>
+            ${orderedPanels.join('')}
           </div>
 
           <!-- Pinned Links (above More) -->
@@ -1989,17 +2068,25 @@ export function render(container) {
 
         <!-- Greeting -->
         <div class="greeting-card animate-fade-in-up">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div>
-              <div class="greeting-title">${getGreeting()}, Cher!</div>
-              <div class="greeting-subtitle">What would you like to do today${getFirstName() ? ', ' + getFirstName() : ''}?</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);">
+            <div style="display:flex;align-items:center;gap:var(--sp-3);min-width:0;">
+              ${teacherMonogramHTML('avatar-lg')}
+              <div style="min-width:0;">
+                <div class="greeting-title">${getGreeting()}, Cher!</div>
+                <div class="greeting-subtitle">What would you like to do today${getFirstName() ? ', ' + getFirstName() : ''}?</div>
+              </div>
             </div>
             <button class="btn btn-ghost btn-sm" id="customise-dashboard-btn" title="Customise your dashboard" style="position:absolute;bottom:var(--sp-3);right:var(--sp-3);padding:6px;opacity:0.6;transition:opacity 0.15s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.6'">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </button>
           </div>
           <div style="margin-top:12px;font-size:0.875rem;font-style:italic;opacity:0.85;line-height:1.5;">
-            "${getDailyQuote().text}"${getDailyQuote().attr ? `<span style="font-style:normal;opacity:0.7;margin-left:6px;">- ${getDailyQuote().attr}</span>` : ''}
+            ${(() => {
+              const mantra = getIdentity().chosenMantra;
+              if (mantra) return escapeHtml(mantra);
+              const q = getDailyQuote();
+              return `"${escapeHtml(q.text)}"${q.attr ? `<span style="font-style:normal;opacity:0.7;margin-left:6px;">- ${escapeHtml(q.attr)}</span>` : ''}`;
+            })()}
           </div>
         </div>
 
@@ -2040,6 +2127,14 @@ export function render(container) {
   }
   container.querySelectorAll('[data-calm-lesson-id]').forEach(el => {
     el.addEventListener('click', () => navigate(`/lessons/${el.dataset.calmLessonId}`));
+  });
+
+  // Swap the two calm panels' order (persisted pref).
+  container.querySelector('#calm-swap-panels')?.addEventListener('click', () => {
+    const p = getDashPrefs();
+    p.calmPanelSwap = !p.calmPanelSwap;
+    saveDashPrefs(p);
+    render(container);
   });
 
   // Up Next hero: card opens the lesson; the CTA jumps straight to the next step

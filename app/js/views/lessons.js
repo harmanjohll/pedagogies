@@ -14,6 +14,7 @@ import { exportPack, importPack } from '../utils/share-pack.js';
 import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
+import { applyJourneyMinimal, toggleJourneyMinimal } from '../components/keyboard-shortcuts.js';
 
 const STATUS_MAP = {
   draft: { label: 'Draft', badge: 'badge-gray' },
@@ -85,36 +86,57 @@ export function lessonStage(l) {
 
 export function lessonNextStep(l) {
   switch (lessonStage(l)) {
+    case 'draft': return { action: 'mark-ready', label: 'Mark ready to teach &rarr;' };
     case 'ready': return { action: 'rehearse', label: 'Rehearse this lesson &rarr;' };
     case 'rehearsed': return { action: 'taught', label: 'Mark as taught' };
     case 'taught': return { action: 'reflect', label: 'Add your reflection' };
     case 'reflected': return { action: 'next-lesson', label: 'Plan next lesson with these insights &rarr;' };
-    default: return { action: 'plan', label: 'Continue planning &rarr;' };
+    default: return { action: 'mark-ready', label: 'Mark ready to teach &rarr;' };
   }
 }
 
 function lifecycleStepperHTML(lesson) {
   const stage = lessonStage(lesson);
-  const idx = LIFECYCLE_STAGES.findIndex(s => s.key === stage);
   const next = lessonNextStep(lesson);
+  // The stage strip is the shared workflow-breadcrumb component in lifecycle
+  // mode, driven by this lesson's REAL stage (unifies the two workflow models).
+  const strip = renderWorkflowBreadcrumb(null, { lifecycle: { stages: LIFECYCLE_STAGES, currentKey: stage } });
+  // Optional secondary action: at the "ready" stage, offer the rehearsal studio
+  // alongside the in-place advance so the studio feature isn't lost.
+  const studioLink = stage === 'ready'
+    ? `<button class="btn btn-ghost btn-sm" id="lifecycle-studio" style="font-size:0.75rem;">Practise in studio &rarr;</button>`
+    : '';
   return `
-    <div class="card" style="margin-bottom:var(--sp-5);padding:var(--sp-4) var(--sp-5);">
-      <div style="display:flex;align-items:center;flex-wrap:wrap;row-gap:10px;">
-        ${LIFECYCLE_STAGES.map((s, i) => `
-          <div style="display:flex;align-items:center;">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <span style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.6875rem;font-weight:700;${
-                i < idx ? 'background:var(--growth,#2c7a4b);color:#fff;'
-                : i === idx ? 'background:var(--brand-navy,#000C53);color:var(--brand-yellow,#FFE200);box-shadow:0 0 0 3px rgba(0,12,83,0.12);'
-                : 'background:var(--bg-subtle);color:var(--ink-faint);'}">${i < idx ? '&#10003;' : i + 1}</span>
-              <span style="font-size:0.75rem;font-weight:${i === idx ? 700 : 500};color:${i <= idx ? 'var(--ink)' : 'var(--ink-faint)'};">${s.label}</span>
-            </div>
-            ${i < LIFECYCLE_STAGES.length - 1 ? `<span style="width:20px;height:2px;background:${i < idx ? 'var(--growth,#2c7a4b)' : 'var(--border-light)'};margin:0 8px;border-radius:2px;"></span>` : ''}
-          </div>`).join('')}
-        <span style="flex:1;min-width:12px;"></span>
+    <div class="card lifecycle-stepper" style="margin-bottom:var(--sp-5);padding:var(--sp-4) var(--sp-5);">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;row-gap:10px;gap:var(--sp-2);">
+        <div class="lifecycle-stages" style="flex:1;min-width:0;">${strip}</div>
+        <button class="btn btn-ghost btn-sm lifecycle-min-toggle" id="journey-minimal-toggle" title="Collapse the journey to just the next action" aria-pressed="false" style="padding:4px 8px;font-size:0.6875rem;color:var(--ink-muted);white-space:nowrap;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <span class="journey-min-label">Next action only</span>
+        </button>
+        ${studioLink}
         <button class="btn btn-primary btn-sm" id="lifecycle-cta" data-action="${next.action}">${next.label}</button>
       </div>
     </div>`;
+}
+
+/* Growth-green loop-close celebration: a lesson has just reached `reflected`.
+ * Restrained by design (matches showActionToast / the "done for the day" banner
+ * tone): a gentle scale-in on the journey's final dot plus one growth-green
+ * toast — no confetti. The motion is pure CSS and is suppressed for
+ * reduced-motion users by the guard in components.css. */
+function celebrateLoopClose(container, id) {
+  // Re-render so the stepper shows the new `reflected` stage, then pop the final
+  // dot on the next frame (once the fresh DOM is in place).
+  renderDetail(container, { id });
+  requestAnimationFrame(() => {
+    const dot = container.querySelector('.lifecycle-dot-final');
+    if (dot) {
+      dot.classList.add('celebrate-loop-close');
+      dot.addEventListener('animationend', () => dot.classList.remove('celebrate-loop-close'), { once: true });
+    }
+  });
+  showToast('Loop closed — that’s the full cycle for this lesson. ✓', 'growth', 3200);
 }
 
 const ROUND_ITEMS = new Set(['desk_round', 'vr_station', 'group_table', 'beanbag', 'plant']);
@@ -884,14 +906,37 @@ export function renderDetail(container, { id }) {
   container.querySelector('#back-btn').addEventListener('click', () => navigate('/lessons'));
   container.querySelector('#edit-btn').addEventListener('click', () => navigate(`/lesson-planner/${id}`));
 
-  // Lifecycle next-step CTA
+  // Apply the persisted "Next action only" preference, then reflect it on the
+  // toggle button (label + aria-pressed).
+  const journeyMin = applyJourneyMinimal();
+  const journeyToggle = container.querySelector('#journey-minimal-toggle');
+  if (journeyToggle) {
+    const syncToggle = (on) => {
+      journeyToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+      const lbl = journeyToggle.querySelector('.journey-min-label');
+      if (lbl) lbl.textContent = on ? 'Show full journey' : 'Next action only';
+    };
+    syncToggle(journeyMin);
+    journeyToggle.addEventListener('click', () => syncToggle(toggleJourneyMinimal()));
+  }
+
+  // Lifecycle next-step CTA — the primary, single-next-action driver. Each click
+  // advances the lesson exactly one stage, so the 5-stage flow is followable
+  // end-to-end here without the #status-btn bypass.
   container.querySelector('#lifecycle-cta')?.addEventListener('click', (e) => {
     const action = e.currentTarget.dataset.action;
-    if (action === 'plan') {
+    if (action === 'mark-ready') {
+      Store.updateLesson(id, { status: 'ready' });
+      showToast('Marked ready to teach — rehearse it when you can.', 'success');
+      renderDetail(container, { id });
+    } else if (action === 'plan') {
       navigate(`/lesson-planner/${id}`);
     } else if (action === 'rehearse') {
-      sessionStorage.setItem('cocher_rehearse_lesson_id', id);
-      navigate('/lesson-rehearsal');
+      // Advance in place (record the rehearsal) so the journey is followable
+      // from the stepper alone; the studio stays reachable via #lifecycle-studio.
+      Store.updateLesson(id, { rehearsedAt: Date.now() });
+      showToast('Marked as rehearsed. Next: teach it, then reflect.', 'success');
+      renderDetail(container, { id });
     } else if (action === 'taught') {
       Store.updateLesson(id, { status: 'completed' });
       showToast('Marked as taught — capture a quick reflection while it\'s fresh!', 'success');
@@ -903,6 +948,12 @@ export function renderDetail(container, { id }) {
     } else if (action === 'next-lesson') {
       container.querySelector('#use-reflection-btn')?.click();
     }
+  });
+
+  // Secondary: open the rehearsal studio (kept from the old flow).
+  container.querySelector('#lifecycle-studio')?.addEventListener('click', () => {
+    sessionStorage.setItem('cocher_rehearse_lesson_id', id);
+    navigate('/lesson-rehearsal');
   });
 
   // Linked resource chip navigation — simulations deep-link straight into
@@ -956,6 +1007,9 @@ export function renderDetail(container, { id }) {
   });
 
   container.querySelector('#save-ref').addEventListener('click', () => {
+    // Snapshot the stage BEFORE saving so we can detect the taught → reflected
+    // transition (the loop closing) and celebrate only on that first close.
+    const wasTaught = lessonStage(Store.getLesson(id)) === 'taught';
     Store.updateLesson(id, {
       reflection: {
         whatWorked: container.querySelector('#ref-what-worked').value,
@@ -965,7 +1019,12 @@ export function renderDetail(container, { id }) {
         freeform: container.querySelector('#ref-freeform').value
       }
     });
-    showToast('Reflection saved!', 'success');
+    const nowReflected = lessonStage(Store.getLesson(id)) === 'reflected';
+    if (wasTaught && nowReflected) {
+      celebrateLoopClose(container, id);
+    } else {
+      showToast('Reflection saved!', 'success');
+    }
   });
 
   // Plan next lesson with reflection insights
