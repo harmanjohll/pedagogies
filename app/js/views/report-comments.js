@@ -11,15 +11,7 @@ import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { escapeHtml } from '../utils/markdown.js';
 import { trackEvent } from '../utils/analytics.js';
-
-const E21CC_DIMS = [
-  { key: 'criticalThinking', label: 'Critical Thinking' },
-  { key: 'creativeThinking', label: 'Creative Thinking' },
-  { key: 'communication', label: 'Communication' },
-  { key: 'collaboration', label: 'Collaboration' },
-  { key: 'socialConnectedness', label: 'Social Connectedness' },
-  { key: 'selfRegulation', label: 'Self-Regulation' },
-];
+import { getSchemaForClass, getFieldValue } from '../utils/tracking.js';
 
 const TONES = {
   Warm: 'affirming and encouraging; celebrates effort and character alongside progress',
@@ -50,12 +42,17 @@ function classReflections(classId) {
   return notes;
 }
 
-function studentContext(s, idx) {
-  const levels = E21CC_DIMS.map(d => `${d.label}: ${s.e21cc?.[d.key] || 'developing'}`).join(', ');
+function studentContext(s, idx, schema) {
+  // Read levels via the class's tracking schema. For an e21cc class this reads
+  // s.e21cc and emits the raw level keys (developing/applying/…) exactly as before;
+  // other schemas read s.tracked and emit their own level keys.
+  const levels = (schema.fields || [])
+    .map(f => `${f.label}: ${getFieldValue(s, schema, f)}`).join(', ');
+  const heading = schema.id === 'e21cc' ? 'E21CC levels' : `${schema.name} levels`;
   const obs = [...(s.observations || [])]
     .sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3)
     .map(o => `"${String(o.text || '').slice(0, 220)}"`).filter(Boolean).join(' | ');
-  return `${idx + 1}. ${s.name}\n   E21CC levels: ${levels}${obs ? `\n   Teacher observations: ${obs}` : ''}`;
+  return `${idx + 1}. ${s.name}\n   ${heading}: ${levels}${obs ? `\n   Teacher observations: ${obs}` : ''}`;
 }
 
 /* Defensive JSON-array extraction — jsonMode usually returns clean JSON,
@@ -247,20 +244,27 @@ export function render(container) {
     renderView();
 
     const reflections = classReflections(cls.id);
+    const schema = getSchemaForClass(cls, Store.getTrackingSchemas());
+    const firstLevels = schema.fields[0]?.levels || [];
+    const rubricLine = schema.id === 'e21cc'
+      ? 'E21CC levels are teacher-assessed on a rubric: developing → applying → extending → leading.'
+      : firstLevels.length
+        ? `${schema.name} levels are teacher-assessed on a rubric: ${firstLevels.map(l => l.label).join(' → ')}.`
+        : '';
     const prompt = `Draft one holistic report comment for EACH student below.
 
 Class: ${cls.name}${cls.level ? ` (${cls.level})` : ''}${cls.subject ? ` — ${cls.subject}` : ''}
 Tone: ${tone} — ${TONES[tone]}
 Length: ${LENGTHS[length]}
 
-E21CC levels are teacher-assessed on a rubric: developing → applying → extending → leading.
+${rubricLine}
 
 Students:
-${students.map((s, i) => studentContext(s, i)).join('\n')}
+${students.map((s, i) => studentContext(s, i, schema)).join('\n')}
 
 ${reflections.length ? `Recent completed-lesson reflections for this class (shared context, applies to the whole class):\n- ${reflections.join('\n- ')}\n\n` : ''}Rules:
 - Write in third person using the student's name.
-- Ground each comment in that student's E21CC levels and observations; never invent specific incidents.
+- Ground each comment in that student's ${schema.id === 'e21cc' ? 'E21CC levels' : `${schema.name} levels`} and observations; never invent specific incidents.
 - Lead with genuine strengths, then one growth area phrased constructively.
 - No grades or marks, no comparisons between students, no generic filler.
 
