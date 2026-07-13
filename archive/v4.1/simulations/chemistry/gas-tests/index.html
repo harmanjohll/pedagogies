@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gas Tests – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="gas-tests.css?v=5">
+</head>
+<body>
+
+  <a href="#main-canvas" class="skip-link">Skip to simulation</a>
+
+  <!-- Print-only header -->
+  <div class="print-header">
+    <h1>Gas Tests</h1>
+    <p>LabSim Chemistry Practical</p>
+  </div>
+
+  <!-- Top bar -->
+  <nav class="topbar" role="navigation" aria-label="Main navigation">
+    <div class="topbar-inner">
+      <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+      <span class="topbar-breadcrumb">
+        <a href="../../index.html">LabSim</a>
+        <span class="separator">/</span>
+        <a href="../../index.html">Chemistry</a>
+        <span class="separator">/</span>
+        Gas Tests
+      </span>
+      <div class="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-toggle-guide" class="btn btn-ghost btn-sm" aria-label="Toggle procedure guide">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+          Guide
+        </button>
+        <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main 3-column layout -->
+  <main class="practical-layout">
+
+    <!-- Left: Gas Selector + Reaction + Procedure -->
+    <aside id="guide-panel" class="guide-panel" aria-label="Gas selector and procedure guide">
+
+      <!-- Gas selector -->
+      <div class="panel">
+        <div class="panel-header">Select a Gas</div>
+        <div class="panel-body">
+          <div class="gas-selector" id="gas-selector"></div>
+        </div>
+      </div>
+
+      <!-- Reaction info -->
+      <div class="panel">
+        <div class="panel-header">Generation Reaction</div>
+        <div class="panel-body" id="reaction-panel">
+          <div class="reaction-card" id="reaction-card" style="display:none;">
+            <div class="reaction-card-title">Equation</div>
+            <div class="reaction-equation" id="reaction-equation"></div>
+            <div class="reaction-desc" id="reaction-desc"></div>
+          </div>
+          <p id="reaction-placeholder" class="text-sm text-muted text-center">
+            Select a gas to view the generation reaction.
+          </p>
+        </div>
+      </div>
+
+      <!-- Procedure guide -->
+      <div class="panel">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <div class="procedure-list" id="procedure-list"></div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Centre: Simulation Canvas -->
+    <section class="workbench-panel" aria-label="Simulation">
+      <div class="workbench">
+        <canvas id="main-canvas" width="700" height="480"></canvas>
+
+        <!-- Status label on canvas -->
+        <div class="wb-status" id="wb-status"></div>
+
+        <!-- Result overlay -->
+        <div class="result-overlay" id="result-overlay">
+          <div class="result-overlay-icon" id="result-overlay-icon"></div>
+          <div class="result-overlay-text" id="result-overlay-text"></div>
+          <div class="result-overlay-sub" id="result-overlay-sub"></div>
+          <button class="btn btn-primary btn-sm" id="btn-dismiss-overlay">Continue</button>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-bar" id="action-bar">
+        <span class="action-status" id="action-status">Select a gas to begin.</span>
+        <button id="btn-add-reagent" class="btn btn-primary btn-sm" disabled>Add Reagent</button>
+        <button id="btn-apply-test" class="btn btn-success btn-sm" disabled>Apply Test</button>
+      </div>
+    </section>
+
+    <!-- Right: Results + Analysis -->
+    <aside class="data-panel" aria-label="Results and analysis">
+
+      <!-- Results table -->
+      <div class="panel">
+        <div class="panel-header">Results</div>
+        <div class="panel-body">
+          <div class="results-scroll">
+            <table class="results-table" id="results-table">
+              <thead>
+                <tr>
+                  <th>Gas</th>
+                  <th>Test Used</th>
+                  <th>Observation</th>
+                  <th>Conclusion</th>
+                </tr>
+              </thead>
+              <tbody id="results-tbody"></tbody>
+            </table>
+          </div>
+          <p id="data-empty" class="text-sm text-muted text-center mt-2">
+            Complete gas tests to populate the results table.
+          </p>
+        </div>
+      </div>
+
+      <!-- Analysis questions -->
+      <div class="panel">
+        <div class="panel-header">Analysis Questions</div>
+        <div class="panel-body">
+          <div class="analysis-section" id="analysis-list"></div>
+        </div>
+      </div>
+
+      <!-- Completion banner -->
+      <div class="completion-banner" id="completion-banner">
+        <div class="completion-banner-title">All Gas Tests Complete!</div>
+        <div class="completion-banner-sub">You have identified all five gases. Answer the analysis questions to finish.</div>
+      </div>
+
+      <!-- Score summary slot -->
+      <div id="score-slot" class="mt-4"></div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="gas-tests"></div>
+    </aside>
+
+  </main>
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="gas-data.js?v=5"></script>
+  <script src="gas-tests.js?v=5"></script>
+</body>
+</html>

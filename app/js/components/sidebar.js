@@ -5,9 +5,10 @@
  */
 
 import { Store } from '../state.js';
-import { navigate } from '../router.js';
+import { navigate, getCurrentRoute } from '../router.js';
 import { APP_VERSION } from '../version.js';
 import { EEE_REGISTRY, getEEESidebarSelections, getCustomLinks } from '../views/lesson-planner.js';
+import { getModes, getActiveMode, applyMode, getModeSidebarGroups } from './workflow-modes.js';
 
 /* ── SVG Icons (Feather-style) ── */
 const ICONS = {
@@ -155,16 +156,61 @@ function setCollapsedSections(arr) {
   localStorage.setItem('cocher_sidebar_collapsed', JSON.stringify(arr));
 }
 
+/* ── Workflow-mode switcher ── */
+let _modeStylesInjected = false;
+function injectModeStyles() {
+  if (_modeStylesInjected) return;
+  const style = document.createElement('style');
+  style.textContent = `
+    .sidebar-modes { padding: var(--sp-1) var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border-light); margin-bottom: var(--sp-1); flex-shrink: 0; }
+    .sidebar-modes-label { display: flex; align-items: center; justify-content: space-between; font-size: 0.625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); margin-bottom: 6px; }
+    .sidebar-modes-clear { background: none; border: none; cursor: pointer; color: var(--ink-faint); font-size: 0.625rem; font-weight: 600; padding: 0; text-transform: none; letter-spacing: 0; }
+    .sidebar-modes-clear:hover { color: var(--accent); }
+    .sidebar-modes-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .sidebar-mode-chip { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: var(--radius-md, 8px); border: 1px solid var(--border-light); background: var(--bg-card); color: var(--ink-muted); font-size: 0.6875rem; font-weight: 600; cursor: pointer; text-align: left; transition: all var(--dur-fast, 0.15s) var(--ease, ease); font-family: inherit; min-width: 0; }
+    .sidebar-mode-chip:hover { border-color: var(--accent); color: var(--ink); }
+    .sidebar-mode-chip svg { width: 13px; height: 13px; flex-shrink: 0; opacity: 0.7; }
+    .sidebar-mode-chip .sidebar-mode-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sidebar-mode-chip.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
+    .sidebar-mode-chip.active svg { opacity: 1; }
+    .sidebar-section-label.mode-foreground .hl-word { color: var(--accent); }
+    .sidebar-section-label.mode-foreground .sidebar-section-tri { border-left-color: var(--accent) !important; }
+  `;
+  document.head.appendChild(style);
+  _modeStylesInjected = true;
+}
+
+function buildModeSwitcherHTML() {
+  const modes = getModes();
+  const active = getActiveMode();
+  const chips = modes.map(m => `
+    <button class="sidebar-mode-chip${m.id === active ? ' active' : ''}" data-mode="${m.id}"
+      title="${m.label} — ${m.hint}" aria-pressed="${m.id === active}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${m.icon}</svg>
+      <span class="sidebar-mode-chip-label">${m.label}</span>
+    </button>`).join('');
+  return `
+    <div class="sidebar-modes">
+      <div class="sidebar-modes-label">
+        <span>Workflow mode</span>
+        ${active ? `<button class="sidebar-modes-clear" id="sidebar-mode-clear">Clear</button>` : ''}
+      </div>
+      <div class="sidebar-modes-chips">${chips}</div>
+    </div>`;
+}
+
 /* The sidebar owns exactly ONE live Store subscription; each render replaces
  * the previous one. Without this, every re-render stacked another listener. */
 let _unsubscribe = null;
 
 export function renderSidebar(container) {
   if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+  injectModeStyles();
   const classCount = Store.getClasses().length;
   const lessonCount = Store.getLessons().length;
   const navItems = buildNavItems();
   const collapsedSections = getCollapsedSections();
+  const foregroundGroups = getModeSidebarGroups();
 
   // Group items by section
   let currentSection = null;
@@ -181,8 +227,9 @@ export function renderSidebar(container) {
       // Highlighter treatment on the section word (no-op in Classic theme)
       const displayLabel = `<span class="hl-word">${rawLabel}</span>`;
       const isCollapsed = collapsedSections.includes(currentSection);
+      const isForeground = foregroundGroups.includes(currentSection);
       navHTML += `
-        <div class="sidebar-section-label" data-section="${currentSection}" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;">
+        <div class="sidebar-section-label${isForeground ? ' mode-foreground' : ''}" data-section="${currentSection}" style="cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;">
           <span class="sidebar-section-tri${isCollapsed ? '' : ' open'}" style="display:inline-block;width:0;height:0;border-left:5px solid var(--ink-faint);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform 0.2s ease;${isCollapsed ? '' : 'transform:rotate(90deg);'}"></span>
           ${displayLabel}
         </div>
@@ -222,6 +269,8 @@ export function renderSidebar(container) {
       </div>
     </a>
 
+    ${buildModeSwitcherHTML()}
+
     <nav class="sidebar-nav">
       ${navHTML}
     </nav>
@@ -256,6 +305,27 @@ export function renderSidebar(container) {
       }
       navigate(btn.dataset.route);
     });
+  });
+
+  // Workflow-mode switcher: pick / toggle-off a mode, then refresh the sidebar
+  // (active state + foregrounded groups) and the current view (composed prefs).
+  function refreshAfterMode() {
+    renderSidebar(container);
+    // Re-render the current route so the dashboard picks up the composed prefs.
+    const route = getCurrentRoute() || '/';
+    navigate(route);
+  }
+  container.querySelectorAll('.sidebar-mode-chip[data-mode]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const id = chip.dataset.mode;
+      // Clicking the active mode toggles it off (restores the teacher's prefs).
+      applyMode(id === getActiveMode() ? null : id);
+      refreshAfterMode();
+    });
+  });
+  container.querySelector('#sidebar-mode-clear')?.addEventListener('click', () => {
+    applyMode(null);
+    refreshAfterMode();
   });
 
   // Section collapse/expand toggles

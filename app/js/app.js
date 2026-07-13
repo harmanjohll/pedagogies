@@ -40,6 +40,7 @@ import { render as renderQuestionBank } from './views/question-bank.js';
 import { render as renderReliefKit } from './views/relief-kit.js';
 import { initGlobalSearch, openSearch } from './components/unified-search.js';
 import { initOnboarding } from './components/onboarding.js';
+import { startTour, isTourComplete } from './components/spotlight-tour.js';
 import { maybeShowWhatsNew } from './components/whats-new.js';
 import { initKeyboardShortcuts } from './components/keyboard-shortcuts.js';
 
@@ -143,10 +144,20 @@ function init() {
   // Keyboard shortcuts (Ctrl+N, etc.)
   initKeyboardShortcuts();
 
-  // Onboarding for first-time users
-  initOnboarding();
+  // Consolidated first-run flow: welcome (shown before init) → onboarding intro
+  // → guided spotlight tour. The four first-run systems are sequenced here so
+  // they never stack on top of each other.
+  initOnboarding((res) => {
+    // Genuine new user who wants the walkthrough: start the tour once.
+    if (res && res.shown && !res.skipped && !isTourComplete('main')) {
+      // Small gap so the onboarding overlay is fully gone before the tour dims.
+      setTimeout(() => startTour('main'), 350);
+    }
+  });
 
-  // One-time "what's new" for returning users after a version bump
+  // One-time "what's new" for RETURNING users after a version bump. For genuine
+  // first-run users this records the current version silently and shows nothing,
+  // so it never stacks on top of onboarding/tour.
   maybeShowWhatsNew();
 
   // Show API key reminder banner if key was deferred

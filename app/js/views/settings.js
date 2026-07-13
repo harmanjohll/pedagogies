@@ -13,6 +13,8 @@ import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelecti
 import { startTour, resetTour } from '../components/spotlight-tour.js';
 import { trackEvent, analyticsEnabled, setAnalyticsEnabled } from '../utils/analytics.js';
 import { APP_VERSION, PREVIOUS_VERSIONS } from '../version.js';
+import { getIdentity, setIdentity, applyIdentity } from '../utils/identity.js';
+import { escapeHtml } from '../utils/markdown.js';
 
 /* ── Dashboard Layout Prefs ── */
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
@@ -283,11 +285,29 @@ const COMPONENT_META_SETTINGS = {
   kitchenLayout:   { color: '#009432', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>' }, // Pixelated Grass
 };
 
+/* ── Teacher identity palettes (Appearance → Your Identity) ── */
+const MONOGRAM_COLOURS = ['#000C53', '#4361ee', '#059669', '#CB1B45', '#7c3aed', '#ea580c', '#0d9488', '#475569'];
+const ACCENT_SWATCHES  = ['#4361ee', '#059669', '#CB1B45', '#7c3aed', '#ea580c', '#0d9488', '#d97706', '#db2777'];
+
+function deriveInitials() {
+  const name = getPreferredName() || (getCurrentUser()?.name ? guessFirstName(getCurrentUser().name) : '');
+  return (name || 'C').trim().slice(0, 2).toUpperCase();
+}
+
 export function render(container) {
   const apiKey = Store.get('apiKey') || '';
   const model = normalizeModel(Store.get('model') || 'gemini-2.5-flash');
   const darkMode = Store.get('darkMode');
   const dashPrefs = getDashPrefs();
+
+  // Teacher identity (visual): monogram, personal accent, chosen mantra
+  const identity = getIdentity();
+  const idAvatar = identity.avatar || {};
+  const idColour = idAvatar.color || MONOGRAM_COLOURS[0];
+  const idInitials = idAvatar.initials || '';
+  const idInitialsShown = escapeHtml(idInitials || deriveInitials());
+  const idAccent = identity.personalAccent || '';
+  const idMantra = identity.chosenMantra || '';
 
   container.innerHTML = `
     <div class="main-scroll">
@@ -455,6 +475,87 @@ export function render(container) {
                 `;
               }).join('')}
             </div>
+          </div>
+        </div>
+
+        <!-- Your Identity -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Your Identity</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            A personal, visual signature — separate from your account name. Your monogram appears where Co-Cher shows you, and a personal accent recolours the app just for you.
+          </p>
+
+          <!-- Live preview + monogram colour -->
+          <div style="display: flex; align-items: center; gap: 14px; margin-bottom: var(--sp-5); flex-wrap: wrap;">
+            <div id="identity-avatar-preview" style="
+              width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+              display: flex; align-items: center; justify-content: center;
+              color: #fff; font-weight: 700; font-size: 1.15rem; letter-spacing: 0.02em;
+              background: ${escapeHtml(idColour)}; box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+            ">${idInitialsShown}</div>
+            <div style="flex: 1; min-width: 200px;">
+              <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 6px; color: var(--ink-secondary);">Monogram colour</label>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="identity-colour-picker">
+                ${MONOGRAM_COLOURS.map(c => {
+                  const active = c.toLowerCase() === idColour.toLowerCase();
+                  return `<button class="identity-colour-swatch" data-colour="${c}" title="${c}" style="
+                    width: 26px; height: 26px; border-radius: 50%; cursor: pointer; padding: 0;
+                    background: ${c};
+                    border: 2px solid ${active ? 'var(--ink)' : 'transparent'};
+                    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 ${active ? '3px' : '2px'} ${active ? c : 'transparent'};
+                  "></button>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Custom initials -->
+          <div style="margin-bottom: var(--sp-5); max-width: 320px;">
+            <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 6px; color: var(--ink-secondary);">Custom initials (optional)</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="text" id="identity-initials" class="input" maxlength="3" value="${escapeHtml(idInitials)}"
+                placeholder="${escapeHtml(deriveInitials())}" style="width: 90px; text-transform: uppercase; letter-spacing: 0.05em;" />
+              <span style="font-size: 0.75rem; color: var(--ink-faint);">Up to 3 letters. Blank uses your name.</span>
+            </div>
+          </div>
+
+          <!-- Personal accent -->
+          <div style="margin-bottom: var(--sp-4);">
+            <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 6px; color: var(--ink-secondary);">Personal accent</label>
+            <p style="font-size: 0.75rem; color: var(--ink-faint); margin: 0 0 8px; line-height: 1.5;">
+              A colour that propagates across the whole app. When set, it <strong>overrides the Colour Palette accent</strong> above. Any colour works.
+            </p>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="identity-accent-picker">
+                ${ACCENT_SWATCHES.map(c => {
+                  const active = c.toLowerCase() === idAccent.toLowerCase();
+                  return `<button class="identity-accent-swatch" data-accent="${c}" title="${c}" style="
+                    width: 26px; height: 26px; border-radius: 50%; cursor: pointer; padding: 0;
+                    background: ${c};
+                    border: 2px solid ${active ? 'var(--ink)' : 'transparent'};
+                    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 ${active ? '3px' : '2px'} ${active ? c : 'transparent'};
+                  "></button>`;
+                }).join('')}
+              </div>
+              <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--ink-muted);">
+                Custom
+                <input type="color" id="identity-accent-custom" value="${escapeHtml(idAccent || '#4361ee')}"
+                  style="width: 34px; height: 30px; padding: 0; border: 1px solid var(--border-light); border-radius: 8px; cursor: pointer; background: none;" />
+              </label>
+              <button class="btn btn-ghost btn-sm" id="identity-accent-clear" style="color: var(--ink-muted); ${idAccent ? '' : 'display:none;'}">Clear personal accent</button>
+              <span id="identity-accent-status" style="font-size: 0.75rem; color: var(--ink-faint);">${idAccent ? 'Active: ' + escapeHtml(idAccent) : 'Using palette accent'}</span>
+            </div>
+          </div>
+
+          <!-- Chosen mantra -->
+          <div style="max-width: 460px;">
+            <label style="display: block; font-weight: 600; font-size: 0.8125rem; margin-bottom: 6px; color: var(--ink-secondary);">Your mantra (optional)</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="text" id="identity-mantra" class="input" value="${escapeHtml(idMantra)}"
+                placeholder="e.g. Every child, every day" style="flex: 1;" maxlength="120" />
+              <button class="btn btn-ghost btn-sm" id="identity-mantra-save">Save</button>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--ink-faint); margin-top: 4px;">Shown on your dashboard greeting. Leave empty for a rotating pool of quotes.</p>
           </div>
         </div>
 
@@ -903,6 +1004,66 @@ export function render(container) {
     }
     Store.set('palette', id);
     render(container); // re-render to update active state
+  });
+
+  // ── Your Identity ── (monogram, personal accent, mantra — all live)
+  // Monogram colour
+  container.querySelector('#identity-colour-picker')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.identity-colour-swatch');
+    if (!btn) return;
+    const colour = btn.dataset.colour;
+    setIdentity({ avatar: { color: colour } });
+    const preview = container.querySelector('#identity-avatar-preview');
+    if (preview) preview.style.background = colour;
+    container.querySelectorAll('.identity-colour-swatch').forEach(s => {
+      const on = s.dataset.colour.toLowerCase() === colour.toLowerCase();
+      s.style.border = on ? '2px solid var(--ink)' : '2px solid transparent';
+      s.style.boxShadow = `0 0 0 2px var(--bg-card), 0 0 0 ${on ? '3px' : '2px'} ${on ? s.dataset.colour : 'transparent'}`;
+    });
+  });
+
+  // Custom initials (live preview; empty falls back to name-derived monogram)
+  const identityInitials = container.querySelector('#identity-initials');
+  identityInitials?.addEventListener('input', () => {
+    const val = identityInitials.value.trim().toUpperCase().slice(0, 3);
+    setIdentity({ avatar: { initials: val } });
+    const preview = container.querySelector('#identity-avatar-preview');
+    if (preview) preview.textContent = val || deriveInitials();
+  });
+
+  // Personal accent — writes identity + repaints CSS custom properties live
+  function applyPersonalAccent(hex) {
+    setIdentity({ personalAccent: hex });
+    applyIdentity(); // repaints --accent & family on <html> immediately
+    const status = container.querySelector('#identity-accent-status');
+    if (status) status.textContent = hex ? 'Active: ' + hex : 'Using palette accent';
+    const clearBtn = container.querySelector('#identity-accent-clear');
+    if (clearBtn) clearBtn.style.display = hex ? '' : 'none';
+    container.querySelectorAll('.identity-accent-swatch').forEach(s => {
+      const on = hex && s.dataset.accent.toLowerCase() === hex.toLowerCase();
+      s.style.border = on ? '2px solid var(--ink)' : '2px solid transparent';
+      s.style.boxShadow = `0 0 0 2px var(--bg-card), 0 0 0 ${on ? '3px' : '2px'} ${on ? s.dataset.accent : 'transparent'}`;
+    });
+  }
+  container.querySelector('#identity-accent-picker')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.identity-accent-swatch');
+    if (!btn) return;
+    applyPersonalAccent(btn.dataset.accent);
+    const custom = container.querySelector('#identity-accent-custom');
+    if (custom) custom.value = btn.dataset.accent;
+  });
+  container.querySelector('#identity-accent-custom')?.addEventListener('input', (e) => {
+    applyPersonalAccent(e.target.value);
+  });
+  container.querySelector('#identity-accent-clear')?.addEventListener('click', () => {
+    applyPersonalAccent('');
+  });
+
+  // Chosen mantra
+  container.querySelector('#identity-mantra-save')?.addEventListener('click', () => {
+    const val = container.querySelector('#identity-mantra')?.value.trim() || '';
+    setIdentity({ chosenMantra: val });
+    showToast(val ? 'Mantra saved.' : 'Mantra cleared — a rotating pool will show instead.', 'success');
   });
 
   // EEE marketplace: save selections on toggle change

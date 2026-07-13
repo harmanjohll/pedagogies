@@ -11,16 +11,18 @@ import { openModal } from './modals.js';
 const SEEN_KEY = 'cocher_whatsnew_seen';
 
 const CHANGES = [
-  { icon: '&#128300;', title: 'A rebuilt Simulation Builder',
-    text: 'Every generated sim is now test-run before you see it — broken ones get an automatic repair pass instead of shipping silently. New sims come with a reviewable spec (equations, targeted variable ranges), a predict-first gate, guiding questions, and real controls: pause, step, speed, and a live graph.' },
-  { icon: '&#128295;', title: 'A deep accuracy sweep',
-    text: 'Fixed TOS mark allocation, spatial/kitchen presets that no longer fit real classrooms, an Admin One-Stop click that silently failed, a crashing Parent Digest, and corrected MOE terminology (STP, Cyber Wellness, E21CC) across the app.' },
-  { icon: '&#127891;', title: 'New CCE lessons for Sec 1 & 2',
-    text: 'Total Defence’s six pillars for Sec 1, plus two new Sec 2 discussions — digital footprint and naming stress signals — join the CCE library.' },
-  { icon: '&#127936;', title: 'CCA training exemplars',
-    text: 'Basketball and Scouts now have a ready-to-run example session plan one click away, no API key needed to see what a good one looks like. Scouts also joins the CCA list.' },
-  { icon: '&#128197;', title: 'Two new demo activities',
-    text: 'An Inter-School Basketball Championship (fresh, nothing filled in yet) and a Sec 2 VIA Beach Cleanup (partway through) join Admin One-Stop to show the full range of the event workflow.' },
+  { icon: '&#127793;', title: 'Your lessons, as a living journey',
+    text: 'Every lesson now has one clear next step at every stage — and finishing a reflection is quietly celebrated. See how many lessons you\'ve carried all the way through in the last fortnight. Press Ctrl+J to collapse everything to just the next thing to do.' },
+  { icon: '&#129517;', title: 'Workflow Modes',
+    text: 'One tap reshapes Co-Cher around what you\'re doing — Planning, Teaching Day, Assessment, or Reflection each surface the right tools and tuck the rest away. Clear the mode and your own setup comes straight back.' },
+  { icon: '&#127912;', title: 'Make it yours',
+    text: 'Pick a personal accent colour that flows through the whole app, a monogram, and your own mantra for the dashboard greeting — in Settings → Your Identity. And the guided tour now actually greets new teachers.' },
+  { icon: '&#128101;', title: 'Track what matters to YOUR class',
+    text: 'E21CC is powerful but heavy for everyday use — so now each class can track its own way: a simple Red/Amber/Green, a mastery band, effort, or a scheme you define yourself. Your existing E21CC data is untouched.' },
+  { icon: '&#128228;', title: 'Bulk-add students & jot remarks',
+    text: 'Upload a class list from CSV or Excel in one go (with duplicate-checking), and add a quick free-text remark on any student — which flows straight into your report-comment drafts.' },
+  { icon: '&#128218;', title: 'My References — your own teaching library',
+    text: 'Upload PDFs, Word, PowerPoint, Excel or notes into My Learning; Co-Cher summarises each one and lets you toggle it into the Lesson Planner as reference context — like giving the AI your own materials to work from.' },
 ];
 
 export function maybeShowWhatsNew() {

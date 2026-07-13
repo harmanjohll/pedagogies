@@ -12,11 +12,33 @@ const SHORTCUTS = [
   { keys: ['Ctrl', 'N'], desc: 'New lesson', action: () => navigate('/lesson-planner') },
   { keys: ['Ctrl', 'Shift', 'S'], desc: 'Spatial Designer', action: () => navigate('/spatial') },
   { keys: ['Ctrl', '.'], desc: 'Focus mode (hide sidebar while planning)', action: null },
+  { keys: ['Ctrl', 'J'], desc: 'Next action only (collapse the lesson journey)', action: null },
   { keys: ['Ctrl', '/'], desc: 'Show shortcuts', action: () => showShortcutsHelp() },
 ];
 
 export function toggleFocusMode() {
   document.body.classList.toggle('focus-mode');
+}
+
+/* ── "Next action only" — collapse the lesson journey to just its CTA ──
+ * Mirrors Focus Mode (a body class), but the preference PERSISTS across
+ * sessions since it's a durable teacher choice, not a per-page toggle. */
+const JOURNEY_MINIMAL_KEY = 'cocher_journey_minimal';
+
+/** Toggle journey-minimal, persist it, and return the new on/off state. */
+export function toggleJourneyMinimal() {
+  const on = !document.body.classList.contains('journey-minimal');
+  document.body.classList.toggle('journey-minimal', on);
+  try { localStorage.setItem(JOURNEY_MINIMAL_KEY, on ? '1' : '0'); } catch { /* quota — ignore */ }
+  return on;
+}
+
+/** Apply the persisted preference to <body>. Returns the current state. */
+export function applyJourneyMinimal() {
+  let on = false;
+  try { on = localStorage.getItem(JOURNEY_MINIMAL_KEY) === '1'; } catch { /* ignore */ }
+  document.body.classList.toggle('journey-minimal', on);
+  return on;
 }
 
 function showShortcutsHelp() {
@@ -67,6 +89,10 @@ export function initKeyboardShortcuts() {
     if ((e.ctrlKey || e.metaKey) && e.key === '.') {
       e.preventDefault();
       toggleFocusMode();
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'j' || e.key === 'J')) {
+      e.preventDefault();
+      toggleJourneyMinimal();
     }
   });
 

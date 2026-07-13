@@ -17,11 +17,31 @@ const WORKFLOW_STEPS = [
 ];
 
 /**
+ * Escape helper for lesson-supplied labels (lifecycle mode is data-driven).
+ */
+function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+/**
  * Render a workflow breadcrumb bar.
+ *
+ * Two modes, unifying the app's two "workflow" models into one component:
+ *  1. Navigation mode (default): the SoW → Plan → Enactment → Assess → Reflect
+ *     path, clickable, with `currentStepId` highlighted. Used where there is no
+ *     single lesson in scope (e.g. the Lessons library).
+ *  2. Lifecycle mode: pass `opts.lifecycle = { stages, currentKey }` and the bar
+ *     reflects the REAL lifecycle stage of the current lesson — completed stages
+ *     get a check, the current stage is highlighted, upcoming stages are dimmed.
+ *     Non-navigational (it's a status display, not links), so `bindWorkflowClicks`
+ *     is a safe no-op over it.
+ *
  * @param {string} currentStepId — one of: 'sow', 'plan', 'enactment', 'assess', 'reflect'
+ * @param {{ lifecycle?: { stages: {key:string,label:string}[], currentKey: string } }} [opts]
  * @returns {string} HTML string
  */
-export function renderWorkflowBreadcrumb(currentStepId) {
+export function renderWorkflowBreadcrumb(currentStepId, opts = {}) {
+  if (opts && opts.lifecycle && Array.isArray(opts.lifecycle.stages)) {
+    return renderLifecycleBreadcrumb(opts.lifecycle);
+  }
   const stepsHTML = WORKFLOW_STEPS.map((step, i) => {
     const isCurrent = step.id === currentStepId;
     const arrow = i < WORKFLOW_STEPS.length - 1
@@ -47,6 +67,38 @@ export function renderWorkflowBreadcrumb(currentStepId) {
       <span style="font-size:0.625rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.05em;margin-right:var(--sp-2);flex-shrink:0;">Workflow</span>
       ${stepsHTML}
     </div>`;
+}
+
+/**
+ * Lifecycle mode renderer — a data-driven progress strip for one lesson.
+ * Mirrors the Staffroom stepper dots (growth-green when done, navy/yellow when
+ * current) so the two workflow models read as one. The final dot carries a
+ * `.lifecycle-dot-final` hook so the loop-close celebration can target it.
+ */
+function renderLifecycleBreadcrumb({ stages, currentKey }) {
+  const idx = Math.max(0, stages.findIndex(s => s.key === currentKey));
+  const dots = stages.map((s, i) => {
+    const isDone = i < idx;
+    const isCurrent = i === idx;
+    const isLast = i === stages.length - 1;
+    const dotStyle = isDone
+      ? 'background:var(--growth,#2c7a4b);color:#fff;'
+      : isCurrent
+        ? 'background:var(--brand-navy,#000C53);color:var(--brand-yellow,#FFE200);box-shadow:0 0 0 3px rgba(0,12,83,0.12);'
+        : 'background:var(--bg-subtle);color:var(--ink-faint);';
+    const connector = i < stages.length - 1
+      ? `<span style="width:20px;height:2px;background:${i < idx ? 'var(--growth,#2c7a4b)' : 'var(--border-light)'};margin:0 8px;border-radius:2px;"></span>`
+      : '';
+    return `
+      <div class="lifecycle-step" style="display:flex;align-items:center;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="lifecycle-dot${isLast ? ' lifecycle-dot-final' : ''}" style="width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.6875rem;font-weight:700;${dotStyle}">${isDone ? '&#10003;' : i + 1}</span>
+          <span style="font-size:0.75rem;font-weight:${isCurrent ? 700 : 500};color:${i <= idx ? 'var(--ink)' : 'var(--ink-faint)'};">${esc(s.label)}</span>
+        </div>
+        ${connector}
+      </div>`;
+  }).join('');
+  return `<div class="workflow-breadcrumb lifecycle-breadcrumb" role="img" aria-label="Lesson progress: ${esc((stages[idx] || {}).label || '')}" style="display:flex;align-items:center;flex-wrap:wrap;row-gap:10px;">${dots}</div>`;
 }
 
 /**

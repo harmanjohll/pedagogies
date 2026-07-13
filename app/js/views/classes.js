@@ -11,6 +11,11 @@ import { showToast } from '../components/toast.js';
 import { summarizeNotes, suggestGrouping, sendChat } from '../api.js';
 import { renderMd } from '../utils/latex.js';
 import { escapeHtml } from '../utils/markdown.js';
+import { createStudentUploadZone } from '../components/student-upload.js';
+import {
+  SCHEMA_PRESETS, getSchemaForClass, getFieldValue, applyFieldUpdate,
+  levelMeta as fieldLevelMeta
+} from '../utils/tracking.js';
 
 const E21CC_DIMS = [
   { key: 'criticalThinking',    label: 'Critical Thinking',     short: 'CT',  color: '#6366f1' },
@@ -30,6 +35,64 @@ const E21CC_LEVELS = [
 
 function levelToValue(level) { return E21CC_LEVELS.find(l => l.key === level)?.value || 1; }
 function levelMeta(level) { return E21CC_LEVELS.find(l => l.key === level) || E21CC_LEVELS[0]; }
+
+/* ═══════════ Schema-aware display helpers ═══════════
+ * The tracking-schema registry (utils/tracking.js) centralises field labels,
+ * level keys and colours, but its E21CC preset intentionally omits the decorative
+ * short-codes (CT, Dev…) and per-dimension header colours that this view has
+ * always shown. These helpers re-attach that presentation for E21CC (so an
+ * E21CC class renders byte-for-byte as before) and derive sensible equivalents
+ * for every other schema. */
+
+const FIELD_PALETTE = ['#6366f1', '#8b5cf6', '#0ea5e9', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#14b8a6'];
+
+/** The class's active tracking schema (unset ⇒ e21cc). */
+function schemaFor(cls) { return getSchemaForClass(cls, Store.getTrackingSchemas()); }
+
+/** Header accent colour for a field column. */
+function dimColor(schema, field, idx = 0) {
+  if (schema.id === 'e21cc') return E21CC_DIMS.find(d => d.key === field.key)?.color || FIELD_PALETTE[idx % FIELD_PALETTE.length];
+  return FIELD_PALETTE[idx % FIELD_PALETTE.length];
+}
+
+/** Compact column label for a field (CT, CrT… for E21CC; derived otherwise). */
+function dimShort(schema, field) {
+  if (schema.id === 'e21cc') return E21CC_DIMS.find(d => d.key === field.key)?.short || field.label;
+  const words = String(field.label).trim().split(/\s+/).filter(Boolean);
+  if (words.length > 1) return words.map(w => w[0]).slice(0, 3).join('').toUpperCase();
+  return field.label.slice(0, 4);
+}
+
+/** Level metadata for a field value: { label, color, short, value }. */
+function valueMeta(schema, field, value) {
+  const m = fieldLevelMeta(field, value); // { label, color, value }
+  let short;
+  if (schema.id === 'e21cc') {
+    short = E21CC_LEVELS.find(l => l.key === value)?.short || m.label;
+  } else {
+    const first = String(m.label).split(/[\s—–\-]+/).filter(Boolean)[0] || m.label;
+    short = first.length > 5 ? first.slice(0, 4) : first;
+  }
+  return { ...m, short };
+}
+
+/** The history array for this schema (e21ccHistory for e21cc, else trackedHistory). */
+function historyOf(student, schema) {
+  return (schema.id === 'e21cc' ? student.e21ccHistory : student.trackedHistory) || [];
+}
+
+/** Numeric value of a stored (key or number) reading for a field. */
+function valueToNum(field, raw) {
+  const lv = (field.levels || []).find(l => l.key === raw);
+  if (lv) return lv.value;
+  return typeof raw === 'number' ? raw : (field.levels?.[0]?.value ?? 1);
+}
+
+/** Min/max numeric range for a field's levels (defaults 1–4). */
+function fieldRange(field) {
+  const vals = (field.levels || []).map(l => l.value).filter(v => typeof v === 'number');
+  return { min: vals.length ? Math.min(...vals) : 1, max: vals.length ? Math.max(...vals) : 4 };
+}
 
 /* ═══════════ Classes List ═══════════ */
 
@@ -64,15 +127,17 @@ export function renderList(container) {
             ${classes.map(cls => {
               const studentCount = cls.students?.length || 0;
               const noteCount = cls.notes?.length || 0;
-              const dimModes = E21CC_DIMS.map(d => {
-                if (studentCount === 0) return { ...d, mode: null };
+              const schema = schemaFor(cls);
+              const dimModes = schema.fields.map((field, idx) => {
+                const base = { field, idx, short: dimShort(schema, field), color: dimColor(schema, field, idx) };
+                if (studentCount === 0) return { ...base, mode: null };
                 const counts = {};
                 cls.students.forEach(st => {
-                  const lv = st.e21cc?.[d.key] || 'developing';
+                  const lv = getFieldValue(st, schema, field);
                   counts[lv] = (counts[lv] || 0) + 1;
                 });
                 const mode = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-                return { ...d, mode };
+                return { ...base, mode };
               });
 
               return `
@@ -91,15 +156,15 @@ export function renderList(container) {
                     ${studentCount > 0 ? `
                       <div style="display:flex;flex-wrap:wrap;gap:6px;">
                         ${dimModes.map(d => {
-                          const meta = levelMeta(d.mode);
+                          const meta = valueMeta(schema, d.field, d.mode);
                           return `<div style="display:flex;align-items:center;gap:4px;">
-                            <span style="font-size:0.6875rem;font-weight:600;color:${d.color};">${d.short}</span>
-                            <span style="padding:2px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${meta.color}15;color:${meta.color};">${meta.short}</span>
+                            <span style="font-size:0.6875rem;font-weight:600;color:${d.color};">${escapeHtml(d.short)}</span>
+                            <span style="padding:2px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${meta.color}15;color:${meta.color};">${escapeHtml(meta.short)}</span>
                           </div>`;
                         }).join('')}
                       </div>
                     ` : `
-                      <p style="font-size: 0.8125rem; color: var(--ink-faint); font-style: italic;">Add students to see E21CC overview</p>
+                      <p style="font-size: 0.8125rem; color: var(--ink-faint); font-style: italic;">Add students to see ${escapeHtml(schema.id === 'e21cc' ? 'E21CC' : schema.name)} overview</p>
                     `}
                   </div>
                 </div>`;
@@ -198,6 +263,10 @@ export function renderDetail(container, { id }) {
     if (!freshCls) return;
     const students = freshCls.students || [];
     const notes = freshCls.notes || [];
+    const schema = schemaFor(freshCls);
+    const isE21cc = schema.id === 'e21cc';
+    // A stored qcDim from a previous schema is no longer valid after a switch.
+    if (qcDim && !schema.fields.some(f => f.key === qcDim)) { qcDim = null; qcLevels = {}; }
 
     container.innerHTML = `
       <div class="main-scroll">
@@ -217,6 +286,11 @@ export function renderDetail(container, { id }) {
                 <button class="btn btn-secondary btn-sm" id="edit-class-btn">Edit</button>
                 <button class="btn btn-ghost btn-sm" id="delete-class-btn" style="color: var(--danger);">Delete</button>
               </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--sp-2);margin-top:var(--sp-3);flex-wrap:wrap;">
+              <span style="font-size:0.75rem;color:var(--ink-muted);">Tracking schema:</span>
+              <span class="badge badge-blue" style="font-size:0.75rem;">${escapeHtml(isE21cc ? 'E21CC (default)' : schema.name)}</span>
+              <button class="btn btn-ghost btn-sm" id="schema-picker-btn" style="font-size:0.75rem;">Change</button>
             </div>
           </div>
 
@@ -240,7 +314,7 @@ export function renderDetail(container, { id }) {
           ${renderPortraitCard(Store.getClassPortrait(id))}
 
           <!-- Quick Capture -->
-          ${students.length > 0 ? renderQuickCaptureCard(students, qcOpen, qcDim, qcLevels) : ''}
+          ${students.length > 0 ? renderQuickCaptureCard(students, schema, qcOpen, qcDim, qcLevels) : ''}
 
           <!-- Quick Actions for this class -->
           <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-6);flex-wrap:wrap;">
@@ -251,7 +325,7 @@ export function renderDetail(container, { id }) {
             ${students.length > 0 ? `
               <button class="btn btn-secondary btn-sm" id="batch-e21cc-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                Batch Update E21CC
+                ${isE21cc ? 'Batch Update E21CC' : 'Batch Update'}
               </button>
               <button class="btn btn-ghost btn-sm" id="group-students-btn" title="Auto-generate student groups">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -273,7 +347,7 @@ export function renderDetail(container, { id }) {
 
           <!-- Tab Content -->
           <div id="tab-content">
-            ${activeTab === 'students' ? renderStudentsTab(freshCls) : activeTab === 'trends' ? renderTrendsTab(freshCls) : renderNotesTab(freshCls)}
+            ${activeTab === 'students' ? renderStudentsTab(freshCls, schema) : activeTab === 'trends' ? renderTrendsTab(freshCls, schema) : renderNotesTab(freshCls)}
           </div>
         </div>
       </div>
@@ -333,15 +407,18 @@ export function renderDetail(container, { id }) {
     container.querySelectorAll('.qc-student-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (!qcDim) return;
+        const field = schema.fields.find(f => f.key === qcDim);
+        if (!field || !field.levels?.length) return;
         const s = students.find(x => x.id === btn.dataset.studentId);
         if (!s) return;
-        const saved = s.e21cc?.[qcDim] || 'developing';
+        const saved = getFieldValue(s, schema, field);
         const current = qcLevels[s.id] || saved;
-        const order = E21CC_LEVELS.map(l => l.key);
-        const next = order[(order.indexOf(current) + 1) % order.length];
+        const order = field.levels.map(l => l.key);
+        const idx = order.indexOf(current);
+        const next = order[(idx + 1) % order.length];
         qcLevels[s.id] = next;
         // Update the tapped button in place — no full re-render per tap
-        const meta = levelMeta(next);
+        const meta = valueMeta(schema, field, next);
         const changed = next !== saved;
         btn.style.borderColor = changed ? meta.color : 'var(--border)';
         btn.style.background = changed ? 'var(--marker-wash, #FFF9C9)' : 'transparent';
@@ -356,31 +433,27 @@ export function renderDetail(container, { id }) {
 
     container.querySelector('#qc-save-btn')?.addEventListener('click', () => {
       if (!qcDim) return;
-      const dimMeta = E21CC_DIMS.find(d => d.key === qcDim);
+      const field = schema.fields.find(f => f.key === qcDim);
+      if (!field) return;
       const fresh = Store.getClass(id);
       if (!fresh) return;
-      const now = Date.now();
       let changedCount = 0;
       const updatedStudents = (fresh.students || []).map(s => {
         const next = qcLevels[s.id];
-        const saved = s.e21cc?.[qcDim] || 'developing';
+        const saved = getFieldValue(s, schema, field);
         if (!next || next === saved) return s;
         changedCount++;
-        const newE21cc = { ...(s.e21cc || {}) };
-        E21CC_DIMS.forEach(d => { if (!newE21cc[d.key]) newE21cc[d.key] = 'developing'; });
-        newE21cc[qcDim] = next;
-        // History entries are full level snapshots (see Batch Update above)
-        const history = [...(s.e21ccHistory || [])];
-        history.push({ ts: now, ...newE21cc });
-        if (history.length > 20) history.splice(0, history.length - 20);
+        // applyFieldUpdate builds the correct {e21cc,e21ccHistory} or
+        // {tracked,trackedHistory} patch, with the 20-capped history snapshot.
+        const patch = applyFieldUpdate(s, schema, qcDim, next);
         // One observation per changed student per save
         const observations = [...(s.observations || []), {
           id: generateId(),
-          text: `Quick capture: ${dimMeta?.label || qcDim} updated`,
+          text: `Quick capture: ${field.label} updated`,
           tags: [qcDim],
-          ts: now
+          ts: Date.now()
         }];
-        return { ...s, e21cc: newE21cc, e21ccHistory: history, observations };
+        return { ...s, ...patch, observations };
       });
       if (changedCount === 0) {
         showToast('No level changes to save.', 'danger');
@@ -393,9 +466,19 @@ export function renderDetail(container, { id }) {
       renderInner();
     });
 
-    // Batch E21CC update
+    // Batch update (schema-aware)
     container.querySelector('#batch-e21cc-btn')?.addEventListener('click', () => {
-      showBatchE21CCModal(id, renderInner);
+      showBatchUpdateModal(id, renderInner);
+    });
+
+    // Tracking schema picker + custom schema builder
+    container.querySelector('#schema-picker-btn')?.addEventListener('click', () => {
+      showSchemaPickerModal(id, renderInner);
+    });
+
+    // Bulk student upload (CSV/XLSX)
+    container.querySelector('#bulk-upload-btn')?.addEventListener('click', () => {
+      showBulkUploadModal(id, renderInner);
     });
 
     // Student grouping
@@ -437,14 +520,29 @@ export function renderDetail(container, { id }) {
         });
       });
 
-      // E21CC edit
-      container.querySelectorAll('.e21cc-edit-btn').forEach(btn => {
+      // Edit student tracking levels (schema-aware)
+      container.querySelectorAll('.student-edit-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const sid = btn.dataset.studentId;
           const student = students.find(s => s.id === sid);
-          if (student) showEditE21CCModal(id, student, renderInner);
+          if (student) showEditStudentModal(id, student, schema, renderInner);
         });
+      });
+
+      // Free-text remark (B6) — writes a tagged observation
+      container.querySelectorAll('.remark-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const sid = btn.dataset.studentId;
+          const student = students.find(s => s.id === sid);
+          if (student) showRemarkModal(id, student, renderInner);
+        });
+      });
+
+      // Bulk upload from the empty-state (mirrors the toolbar button)
+      container.querySelector('#bulk-upload-empty-btn')?.addEventListener('click', () => {
+        showBulkUploadModal(id, renderInner);
       });
 
       // Radar chart toggle
@@ -593,32 +691,31 @@ export function renderDetail(container, { id }) {
         const fc = Store.getClass(id);
         if (!fc) return;
         const sts = fc.students || [];
-        const rows = sts.filter(s => s.e21ccHistory && s.e21ccHistory.length >= 2).map(s => {
-          const h = s.e21ccHistory, latest = h[h.length - 1], first = h[0];
+        const fields = schema.fields;
+        const title = isE21cc ? 'E21CC' : escapeHtml(schema.name);
+        const rows = sts.filter(s => historyOf(s, schema).length >= 2).map(s => {
+          const h = historyOf(s, schema), latest = h[h.length - 1], first = h[0];
           return `<tr>
             <td>${escapeHtml(s.name)}</td>
-            ${E21CC_DIMS.map(d => {
-              const latestVal = typeof latest[d.key] === 'string' ? latest[d.key] : 'developing';
-              const firstVal = typeof first[d.key] === 'string' ? first[d.key] : 'developing';
-              const latestMeta = levelMeta(latestVal);
-              const firstMeta = levelMeta(firstVal);
-              const diff = latestMeta.value - firstMeta.value;
-              return `<td>${latestMeta.short} (${diff >= 0 ? '+' : ''}${diff})</td>`;
+            ${fields.map(field => {
+              const latestMeta = valueMeta(schema, field, latest[field.key]);
+              const diff = valueToNum(field, latest[field.key]) - valueToNum(field, first[field.key]);
+              return `<td>${escapeHtml(latestMeta.short)} (${diff >= 0 ? '+' : ''}${diff})</td>`;
             }).join('')}
             <td>${h.length}</td>
           </tr>`;
         }).join('');
         const pw = window.open('', '_blank');
         if (!pw) { showToast('Pop-up blocked — allow pop-ups for this site to print.', 'danger'); return; }
-        pw.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(fc.name)} — E21CC Trends</title>
+        pw.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(fc.name)} — ${title} Trends</title>
           <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.7;font-size:14px}
           h1{font-size:18px;border-bottom:2px solid #000c53;padding-bottom:8px;color:#000c53}
           table{width:100%;border-collapse:collapse;margin:16px 0}th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0}th{font-weight:600;background:#f1f5f9}
           @media print{body{margin:0;padding:16px}}</style></head>
           <body>
-            <h1>${escapeHtml(fc.name)} — E21CC Trends Report</h1>
-            <p style="font-size:12px;color:#64748b;">${fc.level || ''} ${fc.subject || ''} &middot; ${sts.length} students &middot; ${new Date().toLocaleDateString('en-SG')}</p>
-            <table><thead><tr><th>Student</th>${E21CC_DIMS.map(d => `<th>${d.short}</th>`).join('')}<th>Updates</th></tr></thead><tbody>${rows || `<tr><td colspan="${E21CC_DIMS.length + 2}">No trend data</td></tr>`}</tbody></table>
+            <h1>${escapeHtml(fc.name)} — ${title} Trends Report</h1>
+            <p style="font-size:12px;color:#64748b;">${escapeHtml(fc.level || '')} ${escapeHtml(fc.subject || '')} &middot; ${sts.length} students &middot; ${new Date().toLocaleDateString('en-SG')}</p>
+            <table><thead><tr><th>Student</th>${fields.map(field => `<th>${escapeHtml(dimShort(schema, field))}</th>`).join('')}<th>Updates</th></tr></thead><tbody>${rows || `<tr><td colspan="${fields.length + 2}">No trend data</td></tr>`}</tbody></table>
             <p style="color:#94a3b8;font-size:11px;margin-top:32px;">Exported from Co-Cher</p>
           </body></html>`);
         pw.document.close();
@@ -633,32 +730,71 @@ export function renderDetail(container, { id }) {
 /* ── Class Portrait Card ── */
 function renderPortraitCard(p) {
   if (!p) return '';
-  const dimLabel = k => E21CC_DIMS.find(d => d.key === k)?.label || k;
   const total = p.studentCount;
+  const isE21cc = p.schemaId === 'e21cc';
 
-  const bars = total === 0 ? '' : E21CC_DIMS.map(d => {
-    const counts = p.e21ccDistribution[d.key] || {};
-    const segments = E21CC_LEVELS.map(lv => {
-      const n = counts[lv.key] || 0;
-      if (!n) return '';
-      return `<div title="${lv.label}: ${n}" style="width:${(n / total) * 100}%;background:${lv.color};"></div>`;
-    }).join('');
-    return `
+  // Distribution bars + legend + weak/strong sentences differ per schema.
+  // E21CC keeps its original computation byte-for-byte (regression-safe);
+  // every other schema derives the same presentation from its own fields.
+  let bars, legend, weakSentence, strongSentence;
+
+  if (isE21cc) {
+    const dimLabel = k => E21CC_DIMS.find(d => d.key === k)?.label || k;
+    bars = total === 0 ? '' : E21CC_DIMS.map(d => {
+      const counts = p.e21ccDistribution[d.key] || {};
+      const segments = E21CC_LEVELS.map(lv => {
+        const n = counts[lv.key] || 0;
+        if (!n) return '';
+        return `<div title="${lv.label}: ${n}" style="width:${(n / total) * 100}%;background:${lv.color};"></div>`;
+      }).join('');
+      return `
       <div style="display:flex;align-items:center;gap:var(--sp-2);">
         <span style="width:36px;flex-shrink:0;font-size:0.6875rem;font-weight:600;color:${d.color};" title="${d.label}">${d.short}</span>
         <div style="flex:1;display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--bg-subtle);">${segments}</div>
       </div>`;
-  }).join('');
-
-  const legend = `
+    }).join('');
+    legend = `
     <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;margin-top:var(--sp-2);">
       ${E21CC_LEVELS.map(lv => `<span style="display:flex;align-items:center;gap:4px;font-size:0.6875rem;color:var(--ink-muted);"><span style="width:8px;height:8px;border-radius:2px;background:${lv.color};"></span>${lv.label}</span>`).join('')}
     </div>`;
+    weakSentence = total > 0 && p.weakestDims.length
+      ? `Most students are still developing in ${p.weakestDims.map(dimLabel).join(' and ')}.` : '';
+    strongSentence = total > 0 && p.strongestDims.length
+      ? `The class is furthest ahead in ${p.strongestDims.map(dimLabel).join(' and ')}.` : '';
+  } else {
+    const schema = p.schema;
+    const fieldByKey = k => schema.fields.find(f => f.key === k);
+    const fieldLabel = k => fieldByKey(k)?.label || k;
+    // Union of level definitions for the legend (fields may share a level set).
+    const legendLevels = [];
+    const seen = new Set();
+    schema.fields.forEach(f => (f.levels || []).forEach(lv => {
+      if (!seen.has(lv.label)) { seen.add(lv.label); legendLevels.push(lv); }
+    }));
+    bars = total === 0 ? '' : schema.fields.map((field, idx) => {
+      const counts = p.distribution[field.key] || {};
+      const segments = (field.levels || []).map(lv => {
+        const n = counts[lv.key] || 0;
+        if (!n) return '';
+        const m = fieldLevelMeta(field, lv.key);
+        return `<div title="${escapeHtml(lv.label)}: ${n}" style="width:${(n / total) * 100}%;background:${m.color};"></div>`;
+      }).join('');
+      return `
+      <div style="display:flex;align-items:center;gap:var(--sp-2);">
+        <span style="width:36px;flex-shrink:0;font-size:0.6875rem;font-weight:600;color:${dimColor(schema, field, idx)};" title="${escapeHtml(field.label)}">${escapeHtml(dimShort(schema, field))}</span>
+        <div style="flex:1;display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--bg-subtle);">${segments}</div>
+      </div>`;
+    }).join('');
+    legend = `
+    <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;margin-top:var(--sp-2);">
+      ${legendLevels.map(lv => `<span style="display:flex;align-items:center;gap:4px;font-size:0.6875rem;color:var(--ink-muted);"><span style="width:8px;height:8px;border-radius:2px;background:${lv.color};"></span>${escapeHtml(lv.label)}</span>`).join('')}
+    </div>`;
+    weakSentence = total > 0 && p.weakestFields.length
+      ? `The class is weakest in ${p.weakestFields.map(fieldLabel).join(' and ')}.` : '';
+    strongSentence = total > 0 && p.strongestFields.length
+      ? `The class is furthest ahead in ${p.strongestFields.map(fieldLabel).join(' and ')}.` : '';
+  }
 
-  const weakSentence = total > 0 && p.weakestDims.length
-    ? `Most students are still developing in ${p.weakestDims.map(dimLabel).join(' and ')}.` : '';
-  const strongSentence = total > 0 && p.strongestDims.length
-    ? `The class is furthest ahead in ${p.strongestDims.map(dimLabel).join(' and ')}.` : '';
   const trendSentence = p.engagementTrend === 'rising' ? 'Engagement across recent lessons is rising.'
     : p.engagementTrend === 'dipping' ? 'Engagement across recent lessons is dipping — worth designing for re-engagement.'
     : p.engagementTrend === 'steady' ? 'Engagement across recent lessons is holding steady.'
@@ -684,7 +820,10 @@ function renderPortraitCard(p) {
 }
 
 /* ── Quick Capture Card ── */
-function renderQuickCaptureCard(students, open, dim, levels) {
+function renderQuickCaptureCard(students, schema, open, dim, levels) {
+  // Only level-based fields (scale/band/rag) can be tapped to cycle.
+  const capturable = schema.fields.filter(f => (f.levels || []).length);
+  const field = dim ? capturable.find(f => f.key === dim) : null;
   return `
     <div class="card" style="margin-bottom:var(--sp-6);">
       <button id="qc-toggle" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;cursor:pointer;padding:0;text-align:left;">
@@ -693,23 +832,28 @@ function renderQuickCaptureCard(students, open, dim, levels) {
       </button>
       ${open ? `
         <div style="margin-top:var(--sp-4);">
-          <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">Pick a dimension, then tap a student to cycle their level. Only changed students are saved.</p>
+          <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">Pick a ${schema.id === 'e21cc' ? 'dimension' : 'field'}, then tap a student to cycle their level. Only changed students are saved.</p>
+          ${capturable.length === 0 ? `
+            <p style="font-size:0.8125rem;color:var(--ink-faint);font-style:italic;">This schema has no level-based fields to capture.</p>
+          ` : `
           <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-4);">
-            ${E21CC_DIMS.map(d => `
-              <button class="qc-dim-chip" data-dim="${d.key}" style="padding:4px 10px;border-radius:var(--radius-full, 999px);font-size:0.75rem;font-weight:600;cursor:pointer;border:2px solid ${dim === d.key ? d.color : 'var(--border)'};background:${dim === d.key ? d.color + '15' : 'transparent'};color:${dim === d.key ? d.color : 'var(--ink-muted)'};transition:all 0.15s;">${d.label}</button>
-            `).join('')}
+            ${capturable.map((f, idx) => {
+              const color = dimColor(schema, f, schema.fields.indexOf(f));
+              return `
+              <button class="qc-dim-chip" data-dim="${escapeAttr(f.key)}" style="padding:4px 10px;border-radius:var(--radius-full, 999px);font-size:0.75rem;font-weight:600;cursor:pointer;border:2px solid ${dim === f.key ? color : 'var(--border)'};background:${dim === f.key ? color + '15' : 'transparent'};color:${dim === f.key ? color : 'var(--ink-muted)'};transition:all 0.15s;">${escapeHtml(f.label)}</button>`;
+            }).join('')}
           </div>
-          ${dim ? `
+          ${field ? `
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--sp-2);margin-bottom:var(--sp-4);">
               ${students.map(s => {
-                const saved = s.e21cc?.[dim] || 'developing';
+                const saved = getFieldValue(s, schema, field);
                 const current = levels[s.id] || saved;
-                const meta = levelMeta(current);
+                const meta = valueMeta(schema, field, current);
                 const changed = current !== saved;
                 return `
                 <button class="qc-student-btn" data-student-id="${s.id}" title="Tap to cycle level" style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);padding:6px 10px;border-radius:var(--radius-md);border:1px solid ${changed ? meta.color : 'var(--border)'};background:${changed ? 'var(--marker-wash, #FFF9C9)' : 'transparent'};cursor:pointer;text-align:left;transition:all 0.15s;">
                   <span style="font-size:0.75rem;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.name)}</span>
-                  <span class="qc-level-badge" style="padding:2px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${meta.color}15;color:${meta.color};flex-shrink:0;">${meta.short}</span>
+                  <span class="qc-level-badge" style="padding:2px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${meta.color}15;color:${meta.color};flex-shrink:0;">${escapeHtml(meta.short)}</span>
                 </button>`;
               }).join('')}
             </div>
@@ -717,14 +861,16 @@ function renderQuickCaptureCard(students, open, dim, levels) {
               <button class="btn btn-primary btn-sm" id="qc-save-btn">Save Quick Capture</button>
             </div>
           ` : ''}
+          `}
         </div>
       ` : ''}
     </div>`;
 }
 
 /* ── Student Tab ── */
-function renderStudentsTab(cls) {
+function renderStudentsTab(cls, schema) {
   const students = cls.students || [];
+  const isE21cc = schema.id === 'e21cc';
   if (students.length === 0) {
     return `
       <div class="empty-state" style="padding: var(--sp-8);">
@@ -732,52 +878,15 @@ function renderStudentsTab(cls) {
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
         <h3 class="empty-state-title">No students yet</h3>
-        <p class="empty-state-text">Add students to track their E21CC competency development.</p>
-        <button class="btn btn-primary btn-sm" id="add-student-btn">Add Student</button>
+        <p class="empty-state-text">Add students to track their progress, or upload a class list.</p>
+        <div style="display:flex;gap:var(--sp-2);justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" id="add-student-btn">Add Student</button>
+          <button class="btn btn-secondary btn-sm" id="bulk-upload-empty-btn">Upload students (CSV/XLSX)</button>
+        </div>
       </div>`;
   }
 
-  return `
-    <div style="display: flex; justify-content: flex-end; margin-bottom: var(--sp-4);">
-      <button class="btn btn-primary btn-sm" id="add-student-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Student
-      </button>
-    </div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            ${E21CC_DIMS.map(d => `<th>${d.short}</th>`).join('')}
-            <th style="width: 120px; text-align: right;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${students.map(s => `
-            <tr>
-              <td>
-                <div style="display: flex; align-items: center; gap: var(--sp-3);">
-                  <div class="avatar avatar-sm" style="background: ${stringToColor(s.name)};">${initials(s.name)}</div>
-                  <span style="font-weight: 500;">${s.name}</span>
-                </div>
-              </td>
-              ${E21CC_DIMS.map(d => {
-                const meta = levelMeta(s.e21cc?.[d.key] || 'developing');
-                return `
-              <td>
-                <span style="padding:2px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${meta.color}15;color:${meta.color};">${meta.short}</span>
-              </td>`;
-              }).join('')}
-              <td style="text-align: right;">
-                <button class="btn btn-ghost btn-sm e21cc-edit-btn" data-student-id="${s.id}" style="font-size: 0.75rem;">Edit E21CC</button>
-                <button class="btn btn-ghost btn-sm remove-student-btn" data-student-id="${s.id}" style="color: var(--danger); font-size: 0.75rem;">Remove</button>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
+  const radarBlock = isE21cc ? `
     <div style="margin-top:var(--sp-4);display:flex;align-items:center;gap:var(--sp-3);">
       <span style="font-size:0.8125rem;font-weight:500;color:var(--ink-muted);">View:</span>
       <button class="btn btn-sm" id="bar-view-btn" style="font-weight:600;">Bar view</button>
@@ -806,7 +915,59 @@ function renderStudentsTab(cls) {
           <span style="width:8px;height:8px;border-radius:50%;background:#8b5cf6;"></span> Leading (4)
         </span>
       </div>
-    </div>`;
+    </div>` : '';
+
+  return `
+    <div style="display: flex; justify-content: flex-end; gap: var(--sp-2); margin-bottom: var(--sp-4);">
+      <button class="btn btn-secondary btn-sm" id="bulk-upload-btn" title="Upload a class list (CSV or Excel)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload CSV/XLSX
+      </button>
+      <button class="btn btn-primary btn-sm" id="add-student-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Student
+      </button>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            ${schema.fields.map(field => `<th title="${escapeAttr(field.label)}">${escapeHtml(dimShort(schema, field))}</th>`).join('')}
+            <th style="width: 200px; text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${students.map(s => `
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: var(--sp-3);">
+                  <div class="avatar avatar-sm" style="background: ${stringToColor(s.name)};">${initials(s.name)}</div>
+                  <span style="font-weight: 500;">${escapeHtml(s.name)}</span>
+                </div>
+              </td>
+              ${schema.fields.map(field => {
+                if ((field.levels || []).length) {
+                  const meta = valueMeta(schema, field, getFieldValue(s, schema, field));
+                  return `
+              <td>
+                <span style="padding:2px 6px;border-radius:4px;font-size:0.6875rem;font-weight:600;background:${meta.color}15;color:${meta.color};">${escapeHtml(meta.short)}</span>
+              </td>`;
+                }
+                const raw = getFieldValue(s, schema, field);
+                return `<td><span style="font-size:0.75rem;color:var(--ink-secondary);">${escapeHtml(String(raw || '—'))}</span></td>`;
+              }).join('')}
+              <td style="text-align: right;">
+                <button class="btn btn-ghost btn-sm student-edit-btn" data-student-id="${s.id}" style="font-size: 0.75rem;">${isE21cc ? 'Edit E21CC' : 'Edit'}</button>
+                <button class="btn btn-ghost btn-sm remark-btn" data-student-id="${s.id}" style="font-size: 0.75rem;" title="Add a free-text remark">Remark</button>
+                <button class="btn btn-ghost btn-sm remove-student-btn" data-student-id="${s.id}" style="color: var(--danger); font-size: 0.75rem;">Remove</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    ${radarBlock}`;
 }
 
 /* ── Notes Tab ── */
@@ -846,14 +1007,17 @@ function renderNotesTab(cls) {
 
 /* ── Trends Tab ── */
 let _sparkId = 0;
-function renderSparkline(history, key, color, width = 100, height = 28) {
+/**
+ * Draw a sparkline for one field's numeric history. `schema`+`field` drive the
+ * value range and the hover-tip labels; for E21CC this reproduces the original
+ * 1–4 scale and Dev/App/Ext/Lead tip labels exactly.
+ */
+function renderSparkline(history, schema, field, color, width = 100, height = 28) {
   if (!history || history.length < 2) return `<span style="font-size:0.6875rem;color:var(--ink-faint);">Not enough data</span>`;
-  const vals = history.map(h => {
-    const raw = h[key];
-    return typeof raw === 'string' ? levelToValue(raw) : (raw || 1);
-  });
+  const key = field.key;
+  const vals = history.map(h => valueToNum(field, h[key]));
   const timestamps = history.map(h => h.ts);
-  const min = 1, max = 4;
+  const { min, max } = fieldRange(field);
   const range = max - min || 1;
   const step = width / (vals.length - 1);
   const points = vals.map((v, i) => `${i * step},${height - ((v - min) / range) * (height - 4) - 2}`).join(' ');
@@ -863,20 +1027,22 @@ function renderSparkline(history, key, color, width = 100, height = 28) {
   const arrow = diff > 0 ? '\u25B2' : diff < 0 ? '\u25BC' : '\u2500';
   const diffColor = diff > 0 ? 'var(--success)' : diff < 0 ? 'var(--danger)' : 'var(--ink-faint)';
   const sid = `spark-${++_sparkId}`;
+  const tipLabel = dimShort(schema, field);
+  const shortForNum = (v) => {
+    const lv = (field.levels || []).find(l => l.value === v);
+    return lv ? valueMeta(schema, field, lv.key).short : String(v);
+  };
 
   // Invisible circles for hover tooltips
   const hoverCircles = vals.map((v, i) => {
     const cx = i * step;
     const cy = height - ((v - min) / range) * (height - 4) - 2;
     const date = new Date(timestamps[i]).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
-    const dimInfo = E21CC_DIMS.find(d => d.key === key);
-    const tipLabel = dimInfo ? dimInfo.short : key;
-    const lvLabel = (E21CC_LEVELS.find(l => l.value === v) || E21CC_LEVELS[0]).short;
-    return `<circle cx="${cx}" cy="${cy}" r="6" fill="transparent" stroke="none" data-tip="${tipLabel}: ${lvLabel} (${date})"/>
+    const lvLabel = shortForNum(v);
+    return `<circle cx="${cx}" cy="${cy}" r="6" fill="transparent" stroke="none" data-tip="${escapeAttr(tipLabel)}: ${escapeAttr(lvLabel)} (${date})"/>
             <circle cx="${cx}" cy="${cy}" r="2" fill="${color}" opacity="0" class="hover-dot"/>`;
   }).join('');
 
-  const lastMeta = E21CC_LEVELS.find(l => l.value === last) || E21CC_LEVELS[0];
   return `
     <div style="display:flex;align-items:center;gap:var(--sp-2);position:relative;" id="${sid}">
       <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="display:block;overflow:visible;">
@@ -910,40 +1076,40 @@ function attachSparklineTips(container) {
   });
 }
 
-function renderTrendsTab(cls) {
+function renderTrendsTab(cls, schema) {
   const students = cls.students || [];
-  const withHistory = students.filter(s => s.e21ccHistory && s.e21ccHistory.length >= 2);
+  const fields = schema.fields.filter(f => (f.levels || []).length);
+  const withHistory = students.filter(s => historyOf(s, schema).length >= 2);
+  const isE21cc = schema.id === 'e21cc';
 
-  if (withHistory.length === 0) {
+  if (withHistory.length === 0 || fields.length === 0) {
+    const noun = isE21cc ? 'E21CC' : escapeHtml(schema.name);
     return `
       <div class="empty-state" style="padding: var(--sp-8);">
         <div class="empty-state-icon">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         </div>
         <h3 class="empty-state-title">No trend data yet</h3>
-        <p class="empty-state-text">E21CC trends will appear after you update student scores at least twice. Use "Edit E21CC" or "Batch Update" to record changes over time.</p>
+        <p class="empty-state-text">${noun} trends will appear after you update student scores at least twice. Use "${isE21cc ? 'Edit E21CC' : 'Edit'}" or "Batch Update" to record changes over time.</p>
       </div>`;
   }
 
-  // Class-level averages over time (using numeric values 1-4 for sparkline)
-  const allTimestamps = [...new Set(withHistory.flatMap(s => s.e21ccHistory.map(h => h.ts)))].sort();
+  // Class-level averages over time (numeric field values)
+  const allTimestamps = [...new Set(withHistory.flatMap(s => historyOf(s, schema).map(h => h.ts)))].sort();
   const classHistory = allTimestamps.map(ts => {
     const sums = {};
-    E21CC_DIMS.forEach(d => { sums[d.key] = 0; });
+    fields.forEach(f => { sums[f.key] = 0; });
     let count = 0;
     students.forEach(s => {
-      const snapshot = (s.e21ccHistory || []).filter(h => h.ts <= ts);
+      const snapshot = historyOf(s, schema).filter(h => h.ts <= ts);
       if (snapshot.length > 0) {
         const latest = snapshot[snapshot.length - 1];
-        E21CC_DIMS.forEach(d => {
-          const raw = latest[d.key];
-          sums[d.key] += typeof raw === 'string' ? levelToValue(raw) : (raw || 1);
-        });
+        fields.forEach(f => { sums[f.key] += valueToNum(f, latest[f.key]); });
         count++;
       }
     });
     const entry = { ts };
-    E21CC_DIMS.forEach(d => { entry[d.key] = count ? Math.round(sums[d.key] / count) : 1; });
+    fields.forEach(f => { entry[f.key] = count ? Math.round(sums[f.key] / count) : fieldRange(f).min; });
     return entry;
   });
 
@@ -958,12 +1124,14 @@ function renderTrendsTab(cls) {
     <div class="card" style="margin-bottom:var(--sp-6);">
       <h4 style="font-size:0.9375rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-3);">Class Average Trends</h4>
       <div style="display:flex;gap:var(--sp-6);flex-wrap:wrap;">
-        ${E21CC_DIMS.map(d => `
+        ${fields.map((field, idx) => {
+          const color = dimColor(schema, field, schema.fields.indexOf(field));
+          return `
         <div>
-          <span style="font-size:0.75rem;font-weight:600;color:${d.color};">${d.short}</span>
-          ${renderSparkline(classHistory, d.key, d.color, 120, 32)}
-        </div>
-        `).join('')}
+          <span style="font-size:0.75rem;font-weight:600;color:${color};">${escapeHtml(dimShort(schema, field))}</span>
+          ${renderSparkline(classHistory, schema, field, color, 120, 32)}
+        </div>`;
+        }).join('')}
       </div>
     </div>
 
@@ -973,7 +1141,7 @@ function renderTrendsTab(cls) {
         <thead>
           <tr>
             <th>Student</th>
-            ${E21CC_DIMS.map(d => `<th>${d.short} Trend</th>`).join('')}
+            ${fields.map(field => `<th>${escapeHtml(dimShort(schema, field))} Trend</th>`).join('')}
             <th style="width:80px;text-align:right;">Updates</th>
           </tr>
         </thead>
@@ -983,11 +1151,14 @@ function renderTrendsTab(cls) {
               <td>
                 <div style="display:flex;align-items:center;gap:var(--sp-2);">
                   <div class="avatar avatar-sm" style="background:${stringToColor(s.name)};">${initials(s.name)}</div>
-                  <span style="font-weight:500;">${s.name}</span>
+                  <span style="font-weight:500;">${escapeHtml(s.name)}</span>
                 </div>
               </td>
-              ${E21CC_DIMS.map(d => `<td>${renderSparkline(s.e21ccHistory, d.key, d.color, 80, 24)}</td>`).join('')}
-              <td style="text-align:right;font-size:0.75rem;color:var(--ink-muted);">${s.e21ccHistory.length}</td>
+              ${fields.map(field => {
+                const color = dimColor(schema, field, schema.fields.indexOf(field));
+                return `<td>${renderSparkline(historyOf(s, schema), schema, field, color, 80, 24)}</td>`;
+              }).join('')}
+              <td style="text-align:right;font-size:0.75rem;color:var(--ink-muted);">${historyOf(s, schema).length}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -1049,7 +1220,7 @@ function showAddStudentModal(classId, onUpdate) {
         <input class="input" id="student-name" placeholder="Full name" autofocus />
       </div>
       <p style="font-size: 0.8125rem; color: var(--ink-muted); line-height: 1.5;">
-        E21CC competency levels can be set after adding the student.
+        Tracking levels can be set after adding the student.
       </p>
     `,
     footer: `
@@ -1079,32 +1250,47 @@ function showAddStudentModal(classId, onUpdate) {
   setTimeout(() => backdrop.querySelector('#student-name')?.focus(), 100);
 }
 
-function showEditE21CCModal(classId, student, onUpdate) {
-  const currentLevels = student.e21cc || {};
+function showEditStudentModal(classId, student, schema, onUpdate) {
+  const isE21cc = schema.id === 'e21cc';
+  const fieldByKey = {};
+  schema.fields.forEach(f => { fieldByKey[f.key] = f; });
+  const curVal = (field) => getFieldValue(student, schema, field);
+
   const { backdrop, close } = openModal({
-    title: `E21CC — ${student.name}`,
+    title: `${isE21cc ? 'E21CC' : escapeHtml(schema.name)} — ${escapeHtml(student.name)}`,
     width: 520,
     body: `
       <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-2); line-height: 1.5;">
-        Set competency levels based on your observations and assessments.
+        Set levels based on your observations and assessments.
       </p>
-      ${E21CC_DIMS.map(d => `
+      ${schema.fields.map((field, idx) => {
+        const color = dimColor(schema, field, idx);
+        if ((field.levels || []).length) {
+          const current = curVal(field);
+          return `
       <div class="input-group">
-        <label class="input-label" style="color: ${d.color};">${d.label}</label>
-        <div style="display:flex;gap:var(--sp-2);">
-          ${E21CC_LEVELS.map(lv => {
-            const checked = (currentLevels[d.key] || 'developing') === lv.key;
-            return `<label style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px 4px;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;border:2px solid ${checked ? lv.color : 'var(--border)'};background:${checked ? lv.color + '15' : 'transparent'};color:${checked ? lv.color : 'var(--ink-muted)'};transition:all 0.15s;">
-              <input type="radio" name="e21cc-${d.key}" value="${lv.key}" ${checked ? 'checked' : ''} style="display:none;" />
-              ${lv.short}
+        <label class="input-label" style="color: ${color};">${escapeHtml(field.label)}</label>
+        <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">
+          ${field.levels.map(lv => {
+            const checked = current === lv.key;
+            return `<label style="flex:1;min-width:60px;display:flex;align-items:center;justify-content:center;padding:6px 4px;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;border:2px solid ${checked ? lv.color : 'var(--border)'};background:${checked ? lv.color + '15' : 'transparent'};color:${checked ? lv.color : 'var(--ink-muted)'};transition:all 0.15s;">
+              <input type="radio" name="field-${escapeAttr(field.key)}" value="${escapeAttr(lv.key)}" ${checked ? 'checked' : ''} style="display:none;" />
+              ${escapeHtml(valueMeta(schema, field, lv.key).short)}
             </label>`;
           }).join('')}
         </div>
-      </div>
-      `).join('')}
+      </div>`;
+        }
+        // text / number field
+        return `
+      <div class="input-group">
+        <label class="input-label" style="color: ${color};">${escapeHtml(field.label)}</label>
+        <input class="input" type="${field.type === 'number' ? 'number' : 'text'}" data-field-key="${escapeAttr(field.key)}" value="${escapeAttr(String(curVal(field) || ''))}" />
+      </div>`;
+      }).join('')}
       <div class="input-group" style="margin-top:var(--sp-4);">
         <label class="input-label">Observation Note (optional)</label>
-        <textarea class="input" id="e21cc-observation" rows="3" placeholder="Brief note about this student's competency development..." style="resize:vertical;"></textarea>
+        <textarea class="input" id="student-observation" rows="3" placeholder="Brief note about this student's development..." style="resize:vertical;"></textarea>
       </div>
     `,
     footer: `
@@ -1116,11 +1302,13 @@ function showEditE21CCModal(classId, student, onUpdate) {
   // Style radio pills on change
   backdrop.querySelectorAll('input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', () => {
+      const fieldKey = radio.name.replace(/^field-/, '');
+      const field = fieldByKey[fieldKey];
       const group = backdrop.querySelectorAll(`input[name="${radio.name}"]`);
       group.forEach(r => {
         const label = r.closest('label');
-        const lv = E21CC_LEVELS.find(l => l.key === r.value);
-        if (r.checked) {
+        const lv = (field?.levels || []).find(l => l.key === r.value);
+        if (r.checked && lv) {
           label.style.borderColor = lv.color;
           label.style.background = lv.color + '15';
           label.style.color = lv.color;
@@ -1135,57 +1323,83 @@ function showEditE21CCModal(classId, student, onUpdate) {
 
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
   backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
-    const e21cc = {};
-    E21CC_DIMS.forEach(d => {
-      const checked = backdrop.querySelector(`input[name="e21cc-${d.key}"]:checked`);
-      e21cc[d.key] = checked ? checked.value : (currentLevels[d.key] || 'developing');
+    const values = {};
+    const changed = [];
+    schema.fields.forEach(field => {
+      const before = curVal(field);
+      let next;
+      if ((field.levels || []).length) {
+        const checked = backdrop.querySelector(`input[name="field-${CSS.escape(field.key)}"]:checked`);
+        next = checked ? checked.value : before;
+      } else {
+        const input = backdrop.querySelector(`[data-field-key="${CSS.escape(field.key)}"]`);
+        next = input ? input.value.trim() : before;
+      }
+      values[field.key] = next;
+      if (next !== before) changed.push(field.key);
     });
-    // Build observation if note provided
-    const noteText = backdrop.querySelector('#e21cc-observation').value.trim();
-    const updateData = { e21cc };
+
+    // Build the patch. E21CC passes { e21cc } and lets Store.updateStudent
+    // append the history snapshot (byte-identical to the original); other
+    // schemas write { tracked, trackedHistory } with a 20-capped snapshot.
+    let updateData;
+    if (isE21cc) {
+      updateData = { e21cc: values };
+    } else {
+      const history = [...(student.trackedHistory || [])];
+      history.push({ ts: Date.now(), ...(student.tracked || {}), ...values });
+      if (history.length > 20) history.splice(0, history.length - 20);
+      updateData = { tracked: { ...(student.tracked || {}), ...values }, trackedHistory: history };
+    }
+
+    const noteText = backdrop.querySelector('#student-observation').value.trim();
     if (noteText) {
-      const changedDims = E21CC_DIMS.filter(d => e21cc[d.key] !== (currentLevels[d.key] || 'developing')).map(d => d.key);
       updateData.observations = [{
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        id: generateId(),
         text: noteText,
-        tags: changedDims.length > 0 ? changedDims : E21CC_DIMS.map(d => d.key),
+        tags: changed.length > 0 ? changed : schema.fields.map(f => f.key),
         ts: Date.now()
       }];
     }
     Store.updateStudent(classId, student.id, updateData);
-    showToast('E21CC updated', 'success');
+    showToast(`${isE21cc ? 'E21CC' : schema.name} updated`, 'success');
     close();
     onUpdate();
   });
 }
 
-/* ── Batch E21CC Update ── */
-function showBatchE21CCModal(classId, onUpdate) {
+/* ── Batch Update (schema-aware) ── */
+function showBatchUpdateModal(classId, onUpdate) {
   const cls = Store.getClass(classId);
   if (!cls || !cls.students?.length) return;
+  const schema = schemaFor(cls);
+  const isE21cc = schema.id === 'e21cc';
+  const fields = schema.fields.filter(f => (f.levels || []).length);
+  if (fields.length === 0) { showToast('This schema has no level-based fields to batch update.', 'danger'); return; }
+  const noun = isE21cc ? 'dimension' : 'field';
 
   const { backdrop, close } = openModal({
-    title: `Batch Update E21CC — ${cls.name}`,
+    title: `${isE21cc ? 'Batch Update E21CC' : 'Batch Update'} — ${escapeHtml(cls.name)}`,
     width: 560,
     body: `
       <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">
-        Set a level for each dimension to apply to all students. Choose "(No change)" to skip a dimension.
+        Set a level for each ${noun} to apply to all students. Choose "(No change)" to skip a ${noun}.
       </p>
       <div class="input-group">
         <label class="input-label">Activity / Reason</label>
         <input class="input" id="batch-reason" placeholder="e.g. Group project on climate change" />
       </div>
-      ${E21CC_DIMS.map(d => `
+      ${fields.map((field, idx) => `
       <div class="input-group">
-        <label class="input-label" style="color:${d.color};">${d.label}</label>
-        <select class="input" id="batch-${d.key}">
+        <label class="input-label" style="color:${dimColor(schema, field, idx)};">${escapeHtml(field.label)}</label>
+        <select class="input" data-batch-field="${escapeAttr(field.key)}">
           <option value="">(No change)</option>
-          ${E21CC_LEVELS.map(lv => `<option value="${lv.key}">${lv.label}</option>`).join('')}
+          ${field.levels.map(lv => `<option value="${escapeAttr(lv.key)}">${escapeHtml(lv.label)}</option>`).join('')}
         </select>
       </div>
       `).join('')}
       <div style="background:var(--bg-subtle);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-md);font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">
-        This will update <strong>${cls.students.length} students</strong> for any dimensions where a level is selected.
+        This will update <strong>${cls.students.length} students</strong> for any ${noun}s where a level is selected.
       </div>
     `,
     footer: `
@@ -1197,9 +1411,9 @@ function showBatchE21CCModal(classId, onUpdate) {
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
   backdrop.querySelector('[data-action="apply"]').addEventListener('click', () => {
     const newLevels = {};
-    E21CC_DIMS.forEach(d => {
-      const val = backdrop.querySelector(`#batch-${d.key}`).value;
-      if (val) newLevels[d.key] = val;
+    fields.forEach(field => {
+      const val = backdrop.querySelector(`[data-batch-field="${CSS.escape(field.key)}"]`).value;
+      if (val) newLevels[field.key] = val;
     });
 
     if (Object.keys(newLevels).length === 0) {
@@ -1211,15 +1425,19 @@ function showBatchE21CCModal(classId, onUpdate) {
     if (!freshCls) { showToast('Class no longer exists.', 'danger'); close(); return; }
     const now = Date.now();
     const updatedStudents = (freshCls.students || []).map(s => {
-      const newE21cc = { ...(s.e21cc || {}) };
-      E21CC_DIMS.forEach(d => {
-        if (newLevels[d.key]) newE21cc[d.key] = newLevels[d.key];
-        else if (!newE21cc[d.key]) newE21cc[d.key] = 'developing';
+      const store = isE21cc ? (s.e21cc || {}) : (s.tracked || {});
+      const newMap = { ...store };
+      fields.forEach(field => {
+        if (newLevels[field.key]) newMap[field.key] = newLevels[field.key];
+        else if (newMap[field.key] === undefined) newMap[field.key] = field.levels[0].key;
       });
-      const history = [...(s.e21ccHistory || [])];
-      history.push({ ts: now, ...newE21cc });
+      const histArr = isE21cc ? (s.e21ccHistory || []) : (s.trackedHistory || []);
+      const history = [...histArr];
+      history.push({ ts: now, ...newMap });
       if (history.length > 20) history.splice(0, history.length - 20);
-      return { ...s, e21cc: newE21cc, e21ccHistory: history };
+      return isE21cc
+        ? { ...s, e21cc: newMap, e21ccHistory: history }
+        : { ...s, tracked: newMap, trackedHistory: history };
     });
 
     Store.updateClass(classId, { students: updatedStudents });
@@ -1253,7 +1471,7 @@ function showGroupingModal(classId) {
         <label class="input-label">Method</label>
         <select class="input" id="group-method">
           <option value="random">Random</option>
-          <option value="mixed">Mixed Ability (by E21CC)</option>
+          <option value="mixed">Mixed Ability</option>
           <option value="similar">Similar Ability</option>
           <option value="ai">AI Suggested</option>
         </select>
@@ -1296,18 +1514,18 @@ function showGroupingModal(classId) {
       return;
     }
 
-    // Local grouping
+    // Local grouping — rank by total across the class's tracking schema
+    const groupSchema = schemaFor(cls);
+    const abilityScore = (st) => groupSchema.fields
+      .filter(f => (f.levels || []).length)
+      .reduce((sum, f) => sum + valueToNum(f, getFieldValue(st, groupSchema, f)), 0);
     let sorted;
     if (method === 'mixed') {
-      sorted = students.sort((a, b) => {
-        const sa = E21CC_DIMS.reduce((sum, d) => sum + levelToValue(a.e21cc?.[d.key] || 'developing'), 0);
-        const sb = E21CC_DIMS.reduce((sum, d) => sum + levelToValue(b.e21cc?.[d.key] || 'developing'), 0);
-        return sb - sa;
-      });
+      sorted = students.sort((a, b) => abilityScore(b) - abilityScore(a));
     } else if (method === 'similar') {
       sorted = students.sort((a, b) => {
-        const sa = E21CC_DIMS.reduce((sum, d) => sum + levelToValue(a.e21cc?.[d.key] || 'developing'), 0);
-        const sb = E21CC_DIMS.reduce((sum, d) => sum + levelToValue(b.e21cc?.[d.key] || 'developing'), 0);
+        const sa = abilityScore(a);
+        const sb = abilityScore(b);
         return sb - sa;
       });
     } else {
@@ -1335,6 +1553,318 @@ function showGroupingModal(classId) {
       </div>
     `).join('');
   });
+}
+
+/* ═══════════ Tracking Schema (B5-UI) ═══════════ */
+
+/** Pick the class's tracking schema (preset or custom) or launch the builder. */
+function showSchemaPickerModal(classId, onUpdate) {
+  const cls = Store.getClass(classId);
+  if (!cls) return;
+  const current = cls.trackingSchemaId || 'e21cc';
+  const custom = Store.getTrackingSchemas();
+  const presetOrder = ['e21cc', 'rag', 'mastery', 'participation'];
+  const options = presetOrder
+    .map(pid => ({ id: pid, name: SCHEMA_PRESETS[pid].name, fields: SCHEMA_PRESETS[pid].fields, custom: false }))
+    .concat(custom.map(s => ({ id: s.id, name: s.name, fields: s.fields || [], custom: true })));
+
+  const { backdrop, close } = openModal({
+    title: `Tracking schema — ${escapeHtml(cls.name)}`,
+    width: 560,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">
+        Choose how this class's progress is tracked. Switching schemas never deletes data — existing E21CC readings are preserved even while another schema is active.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
+        ${options.map(o => {
+          const checked = o.id === current;
+          const summary = (o.fields || []).map(f => f.label).join(', ');
+          return `
+          <label style="display:flex;gap:var(--sp-3);align-items:flex-start;padding:var(--sp-3);border-radius:var(--radius-md);cursor:pointer;border:2px solid ${checked ? 'var(--accent)' : 'var(--border)'};background:${checked ? 'var(--accent-light, rgba(67,97,238,0.08))' : 'transparent'};">
+            <input type="radio" name="schema-pick" value="${escapeAttr(o.id)}" ${checked ? 'checked' : ''} style="margin-top:3px;" />
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.875rem;font-weight:600;color:var(--ink);">${escapeHtml(o.name)}${o.id === 'e21cc' ? ' <span style="font-size:0.6875rem;font-weight:500;color:var(--ink-muted);">(default)</span>' : ''}${o.custom ? ' <span class="badge badge-gray" style="font-size:0.625rem;">custom</span>' : ''}</div>
+              <div style="font-size:0.75rem;color:var(--ink-muted);margin-top:2px;">${escapeHtml(summary) || 'No fields'}</div>
+            </div>
+          </label>`;
+        }).join('')}
+      </div>
+      <button class="btn btn-ghost btn-sm" id="create-custom-schema-btn" style="margin-top:var(--sp-3);">+ Create custom schema</button>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save">Use this schema</button>
+    `
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('#create-custom-schema-btn').addEventListener('click', () => {
+    close();
+    showCustomSchemaBuilder(classId, onUpdate);
+  });
+  backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
+    const picked = backdrop.querySelector('input[name="schema-pick"]:checked');
+    if (!picked) return;
+    Store.updateClass(classId, { trackingSchemaId: picked.value });
+    const name = options.find(o => o.id === picked.value)?.name || picked.value;
+    showToast(`Tracking schema set to ${name}`, 'success');
+    close();
+    onUpdate();
+  });
+}
+
+/** Lightweight builder for a custom tracking schema (name + fields + levels). */
+function showCustomSchemaBuilder(classId, onUpdate) {
+  const DEFAULT_LEVEL_COLORS = ['#C94F4F', '#E8A33D', '#3b82f6', '#2c7a4b', '#8b5cf6'];
+  const slugify = (str, fallback) => {
+    const s = String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    return s || fallback;
+  };
+  // In-memory model — the fields area is re-rendered from this on structural changes.
+  let fields = [{
+    label: '',
+    type: 'scale',
+    levels: [
+      { label: 'Emerging', color: '#C94F4F' },
+      { label: 'Developing', color: '#E8A33D' },
+      { label: 'Secure', color: '#2c7a4b' }
+    ]
+  }];
+
+  const { backdrop, close } = openModal({
+    title: 'Create custom schema',
+    width: 620,
+    body: `
+      <div class="input-group">
+        <label class="input-label">Schema name</label>
+        <input class="input" id="cs-name" placeholder="e.g. Reading Fluency" autofocus />
+      </div>
+      <div id="cs-fields"></div>
+      <button class="btn btn-ghost btn-sm" id="cs-add-field" style="margin-top:var(--sp-2);">+ Add field</button>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="create">Create &amp; use</button>
+    `
+  });
+
+  const fieldsEl = backdrop.querySelector('#cs-fields');
+
+  function syncFromDOM() {
+    fieldsEl.querySelectorAll('[data-field-idx]').forEach(row => {
+      const fi = parseInt(row.dataset.fieldIdx, 10);
+      if (!fields[fi]) return;
+      fields[fi].label = row.querySelector('.cs-field-label')?.value || '';
+      fields[fi].type = row.querySelector('.cs-field-type')?.value || 'scale';
+      row.querySelectorAll('[data-level-idx]').forEach(lrow => {
+        const li = parseInt(lrow.dataset.levelIdx, 10);
+        if (!fields[fi].levels[li]) return;
+        fields[fi].levels[li].label = lrow.querySelector('.cs-level-label')?.value || '';
+        fields[fi].levels[li].color = lrow.querySelector('.cs-level-color')?.value || '#3b82f6';
+      });
+    });
+  }
+
+  function renderFields() {
+    fieldsEl.innerHTML = fields.map((f, fi) => `
+      <div data-field-idx="${fi}" style="border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--sp-3);margin-top:var(--sp-3);">
+        <div style="display:flex;gap:var(--sp-2);align-items:flex-end;">
+          <div class="input-group" style="flex:1;margin:0;">
+            <label class="input-label">Field label</label>
+            <input class="input cs-field-label" value="${escapeAttr(f.label)}" placeholder="e.g. Accuracy" />
+          </div>
+          <div class="input-group" style="width:120px;margin:0;">
+            <label class="input-label">Type</label>
+            <select class="input cs-field-type">
+              <option value="scale" ${f.type === 'scale' ? 'selected' : ''}>Scale</option>
+              <option value="band" ${f.type === 'band' ? 'selected' : ''}>Band</option>
+              <option value="rag" ${f.type === 'rag' ? 'selected' : ''}>RAG</option>
+            </select>
+          </div>
+          ${fields.length > 1 ? `<button class="btn btn-ghost btn-sm cs-remove-field" data-fi="${fi}" style="color:var(--danger);">Remove</button>` : ''}
+        </div>
+        <div style="margin-top:var(--sp-2);">
+          <label class="input-label">Levels (low to high)</label>
+          ${f.levels.map((lv, li) => `
+            <div data-level-idx="${li}" style="display:flex;gap:var(--sp-2);align-items:center;margin-bottom:6px;">
+              <input type="color" class="cs-level-color" value="${escapeAttr(lv.color || '#3b82f6')}" style="width:36px;height:32px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;" />
+              <input class="input cs-level-label" value="${escapeAttr(lv.label)}" placeholder="Level label" style="flex:1;" />
+              ${f.levels.length > 1 ? `<button class="btn btn-ghost btn-sm cs-remove-level" data-fi="${fi}" data-li="${li}" style="color:var(--danger);">&times;</button>` : ''}
+            </div>
+          `).join('')}
+          <button class="btn btn-ghost btn-sm cs-add-level" data-fi="${fi}">+ Add level</button>
+        </div>
+      </div>
+    `).join('');
+
+    fieldsEl.querySelectorAll('.cs-remove-field').forEach(b => b.addEventListener('click', () => {
+      syncFromDOM(); fields.splice(parseInt(b.dataset.fi, 10), 1); renderFields();
+    }));
+    fieldsEl.querySelectorAll('.cs-add-level').forEach(b => b.addEventListener('click', () => {
+      syncFromDOM();
+      const fi = parseInt(b.dataset.fi, 10);
+      fields[fi].levels.push({ label: '', color: DEFAULT_LEVEL_COLORS[fields[fi].levels.length % DEFAULT_LEVEL_COLORS.length] });
+      renderFields();
+    }));
+    fieldsEl.querySelectorAll('.cs-remove-level').forEach(b => b.addEventListener('click', () => {
+      syncFromDOM();
+      fields[parseInt(b.dataset.fi, 10)].levels.splice(parseInt(b.dataset.li, 10), 1);
+      renderFields();
+    }));
+  }
+
+  renderFields();
+
+  backdrop.querySelector('#cs-add-field').addEventListener('click', () => {
+    syncFromDOM();
+    fields.push({ label: '', type: 'scale', levels: [{ label: '', color: '#C94F4F' }, { label: '', color: '#2c7a4b' }] });
+    renderFields();
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="create"]').addEventListener('click', () => {
+    syncFromDOM();
+    const name = backdrop.querySelector('#cs-name').value.trim();
+    if (!name) { backdrop.querySelector('#cs-name').style.borderColor = 'var(--danger)'; return; }
+    // Validate + build.
+    const usedFieldKeys = new Set();
+    const built = [];
+    for (let fi = 0; fi < fields.length; fi++) {
+      const f = fields[fi];
+      if (!f.label.trim()) { showToast(`Field ${fi + 1} needs a label.`, 'danger'); return; }
+      const validLevels = f.levels.filter(lv => lv.label.trim());
+      if (validLevels.length < 2) { showToast(`"${f.label}" needs at least 2 levels.`, 'danger'); return; }
+      let fkey = slugify(f.label, `field_${fi + 1}`);
+      while (usedFieldKeys.has(fkey)) fkey += '_';
+      usedFieldKeys.add(fkey);
+      const usedLevelKeys = new Set();
+      const levels = validLevels.map((lv, li) => {
+        let lkey = slugify(lv.label, `level_${li + 1}`);
+        while (usedLevelKeys.has(lkey)) lkey += '_';
+        usedLevelKeys.add(lkey);
+        return { key: lkey, label: lv.label.trim(), color: lv.color || '#3b82f6', value: li + 1 };
+      });
+      built.push({ key: fkey, label: f.label.trim(), type: f.type, levels });
+    }
+    const entry = Store.addTrackingSchema({ name, fields: built });
+    Store.updateClass(classId, { trackingSchemaId: entry.id });
+    showToast(`Custom schema "${name}" created and applied`, 'success');
+    close();
+    onUpdate();
+  });
+}
+
+/* ═══════════ Bulk Student Upload (B4) ═══════════ */
+
+function showBulkUploadModal(classId, onUpdate) {
+  const cls = Store.getClass(classId);
+  if (!cls) return;
+  let parsed = [];
+
+  const { backdrop, close } = openModal({
+    title: `Upload students — ${escapeHtml(cls.name)}`,
+    width: 640,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">
+        Upload a CSV or Excel class list. A <strong>Name</strong> column is required (other columns are ignored here).
+        Names that already exist in this class — or repeat within the file — are skipped automatically.
+      </p>
+      <div id="bulk-upload-zone"></div>
+      <div id="bulk-upload-summary" style="margin-top:var(--sp-3);font-size:0.8125rem;color:var(--ink-secondary);"></div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="confirm" disabled>Add students</button>
+    `
+  });
+
+  const zone = backdrop.querySelector('#bulk-upload-zone');
+  const summaryEl = backdrop.querySelector('#bulk-upload-summary');
+  const confirmBtn = backdrop.querySelector('[data-action="confirm"]');
+  const existingNames = new Set((cls.students || []).map(s => (s.name || '').trim().toLowerCase()));
+
+  function dedupeCounts(rows) {
+    const seen = new Set();
+    let add = 0, dup = 0;
+    rows.forEach(r => {
+      const nm = String(r.name || '').trim();
+      if (!nm) return;
+      const key = nm.toLowerCase();
+      if (existingNames.has(key) || seen.has(key)) { dup++; return; }
+      seen.add(key); add++;
+    });
+    return { add, dup };
+  }
+
+  function recompute() {
+    const { add, dup } = dedupeCounts(parsed);
+    confirmBtn.disabled = add === 0;
+    confirmBtn.textContent = add ? `Add ${add} student${add !== 1 ? 's' : ''}` : 'Add students';
+    summaryEl.innerHTML = parsed.length
+      ? `${add} new · ${dup} duplicate${dup !== 1 ? 's' : ''} skipped · ${parsed.length} row${parsed.length !== 1 ? 's' : ''} parsed.`
+      : '';
+  }
+
+  const uploader = createStudentUploadZone({
+    onParsed: (rows) => { parsed = rows || []; recompute(); }
+  });
+  zone.appendChild(uploader.el);
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  confirmBtn.addEventListener('click', () => {
+    const rows = uploader.getStudents();
+    const existing = new Set((Store.getClass(classId)?.students || []).map(s => (s.name || '').trim().toLowerCase()));
+    const seen = new Set();
+    let added = 0, skipped = 0;
+    rows.forEach(r => {
+      const nm = String(r.name || '').trim();
+      if (!nm) { skipped++; return; }
+      const key = nm.toLowerCase();
+      if (existing.has(key) || seen.has(key)) { skipped++; return; }
+      seen.add(key);
+      Store.addStudent(classId, { name: nm });
+      added++;
+    });
+    showToast(`Added ${added} student${added !== 1 ? 's' : ''}${skipped ? ` — ${skipped} skipped` : ''}`, added ? 'success' : 'danger');
+    close();
+    onUpdate();
+  });
+}
+
+/* ═══════════ Free-text Remark (B6) ═══════════ */
+
+function showRemarkModal(classId, student, onUpdate) {
+  const { backdrop, close } = openModal({
+    title: `Remark — ${escapeHtml(student.name)}`,
+    width: 480,
+    body: `
+      <div class="input-group">
+        <label class="input-label">Free-text remark</label>
+        <textarea class="input" id="remark-text" rows="4" placeholder="A quick note — a win, a behaviour to follow up, anything worth remembering..." style="resize:vertical;"></textarea>
+      </div>
+      <p style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Saved as a teacher observation. Remarks feed the class portrait and the Report Comment Drafter.</p>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save">Save Remark</button>
+    `
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
+    const input = backdrop.querySelector('#remark-text');
+    const text = input.value.trim();
+    if (!text) { input.style.borderColor = 'var(--danger)'; return; }
+    // Store.updateStudent APPENDS observations — pass ONLY the new one to avoid a double-append.
+    Store.updateStudent(classId, student.id, {
+      observations: [{ id: generateId(), text, tags: ['remark'], ts: Date.now() }]
+    });
+    showToast('Remark saved', 'success');
+    close();
+    onUpdate();
+  });
+
+  setTimeout(() => backdrop.querySelector('#remark-text')?.focus(), 100);
 }
 
 /* ── Helpers ── */

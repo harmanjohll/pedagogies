@@ -6,6 +6,8 @@
 
 import { trackEvent } from './utils/analytics.js';
 import { idbSetContent, idbDeleteContent, idbGetAllContent, idbClearContent } from './utils/storage.js';
+import { getSchemaForClass, getFieldValue } from './utils/tracking.js';
+import { applyIdentity } from './utils/identity.js';
 
 const STORAGE_KEY = 'cocher_app_data';
 
@@ -94,6 +96,32 @@ function syncKbContentToIdb(oldList, newList) {
   } catch { /* non-fatal — content stays in memory this session */ }
 }
 
+/* ── References content lives in IndexedDB too ──
+ * Same discipline as Knowledge Base uploads: the extracted `content` (which can
+ * be large) is offloaded to IndexedDB and stripped from the localStorage
+ * snapshot once the write is confirmed; only metadata + `summary` are persisted.
+ * Reuses the shared kb_content store via idbSetContent/idbDeleteContent. */
+const _refContentInIdb = new Set();
+
+function syncRefContentToIdb(oldList, newList) {
+  try {
+    const newIds = new Set(newList.map(r => r.id));
+    oldList.forEach(r => {
+      if (r.id && !newIds.has(r.id)) {
+        _refContentInIdb.delete(r.id);
+        idbDeleteContent(r.id).catch(() => {});
+      }
+    });
+    newList.forEach(r => {
+      if (r.id && typeof r.content === 'string' && r.content) {
+        idbSetContent(r.id, r.content)
+          .then(ok => { if (ok) { _refContentInIdb.add(r.id); Store._persist(); } })
+          .catch(() => {});
+      }
+    });
+  } catch { /* non-fatal — content stays in memory this session */ }
+}
+
 const DEFAULT_STATE = {
   apiKey: localStorage.getItem('cocher_api_key') || '',
   model: localStorage.getItem('cocher_model') || 'gemini-2.5-flash',
@@ -115,6 +143,8 @@ const DEFAULT_STATE = {
   assessmentBlueprints: [],
   practiceLog: [],
   practiceGoal: null,
+  trackingSchemas: [],
+  references: [],
   onboardingComplete: false
 };
 
@@ -264,6 +294,14 @@ export const Store = {
       assessmentBlueprints: _state.assessmentBlueprints || [],
       practiceLog: _state.practiceLog || [],
       practiceGoal: _state.practiceGoal || null,
+      trackingSchemas: _state.trackingSchemas || [],
+      // Reference content lives in IndexedDB — persist metadata + summary only
+      // once the content write is confirmed there.
+      references: (_state.references || []).map(r => {
+        if (!_refContentInIdb.has(r.id)) return r;
+        const { content, ...meta } = r;
+        return meta;
+      }),
       schoolProfile: _state.schoolProfile || { name: '', values: '' },
       onboardingComplete: _state.onboardingComplete || false,
       apiKeyDeferred: _state.apiKeyDeferred || false,
@@ -434,25 +472,53 @@ export const Store = {
     if (!cls) return null;
     const students = cls.students || [];
 
-    // Per-dimension counts of each rubric level across students
-    const e21ccDistribution = {};
-    E21CC_DIM_KEYS.forEach(dim => {
-      const counts = { developing: 0, applying: 0, extending: 0, leading: 0 };
+    // Resolve the class's tracking schema (unset ⇒ e21cc, the default).
+    const schema = getSchemaForClass(cls, this.getTrackingSchemas());
+    const isE21cc = schema.id === 'e21cc';
+
+    // Per-field counts of each level across students. For E21CC this reproduces
+    // the exact original computation (regression-safe); other schemas use the
+    // shared tracking accessors.
+    const distribution = {};
+    schema.fields.forEach(field => {
+      const counts = {};
+      (field.levels || []).forEach(lv => { counts[lv.key] = 0; });
       students.forEach(s => {
-        const lv = s.e21cc?.[dim];
-        counts[E21CC_LEVEL_KEYS.includes(lv) ? lv : 'developing']++;
+        const lv = isE21cc
+          ? (E21CC_LEVEL_KEYS.includes(s.e21cc?.[field.key]) ? s.e21cc[field.key] : (field.levels?.[0]?.key))
+          : getFieldValue(s, schema, field);
+        if (counts[lv] === undefined) counts[lv] = 0;
+        counts[lv]++;
       });
-      e21ccDistribution[dim] = counts;
+      distribution[field.key] = counts;
     });
 
-    const weakestDims = [...E21CC_DIM_KEYS]
-      .sort((a, b) => e21ccDistribution[b].developing - e21ccDistribution[a].developing)
-      .slice(0, 2);
-    const strongestDims = [...E21CC_DIM_KEYS]
-      .sort((a, b) =>
-        (e21ccDistribution[b].leading + e21ccDistribution[b].extending) -
-        (e21ccDistribution[a].leading + e21ccDistribution[a].extending))
-      .slice(0, 2);
+    let weakestFields, strongestFields;
+    if (isE21cc) {
+      // Original E21CC ranking: weakest by 'developing' count, strongest by leading+extending.
+      weakestFields = [...E21CC_DIM_KEYS]
+        .sort((a, b) => distribution[b].developing - distribution[a].developing)
+        .slice(0, 2);
+      strongestFields = [...E21CC_DIM_KEYS]
+        .sort((a, b) =>
+          (distribution[b].leading + distribution[b].extending) -
+          (distribution[a].leading + distribution[a].extending))
+        .slice(0, 2);
+    } else {
+      // Generic ranking by mean level value across the class.
+      const meanVal = (field) => {
+        const counts = distribution[field.key]; let sum = 0, n = 0;
+        (field.levels || []).forEach(lv => { const c = counts[lv.key] || 0; sum += lv.value * c; n += c; });
+        return n ? sum / n : 0;
+      };
+      const byMeanAsc = [...schema.fields].sort((a, b) => meanVal(a) - meanVal(b));
+      weakestFields = byMeanAsc.slice(0, 2).map(f => f.key);
+      strongestFields = [...byMeanAsc].reverse().slice(0, 2).map(f => f.key);
+    }
+    // Back-compat aliases for not-yet-schema-aware readers (all classes are e21cc today).
+    const e21ccDistribution = isE21cc ? distribution : {};
+    const weakestDims = isE21cc ? weakestFields : [];
+    const strongestDims = isE21cc ? strongestFields : [];
 
     // Last 5 observation texts across students, newest first
     // (observation shape: { id, text, tags, ts })
@@ -502,6 +568,13 @@ export const Store = {
       subject: cls.subject || '',
       level: cls.level || '',
       studentCount: students.length,
+      // Schema-aware fields (new readers use these)
+      schemaId: schema.id,
+      schema,
+      distribution,
+      weakestFields,
+      strongestFields,
+      // Back-compat aliases (populated only for e21cc — the default)
       e21ccDistribution,
       weakestDims,
       strongestDims,
@@ -528,12 +601,28 @@ export const Store = {
     const detail = [p.level, p.subject].filter(Boolean).join(', ');
     lines.push(`CLASS PORTRAIT — ${p.className}${detail ? ` (${detail})` : ''}, ${p.studentCount} student${p.studentCount === 1 ? '' : 's'}.`);
     if (p.studentCount > 0) {
-      lines.push('E21CC levels (Co-Cher\'s six tracked dimensions; developing/applying/extending/leading): ' +
-        E21CC_DIM_KEYS.map(k => {
-          const c = p.e21ccDistribution[k];
-          return `${E21CC_DIM_LABELS[k]} ${c.developing}/${c.applying}/${c.extending}/${c.leading}`;
-        }).join('; ') + '.');
-      lines.push(`Weakest: ${p.weakestDims.map(k => E21CC_DIM_LABELS[k]).join(', ')}. Strongest: ${p.strongestDims.map(k => E21CC_DIM_LABELS[k]).join(', ')}.`);
+      if (p.schemaId === 'e21cc') {
+        lines.push('E21CC levels (Co-Cher\'s six tracked dimensions; developing/applying/extending/leading): ' +
+          E21CC_DIM_KEYS.map(k => {
+            const c = p.e21ccDistribution[k];
+            return `${E21CC_DIM_LABELS[k]} ${c.developing}/${c.applying}/${c.extending}/${c.leading}`;
+          }).join('; ') + '.');
+        lines.push(`Weakest: ${p.weakestDims.map(k => E21CC_DIM_LABELS[k]).join(', ')}. Strongest: ${p.strongestDims.map(k => E21CC_DIM_LABELS[k]).join(', ')}.`);
+      } else {
+        // Generic schema-labelled distribution (e.g. "Tracked (RAG): Understanding red/amber/green counts").
+        const fieldLabel = (key) => (p.schema.fields.find(f => f.key === key) || {}).label || key;
+        const levels = p.schema.fields[0]?.levels || [];
+        const levelOrder = levels.map(l => l.key);
+        const levelHdr = levels.map(l => l.label).join('/');
+        lines.push(`Tracked — ${p.schema.name}${levelHdr ? ` (${levelHdr})` : ''}: ` +
+          p.schema.fields.map(f => {
+            const c = p.distribution[f.key] || {};
+            const fLevels = (f.levels || []).map(l => l.key);
+            const order = fLevels.length ? fLevels : levelOrder;
+            return `${f.label} ${order.map(k => c[k] || 0).join('/')}`;
+          }).join('; ') + '.');
+        lines.push(`Weakest: ${p.weakestFields.map(fieldLabel).join(', ')}. Strongest: ${p.strongestFields.map(fieldLabel).join(', ')}.`);
+      }
     }
     if (p.engagementTrend) lines.push(`Engagement trend across recent lessons: ${p.engagementTrend}.`);
     if (p.recentObservations.length) {
@@ -936,6 +1025,77 @@ export const Store = {
     this._notify();
   },
 
+  /* ══════════ Tracking schemas (custom, teacher-level) ══════════ */
+
+  getTrackingSchemas() {
+    return _state.trackingSchemas || [];
+  },
+
+  addTrackingSchema(schema) {
+    const entry = { id: generateId(), name: schema.name || 'Custom', fields: schema.fields || [], createdAt: Date.now() };
+    _state.trackingSchemas = [...(_state.trackingSchemas || []), entry];
+    this._persist();
+    this._notify();
+    return entry;
+  },
+
+  updateTrackingSchema(id, patch) {
+    _state.trackingSchemas = (_state.trackingSchemas || []).map(s => s.id === id ? { ...s, ...patch } : s);
+    this._persist();
+    this._notify();
+  },
+
+  deleteTrackingSchema(id) {
+    _state.trackingSchemas = (_state.trackingSchemas || []).filter(s => s.id !== id);
+    this._persist();
+    this._notify();
+  },
+
+  /* ══════════ References (teacher's reusable AI reference docs) ══════════ */
+
+  getReferences() {
+    return _state.references || [];
+  },
+
+  addReference(ref) {
+    const entry = {
+      id: generateId(),
+      name: ref.name || 'Reference',
+      source: ref.source || {},
+      summary: ref.summary || '',
+      content: ref.content || '',
+      contentLength: (ref.content || '').length,
+      createdAt: Date.now()
+    };
+    const old = _state.references || [];
+    _state.references = [...old, entry];
+    syncRefContentToIdb(old, _state.references);
+    this._persist();
+    this._notify();
+    return entry;
+  },
+
+  updateReference(id, patch) {
+    const old = _state.references || [];
+    _state.references = old.map(r => {
+      if (r.id !== id) return r;
+      const next = { ...r, ...patch };
+      if (typeof patch.content === 'string') next.contentLength = patch.content.length;
+      return next;
+    });
+    syncRefContentToIdb(old, _state.references);
+    this._persist();
+    this._notify();
+  },
+
+  deleteReference(id) {
+    const old = _state.references || [];
+    _state.references = old.filter(r => r.id !== id);
+    syncRefContentToIdb(old, _state.references);
+    this._persist();
+    this._notify();
+  },
+
   /* ══════════ Activity Feed ══════════ */
 
   _addActivity(type, description) {
@@ -975,6 +1135,8 @@ export const Store = {
       assessmentBlueprints: _state.assessmentBlueprints || [],
       practiceLog: _state.practiceLog || [],
       practiceGoal: _state.practiceGoal || null,
+      trackingSchemas: _state.trackingSchemas || [],
+      references: _state.references || [],
       recentActivity: _state.recentActivity
     }, null, 2);
   },
@@ -987,7 +1149,8 @@ export const Store = {
   previewImportData(jsonStr) {
     const ARRAY_KEYS = ['classes', 'lessons', 'savedLayouts', 'adminEvents', 'knowledgeUploads',
       'pdFolders', 'assessmentRoutines', 'savedTOS', 'assessmentChecklists', 'stimulusLibrary',
-      'sourceLibrary', 'departmentSchemes', 'assessmentBlueprints', 'practiceLog', 'recentActivity'];
+      'sourceLibrary', 'departmentSchemes', 'assessmentBlueprints', 'practiceLog',
+      'trackingSchemas', 'references', 'recentActivity'];
     let data;
     try { data = JSON.parse(jsonStr); } catch { return { ok: false, error: 'This file is not valid JSON.' }; }
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -1030,6 +1193,12 @@ export const Store = {
       if (Array.isArray(data.assessmentBlueprints)) _state.assessmentBlueprints = data.assessmentBlueprints;
       if (Array.isArray(data.practiceLog)) _state.practiceLog = data.practiceLog;
       if (data.practiceGoal && typeof data.practiceGoal === 'object' && !Array.isArray(data.practiceGoal)) _state.practiceGoal = data.practiceGoal;
+      if (Array.isArray(data.trackingSchemas)) _state.trackingSchemas = data.trackingSchemas;
+      if (Array.isArray(data.references)) {
+        _state.references = data.references;
+        // Imported backups may carry reference content — put it in IndexedDB
+        syncRefContentToIdb([], data.references);
+      }
       if (Array.isArray(data.recentActivity)) _state.recentActivity = data.recentActivity;
       // Also sync to legacy localStorage keys for backwards compat
       if (Array.isArray(data.stimulusLibrary)) localStorage.setItem('cocher_stimulus_library', JSON.stringify(data.stimulusLibrary));
@@ -1058,6 +1227,9 @@ export const Store = {
     _state.assessmentBlueprints = [];
     _state.practiceLog = [];
     _state.practiceGoal = null;
+    _state.trackingSchemas = [];
+    _state.references = [];
+    _refContentInIdb.clear();
     _state.recentActivity = [];
     _state.chatHistory = [];
     // Clear legacy keys too
@@ -1098,6 +1270,32 @@ export const Store = {
   }
 })();
 
+/* ── Hydrate References content from IndexedDB (mirrors the KB pattern) ── */
+(async function migrateAndHydrateRefContent() {
+  try {
+    const refs = _state.references || [];
+    if (!refs.length) return;
+    const withContent = refs.filter(r => r.id && typeof r.content === 'string' && r.content);
+    for (const r of withContent) {
+      const ok = await idbSetContent(r.id, r.content);
+      if (ok) _refContentInIdb.add(r.id);
+    }
+    const map = await idbGetAllContent();
+    let hydrated = false;
+    refs.forEach(r => {
+      if (r.content == null && map.has(r.id)) {
+        r.content = map.get(r.id);
+        _refContentInIdb.add(r.id);
+        hydrated = true;
+      }
+    });
+    if (withContent.some(r => _refContentInIdb.has(r.id))) Store._persist();
+    if (hydrated) Store._notify();
+  } catch (e) {
+    console.warn('Co-Cher: Reference content hydration failed', e);
+  }
+})();
+
 // Apply dark mode and colour palette on load
 if (_state.darkMode) {
   document.documentElement.classList.add('dark');
@@ -1105,3 +1303,6 @@ if (_state.darkMode) {
 if (_state.palette) {
   document.documentElement.classList.add(`palette-${_state.palette}`);
 }
+// Apply the teacher's personal visual identity (accent) — overrides the palette
+// when a personal accent is set; safe no-op otherwise.
+try { applyIdentity(); } catch { /* ignore */ }
