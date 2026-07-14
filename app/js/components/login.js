@@ -9,7 +9,7 @@
 import { Store } from '../state.js';
 import { trackEvent } from '../utils/analytics.js';
 
-const TT_CSV_URL = './btyrelief/BTYTT_2026Sem1_v1.csv';
+const TT_CSV_URL = './btyrelief/BTYTT_2026Sem2_v1.csv';
 
 let _authorisedList = null;   // [{ name, email }]
 

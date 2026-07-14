@@ -27,7 +27,7 @@ async function loadTimetable() {
   if (_ttData) return _ttData;
   try {
     const [res] = await Promise.all([
-      fetch('./btyrelief/BTYTT_2026Sem1_v1.csv'),
+      fetch('./btyrelief/BTYTT_2026Sem2_v1.csv'),
       // Load calendar reference alongside timetable
       (async () => { if (!_sdCalRef) _sdCalRef = await loadCalendarReference(); })()
     ]);
@@ -40,7 +40,7 @@ async function loadTimetable() {
 function parseTTCSV(csv) {
   const lines = csv.split('\n').filter(l => l.trim());
   if (lines.length < 2) return [];
-  const headers = lines[0].split(',');
+  const headers = lines[0].replace(/^﻿/, '').split(',');
   return lines.slice(1).map(line => {
     const cols = line.split(',');
     const row = {};
@@ -50,6 +50,16 @@ function parseTTCSV(csv) {
 }
 
 let _sdCalRef = null;
+
+/* Beatty Sem 2 bell schedule (canonical copy lives in dashboard.js): 35-min
+ * teaching periods, P13/P14 on Wed/Thu afternoons only; CSV columns are keyed
+ * {Odd|Even}{Day}P{nn} (zero-padded), e.g. OddMonP01, EvenThuP14. */
+const SD_TEACHING_PERIODS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14];
+const SD_PERIOD_START = {
+  1: 475, 2: 510, 3: 545, 4: 580, 5: 615, 6: 650, 7: 685,
+  8: 720, 9: 755, 10: 790, 11: 825, 13: 895, 14: 930,
+};
+const sdPeriodCol = (weekType, dayStr, p) => `${weekType}${dayStr}P${String(p).padStart(2, '0')}`;
 
 function getCurrentPeriodKey() {
   const now = new Date();
@@ -69,21 +79,16 @@ function getCurrentPeriodKey() {
     weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
   }
 
-  // Approximate period from time (BTYSS bell schedule)
+  // Approximate current period from the time (Beatty Sem 2 bell schedule)
   const h = now.getHours(), m = now.getMinutes();
   const mins = h * 60 + m;
-  const periods = [
-    { p: 1, start: 450 }, { p: 2, start: 490 }, { p: 3, start: 530 },
-    { p: 4, start: 570 }, { p: 5, start: 620 }, { p: 6, start: 660 },
-    { p: 7, start: 700 }, { p: 8, start: 740 }, { p: 9, start: 790 },
-    { p: 10, start: 830 }, { p: 11, start: 870 }
-  ];
   let period = null;
-  for (let i = periods.length - 1; i >= 0; i--) {
-    if (mins >= periods[i].start) { period = periods[i].p; break; }
+  for (let i = SD_TEACHING_PERIODS.length - 1; i >= 0; i--) {
+    const p = SD_TEACHING_PERIODS[i];
+    if (mins >= SD_PERIOD_START[p]) { period = p; break; }
   }
   if (!period) return null;
-  return { col: `${weekType}${dayStr}${period}`, dayStr, period, weekType };
+  return { col: sdPeriodCol(weekType, dayStr, period), dayStr, period, weekType };
 }
 
 function getTTForTeacher(ttData, email) {
