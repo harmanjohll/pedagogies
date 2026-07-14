@@ -7,7 +7,7 @@
 
 import { openModal } from './modals.js';
 
-const TT_CSV_URL = './btyrelief/BTYTT_2026Sem1_v1.csv';
+const TT_CSV_URL = './btyrelief/BTYTT_2026Sem2_v1.csv';
 const ALL_STAFF_EMAIL = 'BTYSS_all_staff@btyss.moe.edu.sg';
 
 let _staffCache = null;

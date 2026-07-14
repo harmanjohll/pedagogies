@@ -242,7 +242,7 @@
   <script>
     // --- CONSTANTS ---
     const DATA_URLS = {
-        TIMETABLE: 'BTYTT_2026Sem1_v1.csv',
+        TIMETABLE: 'BTYTT_2026Sem2_v1.csv',
         CALENDAR: 'CalendarReference.csv'
     };
     
@@ -264,8 +264,13 @@
     let currentWeekType = '';  
     let currentDayName = '';
     let draftAssignments = [];
-    let teacherInstructions = {}; 
+    let teacherInstructions = {};
     let materialLink = "";
+
+    // Beatty Sem 2: 35-min teaching periods; P13/P14 on Wed/Thu afternoons only.
+    // CSV columns are keyed {Odd|Even}{Day}P{nn} (zero-padded), e.g. OddMonP01.
+    const RELIEF_PERIODS = [1,2,3,4,5,6,7,8,9,10,11,13,14];
+    const periodKey = (wk, day, p) => `${wk}${day}P${String(p).padStart(2,'0')}`;
 
     // --- DOM ELEMENTS ---
     const els = {
@@ -386,7 +391,7 @@
 
     function parseCSV(csvText) {
       const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
-      const headers = lines[0].split(',').map(h => h.trim());
+      const headers = lines[0].replace(/^﻿/, '').split(',').map(h => h.trim());
       
       const idxName = headers.findIndex(h => h.toUpperCase().includes('NAME'));
       const idxEmail = headers.findIndex(h => h.toUpperCase().includes('EMAIL') && !h.toUpperCase().includes('IP') && !h.toUpperCase().includes('RO'));
@@ -495,8 +500,8 @@
         let classesFound = false;
         let html = '';
 
-        for(let p=1; p<=11; p++) {
-            const key = `${currentWeekType}${currentDayName}${p}`;
+        for(const p of RELIEF_PERIODS) {
+            const key = periodKey(currentWeekType, currentDayName, p);
             const code = teacher.schedule[key] || "0";
             if(code !== "0") {
                 classesFound = true;
@@ -542,7 +547,7 @@
         const teacher = teachersData.find(t => t.name === name);
 
         const instructions = {};
-        for(let p=1; p<=11; p++) {
+        for(const p of RELIEF_PERIODS) {
             const input = document.getElementById(`instr_p${p}`);
             if(input && input.value.trim()) instructions[p] = input.value.trim();
         }
@@ -563,8 +568,8 @@
         
         let body = `Dear ${ipHeadName},%0D%0A%0D%0A${senderName} will be away on ${niceDate}.%0D%0A%0D%0AWe need your help to cover the following lessons. Some instructions are available for your reference, too.%0D%0A%0D%0ALink to Materials: ${matLink || "None"}%0D%0A%0D%0APlease click this link to assign relief:%0D%0A${encodeURIComponent(magicLink)}%0D%0A%0D%0AClasses:%0D%0A`;
         
-        for(let p=1; p<=11; p++) {
-            const key = `${currentWeekType}${currentDayName}${p}`;
+        for(const p of RELIEF_PERIODS) {
+            const key = periodKey(currentWeekType, currentDayName, p);
             const code = teacher.schedule[key] || "0";
             if(code !== "0") {
                 const instr = instructions[p] ? ` (Note: ${instructions[p]})` : "";
@@ -600,8 +605,8 @@
         els.resultsList.innerHTML = '';
 
         let tasksFound = 0;
-        for(let p=1; p<=11; p++) {
-            const key = `${currentWeekType}${currentDayName}${p}`;
+        for(const p of RELIEF_PERIODS) {
+            const key = periodKey(currentWeekType, currentDayName, p);
             const code = teacher.schedule[key] || "0";
 
             if(code !== "0") {
@@ -703,7 +708,10 @@
         
         teachersData.forEach(candidate => {
             if(candidate.name === absentTeacher.name) return;
-            if(candidate.schedule[columnKey] !== "0") return;
+            // Free at this period = no class. Sem 2 leaves free cells blank
+            // (absent from schedule → undefined); Sem 1 stored "0". Treat both as free.
+            const busyHere = candidate.schedule[columnKey];
+            if(busyHere && busyHere !== "0") return;
 
             let score = 0;
             let badges = [];

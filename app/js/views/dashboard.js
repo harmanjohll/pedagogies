@@ -253,11 +253,11 @@ let _ttCache = null;
 export async function loadTT() {
   if (_ttCache) return _ttCache;
   try {
-    const res = await fetch('./btyrelief/BTYTT_2026Sem1_v1.csv');
+    const res = await fetch('./btyrelief/BTYTT_2026Sem2_v1.csv');
     const text = await res.text();
     const lines = text.split('\n').filter(l => l.trim());
     if (lines.length < 2) { _ttCache = []; return _ttCache; }
-    const headers = lines[0].split(',');
+    const headers = lines[0].replace(/^﻿/, '').split(',');
     _ttCache = lines.slice(1).map(line => {
       const cols = line.split(',');
       const row = {};
@@ -266,6 +266,38 @@ export async function loadTT() {
     });
   } catch { _ttCache = []; }
   return _ttCache;
+}
+
+/* ── Beatty Semester 2 bell schedule ──────────────────────────────
+ * Day starts 07:30. P0 (form/assembly, 25 min) and P12 are not taught and
+ * never appear in the timetable grid. All teaching periods are 35 min. P13 &
+ * P14 run on Wed/Thu afternoons only. CSV columns are keyed {Odd|Even}{Day}P{nn}
+ * (zero-padded), e.g. OddMonP01, EvenThuP14. Which periods a given day/week
+ * actually has is read from the row's own columns (periodsForDay), so late-start
+ * days and the Wed/Thu afternoons are handled without hardcoding day lists. */
+export const TEACHING_PERIODS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14];
+const PERIOD_START_MIN = {
+  1: 475, 2: 510, 3: 545, 4: 580, 5: 615, 6: 650, 7: 685,
+  8: 720, 9: 755, 10: 790, 11: 825, 13: 895, 14: 930,
+};
+const PERIOD_LEN_MIN = 35;
+const DAY_START_MIN = 450; // 07:30 — first bell (P0 form/assembly)
+
+/** Timetable CSV column key, e.g. periodCol('Odd','Mon',1) → 'OddMonP01'. */
+export function periodCol(weekType, dayStr, p) {
+  return `${weekType}${dayStr}P${String(p).padStart(2, '0')}`;
+}
+/** Periods that actually exist for this day/week, read from the row's own columns. */
+function periodsForDay(teacherRow, weekType, dayStr) {
+  return TEACHING_PERIODS.filter(p => periodCol(weekType, dayStr, p) in teacherRow);
+}
+function periodStartMin(p) { return PERIOD_START_MIN[p] ?? null; }
+function periodEndMin(p) { const s = PERIOD_START_MIN[p]; return s == null ? null : s + PERIOD_LEN_MIN; }
+/** minutes-from-midnight → "7:55" (12-hour clock, no meridian). */
+function fmtClockShort(mins) {
+  if (mins == null) return '';
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return `${h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')}`;
 }
 
 let _calRef = null;
@@ -304,15 +336,10 @@ export function getTTPeriodKey() {
   }
 
   const h = now.getHours(), m = now.getMinutes(), mins = h * 60 + m;
-  const periods = [
-    { p: 1, start: 450 }, { p: 2, start: 490 }, { p: 3, start: 530 },
-    { p: 4, start: 570 }, { p: 5, start: 620 }, { p: 6, start: 660 },
-    { p: 7, start: 700 }, { p: 8, start: 740 }, { p: 9, start: 790 },
-    { p: 10, start: 830 }, { p: 11, start: 870 }
-  ];
   let period = null;
-  for (let i = periods.length - 1; i >= 0; i--) {
-    if (mins >= periods[i].start) { period = periods[i].p; break; }
+  for (let i = TEACHING_PERIODS.length - 1; i >= 0; i--) {
+    const p = TEACHING_PERIODS[i];
+    if (mins >= PERIOD_START_MIN[p]) { period = p; break; }
   }
   return { dayStr, period, weekType, mins };
 }
@@ -339,13 +366,12 @@ function buildStatusBanner(teacherRow) {
   if (!pk) return ''; // Weekend
 
   const { dayStr, period, weekType, mins } = pk;
-  const periodStartTimes = [0, 450, 490, 530, 570, 620, 660, 700, 740, 790, 830, 870];
   const firstName = getFirstName() || 'Cher';
 
   // Build today's full schedule
   const allPeriods = [];
-  for (let p = 1; p <= 11; p++) {
-    const col = `${weekType}${dayStr}${p}`;
+  for (const p of periodsForDay(teacherRow, weekType, dayStr)) {
+    const col = periodCol(weekType, dayStr, p);
     const val = teacherRow[col];
     if (val && val !== '0') {
       const parts = val.split(' / ');
@@ -354,7 +380,7 @@ function buildStatusBanner(teacherRow) {
   }
 
   const lastPeriod = allPeriods.length > 0 ? allPeriods[allPeriods.length - 1].p : 0;
-  const beforeSchool = mins < 450;
+  const beforeSchool = mins < DAY_START_MIN;
 
   // Find the next upcoming lesson (current or future)
   const nextLesson = allPeriods.find(s => period === null ? true : s.p >= period);
@@ -370,7 +396,7 @@ function buildStatusBanner(teacherRow) {
 
   if (beforeSchool && nextLesson) {
     // Before school: show first lesson
-    const startTime = formatTime(periodStartTimes[nextLesson.p]);
+    const startTime = formatTime(periodStartMin(nextLesson.p));
     return `
       <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent,#4361ee),#6366f1);color:#fff;display:flex;align-items:center;gap:var(--sp-4);">
         <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -401,7 +427,7 @@ function buildStatusBanner(teacherRow) {
     const upNext = allPeriods.find(s => s.p > period);
     if (isCurrent) {
       const label = upNext
-        ? `Up next: P${upNext.p} | ${upNext.classCode} in ${upNext.room} at ${formatTime(periodStartTimes[upNext.p])}`
+        ? `Up next: P${upNext.p} | ${upNext.classCode} in ${upNext.room} at ${formatTime(periodStartMin(upNext.p))}`
         : 'This is your last lesson today';
       return `
         <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:var(--accent-light);border-left:4px solid var(--accent);display:flex;align-items:center;gap:var(--sp-4);">
@@ -415,7 +441,7 @@ function buildStatusBanner(teacherRow) {
           </div>
         </div>`;
     } else {
-      const startTime = formatTime(periodStartTimes[nextLesson.p]);
+      const startTime = formatTime(periodStartMin(nextLesson.p));
       return `
         <div style="padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-5);border-radius:var(--radius-lg);background:var(--warning-light, rgba(245,158,11,0.1));border-left:4px solid var(--warning);display:flex;align-items:center;gap:var(--sp-4);">
           <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -443,8 +469,8 @@ function buildTTScheduleCard(teacherRow) {
 
   // Build today's full schedule
   const allPeriods = [];
-  for (let p = 1; p <= 11; p++) {
-    const col = `${weekType}${dayStr}${p}`;
+  for (const p of periodsForDay(teacherRow, weekType, dayStr)) {
+    const col = periodCol(weekType, dayStr, p);
     const val = teacherRow[col];
     if (val && val !== '0') {
       const parts = val.split(' / ');
@@ -454,10 +480,9 @@ function buildTTScheduleCard(teacherRow) {
 
   // Find last teaching period
   const lastPeriod = allPeriods.length > 0 ? allPeriods[allPeriods.length - 1].p : 0;
-  const periodEndTimes = [0, 490, 530, 570, 610, 660, 700, 740, 780, 830, 870, 910];
   const doneForDay = period !== null && period > lastPeriod && allPeriods.length > 0;
   // School day hasn't started
-  const beforeSchool = mins < 450;
+  const beforeSchool = mins < DAY_START_MIN;
 
   // Current slot
   let currentLabel = '';
@@ -998,8 +1023,8 @@ function buildWeeklyOverview(teacherRow, lessons, classes) {
 
   const dayColumns = days.map((day, idx) => {
     const periods = [];
-    for (let p = 1; p <= 11; p++) {
-      const col = `${weekType}${day}${p}`;
+    for (const p of periodsForDay(teacherRow, weekType, day)) {
+      const col = periodCol(weekType, day, p);
       const val = teacherRow[col];
       if (val && val !== '0') {
         const parts = val.split(' / ');
@@ -1026,8 +1051,8 @@ function buildWeeklyOverview(teacherRow, lessons, classes) {
   // Count teaching periods this week
   let totalPeriods = 0;
   days.forEach(day => {
-    for (let p = 1; p <= 11; p++) {
-      const col = `${weekType}${day}${p}`;
+    for (const p of periodsForDay(teacherRow, weekType, day)) {
+      const col = periodCol(weekType, day, p);
       const val = teacherRow[col];
       if (val && val !== '0') totalPeriods++;
     }
@@ -1049,8 +1074,8 @@ function buildPrepChecklist(teacherRow, lessons, classes) {
 
   // Find next upcoming lesson
   const allPeriods = [];
-  for (let p = 1; p <= 11; p++) {
-    const col = `${weekType}${dayStr}${p}`;
+  for (const p of periodsForDay(teacherRow, weekType, dayStr)) {
+    const col = periodCol(weekType, dayStr, p);
     const val = teacherRow[col];
     if (val && val !== '0') {
       const parts = val.split(' / ');
@@ -1058,7 +1083,7 @@ function buildPrepChecklist(teacherRow, lessons, classes) {
     }
   }
 
-  const beforeSchool = mins < 450;
+  const beforeSchool = mins < DAY_START_MIN;
   const nextLesson = allPeriods.find(s => beforeSchool ? true : (period !== null ? s.p >= period : false));
   if (!nextLesson) return '<div style="font-size:0.8125rem;color:var(--ink-muted);padding:var(--sp-2);">No upcoming lessons today. You\'re all set!</div>';
 
@@ -1478,7 +1503,7 @@ function calmHeadline(firstName) {
   const pk = getTTPeriodKey();
   if (!pk) return `${getGreeting()}, ${firstName}.`;
   const dayFull = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday' }[pk.dayStr] || pk.dayStr;
-  if (pk.mins < 450) return `${dayFull}, before Period 1.`;
+  if (pk.mins < periodStartMin(1)) return `${dayFull}, before Period 1.`;
   if (pk.mins >= 910) return `${dayFull}, after school.`;
   if (pk.period) {
     // Within 10 minutes of the next period's start, phrase it as "before Pn"
@@ -1512,8 +1537,8 @@ function calmOrientationText(teacherRow, lessons) {
   if (!pk) return `No school day today — ${lessonBit}.`;
   if (!teacherRow) return `No timetable found — ${lessonBit}.`;
   let n = 0;
-  for (let p = 1; p <= 11; p++) {
-    const val = teacherRow[`${pk.weekType}${pk.dayStr}${p}`];
+  for (const p of periodsForDay(teacherRow, pk.weekType, pk.dayStr)) {
+    const val = teacherRow[periodCol(pk.weekType, pk.dayStr, p)];
     if (val && val !== '0') n++;
   }
   const teachBit = n === 0 ? 'No teaching periods today'
@@ -1524,7 +1549,7 @@ function calmOrientationText(teacherRow, lessons) {
 
 /* Day ribbon: all 11 periods as small cards. Current period gets the
  * marker wash + NOW tag; past periods are dimmed. Same column parsing as
- * buildMyTimetable (`${weekType}${dayStr}${p}`). */
+ * buildMyTimetable (periodCol → OddMonP01…). */
 function buildCalmRibbon(teacherRow) {
   if (!teacherRow) return '';
   const pk = getTTPeriodKey();
@@ -1536,8 +1561,8 @@ function buildCalmRibbon(teacherRow) {
   const accent = getIdentity().personalAccent;
   const useAccent = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(accent || '').trim());
   const cells = [];
-  for (let p = 1; p <= 11; p++) {
-    const val = teacherRow[`${weekType}${dayStr}${p}`];
+  for (const p of periodsForDay(teacherRow, weekType, dayStr)) {
+    const val = teacherRow[periodCol(weekType, dayStr, p)];
     const hasClass = val && val !== '0';
     const classCode = hasClass ? (val.split(' / ')[0] || '').trim() : '';
     const isNow = period === p;
@@ -2472,16 +2497,9 @@ export function buildMyTimetable(teacherRow) {
   if (!pk) return '';
   const { dayStr, period, weekType } = pk;
 
-  const periodTimes = [
-    '7:30', '8:10', '8:50', '9:30', '10:20', '11:00', '11:40', '12:20', '1:10', '1:50', '2:30'
-  ];
-  const periodEndTimes = [
-    '8:10', '8:50', '9:30', '10:10', '11:00', '11:40', '12:20', '1:00', '1:50', '2:30', '3:10'
-  ];
-
   const rows = [];
-  for (let p = 1; p <= 11; p++) {
-    const col = `${weekType}${dayStr}${p}`;
+  for (const p of periodsForDay(teacherRow, weekType, dayStr)) {
+    const col = periodCol(weekType, dayStr, p);
     const val = teacherRow[col];
     const hasClass = val && val !== '0';
     const parts = hasClass ? val.split(' / ') : [];
@@ -2498,7 +2516,7 @@ export function buildMyTimetable(teacherRow) {
     const freeLabel = r.isPast ? 'Free' : '<span style="color:var(--success,#22c55e);">Free</span>';
     return `<div style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);border-bottom:1px solid var(--border-light);font-size:0.8125rem;${bg}${leftBorder}">
       <div style="width:36px;font-weight:700;color:var(--ink-muted);flex-shrink:0;">P${r.p}</div>
-      <div style="width:80px;font-size:0.75rem;color:var(--ink-faint);flex-shrink:0;">${periodTimes[r.p - 1]}–${periodEndTimes[r.p - 1]}</div>
+      <div style="width:80px;font-size:0.75rem;color:var(--ink-faint);flex-shrink:0;">${fmtClockShort(periodStartMin(r.p))}–${fmtClockShort(periodEndMin(r.p))}</div>
       <div style="flex:1;font-weight:${r.hasClass ? '600' : '400'};color:var(--ink);">${r.hasClass ? r.classCode : freeLabel}</div>
       ${r.room ? `<div style="font-size:0.75rem;color:var(--ink-muted);">${r.room}</div>` : ''}
       ${r.isCurrent ? '<span class="badge badge-blue" style="font-size:0.625rem;">NOW</span>' : ''}
