@@ -112,6 +112,25 @@ export function normalizeModel(id) {
   return AVAILABLE_MODELS.some(m => m.id === id) ? id : 'gemini-2.5-flash';
 }
 
+/* ── Defensive JSON extraction for jsonMode responses ──
+ * responseMimeType asks Gemini for pure JSON, but models occasionally wrap
+ * output in ``` fences or stray prose. Strip both before parsing. */
+function parseJsonResponse(raw, label) {
+  let text = String(raw ?? '').trim();
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) text = fence[1].trim();
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start >= 0 && end > start && (start > 0 || end < text.length - 1)) {
+    text = text.slice(start, end + 1);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Could not read the model's ${label} response — please try again.`);
+  }
+}
+
 export async function sendChat(messages, options = {}) {
   trackEvent('ai', 'generate', options.trackLabel || 'chat', options.trackDetail || '');
   const apiKey = Store.get('apiKey');
@@ -305,9 +324,17 @@ const E21CC_PROFILE_DIMS = [
 const e21ccProfileLine = (s) =>
   E21CC_PROFILE_DIMS.map(([key, label]) => `${label}=${s.e21cc?.[key] || 'developing'}`).join(', ');
 
+/* Returns a structured result:
+ *   { groups: [{ name, studentNames: [], rationale }], strategyNote }
+ * A non-enumerable toString() renders the legacy markdown so callers that
+ * treat the result as text (e.g. classes.js via escapeHtml → String()) keep
+ * working unchanged. Use groupingToMarkdown() for an explicit rendering.
+ * options.portraitText: schema-aware class portrait prose
+ * (Store.getPortraitPromptText) injected as extra grouping context. */
 export async function suggestGrouping(students, activityType, options = {}) {
   const groupSize = options.groupSize || 4;
   const considerations = options.considerations || '';
+  const portraitText = options.portraitText || '';
 
   const studentSummary = students.map((s, i) =>
     `${i + 1}. ${s.name}: ${e21ccProfileLine(s)}`
@@ -316,24 +343,23 @@ export async function suggestGrouping(students, activityType, options = {}) {
   const totalStudents = students.length;
   const expectedGroups = Math.ceil(totalStudents / groupSize);
 
-  let userContent = `Create student groupings for: ${activityType}
+  const userContent = `Create student groupings for: ${activityType}
 Preferred group size: ${groupSize} students per group (approximately ${expectedGroups} groups)
 Total students: ${totalStudents}
 
-${considerations ? `Teacher's additional considerations:\n${considerations}\n\n` : ''}Students and their E21CC profiles:
+${portraitText ? `Class portrait (whole-class summary — use it to inform the strategy):\n${portraitText}\n\n` : ''}${considerations ? `Teacher's additional considerations:\n${considerations}\n\n` : ''}Students and their E21CC profiles:
 ${studentSummary}`;
 
-  const messages = [{ role: 'user', content: userContent }];
-
-  return sendChat(messages, {
+  const raw = await sendChat([{ role: 'user', content: userContent }], {
     trackLabel: 'suggestGrouping',
+    jsonMode: true,
     systemPrompt: `You are Co-Cher's grouping specialist. Create student groups for Singapore classrooms.
 
 ABSOLUTE RULES — FOLLOW EXACTLY:
-1. You MUST list EVERY SINGLE ONE of the ${totalStudents} students. Count them. No one left out.
+1. You MUST assign EVERY SINGLE ONE of the ${totalStudents} students to exactly one group. Count them. No one left out, no one duplicated.
 2. Target ${groupSize} per group. Some groups may have ${groupSize - 1} or ${groupSize + 1} if numbers don't divide evenly.
-3. Keep rationale SHORT — one sentence per group maximum.
-4. Use the student's FULL NAME exactly as provided in the list.
+3. Keep each rationale SHORT — one sentence maximum.
+4. Use each student's FULL NAME exactly as provided in the list. Do NOT abbreviate, do NOT use "..." or "etc."
 
 E21CC dimension levels run developing → applying → extending → leading.
 
@@ -346,24 +372,55 @@ Grouping logic:
 - Debate: balance Communication levels
 - Project-based: diverse strengths
 
-FORMAT — follow this exactly:
-
-## Groups for ${activityType}
-
-**Group 1:** Name A, Name B, Name C, Name D
-**Rationale:** One short sentence.
-
-**Group 2:** Name E, Name F, Name G, Name H
-**Rationale:** One short sentence.
-
-(continue until ALL ${totalStudents} students are assigned)
-
-**Total: ${totalStudents} / ${totalStudents} students assigned**
-
-IMPORTANT: List every student name. Do NOT abbreviate, do NOT use "..." or "etc." Do NOT skip any student.`,
-    temperature: 0.6,
+Return STRICT JSON only (no markdown, no commentary) in exactly this shape:
+{"groups":[{"name":"Group 1","studentNames":["Full Name A","Full Name B"],"rationale":"One short sentence."}],"strategyNote":"One or two sentences on the overall grouping strategy."}`,
+    temperature: 0.5,
     maxTokens: 8192
   });
+
+  const parsed = parseJsonResponse(raw, 'grouping');
+  const groups = (Array.isArray(parsed?.groups) ? parsed.groups : [])
+    .map((g, i) => ({
+      name: typeof g?.name === 'string' && g.name.trim() ? g.name.trim() : `Group ${i + 1}`,
+      studentNames: Array.isArray(g?.studentNames) ? g.studentNames.map(n => String(n).trim()).filter(Boolean) : [],
+      rationale: typeof g?.rationale === 'string' ? g.rationale.trim() : ''
+    }))
+    .filter(g => g.studentNames.length > 0);
+  if (groups.length === 0) {
+    throw new Error('The model returned no usable groups — please try again.');
+  }
+  const result = {
+    groups,
+    strategyNote: typeof parsed?.strategyNote === 'string' ? parsed.strategyNote.trim() : ''
+  };
+  Object.defineProperty(result, 'toString', {
+    value: () => groupingToMarkdown(result, { activityType }),
+    enumerable: false
+  });
+  return result;
+}
+
+/* Render a structured grouping result as the markdown shape the UI has
+ * always shown (**Group N:** names + rationale). Pure and synchronous. */
+export function groupingToMarkdown(result, options = {}) {
+  const groups = Array.isArray(result?.groups) ? result.groups : [];
+  const lines = [`## Groups${options.activityType ? ` for ${options.activityType}` : ''}`, ''];
+  let total = 0;
+  groups.forEach((g, i) => {
+    const names = (g.studentNames || []).map(n => String(n).trim()).filter(Boolean);
+    total += names.length;
+    const isDefaultName = /^group\s*\d+$/i.test((g.name || '').trim());
+    const label = isDefaultName ? g.name.trim() : `Group ${i + 1}${g.name ? ` — ${g.name}` : ''}`;
+    lines.push(`**${label}:** ${names.join(', ')}`);
+    if (g.rationale) lines.push(`**Rationale:** ${g.rationale}`);
+    lines.push('');
+  });
+  if (total > 0) lines.push(`**Total: ${total} student${total === 1 ? '' : 's'} assigned**`);
+  if (result?.strategyNote) {
+    lines.push('');
+    lines.push(`**Strategy:** ${result.strategyNote}`);
+  }
+  return lines.join('\n').trim();
 }
 
 /* ── Exit Ticket / Quick Check Generator ── */
@@ -512,10 +569,15 @@ Be specific and practical. Teachers need minute-by-minute clarity.`,
 }
 
 /* ── Seat Assignment (Who Sits Where) ── */
+/* Returns a structured result:
+ *   { groups: [{ name, position, members: [], why }], note }
+ * A non-enumerable toString() renders the legacy markdown; use
+ * seatPlanToMarkdown() for an explicit rendering. */
 export async function suggestSeatAssignment(groups, layoutPreset, studentCount) {
-  const groupSummary = groups.map((g, i) =>
-    `Group ${i + 1}: ${g.members.join(', ')}`
-  ).join('\n');
+  const groupSummary = groups.map((g, i) => {
+    const custom = g.name && !/^group\s*\d+$/i.test(String(g.name).trim());
+    return `Group ${i + 1}${custom ? ` (${g.name})` : ''}: ${(g.members || []).join(', ')}`;
+  }).join('\n');
 
   const messages = [{
     role: 'user',
@@ -525,8 +587,9 @@ Groups:
 ${groupSummary}`
   }];
 
-  return sendChat(messages, {
+  const raw = await sendChat(messages, {
     trackLabel: 'suggestSeatAssignment',
+    jsonMode: true,
     systemPrompt: `You are Co-Cher's spatial arrangement specialist. Given student groups and a classroom layout preset, suggest where each group should sit.
 
 Layout presets and their spatial features:
@@ -539,26 +602,147 @@ Layout presets and their spatial features:
 - fishbowl: Inner + outer circle — assign inner/outer positions
 - maker: Makerspace tables — assign workbench areas
 
-Format:
+Include every group and every member exactly as provided. Be practical and visual — help the teacher picture exactly where each group goes.
 
-## Seating Plan
-
-### Group 1: [group name]
-**Position:** [Specific location in the room, e.g., "Front-left pod", "Station A (Blue)"]
-**Members:** [names with seat positions if applicable]
-**Why here:** [Brief rationale — e.g., "Near whiteboard for presentations", "Close to materials"]
-
-(continue for all groups...)
-
-## Room Notes
-- Where the teacher should position themselves
-- Sightline considerations
-- Any students who should face specific directions
-
-Be practical and visual — help the teacher picture exactly where each group goes.`,
-    temperature: 0.6,
-    maxTokens: 2048
+Return STRICT JSON only (no markdown, no commentary) in exactly this shape:
+{"groups":[{"name":"Group 1","position":"Specific location, e.g. Front-left pod","members":["Full Name A","Full Name B"],"why":"Brief rationale, e.g. Near whiteboard for presentations"}],"note":"Room notes: where the teacher should position themselves, sightline considerations, students who should face specific directions."}`,
+    temperature: 0.5,
+    maxTokens: 4096
   });
+
+  const parsed = parseJsonResponse(raw, 'seating plan');
+  const parsedGroups = (Array.isArray(parsed?.groups) ? parsed.groups : [])
+    .map((g, i) => ({
+      name: typeof g?.name === 'string' && g.name.trim() ? g.name.trim() : `Group ${i + 1}`,
+      position: typeof g?.position === 'string' ? g.position.trim() : '',
+      members: Array.isArray(g?.members) ? g.members.map(m => String(m).trim()).filter(Boolean) : [],
+      why: typeof g?.why === 'string' ? g.why.trim() : ''
+    }))
+    .filter(g => g.members.length > 0);
+  if (parsedGroups.length === 0) {
+    throw new Error('The model returned no usable seating plan — please try again.');
+  }
+  const result = {
+    groups: parsedGroups,
+    note: typeof parsed?.note === 'string' ? parsed.note.trim() : ''
+  };
+  Object.defineProperty(result, 'toString', {
+    value: () => seatPlanToMarkdown(result),
+    enumerable: false
+  });
+  return result;
+}
+
+/* Render a structured seat plan as the markdown shape the UI has always
+ * shown ('### Group N / Position / Members / Why here'). */
+export function seatPlanToMarkdown(result) {
+  const lines = ['## Seating Plan', ''];
+  (Array.isArray(result?.groups) ? result.groups : []).forEach((g, i) => {
+    const isDefaultName = /^group\s*\d+$/i.test((g.name || '').trim());
+    lines.push(isDefaultName ? `### ${g.name.trim()}` : `### Group ${i + 1}${g.name ? `: ${g.name}` : ''}`);
+    if (g.position) lines.push(`**Position:** ${g.position}`);
+    lines.push(`**Members:** ${(g.members || []).join(', ')}`);
+    if (g.why) lines.push(`**Why here:** ${g.why}`);
+    lines.push('');
+  });
+  if (result?.note) {
+    lines.push('## Room Notes');
+    lines.push(result.note);
+  }
+  return lines.join('\n').trim();
+}
+
+/* ── Run of Show: stage a freeform plan into runnable segments ── */
+const RUN_OF_SHOW_MODES = ['individual', 'pairs', 'groups', 'whole-class'];
+
+function coerceGroupingMode(value) {
+  const v = String(value ?? '').toLowerCase().trim();
+  if (!v) return null;
+  if (RUN_OF_SHOW_MODES.includes(v)) return v;
+  if (/^(solo|individual|independent)/.test(v)) return 'individual';
+  if (/pair/.test(v)) return 'pairs';
+  if (/(whole|full)[\s_-]*class|plenary/.test(v)) return 'whole-class';
+  if (/group|team|pod/.test(v)) return 'groups';
+  return null;
+}
+
+let _segmentSeq = 0;
+function newSegmentId() {
+  _segmentSeq += 1;
+  return `seg_${Date.now().toString(36)}_${_segmentSeq}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+/* Normalize + validate raw model output (or any segment-ish data) into the
+ * lesson.runOfShow shape: { generatedAt, segments: [{ id, name, duration,
+ * activity, studentInstructions, layoutSceneId, grouping, resources }] }.
+ * Clamps to 1-14 segments, coerces numbers, defaults missing fields, and
+ * gives every segment an id. Throws when nothing usable remains.
+ * Exported for testability. */
+export function normalizeRunOfShow(raw) {
+  let data = raw;
+  if (typeof data === 'string') data = parseJsonResponse(data, 'run of show');
+  const list = Array.isArray(data) ? data : (Array.isArray(data?.segments) ? data.segments : []);
+  const segments = list.slice(0, 14).map((seg, i) => {
+    const s = (seg && typeof seg === 'object') ? seg : {};
+    let duration = Math.round(Number(s.duration));
+    if (!Number.isFinite(duration) || duration < 1) duration = 5;
+    if (duration > 240) duration = 240;
+    const mode = coerceGroupingMode(s.groupingMode ?? s.grouping?.mode);
+    const existingGroups = Array.isArray(s.grouping?.groups) ? s.grouping.groups : [];
+    return {
+      id: (typeof s.id === 'string' && s.id) ? s.id : newSegmentId(),
+      name: String(s.name ?? '').trim() || `Segment ${i + 1}`,
+      duration,
+      activity: String(s.activity ?? '').trim(),
+      studentInstructions: String(s.studentInstructions ?? '').trim(),
+      layoutSceneId: (typeof s.layoutSceneId === 'string' && s.layoutSceneId) ? s.layoutSceneId : null,
+      grouping: mode ? { mode, groups: existingGroups } : null,
+      resources: Array.isArray(s.resources) ? s.resources : []
+    };
+  });
+  if (segments.length === 0) {
+    throw new Error('No usable segments in the run of show — please try again.');
+  }
+  return { generatedAt: Date.now(), segments };
+}
+
+/* Stage a freeform lesson plan (markdown) into 3-7 chronological segments.
+ * Returns the normalized runOfShow object or throws. */
+export async function generateRunOfShow({ plan, className = '', portraitText = '', durationHint = null } = {}) {
+  const planText = String(plan ?? '').trim();
+  if (!planText) throw new Error('No lesson plan to stage yet.');
+
+  const duration = Math.round(Number(durationHint));
+  const durationLine = (Number.isFinite(duration) && duration > 0)
+    ? `The lesson is ${duration} minutes long — segment durations must be integers summing to approximately ${duration}.`
+    : 'If the plan implies a total lesson duration, make the integer segment durations sum to approximately it; otherwise assume a 55-minute lesson.';
+
+  const raw = await sendChat([{
+    role: 'user',
+    content: `Break this lesson plan into a chronological run of show.
+${className ? `Class: ${className}\n` : ''}${portraitText ? `\nClass portrait:\n${portraitText}\n` : ''}
+Lesson plan (markdown):
+${planText.slice(0, 12000)}`
+  }], {
+    trackLabel: 'runOfShow',
+    jsonMode: true,
+    systemPrompt: `You are an expert Singapore-school lesson stager. Given a lesson plan in markdown, break it into 3-7 chronological segments a teacher can run in class, from opening to closure.
+
+Rules:
+- ${durationLine}
+- "name" is a short segment title (2-5 words).
+- "activity" is a 1-line teacher-facing summary of what happens in the segment.
+- "studentInstructions" is 1-3 short imperative student-facing sentences (what students should do). No teacher jargon, no framework names, and never reveal answers.
+- "groupingMode" is exactly one of: individual | pairs | groups | whole-class.
+- Segments must be in chronological order and cover the whole lesson.
+
+Return STRICT JSON only (no markdown, no commentary) in exactly this shape:
+{"segments":[{"name":"Segment name","duration":10,"activity":"One-line teacher summary","studentInstructions":"Short student-facing instructions.","groupingMode":"pairs"}]}`,
+    temperature: 0.4,
+    maxTokens: 4096
+  });
+
+  return normalizeRunOfShow(raw);
 }
 
 /* ── YouTube Recommendations ── */
