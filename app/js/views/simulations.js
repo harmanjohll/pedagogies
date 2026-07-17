@@ -6,6 +6,7 @@
 
 import { showToast } from '../components/toast.js';
 import { Store } from '../state.js';
+import { navigate } from '../router.js';
 import { sendChat } from '../api.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { idbPut, idbGet, idbRemove } from '../utils/storage.js';
@@ -201,6 +202,53 @@ const SIMULATIONS = [
     description: 'Simulate particle systems; explore states of matter, gas laws, diffusion, and kinetic theory with adjustable parameters.',
     difficulty: 'Intermediate',
     path: 'simulations/interactives/particle-dynamics/index.html'
+  },
+  /* ─── Subject tools (dedicated app pages — Launch navigates to the route,
+     no iframe plumbing; each already has its own view under app/js/views/) ─── */
+  {
+    id: 'rhythm-tool',
+    title: 'Rhythm & Percussion',
+    subject: 'Music',
+    description: 'Beat grid sequencer with drum kit and body percussion sounds. BPM, time signatures, presets.',
+    difficulty: 'Beginner',
+    route: '/rhythm-tool',
+    tool: true
+  },
+  {
+    id: 'stave-notation',
+    title: 'Stave Notation',
+    subject: 'Music',
+    description: 'Staff notation editor with treble/bass clefs, key and time signatures, and audio playback.',
+    difficulty: 'Intermediate',
+    route: '/stave-notation',
+    tool: true
+  },
+  {
+    id: 'art-critique',
+    title: 'Art Critique Guide',
+    subject: 'Art',
+    description: 'Feldman Model critique (Describe → Analyse → Interpret → Judge) with image upload and print export.',
+    difficulty: 'Beginner',
+    route: '/art-critique',
+    tool: true
+  },
+  {
+    id: 'design-process',
+    title: 'Design Process',
+    subject: 'D&T',
+    description: '5-stage design thinking workflow (Empathise → Test) with Empathy Maps, SCAMPER, and journal export.',
+    difficulty: 'Intermediate',
+    route: '/design-process',
+    tool: true
+  },
+  {
+    id: 'kitchen-layout',
+    title: 'Kitchen Layout Planner',
+    subject: 'NFS / FCE',
+    description: 'Kitchen floor-plan designer, AI recipe adaptation, nutrition analysis, and station rotation timer.',
+    difficulty: 'Intermediate',
+    route: '/kitchen-layout',
+    tool: true
   }
 ];
 
@@ -209,6 +257,10 @@ function subjectColor(subject) {
   if (subject === 'Chemistry') return '#4361ee';
   if (subject === 'Biology') return '#06d6a0';
   if (subject === 'Interactive') return '#8b5cf6';
+  if (subject === 'Music') return '#6366f1';
+  if (subject === 'Art') return '#ec4899';
+  if (subject === 'D&T') return '#0d9488';
+  if (subject === 'NFS / FCE') return '#f59e0b';
   return '#f77f00';
 }
 
@@ -294,6 +346,253 @@ function saveCustomSims(sims) {
   localStorage.setItem('cocher_custom_sims', JSON.stringify(sims));
 }
 
+/* ── Shared widget composition (C9) ──
+ * Generated sims are STORED as raw model output; the shared widget library
+ * (design-system.css + a curated script subset) is injected at every
+ * consumption point (probe, preview, overlay launch, exports) so the same
+ * raw HTML always runs — and ships — with LabNotebook / LabExport /
+ * guide-collapse available. The subset is deliberately small:
+ *  - lab-notebook.js  → LabNotebook: floating reflection notebook; auto-mounts
+ *                       only when a .lab-notebook-slot[data-practical] exists,
+ *                       so legacy sims are untouched.
+ *  - lab-export.js    → LabExport: PNG/CSV/print export API, no auto-run.
+ *  - guide-collapse.js→ no global; makes #guide-panel collapsible, no-op
+ *                       without that markup.
+ * Excluded on purpose: lab-score/lab-tutorial (need bespoke configs the model
+ * would misuse), lab-progress (localStorage is unavailable in the opaque
+ * allow-scripts sandbox), lab-audio (marginal value), dark-mode (injects a
+ * topbar toggle that could fight the sim's own palette). */
+const WIDGET_MARKER = '<!-- cocher-widgets -->';
+const WIDGET_CSS_PATH = 'simulations/shared/design-system.css';
+const WIDGET_SCRIPT_PATHS = [
+  'simulations/shared/lab-notebook.js',
+  'simulations/shared/lab-export.js',
+  'simulations/shared/guide-collapse.js'
+];
+
+let _widgetBundlePromise = null; // module-level cache: fetched once per session
+
+function loadWidgetBundle() {
+  if (!_widgetBundlePromise) {
+    _widgetBundlePromise = (async () => {
+      const fetchText = async (path) => {
+        const res = await fetch('./' + path);
+        if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+        return res.text();
+      };
+      const [css, ...scripts] = await Promise.all([
+        fetchText(WIDGET_CSS_PATH),
+        ...WIDGET_SCRIPT_PATHS.map(fetchText)
+      ]);
+      // "</script" inside the embedded source would end our inline tag early.
+      // Escaping the slash is semantics-preserving inside JS string literals
+      // (the sequence \/ === /) and the pattern cannot appear outside one.
+      const js = scripts.join('\n;\n').replace(/<\/script/gi, '<\\/script');
+      return { css, js };
+    })().catch(err => {
+      _widgetBundlePromise = null; // failed (offline?) — allow a retry later
+      throw err;
+    });
+  }
+  return _widgetBundlePromise;
+}
+
+/* Compose a raw generated document with the shared widget library.
+ * Insertion strategy:
+ *  - CSS goes immediately AFTER the opening <head> tag (falling back to after
+ *    <html>, else prepended). Being FIRST in the head means the sim's own
+ *    <style> rules come later in the cascade, so on any equal-specificity
+ *    conflict (body background, fonts…) the sim's styling wins — the shared
+ *    sheet only supplies tokens/classes the sim doesn't define itself.
+ *  - Widget <script>s go immediately AFTER the opening <body> tag (falling
+ *    back to before </body>, else appended). That guarantees the globals
+ *    (LabNotebook, LabExport) exist before ANY sim script placed later in the
+ *    body evaluates, regardless of where the model put its code; the widgets
+ *    themselves only touch the DOM on DOMContentLoaded, so running before the
+ *    sim's markup is safe.
+ * Idempotent (the marker is checked first) and fail-open: if the widget
+ * files can't be fetched, the raw document is returned unchanged — a sim
+ * must never break because widgets couldn't load.
+ * Exported for test harnesses. */
+export async function composeSimDoc(rawHtml) {
+  if (typeof rawHtml !== 'string' || !rawHtml) return rawHtml;
+  if (rawHtml.includes(WIDGET_MARKER)) return rawHtml; // already composed
+  let bundle;
+  try {
+    bundle = await loadWidgetBundle();
+  } catch {
+    return rawHtml; // offline / fetch failed — run the sim without widgets
+  }
+  const styleBlock = `\n${WIDGET_MARKER}\n<style id="cocher-widget-css">\n${bundle.css}\n</style>\n`;
+  const scriptBlock = `\n<script id="cocher-widget-js">\n${bundle.js}\n</script>\n`;
+  let html = rawHtml;
+
+  const headOpen = html.match(/<head[^>]*>/i);
+  if (headOpen) {
+    const at = headOpen.index + headOpen[0].length;
+    html = html.slice(0, at) + styleBlock + html.slice(at);
+  } else {
+    const htmlOpen = html.match(/<html[^>]*>/i);
+    if (htmlOpen) {
+      const at = htmlOpen.index + htmlOpen[0].length;
+      html = html.slice(0, at) + styleBlock + html.slice(at);
+    } else {
+      html = styleBlock + html;
+    }
+  }
+
+  const bodyOpen = html.match(/<body[^>]*>/i);
+  if (bodyOpen) {
+    const at = bodyOpen.index + bodyOpen[0].length;
+    html = html.slice(0, at) + scriptBlock + html.slice(at);
+  } else {
+    const bodyClose = html.search(/<\/body>/i);
+    if (bodyClose !== -1) html = html.slice(0, bodyClose) + scriptBlock + html.slice(bodyClose);
+    else html += scriptBlock;
+  }
+  return html;
+}
+
+/* ── Student bundle (C12): tiny header banner for downloaded copies ── */
+function injectStudentBanner(html, title) {
+  if (typeof html !== 'string' || html.includes('id="cocher-student-banner"')) return html;
+  const banner = `\n<div id="cocher-student-banner" style="background:#12122a;color:#e8e8f0;font-family:system-ui,-apple-system,sans-serif;font-size:13px;line-height:1.5;padding:8px 14px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:2px solid #4361ee;">
+  <strong style="font-size:14px;">${escapeHtml(title || 'Simulation')}</strong>
+  <span style="opacity:0.75;">Open this file in your browser — no internet needed.</span>
+</div>\n`;
+  const bodyOpen = html.match(/<body[^>]*>/i);
+  if (bodyOpen) {
+    const at = bodyOpen.index + bodyOpen[0].length;
+    return html.slice(0, at) + banner + html.slice(at);
+  }
+  const bodyClose = html.search(/<\/body>/i);
+  if (bodyClose !== -1) return html.slice(0, bodyClose) + banner + html.slice(bodyClose);
+  return html + banner;
+}
+
+/* ── Download helpers shared by the teacher + student exports ── */
+function slugifySimTitle(title) {
+  return String(title || '').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase();
+}
+
+function downloadHtmlFile(html, filename) {
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ── Attach-to-lesson (C10): one code path for custom AND built-in sims ──
+ * entry: { id, type:'simulation', title, builtin?:true } */
+function attachResourceEntry(lessonId, entry) {
+  const lesson = Store.getLesson(lessonId);
+  if (!lesson) return null;
+  const resources = (lesson.attachedResources || []).filter(r => r.id !== entry.id);
+  resources.push(entry);
+  Store.updateLesson(lesson.id, { attachedResources: resources });
+  return lesson;
+}
+
+function openAttachModal(entry) {
+  const lessons = Store.getLessons();
+  if (lessons.length === 0) { showToast('No lessons yet — save a lesson first.', 'default'); return; }
+  const { backdrop, close } = openModal({
+    title: 'Attach to Lesson',
+    body: `<div style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;">
+      ${lessons.map(l => `<button class="btn btn-secondary btn-sm sim-attach-lesson" data-lesson-id="${escapeHtml(l.id)}" style="justify-content:flex-start;text-align:left;">${escapeHtml(l.title || 'Untitled Lesson')}</button>`).join('')}
+    </div>`
+  });
+  backdrop.querySelectorAll('.sim-attach-lesson').forEach(lb => {
+    lb.addEventListener('click', () => {
+      const lesson = attachResourceEntry(lb.dataset.lessonId, entry);
+      if (lesson) showToast(`Attached to "${lesson.title}"`, 'success');
+      close();
+    });
+  });
+}
+
+/* ── My Sims library filters (C11) ── */
+let _customSimSearch = '';
+let _customSimSubject = 'All';
+let _builderPrefillLessonId = null; // C10: lesson to auto-attach after a prefilled build
+
+function matchesCustomFilters(sim) {
+  if (_customSimSubject !== 'All' && sim.subject !== _customSimSubject) return false;
+  const q = _customSimSearch.trim().toLowerCase();
+  if (!q) return true;
+  const hay = [sim.title, sim.prompt, sim.subject, sim.level]
+    .filter(Boolean).join(' ').toLowerCase();
+  return hay.includes(q);
+}
+
+/* Live show/hide of the rendered cards (avoids re-rendering while typing,
+ * which would drop focus from the search box). */
+function applyCustomSimFilters(container) {
+  const sims = getCustomSims();
+  let shown = 0;
+  container.querySelectorAll('[data-custom-id]').forEach(card => {
+    const sim = sims.find(s => s.id === card.dataset.customId);
+    const show = sim ? matchesCustomFilters(sim) : true;
+    card.style.display = show ? '' : 'none';
+    if (show) shown++;
+  });
+  const empty = container.querySelector('#sim-custom-empty');
+  if (empty) empty.style.display = shown === 0 ? '' : 'none';
+}
+
+/* ── Builder prefill handoff (C10) ──
+ * The lesson planner leaves a JSON payload in sessionStorage
+ * 'cocher_sim_builder_prefill' ({subject?, level?, topic?, simType?,
+ * objective?, variables?, notes?, lessonId?}); this view consumes it once,
+ * pre-fills the builder form, and remembers lessonId so the finished sim is
+ * auto-attached to that lesson after a successful build+save. */
+function applyBuilderPrefill(container, p) {
+  _builderPrefillLessonId = (typeof p.lessonId === 'string' && p.lessonId) ? p.lessonId : null;
+
+  const subjEl = container.querySelector('#byo-subject');
+  if (subjEl && typeof p.subject === 'string' && p.subject.trim()) {
+    const want = p.subject.trim().toLowerCase();
+    const opt = Array.from(subjEl.options).find(o => o.value && o.value.toLowerCase() === want);
+    subjEl.value = opt ? opt.value : 'Other';
+    subjEl.dispatchEvent(new Event('change')); // populates the topic dropdown
+  }
+
+  if (typeof p.topic === 'string' && p.topic.trim()) {
+    const topic = p.topic.trim();
+    const topicSel = container.querySelector('#byo-topic-select');
+    const options = topicSel ? Array.from(topicSel.options).filter(o => o.value && o.value !== 'Other') : [];
+    const match = options.find(o => o.value.toLowerCase() === topic.toLowerCase())
+      || options.find(o => o.value.toLowerCase().includes(topic.toLowerCase()));
+    if (match) {
+      topicSel.value = match.value;
+    } else {
+      // Fall back to the free-text topic field (readBuilderForm prefers it
+      // whenever the dropdown is empty or set to "Other")
+      if (topicSel && Array.from(topicSel.options).some(o => o.value === 'Other')) topicSel.value = 'Other';
+      const otherInput = container.querySelector('#byo-other-topic');
+      const otherWrap = container.querySelector('#byo-other-topic-wrap');
+      if (otherInput) otherInput.value = topic;
+      if (otherWrap) otherWrap.style.display = '';
+    }
+  }
+
+  const setField = (sel, v) => {
+    if (typeof v !== 'string' || !v.trim()) return;
+    const el = container.querySelector(sel);
+    if (el) el.value = v.trim();
+  };
+  setField('#byo-level', p.level);
+  setField('#byo-type', p.simType);
+  setField('#byo-topic', p.objective);
+  setField('#byo-variables', p.variables);
+  setField('#sim-prompt', p.notes);
+
+  container.querySelector('#sim-byo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showToast('Builder pre-filled from your lesson — review and hit Generate.', 'default');
+}
+
 /* ── Iframe overlay with drag-to-resize edges ── */
 function openOverlay(container, title, opts) {
   // opts: { src } for trusted built-ins, or { srcdoc, spec } for generated sims
@@ -318,7 +617,9 @@ function openOverlay(container, title, opts) {
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'flex:1;border:none;width:100%;height:100%;background:#1e1f2b;';
   if (opts.src) iframe.src = opts.src;
-  else if (opts.srcdoc) iframe.srcdoc = opts.srcdoc;
+  // Generated sims: storage holds RAW HTML — the shared widget library is
+  // composed in on the fly at launch (falls back to the raw doc offline).
+  else if (opts.srcdoc) composeSimDoc(opts.srcdoc).then(doc => { iframe.srcdoc = doc; });
   // SECURITY: with allow-same-origin a srcdoc iframe inherits THIS origin, so
   // AI-generated code could read the teacher's API key out of localStorage.
   // Generated (srcdoc) sims get allow-scripts ONLY; same-origin stays limited
@@ -769,13 +1070,21 @@ function probeSimHTML(html) {
   });
 }
 
-const REPAIR_SYSTEM_PROMPT = 'You repair broken self-contained HTML simulations. Fix the reported problem while preserving the layout, science and styling of everything else. Return the COMPLETE corrected HTML document only — no markdown fences, no commentary.';
+/* Shared context blurb for prompts that edit existing sim HTML: the widget
+ * library is injected by the app at runtime, so its globals are valid even
+ * though their source is absent from the document being edited. */
+const WIDGET_CONTEXT_NOTE = 'The host app injects a shared widget library into the document at runtime (design-system.css plus scripts defining the globals LabNotebook and LabExport, and a helper that makes #guide-panel collapsible). References to those globals, to a .lab-notebook-slot element, or to classes like .btn/.panel/.data-table are therefore VALID even though their source is not in the HTML — never "fix" them by removing them, never inline their implementation, and never add <script src> or <link> tags for them.';
+
+const REPAIR_SYSTEM_PROMPT = `You repair broken self-contained HTML simulations. Fix the reported problem while preserving the layout, science and styling of everything else. ${WIDGET_CONTEXT_NOTE} Return the COMPLETE corrected HTML document only — no markdown fences, no commentary.`;
 
 /* Probe → on failure, ONE automatic repair pass → re-probe.
  * Returns { ok, html, error? } — html is the best candidate either way. */
 async function gateSimHTML(html, { repairContext = '', model, onStage } = {}) {
   onStage?.('Testing the build…');
-  const first = await probeSimHTML(html);
+  // Probe the COMPOSED document — that is what actually runs at launch, and
+  // new builds may call injected globals (LabNotebook/LabExport). The RAW
+  // html is what gets returned, repaired and eventually stored.
+  const first = await probeSimHTML(await composeSimDoc(html));
   if (first.ok) return { ok: true, html };
   onStage?.('Check failed — attempting an automatic repair…');
   try {
@@ -786,7 +1095,7 @@ async function gateSimHTML(html, { repairContext = '', model, onStage } = {}) {
     let repaired = extractHTML(text);
     if (!isCompleteHTML(repaired)) repaired = await completeTruncatedHTML(repaired, repairContext || 'Repair the simulation.', model);
     onStage?.('Re-testing the repaired build…');
-    const second = await probeSimHTML(repaired);
+    const second = await probeSimHTML(await composeSimDoc(repaired));
     if (second.ok) return { ok: true, html: repaired };
     return { ok: false, html: repaired, error: second.error };
   } catch {
@@ -936,6 +1245,14 @@ const BUILD_SYSTEM_PROMPT = `You are LabSim Builder. Compile the provided SPEC i
 
 5. VISUALS (last, and briefly)
 - Dark theme: background #1a1a2e, panels #252540, text #e8e8f0, accent #4361ee. Rounded panels, system-ui font, canvas + graph centre with controls beside or below. Clarity over decoration.
+
+6. INJECTED WIDGET LIBRARY
+The app injects a shared stylesheet and widget scripts into your document at runtime (they also ship inside exported copies). Do NOT emit <script src>, <link> or CDN tags for them, do NOT paste their source, and do NOT re-implement their UI — just use them:
+- LabNotebook (global object): a floating student reflection notebook (button + pull-up panel). Enable it by placing exactly one <div class="lab-notebook-slot" data-practical="your-sim-id" style="display:none"></div> inside <body> (pick a short unique id). Never build your own notebook/reflection panel.
+- LabExport (global object): call LabExport.addExportButtons(containerEl, { canvas: graphCanvasEl, table: dataTableEl }) once after the data table exists — it renders "Export Graph" (PNG), "Export CSV" and "Print" buttons. Also available: LabExport.canvasToPNG(canvas, filename) and LabExport.tableToCSV(table, filename). Never write your own CSV/PNG export code.
+- Guide collapse (no global): if you place the instructions in <aside id="guide-panel"> as the first column of a CSS-grid page layout and provide a <button id="btn-toggle-guide">, the injected helper makes that panel collapsible automatically. Optional.
+- design-system.css: prefer its classes for chrome — .btn .btn-primary .btn-success .btn-danger .btn-ghost .btn-sm for buttons, .panel with .panel-header/.panel-body for sections, .data-table for the readings table, .tag for small labels — and its tokens: var(--color-primary), var(--color-success), var(--color-danger), var(--color-warning), var(--radius-md), var(--shadow-md), var(--font-sans). Setting data-theme="dark" on <html> switches the tokens to the dark palette. Your own <style> loads AFTER the shared sheet, so your rules win wherever they overlap.
+Everything else stays vanilla JavaScript that you write yourself; beyond these injected globals the page must remain fully self-contained.
 
 Return ONLY the raw HTML document. No markdown fences, no explanation.`;
 
@@ -1444,7 +1761,7 @@ export function render(container) {
           <div class="sim-toolbar">
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
               <button class="sim-filter-tab ${subjectFilter === 'All' ? 'active' : ''}" data-filter="All">All</button>
-              ${subjects.map(s => `<button class="sim-filter-tab ${subjectFilter === s ? 'active' : ''}" data-filter="${s}">${s}</button>`).join('')}
+              ${subjects.map(s => `<button class="sim-filter-tab ${subjectFilter === s ? 'active' : ''}" data-filter="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}
             </div>
             <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
               <label>Show</label>
@@ -1463,16 +1780,21 @@ export function render(container) {
               return `
                 <div class="sim-card">
                   <div class="sim-card-body">
-                    <span class="sim-subject-tag" style="background:${sc};">${sim.subject}</span>
-                    <div class="sim-title">${sim.title}</div>
-                    <div class="sim-desc">${sim.description}</div>
+                    <span class="sim-subject-tag" style="background:${sc};">${escapeHtml(sim.subject)}</span>
+                    <div class="sim-title">${escapeHtml(sim.title)}</div>
+                    <div class="sim-desc">${escapeHtml(sim.description)}</div>
                   </div>
                   <div class="sim-card-footer">
-                    <span class="sim-difficulty" style="background:${dc.bg};color:${dc.fg};">${sim.difficulty}</span>
-                    <button class="sim-launch-btn" data-sim-id="${sim.id}">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                      Launch
-                    </button>
+                    ${sim.tool
+                      ? '<span class="sim-difficulty" style="background:#ede9fe;color:#5b21b6;">Interactive tool</span>'
+                      : `<span class="sim-difficulty" style="background:${dc.bg};color:${dc.fg};">${sim.difficulty}</span>`}
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <button class="sim-custom-delete" data-builtin-attach="${sim.id}" title="Link under a lesson's resources">Attach</button>
+                      <button class="sim-launch-btn" data-sim-id="${sim.id}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        ${sim.tool ? 'Open' : 'Launch'}
+                      </button>
+                    </div>
                   </div>
                 </div>`;
             }).join('')}
@@ -1490,10 +1812,10 @@ export function render(container) {
               <div class="sim-more-menu" id="sim-more-menu">
                 ${remaining.map(sim => `
                   <button class="sim-more-item" data-sim-id="${sim.id}">
-                    <span class="sim-more-item-tag" style="background:${subjectColor(sim.subject)};">${sim.subject}</span>
+                    <span class="sim-more-item-tag" style="background:${subjectColor(sim.subject)};">${escapeHtml(sim.subject)}</span>
                     <div class="sim-more-item-info">
-                      <div class="sim-more-item-title">${sim.title}</div>
-                      <div class="sim-more-item-desc">${sim.description}</div>
+                      <div class="sim-more-item-title">${escapeHtml(sim.title)}${sim.tool ? ' <span class="sim-meta-badge" style="background:#8b5cf6;">Interactive tool</span>' : ''}</div>
+                      <div class="sim-more-item-desc">${escapeHtml(sim.description)}</div>
                     </div>
                   </button>
                 `).join('')}
@@ -1628,6 +1950,14 @@ export function render(container) {
               <h2 style="font-size:1.125rem;font-weight:700;color:var(--ink, #1a1a2e);margin:0 0 4px;">Your Generated Simulations</h2>
               <p style="font-size:0.8125rem;color:var(--ink-muted, #777);margin:0;">Previously created AI-generated simulations</p>
             </div>
+            <div class="sim-toolbar" style="margin-bottom:16px;">
+              <input type="search" id="sim-custom-search" class="sim-byo-input" style="width:220px;" placeholder="Search by title or topic…" value="${escapeHtml(_customSimSearch)}" aria-label="Search your generated simulations" />
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <button class="sim-filter-tab ${_customSimSubject === 'All' ? 'active' : ''}" data-custom-filter="All">All</button>
+                ${[...new Set(customSims.map(s => s.subject).filter(Boolean))].map(s => `<button class="sim-filter-tab ${_customSimSubject === s ? 'active' : ''}" data-custom-filter="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}
+              </div>
+            </div>
+            <p id="sim-custom-empty" style="display:none;font-size:0.8125rem;color:var(--ink-muted, #777);margin:0 0 16px;">No simulations match your search.</p>
             <div class="sim-custom-grid" id="sim-custom-grid">
               ${customSims.map(sim => `
                 <div class="sim-custom-card" data-custom-id="${sim.id}">
@@ -1646,10 +1976,11 @@ export function render(container) {
                       Launch
                     </button>
                     <button class="sim-custom-delete" data-custom-refine="${sim.id}" title="Preview & refine with AI">Refine</button>
-                    <button class="sim-custom-delete" data-custom-duplicate="${sim.id}" title="Copy this simulation so you can remix it">Duplicate</button>
+                    <button class="sim-custom-delete" data-custom-duplicate="${sim.id}" title="Duplicate as template — copy this simulation's setup and code as a new record to remix">Duplicate</button>
                     <button class="sim-custom-delete" data-custom-attach="${sim.id}" title="Link under a lesson's resources">Attach</button>
                     <button class="sim-custom-delete" data-custom-rename="${sim.id}">Rename</button>
                     <button class="sim-custom-delete" data-custom-export="${sim.id}" title="Download as standalone .html">Export</button>
+                    <button class="sim-custom-delete" data-custom-export-student="${sim.id}" title="Self-contained copy for students — works offline in any browser">Student copy</button>
                     <button class="sim-custom-delete" data-custom-delete="${sim.id}">Delete</button>
                   </div>
                 </div>
@@ -1767,13 +2098,31 @@ export function render(container) {
     // Workflow breadcrumb clicks
     bindWorkflowClicks(container);
 
-    // Subject filter tabs
-    container.querySelectorAll('.sim-filter-tab').forEach(tab => {
+    // Subject filter tabs (gallery — scoped so the My Sims chips below stay independent)
+    container.querySelectorAll('.sim-filter-tab[data-filter]').forEach(tab => {
       tab.addEventListener('click', () => {
         setSubjectFilter(tab.dataset.filter);
         renderView();
       });
     });
+
+    // My Sims subject chips (C11)
+    container.querySelectorAll('.sim-filter-tab[data-custom-filter]').forEach(tab => {
+      tab.addEventListener('click', () => {
+        _customSimSubject = tab.dataset.customFilter;
+        renderView();
+      });
+    });
+
+    // My Sims search box (C11) — live filter, no re-render (keeps focus)
+    const customSearch = container.querySelector('#sim-custom-search');
+    if (customSearch) {
+      customSearch.addEventListener('input', () => {
+        _customSimSearch = customSearch.value;
+        applyCustomSimFilters(container);
+      });
+    }
+    applyCustomSimFilters(container);
 
     // Display limit dropdown
     const limitSel = container.querySelector('#sim-display-limit');
@@ -1798,14 +2147,24 @@ export function render(container) {
       document.addEventListener('click', _menuCloser);
     }
 
-    // Launch built-in sims (cards + dropdown items)
+    // Launch built-in sims (cards + dropdown items). Interactive tools have a
+    // dedicated app page — deep-link to its route instead of an iframe.
     container.querySelectorAll('[data-sim-id]').forEach(btn => {
       btn.addEventListener('click', () => {
         const sim = SIMULATIONS.find(s => s.id === btn.dataset.simId);
         if (sim) {
           if (moreMenu) moreMenu.classList.remove('open');
+          if (sim.route) { navigate(sim.route); return; }
           openOverlay(container, sim.title, { src: sim.path });
         }
+      });
+    });
+
+    // Attach built-in sims (incl. interactive tools) to a lesson (C10)
+    container.querySelectorAll('[data-builtin-attach]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sim = SIMULATIONS.find(s => s.id === btn.dataset.builtinAttach);
+        if (sim) openAttachModal({ id: sim.id, type: 'simulation', title: sim.title, builtin: true });
       });
     });
 
@@ -1875,19 +2234,29 @@ export function render(container) {
       });
     });
 
-    // Export as standalone .html file
+    // Export as standalone .html file (teacher copy) — composed with the
+    // shared widget library so the download is self-contained.
     container.querySelectorAll('[data-custom-export]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const sim = getCustomSims().find(s => s.id === btn.dataset.customExport);
         if (!sim) return;
         const rec = await loadSimRecord(sim.id);
         if (!rec) { showToast('Could not load this simulation’s content.', 'danger'); return; }
-        const blob = new Blob([rec.html], { type: 'text/html' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${sim.title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'simulation'}.html`;
-        a.click();
-        URL.revokeObjectURL(a.href);
+        const composed = await composeSimDoc(rec.html);
+        downloadHtmlFile(composed, `${slugifySimTitle(sim.title) || 'simulation'}.html`);
+      });
+    });
+
+    // Download for students (C12): composed doc + a small header banner
+    container.querySelectorAll('[data-custom-export-student]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const sim = getCustomSims().find(s => s.id === btn.dataset.customExportStudent);
+        if (!sim) return;
+        const rec = await loadSimRecord(sim.id);
+        if (!rec) { showToast('Could not load this simulation’s content.', 'danger'); return; }
+        const composed = await composeSimDoc(rec.html);
+        downloadHtmlFile(injectStudentBanner(composed, sim.title), `${slugifySimTitle(sim.title) || 'simulation'}-student.html`);
+        showToast('Student copy downloaded — share the file directly; it runs offline.', 'success');
       });
     });
 
@@ -1896,26 +2265,7 @@ export function render(container) {
       btn.addEventListener('click', () => {
         const sim = getCustomSims().find(s => s.id === btn.dataset.customAttach);
         if (!sim) return;
-        const lessons = Store.getLessons();
-        if (lessons.length === 0) { showToast('No lessons yet — save a lesson first.', 'default'); return; }
-        const { backdrop, close } = openModal({
-          title: 'Attach to Lesson',
-          body: `<div style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;">
-            ${lessons.map(l => `<button class="btn btn-secondary btn-sm sim-attach-lesson" data-lesson-id="${escapeHtml(l.id)}" style="justify-content:flex-start;text-align:left;">${escapeHtml(l.title || 'Untitled Lesson')}</button>`).join('')}
-          </div>`
-        });
-        backdrop.querySelectorAll('.sim-attach-lesson').forEach(lb => {
-          lb.addEventListener('click', () => {
-            const lesson = Store.getLesson(lb.dataset.lessonId);
-            if (lesson) {
-              const resources = (lesson.attachedResources || []).filter(r => r.id !== sim.id);
-              resources.push({ id: sim.id, type: 'simulation', title: sim.title });
-              Store.updateLesson(lesson.id, { attachedResources: resources });
-              showToast(`Attached to "${lesson.title}"`, 'success');
-            }
-            close();
-          });
-        });
+        openAttachModal({ id: sim.id, type: 'simulation', title: sim.title });
       });
     });
 
@@ -2100,6 +2450,13 @@ export function render(container) {
         sims.unshift(newSim);
         saveCustomSims(sims);
 
+        // C10: a planner handoff carries the lesson to auto-attach to
+        if (_builderPrefillLessonId) {
+          const attached = attachResourceEntry(_builderPrefillLessonId, { id: newSim.id, type: 'simulation', title: newSim.title });
+          _builderPrefillLessonId = null;
+          if (attached) showToast(`Attached to "${attached.title || 'Untitled Lesson'}"`, 'success');
+        }
+
         showToast(experimental
           ? 'Saved as experimental — it did not pass the automated check. Refine it below.'
           : 'Simulation built and checked! Preview it below — you can refine it with follow-up instructions.', 'success');
@@ -2144,7 +2501,9 @@ export function render(container) {
         <div id="sim-refine-loading" style="display:none;" class="sim-loading"><div class="sim-spinner"></div><span>Applying your changes…</span></div>
       </div>`;
 
-    pane.querySelector('#sim-preview-frame').srcdoc = rec.html;
+    // Preview runs the composed doc; rec.html itself stays raw in storage
+    const previewFrame = pane.querySelector('#sim-preview-frame');
+    composeSimDoc(rec.html).then(doc => { previewFrame.srcdoc = doc; });
 
     pane.querySelector('#sim-open-full').addEventListener('click', () => {
       openOverlay(container, sim.title, { srcdoc: rec.html, spec: sim.spec || null });
@@ -2152,7 +2511,7 @@ export function render(container) {
 
     pane.querySelector('#sim-version-select')?.addEventListener('change', (e) => {
       if (e.target.value === 'current') {
-        pane.querySelector('#sim-preview-frame').srcdoc = rec.html;
+        composeSimDoc(rec.html).then(doc => { previewFrame.srcdoc = doc; });
         return;
       }
       const idx = parseInt(e.target.value);
@@ -2184,7 +2543,7 @@ export function render(container) {
           [{ role: 'user', content: `CURRENT SIMULATION HTML:\n${rec.html}\n\nREQUESTED CHANGE:\n${instruction}` }],
           {
             trackLabel: 'customSimulationRefine',
-            systemPrompt: 'You refine existing self-contained HTML simulations. Apply ONLY the requested change while preserving everything else (layout, science, styling conventions). Return the COMPLETE updated HTML document. No markdown fences, no commentary.',
+            systemPrompt: `You refine existing self-contained HTML simulations. Apply ONLY the requested change while preserving everything else (layout, science, styling conventions). ${WIDGET_CONTEXT_NOTE} Return the COMPLETE updated HTML document. No markdown fences, no commentary.`,
             temperature: 0.4,
             maxTokens: 16000,
             model
@@ -2232,6 +2591,18 @@ export function render(container) {
   migrateLegacySimHtml();
   renderView();
 
+  // Builder prefill handoff from the lesson planner (C10) — consume once
+  try {
+    const rawPrefill = sessionStorage.getItem('cocher_sim_builder_prefill');
+    if (rawPrefill) {
+      sessionStorage.removeItem('cocher_sim_builder_prefill');
+      const prefill = JSON.parse(rawPrefill);
+      if (prefill && typeof prefill === 'object' && !Array.isArray(prefill)) {
+        applyBuilderPrefill(container, prefill);
+      }
+    }
+  } catch { /* malformed payload — builder just opens blank */ }
+
   // Deep link from a lesson's Linked Resources chip: open that sim directly
   const openSimId = sessionStorage.getItem('cocher_open_sim_id');
   if (openSimId) {
@@ -2245,7 +2616,11 @@ export function render(container) {
         return;
       }
       const builtIn = SIMULATIONS.find(s => s.id === openSimId);
-      if (builtIn) openOverlay(container, builtIn.title, { src: builtIn.path });
+      if (builtIn) {
+        // Interactive tools live on their own route — no iframe plumbing
+        if (builtIn.route) navigate(builtIn.route);
+        else openOverlay(container, builtIn.title, { src: builtIn.path });
+      }
     })();
   }
 }
