@@ -1018,8 +1018,15 @@ export function render(container) {
   /* ══════ Saved layouts ══════ */
   renderSavedLayouts();
 
-  /* ══════ Scene Timeline (persisted) ══════ */
-  let scenes = JSON.parse(localStorage.getItem('cocher_scenes') || '[]');
+  /* ══════ Scene Timeline (per-layout, with working-copy autosave) ══════ */
+  // Scenes are first-class per-layout data: they save with Store.saveLayout({ scenes })
+  // and restore when a saved layout is loaded. 'cocher_scenes' remains only a
+  // working-copy autosave so a mid-session refresh doesn't lose unsaved scenes.
+  const newSceneId = () => 'scene_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  let scenes = [];
+  try { scenes = JSON.parse(localStorage.getItem('cocher_scenes') || '[]') || []; } catch { scenes = []; }
+  if (!Array.isArray(scenes)) scenes = [];
+  scenes.forEach(s => { if (!s.id) s.id = newSceneId(); }); // migrate legacy scenes to stable ids
   let activeSceneIdx = scenes.length > 0 ? 0 : -1;
 
   function persistScenes() {
@@ -1036,8 +1043,8 @@ export function render(container) {
     el.innerHTML = scenes.map((scene, i) => `
       <div class="scene-card" data-idx="${i}" style="flex-shrink:0;padding:var(--sp-1) var(--sp-2);border-radius:var(--radius-md);border:1.5px solid ${i === activeSceneIdx ? 'var(--accent)' : 'var(--border)'};background:${i === activeSceneIdx ? 'var(--accent-light)' : 'var(--surface)'};cursor:pointer;display:flex;align-items:center;gap:var(--sp-1);font-size:0.75rem;transition:border-color 0.15s, background 0.15s;">
         <span style="font-weight:600;color:${i === activeSceneIdx ? 'var(--accent-dark)' : 'var(--ink)'};">${i + 1}.</span>
-        <span style="color:${i === activeSceneIdx ? 'var(--accent-dark)' : 'var(--ink-secondary)'};">${scene.name}</span>
-        <span style="font-size:0.625rem;color:var(--ink-faint);margin-left:2px;">${scene.items.length} items</span>
+        <span style="color:${i === activeSceneIdx ? 'var(--accent-dark)' : 'var(--ink-secondary)'};">${escapeHtml(scene.name)}</span>
+        <span style="font-size:0.625rem;color:var(--ink-faint);margin-left:2px;">${scene.items.length} items${scene.duration ? ` · ${escapeHtml(String(scene.duration))} min` : ''}</span>
         <button class="scene-del" data-idx="${i}" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:0.75rem;padding:0 2px;line-height:1;">&times;</button>
       </div>
     `).join('');
@@ -1079,7 +1086,7 @@ export function render(container) {
     if (!name) return;
 
     const wallState = panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed';
-    scenes.push({ name, items, wallState, preset: currentPreset || null });
+    scenes.push({ id: newSceneId(), name, items, wallState, preset: currentPreset || null });
     activeSceneIdx = scenes.length - 1;
     persistScenes();
     renderSceneCards();
@@ -1166,8 +1173,14 @@ export function render(container) {
         if (phase.wall_B === 'stack') stackWall('B'); else closeWall('B');
         const items = serializeLayout();
         const wallState = phase.wall_A === 'stack' || phase.wall_B === 'stack' ? 'stacked' : 'closed';
-        const name = `${phase.name}${phase.duration ? ` (${phase.duration}min)` : ''}`;
-        scenes.push({ name, items, wallState, preset: phase.preset, tip: phase.tip || '' });
+        scenes.push({
+          id: newSceneId(),
+          name: phase.name,
+          items, wallState,
+          preset: phase.preset,
+          duration: Number(phase.duration) || null,
+          tip: phase.tip || ''
+        });
       }
 
       // Load the first scene
@@ -2342,7 +2355,8 @@ export function render(container) {
         preset: currentPreset || null,
         venue: currentVenue || 'classroom',
         wallState: panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed',
-        studentCount: parseInt(studentCountInput.value) || 32
+        studentCount: parseInt(studentCountInput.value) || 32,
+        scenes: JSON.parse(JSON.stringify(scenes))
       });
       showToast('Layout saved!', 'success');
       close();
@@ -2376,7 +2390,8 @@ export function render(container) {
       preset: currentPreset || null,
       venue: currentVenue || 'classroom',
       wallState: panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed',
-      studentCount: parseInt(studentCountInput.value) || 32
+      studentCount: parseInt(studentCountInput.value) || 32,
+      scenes: JSON.parse(JSON.stringify(scenes))
     });
     // Store the layout ID for the lesson planner to pick up
     sessionStorage.setItem('cocher_link_spatial_layout', saved.id);
@@ -2429,6 +2444,14 @@ export function render(container) {
           }
           loadLayout(layout.items, layout.wallState);
           if (layout.studentCount) studentCountInput.value = layout.studentCount;
+          // Restore the layout's scenes into the working set (working copy autosaved)
+          if (Array.isArray(layout.scenes) && layout.scenes.length > 0) {
+            scenes = JSON.parse(JSON.stringify(layout.scenes));
+            scenes.forEach(s => { if (!s.id) s.id = newSceneId(); });
+            activeSceneIdx = -1;
+            persistScenes();
+            renderSceneCards();
+          }
           showToast(`Loaded "${layout.name}"`);
         }
       });
