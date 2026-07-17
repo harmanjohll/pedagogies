@@ -1005,6 +1005,30 @@ export function render(container) {
         if (topicInput && !topicInput.value) {
           topicInput.placeholder = `e.g. ${subject || 'lesson'} activity for ${slot.classCode}`;
         }
+
+        // Close the loop: if the timetabled class matches a Co-Cher class,
+        // pre-select it in the design brief and offer to plan for it now.
+        const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const code = norm(slot.classCode);
+        const clsMatch = code ? (Store.get('classes') || []).find(c => {
+          const n = norm(c.name);
+          return n && (n.includes(code) || code.includes(n));
+        }) : null;
+        if (clsMatch) {
+          const sel = container.querySelector('#brief-class');
+          if (sel && [...sel.options].some(o => o.value === clsMatch.id)) {
+            sel.value = clsMatch.id;
+            sel.dispatchEvent(new Event('change'));
+          }
+          textEl.innerHTML += `<br/><button id="tt-plan-now" class="btn btn-primary btn-sm" style="margin-top:6px;">Plan today&rsquo;s ${escapeHtml(clsMatch.name)} lesson &rarr;</button>`;
+          container.querySelector('#tt-plan-now')?.addEventListener('click', () => {
+            sessionStorage.setItem('cocher_plan_class_id', clsMatch.id);
+            sessionStorage.setItem('cocher_plan_class_name', clsMatch.name || '');
+            sessionStorage.setItem('cocher_plan_class_subject', clsMatch.subject || '');
+            sessionStorage.setItem('cocher_plan_class_level', clsMatch.level || '');
+            navigate('/lesson-planner');
+          });
+        }
       }
       banner.style.display = '';
     } catch { /* silently fail; TT is optional */ }
