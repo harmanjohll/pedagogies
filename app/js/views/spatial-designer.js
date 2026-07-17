@@ -311,6 +311,116 @@ const rad = d => d * Math.PI / 180;
 const deg = r => r * 180 / Math.PI;
 const normAngle = a => ((a % 360) + 360) % 360;
 
+/* Stable per-instance item id — assigned at creation, kept across saves so
+ * lessons can reference individual furniture items (seat occupancy). */
+const newItemIid = () => 'it_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* Small centred glyph/label per palette id — shared between the live canvas
+ * (createItem) and the pure renderer (layoutToSVG). [text, size, dy, fill?] */
+const ITEM_GLYPHS = {
+  plant: ['🌿', 16, 5],
+  vr_station: ['VR', 12, 4, '#334155'],
+  cone_large: ['▲', 12, 4, '#fff'],
+  cone_small: ['▲', 8, 3, '#fff'],
+  marker_flat: ['●', 8, 3, '#fff'],
+  hoop: ['○', 14, 4, '#be185d'],
+  water_station: ['💧', 14, 5],
+  speaker: ['📢', 12, 4],
+  post_small: ['|', 10, 3, '#fff'],
+  shuttle_bucket: ['🏸', 10, 4],
+  writable_tv: ['wTV', 10, 4, '#64748b'],
+  tablet_cart: ['iPads', 9, 4, '#64748b'],
+  printer_3d: ['3D', 10, 4, '#64748b'],
+  teacher_desk: ['TDesk', 9, 4, '#64748b'],
+  gym_mat: ['Mat', 10, 4, '#1e40af'],
+  net_full: ['NET', 8, 3, '#fff'],
+  net_short: ['NET', 8, 3, '#fff'],
+  goal_large: ['Goal', 9, 4, '#64748b'],
+  goal_small: ['Goal', 9, 4, '#64748b'],
+  bench: ['Bench', 8, 3, '#64748b'],
+  equipment_box: ['📦', 12, 4],
+  bib_stack: ['Bibs', 8, 3, '#991b1b'],
+  racket_depot: ['🏸', 10, 3],
+  base: ['B', 10, 4, '#92400e'],
+  home_plate: ['H', 10, 4, '#92400e'],
+  wicket: ['|||', 7, 4, '#78350f'],
+  bat_rack: ['Bats', 8, 3, '#64748b'],
+};
+
+/* Front-edge marker (which way a desk faces) — shared shape rule */
+const hasFrontEdge = id => id.startsWith('desk') || id === 'teacher_desk' || id === 'stand_table';
+
+/* Accent colours for group seat placement (chips, outlines, badges) */
+const GROUP_ACCENTS = ['#4361ee', '#0d9488', '#d97706', '#dc2626', '#7c3aed', '#0284c7', '#65a30d', '#db2777'];
+
+/* ═══════════ Pure layout renderer ═══════════ */
+/**
+ * Render serialized layout items ({ id, iid?, x, y, r }) as a read-only SVG
+ * string. Pure string building — no DOM dependency — so other views (lesson
+ * planner, present mode) can import and inline it.
+ * seatLabels maps item iid → short label (group or student name) drawn as a
+ * bold badge on the matching item. All text is escaped.
+ */
+export function layoutToSVG(items, { width = 720, seatLabels = {}, title = '' } = {}) {
+  const textEl = (x, y, str, size = 12, fill = '#64748b', weight = null) =>
+    `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="${fill}"` +
+    (weight ? ` font-weight="${weight}"` : '') +
+    ` font-family="system-ui, -apple-system, sans-serif">${escapeHtml(str)}</text>`;
+
+  const shapes = [];
+  const badges = [];
+  (Array.isArray(items) ? items : []).forEach(item => {
+    const def = PALETTE.find(p => p.id === item?.id);
+    if (!def) return;
+    const w = def.w, h = def.h || def.w;
+    const x = Number(item.x) || 0, y = Number(item.y) || 0, r = Number(item.r) || 0;
+    let body = '';
+    if (def.zone) {
+      body += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="${def.color}" stroke="${def.border}" stroke-width="1.5" rx="8"/>`;
+      body += textEl(0, 4, def.label.replace('Zone: ', ''), 11, def.border, 600);
+    } else if (def.text) {
+      body += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="rgba(0,0,0,0.03)" stroke="#cbd5e1" stroke-width="0.5" rx="4"/>`;
+      body += textEl(0, 4, 'Label', 12);
+    } else if (def.tri) {
+      body += `<path d="M${-TRI_S / 2},${TRI_H / 2} L0,${-TRI_H / 2} L${TRI_S / 2},${TRI_H / 2} Z" fill="${def.color}" stroke="#0f172a" stroke-width="1"/>`;
+      body += `<line x1="${-TRI_S * 0.4}" y1="${TRI_H / 2 - 0.1}" x2="${TRI_S * 0.4}" y2="${TRI_H / 2 - 0.1}" stroke="#0f172a" stroke-width="3"/>`;
+    } else if (def.round) {
+      body += `<ellipse cx="0" cy="0" rx="${w / 2}" ry="${h / 2}" fill="${def.color}" stroke="#0f172a" stroke-width="1"/>`;
+    } else if (def.trap) {
+      const inset = w * 0.2;
+      body += `<path d="M${-w / 2},${-h / 2} L${w / 2},${-h / 2} L${w / 2 - inset},${h / 2} L${-w / 2 + inset},${h / 2} Z" fill="${def.color}" stroke="#0f172a" stroke-width="1"/>`;
+      body += `<line x1="${-w / 2 + 2}" y1="${-h / 2 + 2}" x2="${w / 2 - 2}" y2="${-h / 2 + 2}" stroke="#0f172a" stroke-width="3"/>`;
+    } else {
+      body += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="${def.color}" stroke="#0f172a" stroke-width="1" rx="3"/>`;
+      if (hasFrontEdge(def.id)) {
+        body += `<line x1="${-w / 2 + 2}" y1="${-h / 2 + 2}" x2="${w / 2 - 2}" y2="${-h / 2 + 2}" stroke="#0f172a" stroke-width="3"/>`;
+      }
+    }
+    const glyph = ITEM_GLYPHS[def.id];
+    if (glyph) body += textEl(0, glyph[2], glyph[0], glyph[1], glyph[3] || '#64748b');
+    shapes.push(`<g transform="translate(${x},${y}) rotate(${r})">${body}</g>`);
+
+    // Seat label badge (unrotated, on top of the item)
+    const label = item.iid != null ? seatLabels[item.iid] : undefined;
+    if (label != null && String(label) !== '') {
+      const s = String(label);
+      const bw = Math.max(22, Math.round(s.length * 6.5) + 12);
+      badges.push(
+        `<g transform="translate(${x},${y})">` +
+        `<rect x="${-bw / 2}" y="-10" width="${bw}" height="20" rx="10" fill="#1e293b" opacity="0.92"/>` +
+        textEl(0, 4, s, 11, '#fff', 700) +
+        `</g>`
+      );
+    }
+  });
+
+  return `<svg viewBox="0 0 ${VB_W} ${VB_H}" width="${Number(width) || 720}" preserveAspectRatio="xMidYMid meet" xmlns="${SVG_NS}" role="img">` +
+    (title ? `<title>${escapeHtml(title)}</title>` : '') +
+    `<rect x="0" y="0" width="${VB_W}" height="${VB_H}" fill="#ffffff" stroke="#94a3b8" stroke-width="4" rx="2"/>` +
+    shapes.join('') + badges.join('') +
+    `</svg>`;
+}
+
 /* ═══════════ Render ═══════════ */
 export function render(container) {
   container.innerHTML = `
@@ -895,6 +1005,30 @@ export function render(container) {
         if (topicInput && !topicInput.value) {
           topicInput.placeholder = `e.g. ${subject || 'lesson'} activity for ${slot.classCode}`;
         }
+
+        // Close the loop: if the timetabled class matches a Co-Cher class,
+        // pre-select it in the design brief and offer to plan for it now.
+        const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const code = norm(slot.classCode);
+        const clsMatch = code ? (Store.get('classes') || []).find(c => {
+          const n = norm(c.name);
+          return n && (n.includes(code) || code.includes(n));
+        }) : null;
+        if (clsMatch) {
+          const sel = container.querySelector('#brief-class');
+          if (sel && [...sel.options].some(o => o.value === clsMatch.id)) {
+            sel.value = clsMatch.id;
+            sel.dispatchEvent(new Event('change'));
+          }
+          textEl.innerHTML += `<br/><button id="tt-plan-now" class="btn btn-primary btn-sm" style="margin-top:6px;">Plan today&rsquo;s ${escapeHtml(clsMatch.name)} lesson &rarr;</button>`;
+          container.querySelector('#tt-plan-now')?.addEventListener('click', () => {
+            sessionStorage.setItem('cocher_plan_class_id', clsMatch.id);
+            sessionStorage.setItem('cocher_plan_class_name', clsMatch.name || '');
+            sessionStorage.setItem('cocher_plan_class_subject', clsMatch.subject || '');
+            sessionStorage.setItem('cocher_plan_class_level', clsMatch.level || '');
+            navigate('/lesson-planner');
+          });
+        }
       }
       banner.style.display = '';
     } catch { /* silently fail; TT is optional */ }
@@ -946,10 +1080,8 @@ export function render(container) {
     if (e21ccFocus.length > 0) briefPrompt += `- E21CC Focus: ${e21ccFocus.map(f => E21CC_MAP[f]).join(', ')}\n`;
     if (considerations) briefPrompt += `- Special considerations: ${considerations}\n`;
     if (cls?.students?.length) {
-      const avgCait = Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cait || 50), 0) / cls.students.length);
-      const avgCci = Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cci || 50), 0) / cls.students.length);
-      const avgCgc = Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cgc || 50), 0) / cls.students.length);
-      briefPrompt += `- Class E21CC profile: CAIT avg ${avgCait}, CCI avg ${avgCci}, CGC avg ${avgCgc}\n`;
+      const portrait = Store.getPortraitPromptText(cls.id);
+      if (portrait) briefPrompt += `- Class profile: ${portrait}\n`;
     }
     aiSuggestBtn.disabled = true;
     aiSuggestBtn.textContent = 'Thinking...';
@@ -1020,8 +1152,15 @@ export function render(container) {
   /* ══════ Saved layouts ══════ */
   renderSavedLayouts();
 
-  /* ══════ Scene Timeline (persisted) ══════ */
-  let scenes = JSON.parse(localStorage.getItem('cocher_scenes') || '[]');
+  /* ══════ Scene Timeline (per-layout, with working-copy autosave) ══════ */
+  // Scenes are first-class per-layout data: they save with Store.saveLayout({ scenes })
+  // and restore when a saved layout is loaded. 'cocher_scenes' remains only a
+  // working-copy autosave so a mid-session refresh doesn't lose unsaved scenes.
+  const newSceneId = () => 'scene_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  let scenes = [];
+  try { scenes = JSON.parse(localStorage.getItem('cocher_scenes') || '[]') || []; } catch { scenes = []; }
+  if (!Array.isArray(scenes)) scenes = [];
+  scenes.forEach(s => { if (!s.id) s.id = newSceneId(); }); // migrate legacy scenes to stable ids
   let activeSceneIdx = scenes.length > 0 ? 0 : -1;
 
   function persistScenes() {
@@ -1038,8 +1177,8 @@ export function render(container) {
     el.innerHTML = scenes.map((scene, i) => `
       <div class="scene-card" data-idx="${i}" style="flex-shrink:0;padding:var(--sp-1) var(--sp-2);border-radius:var(--radius-md);border:1.5px solid ${i === activeSceneIdx ? 'var(--accent)' : 'var(--border)'};background:${i === activeSceneIdx ? 'var(--accent-light)' : 'var(--surface)'};cursor:pointer;display:flex;align-items:center;gap:var(--sp-1);font-size:0.75rem;transition:border-color 0.15s, background 0.15s;">
         <span style="font-weight:600;color:${i === activeSceneIdx ? 'var(--accent-dark)' : 'var(--ink)'};">${i + 1}.</span>
-        <span style="color:${i === activeSceneIdx ? 'var(--accent-dark)' : 'var(--ink-secondary)'};">${scene.name}</span>
-        <span style="font-size:0.625rem;color:var(--ink-faint);margin-left:2px;">${scene.items.length} items</span>
+        <span style="color:${i === activeSceneIdx ? 'var(--accent-dark)' : 'var(--ink-secondary)'};">${escapeHtml(scene.name)}</span>
+        <span style="font-size:0.625rem;color:var(--ink-faint);margin-left:2px;">${scene.items.length} items${scene.duration ? ` · ${escapeHtml(String(scene.duration))} min` : ''}</span>
         <button class="scene-del" data-idx="${i}" style="border:none;background:none;color:var(--danger);cursor:pointer;font-size:0.75rem;padding:0 2px;line-height:1;">&times;</button>
       </div>
     `).join('');
@@ -1081,7 +1220,7 @@ export function render(container) {
     if (!name) return;
 
     const wallState = panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed';
-    scenes.push({ name, items, wallState, preset: currentPreset || null });
+    scenes.push({ id: newSceneId(), name, items, wallState, preset: currentPreset || null });
     activeSceneIdx = scenes.length - 1;
     persistScenes();
     renderSceneCards();
@@ -1168,8 +1307,14 @@ export function render(container) {
         if (phase.wall_B === 'stack') stackWall('B'); else closeWall('B');
         const items = serializeLayout();
         const wallState = phase.wall_A === 'stack' || phase.wall_B === 'stack' ? 'stacked' : 'closed';
-        const name = `${phase.name}${phase.duration ? ` (${phase.duration}min)` : ''}`;
-        scenes.push({ name, items, wallState, preset: phase.preset, tip: phase.tip || '' });
+        scenes.push({
+          id: newSceneId(),
+          name: phase.name,
+          items, wallState,
+          preset: phase.preset,
+          duration: Number(phase.duration) || null,
+          tip: phase.tip || ''
+        });
       }
 
       // Load the first scene
@@ -1221,10 +1366,11 @@ export function render(container) {
   initSpatialResize(container);
 
   /* ══════ SVG item creation ══════ */
-  function createItem(def, x, y, rot = 0) {
+  function createItem(def, x, y, rot = 0, iid = null) {
     const g = document.createElementNS(SVG_NS, 'g');
     g.setAttribute('transform', `translate(${x},${y}) rotate(${rot})`);
     g.setAttribute('data-id', def.id);
+    g.setAttribute('data-iid', iid || newItemIid());
     g.setAttribute('data-cat', def.cat);
     if (def.snap) g.setAttribute('data-snap', def.snap);
     g.style.cursor = 'grab';
@@ -1262,16 +1408,6 @@ export function render(container) {
       const c = document.createElementNS(SVG_NS, 'ellipse');
       setAttrs(c, { cx: 0, cy: 0, rx, ry, fill: def.color, stroke: '#0f172a', 'stroke-width': 1 });
       g.appendChild(c);
-      if (def.id === 'plant') g.appendChild(svgText(0, 5, '🌿', 16));
-      if (def.id === 'vr_station') g.appendChild(svgText(0, 4, 'VR', 12, '#334155'));
-      if (def.id === 'cone_large') g.appendChild(svgText(0, 4, '▲', 12, '#fff'));
-      if (def.id === 'cone_small') g.appendChild(svgText(0, 3, '▲', 8, '#fff'));
-      if (def.id === 'marker_flat') g.appendChild(svgText(0, 3, '●', 8, '#fff'));
-      if (def.id === 'hoop') g.appendChild(svgText(0, 4, '○', 14, '#be185d'));
-      if (def.id === 'water_station') g.appendChild(svgText(0, 5, '💧', 14));
-      if (def.id === 'speaker') g.appendChild(svgText(0, 4, '📢', 12));
-      if (def.id === 'post_small') g.appendChild(svgText(0, 3, '|', 10, '#fff'));
-      if (def.id === 'shuttle_bucket') g.appendChild(svgText(0, 4, '🏸', 10));
     } else if (def.trap) {
       const poly = document.createElementNS(SVG_NS, 'path');
       const inset = w * 0.2;
@@ -1289,26 +1425,14 @@ export function render(container) {
       setAttrs(gloss, { x: -w / 2, y: -h / 2, width: w, height: h, fill: 'url(#deskGrad)', 'fill-opacity': 0.4, 'pointer-events': 'none', rx: 3 });
       g.appendChild(gloss);
       // Front edge for desks
-      if (def.id.startsWith('desk') || def.id === 'teacher_desk' || def.id === 'stand_table') {
+      if (hasFrontEdge(def.id)) {
         svgLine(-w / 2 + 2, -h / 2 + 2, w / 2 - 2, -h / 2 + 2, '#0f172a', 3, g);
       }
-      // Labels for special items
-      if (def.id === 'writable_tv') g.appendChild(svgText(0, 4, 'wTV', 10, '#64748b'));
-      if (def.id === 'tablet_cart') g.appendChild(svgText(0, 4, 'iPads', 9, '#64748b'));
-      if (def.id === 'printer_3d') g.appendChild(svgText(0, 4, '3D', 10, '#64748b'));
-      if (def.id === 'teacher_desk') g.appendChild(svgText(0, 4, 'TDesk', 9, '#64748b'));
-      if (def.id === 'gym_mat') g.appendChild(svgText(0, 4, 'Mat', 10, '#1e40af'));
-      if (def.id === 'net_full' || def.id === 'net_short') g.appendChild(svgText(0, 3, 'NET', 8, '#fff'));
-      if (def.id === 'goal_large' || def.id === 'goal_small') g.appendChild(svgText(0, 4, 'Goal', 9, '#64748b'));
-      if (def.id === 'bench') g.appendChild(svgText(0, 3, 'Bench', 8, '#64748b'));
-      if (def.id === 'equipment_box') g.appendChild(svgText(0, 4, '📦', 12));
-      if (def.id === 'bib_stack') g.appendChild(svgText(0, 3, 'Bibs', 8, '#991b1b'));
-      if (def.id === 'racket_depot') g.appendChild(svgText(0, 3, '🏸', 10));
-      if (def.id === 'base') g.appendChild(svgText(0, 4, 'B', 10, '#92400e'));
-      if (def.id === 'home_plate') g.appendChild(svgText(0, 4, 'H', 10, '#92400e'));
-      if (def.id === 'wicket') g.appendChild(svgText(0, 4, '|||', 7, '#78350f'));
-      if (def.id === 'bat_rack') g.appendChild(svgText(0, 3, 'Bats', 8, '#64748b'));
     }
+
+    // Shared per-item glyph/label (same table drives layoutToSVG)
+    const glyph = ITEM_GLYPHS[def.id];
+    if (glyph) g.appendChild(svgText(0, glyph[2], glyph[0], glyph[1], glyph[3]));
 
     makeDraggable(g);
     // Double-click to add/edit custom label on any item
@@ -1364,6 +1488,7 @@ export function render(container) {
   function restoreState(html, label) {
     layoutRoot.innerHTML = html;
     [...layoutRoot.querySelectorAll('g[data-id]')].forEach(g => {
+      if (!g.getAttribute('data-iid')) g.setAttribute('data-iid', newItemIid()); // backfill instance ids
       makeDraggable(g);
       // Text labels edit their text in place (matches createItem)
       if (g.getAttribute('data-id') === 'text_label') {
@@ -1568,6 +1693,7 @@ export function render(container) {
       const newSel = [];
       selected.forEach(g => {
         const clone = g.cloneNode(true);
+        clone.setAttribute('data-iid', newItemIid()); // duplicates get their own instance id
         const [tx, ty] = getTranslate(g);
         clone.setAttribute('transform', `translate(${tx + UNIT * 0.5},${ty + UNIT * 0.5}) rotate(${getRotate(g)})`);
         layoutRoot.appendChild(clone);
@@ -2344,7 +2470,8 @@ export function render(container) {
         preset: currentPreset || null,
         venue: currentVenue || 'classroom',
         wallState: panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed',
-        studentCount: parseInt(studentCountInput.value) || 32
+        studentCount: parseInt(studentCountInput.value) || 32,
+        scenes: JSON.parse(JSON.stringify(scenes))
       });
       showToast('Layout saved!', 'success');
       close();
@@ -2378,7 +2505,8 @@ export function render(container) {
       preset: currentPreset || null,
       venue: currentVenue || 'classroom',
       wallState: panelState.A.some(p => getTranslate(p.node)[0] !== WALL_A_X) ? 'stacked' : 'closed',
-      studentCount: parseInt(studentCountInput.value) || 32
+      studentCount: parseInt(studentCountInput.value) || 32,
+      scenes: JSON.parse(JSON.stringify(scenes))
     });
     // Store the layout ID for the lesson planner to pick up
     sessionStorage.setItem('cocher_link_spatial_layout', saved.id);
@@ -2387,12 +2515,17 @@ export function render(container) {
   });
 
   function serializeLayout() {
-    return [...layoutRoot.querySelectorAll('g[data-id]')].map(g => ({
-      id: g.getAttribute('data-id'),
-      x: getTranslate(g)[0],
-      y: getTranslate(g)[1],
-      r: getRotate(g)
-    }));
+    return [...layoutRoot.querySelectorAll('g[data-id]')].map(g => {
+      // Backfill instance ids for items placed before iids existed
+      if (!g.getAttribute('data-iid')) g.setAttribute('data-iid', newItemIid());
+      return {
+        id: g.getAttribute('data-id'),
+        iid: g.getAttribute('data-iid'),
+        x: getTranslate(g)[0],
+        y: getTranslate(g)[1],
+        r: getRotate(g)
+      };
+    });
   }
 
   function loadLayout(items, wallState) {
@@ -2400,11 +2533,31 @@ export function render(container) {
     clearSelection();
     items.forEach(item => {
       const def = PALETTE.find(p => p.id === item.id);
-      if (def) layoutRoot.appendChild(createItem(def, item.x, item.y, item.r || 0));
+      // Preserve the saved instance id; legacy items without one get a fresh iid
+      if (def) layoutRoot.appendChild(createItem(def, item.x, item.y, item.r || 0, item.iid || null));
     });
     if (wallState === 'stacked') { stackWall('A'); stackWall('B'); }
     else { closeWall('A'); closeWall('B'); }
     updateMetrics();
+  }
+
+  /* Load a saved layout record (venue, items, walls, student count, scenes) */
+  function loadSavedLayout(layout) {
+    if (!layout) return;
+    if (layout.venue && layout.venue !== currentVenue) {
+      applyVenue(layout.venue);
+      if (briefVenue) briefVenue.value = layout.venue;
+    }
+    loadLayout(layout.items || [], layout.wallState);
+    if (layout.studentCount) studentCountInput.value = layout.studentCount;
+    // Restore the layout's scenes into the working set (working copy autosaved)
+    if (Array.isArray(layout.scenes) && layout.scenes.length > 0) {
+      scenes = JSON.parse(JSON.stringify(layout.scenes));
+      scenes.forEach(s => { if (!s.id) s.id = newSceneId(); });
+      activeSceneIdx = -1;
+      persistScenes();
+      renderSceneCards();
+    }
   }
 
   function renderSavedLayouts() {
@@ -2425,12 +2578,7 @@ export function render(container) {
       btn.addEventListener('click', () => {
         const layout = layouts.find(l => l.id === btn.dataset.idx);
         if (layout) {
-          if (layout.venue && layout.venue !== currentVenue) {
-            applyVenue(layout.venue);
-            if (briefVenue) briefVenue.value = layout.venue;
-          }
-          loadLayout(layout.items, layout.wallState);
-          if (layout.studentCount) studentCountInput.value = layout.studentCount;
+          loadSavedLayout(layout);
           showToast(`Loaded "${layout.name}"`);
         }
       });
@@ -2471,9 +2619,190 @@ export function render(container) {
     showToast(`Layout set to "${PRESETS.find(p => p.id === spatialPresetFromPlanner)?.label || spatialPresetFromPlanner}" from Lesson Planner`, 'success');
   }
 
+  /* ══════ Place Groups mode (seating flow from Lesson Planner) ══════ */
+  // Consumes sessionStorage 'cocher_place_groups' written by the planner:
+  // { lessonId, segmentId, groups: [{ name, studentIds, studentNames }] }.
+  // Clicking an armed group chip then furniture items toggles seat assignment;
+  // Done writes grouping.groups[i].itemIds (instance iids) back to the segment.
+  let placeGroupsCleanup = null;
+  (function initPlaceGroupsMode() {
+    const raw = sessionStorage.getItem('cocher_place_groups');
+    if (!raw) return;
+    sessionStorage.removeItem('cocher_place_groups');
+    let payload = null;
+    try { payload = JSON.parse(raw); } catch { payload = null; }
+    const groups = Array.isArray(payload?.groups) ? payload.groups : [];
+    const lesson = payload?.lessonId ? Store.getLesson(payload.lessonId) : null;
+    const segment = lesson?.runOfShow?.segments?.find(s => s.id === payload.segmentId) || null;
+    if (!lesson || !segment || groups.length === 0) {
+      showToast('Could not find that lesson segment — open seating from the Lesson Planner again.', 'danger');
+      return;
+    }
+
+    // Bring in the lesson's linked layout when the canvas is empty
+    if (lesson.spatialLayout && layoutRoot.querySelectorAll('g[data-id]').length === 0) {
+      const linked = Store.getSavedLayouts().find(l => l.id === lesson.spatialLayout);
+      if (linked) loadSavedLayout(linked);
+    }
+
+    // iid → group index; prefill from any previously placed seating
+    const assignments = new Map();
+    const segGroups = Array.isArray(segment.grouping?.groups) ? segment.grouping.groups : [];
+    groups.forEach((g, i) => {
+      const sg = segGroups[i];
+      (Array.isArray(sg?.itemIds) ? sg.itemIds : []).forEach(iid => assignments.set(String(iid), i));
+    });
+    let armedIdx = groups.length === 1 ? 0 : -1;
+    const groupAccent = i => GROUP_ACCENTS[i % GROUP_ACCENTS.length];
+    const groupInitial = i => (String(groups[i]?.name || '').trim().charAt(0) || String(i + 1)).toUpperCase();
+
+    // Badge overlay layer (outside #layout-root so it never serializes)
+    const badgeLayer = document.createElementNS(SVG_NS, 'g');
+    badgeLayer.id = 'place-badges';
+    badgeLayer.style.pointerEvents = 'none';
+    svg.appendChild(badgeLayer);
+
+    // Docked panel above the canvas
+    const canvasCol = container.querySelector('#spatial-canvas-col');
+    const panel = document.createElement('div');
+    panel.id = 'place-groups-panel';
+    panel.style.cssText = 'flex:0 0 auto;display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;padding:var(--sp-2) var(--sp-3);border-bottom:1px solid var(--border-light);background:var(--accent-light,#eef2ff);';
+    panel.innerHTML = `
+      <span style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent-dark,var(--accent));white-space:nowrap;">Place Groups</span>
+      <span style="font-size:0.75rem;color:var(--ink-secondary);white-space:nowrap;">${escapeHtml(segment.name || 'Segment')}</span>
+      <div id="place-group-chips" style="display:flex;gap:var(--sp-1);flex-wrap:wrap;align-items:center;"></div>
+      <span style="font-size:0.6875rem;color:var(--ink-muted);">Click a group, then click furniture to assign its seats. Click again to unassign.</span>
+      <span style="margin-left:auto;display:flex;gap:var(--sp-1);flex-shrink:0;">
+        <button class="btn btn-ghost btn-sm" id="place-groups-cancel">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="place-groups-done">Done</button>
+      </span>
+    `;
+    canvasCol.insertBefore(panel, svg);
+
+    const chipsEl = panel.querySelector('#place-group-chips');
+    function renderChips() {
+      chipsEl.innerHTML = groups.map((g, i) => {
+        const color = groupAccent(i);
+        const seatCount = [...assignments.values()].filter(v => v === i).length;
+        const names = Array.isArray(g.studentNames) ? g.studentNames.join(', ') : '';
+        const armed = i === armedIdx;
+        const members = Array.isArray(g.studentIds) ? g.studentIds.length : 0;
+        return `<button type="button" class="place-group-chip" data-idx="${i}" title="${escapeHtml(names)}" style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;border:1.5px solid ${color};background:${armed ? color : 'var(--surface)'};color:${armed ? '#fff' : 'var(--ink)'};font-size:0.75rem;font-weight:600;cursor:pointer;transition:background 0.15s;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${armed ? '#fff' : color};flex-shrink:0;"></span>
+          ${escapeHtml(g.name || `Group ${i + 1}`)}
+          <span style="font-weight:400;opacity:0.75;">${members}${seatCount ? ` · ${seatCount} seat${seatCount === 1 ? '' : 's'}` : ''}</span>
+        </button>`;
+      }).join('');
+      chipsEl.querySelectorAll('.place-group-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const i = parseInt(btn.dataset.idx);
+          armedIdx = armedIdx === i ? -1 : i; // click again to disarm
+          renderChips();
+        });
+      });
+    }
+
+    function paintBadges() {
+      badgeLayer.innerHTML = '';
+      const nodes = new Map();
+      layoutRoot.querySelectorAll('g[data-id]').forEach(n => {
+        const ii = n.getAttribute('data-iid');
+        if (ii) nodes.set(ii, n);
+      });
+      assignments.forEach((gi, iid) => {
+        const node = nodes.get(iid);
+        if (!node) return; // item removed — assignment kept but nothing to draw
+        const color = groupAccent(gi);
+        const [tx, ty] = getTranslate(node);
+        let bb;
+        try { bb = node.getBBox(); } catch { bb = { x: -20, y: -20, width: 40, height: 40 }; }
+        const outline = document.createElementNS(SVG_NS, 'rect');
+        setAttrs(outline, { x: tx + bb.x - 3, y: ty + bb.y - 3, width: bb.width + 6, height: bb.height + 6, fill: 'none', stroke: color, 'stroke-width': 2.5, rx: 5 });
+        badgeLayer.appendChild(outline);
+        const bx = tx + bb.x + bb.width + 2, by = ty + bb.y - 2;
+        const dot = document.createElementNS(SVG_NS, 'circle');
+        setAttrs(dot, { cx: bx, cy: by, r: 10, fill: color, stroke: '#fff', 'stroke-width': 1.5 });
+        badgeLayer.appendChild(dot);
+        const t = svgText(bx, by + 3.5, groupInitial(gi), 10, '#fff');
+        t.setAttribute('font-weight', '700');
+        badgeLayer.appendChild(t);
+      });
+    }
+
+    // Assign/unassign on click — ignore drags (pointer moved > 6px)
+    let downAt = null;
+    const onDownCapture = e => { downAt = { x: e.clientX, y: e.clientY }; };
+    const onUpRepaint = () => paintBadges(); // items may have moved
+    const onKeyRepaint = () => paintBadges(); // delete / nudge via keyboard
+    const onClick = e => {
+      if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) return;
+      const target = e.target instanceof Element ? e.target.closest('g[data-id]') : null;
+      if (!target || !layoutRoot.contains(target)) return;
+      if (armedIdx < 0) { showToast('Pick a group chip first, then click items to seat it.'); return; }
+      if (!target.getAttribute('data-iid')) target.setAttribute('data-iid', newItemIid());
+      const iid = target.getAttribute('data-iid');
+      if (assignments.get(iid) === armedIdx) assignments.delete(iid); // toggle off
+      else assignments.set(iid, armedIdx); // assign / reassign from another group
+      renderChips();
+      paintBadges();
+    };
+    svg.addEventListener('pointerdown', onDownCapture, true);
+    svg.addEventListener('pointerup', onUpRepaint);
+    svg.addEventListener('click', onClick);
+    document.addEventListener('keyup', onKeyRepaint);
+
+    function dismiss() {
+      svg.removeEventListener('pointerdown', onDownCapture, true);
+      svg.removeEventListener('pointerup', onUpRepaint);
+      svg.removeEventListener('click', onClick);
+      document.removeEventListener('keyup', onKeyRepaint);
+      badgeLayer.remove();
+      panel.remove();
+      placeGroupsCleanup = null;
+    }
+    placeGroupsCleanup = dismiss;
+
+    panel.querySelector('#place-groups-cancel').addEventListener('click', () => {
+      dismiss();
+      showToast('Seat placement cancelled');
+    });
+
+    panel.querySelector('#place-groups-done').addEventListener('click', () => {
+      const fresh = Store.getLesson(payload.lessonId);
+      const ros = fresh?.runOfShow ? JSON.parse(JSON.stringify(fresh.runOfShow)) : null;
+      const seg = ros?.segments?.find(s => s.id === payload.segmentId);
+      if (!seg) {
+        showToast('That lesson segment no longer exists.', 'danger');
+        dismiss();
+        return;
+      }
+      const prevGroups = Array.isArray(seg.grouping?.groups) ? seg.grouping.groups : [];
+      seg.grouping = {
+        mode: seg.grouping?.mode || 'groups',
+        groups: groups.map((g, i) => {
+          const existing = prevGroups[i] || {};
+          return {
+            ...existing,
+            name: g.name || existing.name || `Group ${i + 1}`,
+            studentIds: Array.isArray(g.studentIds) ? g.studentIds : (existing.studentIds || []),
+            itemIds: [...assignments.entries()].filter(([, gi]) => gi === i).map(([iid]) => iid)
+          };
+        })
+      };
+      Store.updateLesson(payload.lessonId, { runOfShow: ros });
+      showToast(`Seating placed for ${segment.name || 'segment'}`, 'success');
+      dismiss();
+      navigate('/lesson-planner/' + payload.lessonId);
+    });
+
+    renderChips();
+    paintBadges();
+  })();
+
   // Cleanup on route change
   return () => {
     document.removeEventListener('keydown', onKey);
+    placeGroupsCleanup?.();
     if (radarChart) { radarChart.destroy(); radarChart = null; }
     if (tooltipEl) tooltipEl.style.display = 'none';
   };

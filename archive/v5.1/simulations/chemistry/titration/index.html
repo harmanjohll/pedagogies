@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Acid-Base Titration – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=15">
+  <link rel="stylesheet" href="titration.css?v=15">
+</head>
+<body>
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../../index.html">Practicals</a>
+      <span class="separator">/</span>
+      Chemistry
+      <span class="separator">/</span>
+      Titration
+    </span>
+    <div class="topbar-actions" id="topbar-actions">
+      <div id="record-mode-slot"></div>
+        <button id="btn-toggle-guide" class="btn btn-ghost btn-sm" title="Toggle guided mode">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+        Guide
+      </button>
+      <button id="btn-next-titration" class="btn btn-success btn-sm" disabled>Next Titration</button>
+      <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+    </div>
+  </nav>
+
+  <!-- Step indicator -->
+  <div id="steps-bar" class="steps-bar"></div>
+
+  <!-- Main layout -->
+  <div class="practical-layout">
+
+    <!-- Guide panel (left) -->
+    <aside id="guide-panel" class="guide-panel">
+      <div id="guide-content" class="guide-step">
+        <div class="guide-step-title" id="guide-title">Getting Started</div>
+        <p id="guide-desc">Select a step above or click on apparatus to begin the titration procedure.</p>
+        <div id="guide-why" class="guide-step-why" style="display:none;"></div>
+        <div id="guide-actions" class="guide-step-actions"></div>
+      </div>
+
+      <!-- Configuration -->
+      <div class="config-section panel" style="margin-top: var(--sp-4);">
+        <div class="panel-header">Configuration</div>
+        <div class="panel-body flex-col gap-3">
+          <div class="config-row">
+            <label for="acid-conc-slider">FA2 (acid) concentration</label>
+            <div class="flex items-center gap-2">
+              <input type="range" id="acid-conc-slider" min="0.05" max="0.20" step="0.005" value="0.10" class="slider">
+              <span id="acid-conc-display" class="config-value">0.100 M</span>
+            </div>
+          </div>
+          <div class="config-row">
+            <label for="base-select">Base in burette</label>
+            <select id="base-select" class="config-select">
+              <option value="0.10">FA1 — NaOH 0.10 M</option>
+              <option value="0.05">FA3 — NaOH 0.05 M</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Workbench -->
+    <section class="workbench-panel">
+      <div id="workbench" class="workbench">
+        <div class="bench-surface"></div>
+
+        <!-- Beaker (FA2) -->
+        <div id="beaker" class="apparatus beaker-apparatus" data-item="beaker">
+          <div class="beaker-body glass">
+            <div class="beaker-liquid liquid" id="beaker-liquid"></div>
+            <div class="beaker-markings"></div>
+          </div>
+          <div class="apparatus-label">FA2</div>
+        </div>
+
+        <!-- Pipette -->
+        <div id="pipette" class="apparatus pipette-apparatus" data-item="pipette">
+          <div class="pipette-filler"></div>
+          <div class="pipette-body glass">
+            <div class="pipette-liquid liquid" id="pipette-liquid"></div>
+            <div class="pipette-bulge glass">
+              <div class="pipette-bulge-liquid" id="pipette-bulge-liquid"></div>
+            </div>
+          </div>
+          <div class="pipette-tip"></div>
+          <div class="apparatus-label">25.0 cm&#179; pipette</div>
+        </div>
+
+        <!-- Conical Flask -->
+        <div id="flask" class="apparatus flask-apparatus" data-item="flask">
+          <div class="flask-body">
+            <div class="flask-glass"></div>
+            <div class="flask-liquid-container">
+              <div class="flask-liquid liquid" id="flask-liquid"></div>
+            </div>
+          </div>
+          <div class="apparatus-label">Conical Flask</div>
+        </div>
+
+        <!-- Indicator Bottle -->
+        <div id="indicator" class="apparatus indicator-apparatus" data-item="indicator">
+          <div class="indicator-bottle glass">
+            <div class="indicator-cap"></div>
+            <span class="indicator-label">Indicator</span>
+          </div>
+        </div>
+
+        <!-- Retort Stand + Burette -->
+        <div id="stand-assembly" class="apparatus stand-assembly">
+          <div class="retort-base metal-dark"></div>
+          <div class="retort-pole metal-mid"></div>
+          <div class="retort-clamp metal-light"></div>
+          <div id="burette" class="burette glass" data-item="burette">
+            <div class="burette-liquid liquid" id="burette-liquid"></div>
+            <div class="burette-markings">
+              <span class="mark" style="top:0%">0</span>
+              <span class="mark" style="top:10%">5</span>
+              <span class="mark" style="top:20%">10</span>
+              <span class="mark" style="top:30%">15</span>
+              <span class="mark" style="top:40%">20</span>
+              <span class="mark" style="top:50%">25</span>
+              <span class="mark" style="top:60%">30</span>
+              <span class="mark" style="top:70%">35</span>
+              <span class="mark" style="top:80%">40</span>
+              <span class="mark" style="top:90%">45</span>
+              <span class="mark" style="top:100%">50</span>
+            </div>
+            <div class="burette-stopcock">
+              <div class="stopcock-handle" id="stopcock-handle"></div>
+            </div>
+            <div class="burette-nozzle"></div>
+            <!-- Drip animation element -->
+            <div class="burette-drip" id="burette-drip"></div>
+          </div>
+          <!-- White tile (hidden until flask placed) -->
+          <div id="white-tile" class="white-tile" style="display:none;">
+            <div class="tile-surface"></div>
+          </div>
+          <!-- Flask placement zone under burette -->
+          <div id="flask-zone" class="flask-under-zone" style="display:none;"></div>
+          <!-- Placed flask goes here dynamically -->
+        </div>
+
+      </div>
+
+      <!-- Burette controls (shown during titration) -->
+      <div id="burette-controls" class="burette-controls" style="display:none;">
+        <div class="reading-display">
+          <span class="reading-label">Burette reading</span>
+          <span class="reading-value" id="burette-reading">0.00 cm&#179;</span>
+        </div>
+        <div class="flow-controls">
+          <button id="btn-fast" class="btn btn-primary btn-sm" disabled>Fast Flow</button>
+          <button id="btn-slow" class="btn btn-primary btn-sm" disabled>Slow Flow</button>
+          <button id="btn-drop" class="btn btn-primary btn-sm" disabled>Half Drop</button>
+          <button id="btn-swirl" class="btn btn-ghost btn-sm">Swirl</button>
+        </div>
+        <div class="reading-actions">
+          <button id="btn-log-initial" class="btn btn-success btn-sm">Log Initial</button>
+          <button id="btn-log-final" class="btn btn-ghost btn-sm">Log Final</button>
+          <button id="btn-topup" class="btn btn-ghost btn-sm">Top Up</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Data panel (right) -->
+    <aside class="data-panel">
+      <div class="panel">
+        <div class="panel-header">Titration Data</div>
+        <div class="panel-body">
+          <table class="data-table" id="data-table">
+            <thead>
+              <tr>
+                <th>Measurement</th>
+                <th>Rough</th>
+                <th>1st</th>
+                <th>2nd</th>
+                <th>3rd</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Final reading / cm&#179;</td>
+                <td><input id="final-0" class="reading-input"></td>
+                <td><input id="final-1" class="reading-input"></td>
+                <td><input id="final-2" class="reading-input"></td>
+                <td><input id="final-3" class="reading-input"></td>
+              </tr>
+              <tr>
+                <td>Initial reading / cm&#179;</td>
+                <td><input id="initial-0" class="reading-input"></td>
+                <td><input id="initial-1" class="reading-input"></td>
+                <td><input id="initial-2" class="reading-input"></td>
+                <td><input id="initial-3" class="reading-input"></td>
+              </tr>
+              <tr>
+                <td>Titre / cm&#179;</td>
+                <td><input id="titre-0" class="reading-input" readonly></td>
+                <td><input id="titre-1" class="reading-input" readonly></td>
+                <td><input id="titre-2" class="reading-input" readonly></td>
+                <td><input id="titre-3" class="reading-input" readonly></td>
+              </tr>
+            </tbody>
+          </table>
+          <div id="concordant-msg" class="concordant-msg" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- Calculation workspace -->
+      <div class="panel" style="margin-top: var(--sp-4);">
+        <div class="panel-header">Calculations</div>
+        <div class="panel-body" id="calc-workspace">
+          <p class="text-sm text-muted">Complete at least two concordant titrations to begin calculations.</p>
+        </div>
+      </div>
+
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="titration"></div>
+    </aside>
+
+  </div>
+
+  <!-- Next Titration overlay bar — fixed to bottom, impossible to miss -->
+  <div id="next-run-bar" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:10000; background:linear-gradient(135deg,#06d6a0,#05b384); padding:16px 24px; box-shadow:0 -4px 20px rgba(0,0,0,0.3); text-align:center;">
+    <span style="color:#fff; font-size:18px; font-weight:600; margin-right:16px;" id="next-run-label">Rough titration complete!</span>
+    <button id="btn-next-run" style="background:#fff; color:#059669; border:none; padding:12px 32px; font-size:18px; font-weight:700; border-radius:8px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+      Start Next Titration
+    </button>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="../../shared/lab-audio.js?v=15"></script>
+  <script src="../../shared/lab-score.js?v=15"></script>
+  <script src="../../shared/dark-mode.js?v=15"></script>
+  <script src="../../shared/lab-record-mode.js?v=15"></script>
+  <script src="../../shared/guide-collapse.js?v=15"></script>
+  <script src="../../shared/lab-notebook.js?v=15"></script>
+  <script src="titration.js?v=15"></script>
+</body>
+</html>

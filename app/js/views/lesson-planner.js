@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -305,6 +305,9 @@ function renderComponents(container) {
 
   const activeComp = lessonComponents[activeComponentTab];
   const activeMeta = COMPONENT_META[activeComponentTab] || { label: activeComponentTab, color: 'var(--ink-muted)', icon: '', order: 99 };
+  // meta is a plain string on legacy components, or { label, structured } on
+  // components saved with structured AI results (A4) — display only the label.
+  const activeMetaLabel = typeof activeComp.meta === 'string' ? activeComp.meta : (activeComp.meta?.label || '');
 
   el.innerHTML = `
     <div style="margin-top:var(--sp-5);">
@@ -335,7 +338,7 @@ function renderComponents(container) {
           <div style="display:flex;align-items:center;gap:var(--sp-2);">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${activeMeta.color}" stroke-width="2">${activeMeta.icon}</svg>
             <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">${activeMeta.label}</span>
-            ${activeComp.meta ? `<span style="font-size:0.6875rem;color:var(--ink-faint);">${esc(activeComp.meta)}</span>` : ''}
+            ${activeMetaLabel ? `<span style="font-size:0.6875rem;color:var(--ink-faint);">${esc(activeMetaLabel)}</span>` : ''}
           </div>
           <div style="display:flex;align-items:center;gap:var(--sp-1);">
             ${['worksheet','stimulus','vocabulary','modelResponse','sourceAnalysis','exitTicket','cceDiscussion'].includes(activeComponentTab) ? `
@@ -350,7 +353,7 @@ function renderComponents(container) {
             </button>
           </div>
         </div>
-        ${activeComponentTab === 'seatPlan' ? buildSeatPlanVisual(activeComp.content) : ''}
+        ${activeComponentTab === 'seatPlan' ? buildSeatPlanVisual(activeComp) : ''}
         <div style="padding:var(--sp-4);font-size:0.875rem;line-height:1.7;color:var(--ink-secondary);max-height:600px;overflow-y:auto;">
           ${md(activeComp.content)}
         </div>
@@ -444,17 +447,42 @@ function renderComponents(container) {
   });
 }
 
-/* ── Visual Seating Plan: parse AI text to render an SVG classroom view ── */
-function buildSeatPlanVisual(text) {
-  // Parse groups and positions from the AI seating plan text
+/* ── Visual Seating Plan: render an SVG classroom view ──
+ * Accepts the full seatPlan component ({ content, meta }) or a bare markdown
+ * string. When the component carries a structured result (meta.structured,
+ * A4) the SVG is built directly from it; otherwise the legacy regex parse of
+ * the markdown keeps older saved components rendering exactly as before. */
+function buildSeatPlanVisual(comp) {
+  const text = typeof comp === 'string' ? comp : (comp?.content || '');
+  const structured = (comp && typeof comp === 'object' && comp.meta && typeof comp.meta === 'object')
+    ? comp.meta.structured : null;
+
   const groups = [];
-  const groupRegex = /###?\s*Group\s*(\d+)[^]*?(?:\*\*Position:\*\*|Position:)\s*([^\n]+)[^]*?(?:\*\*Members?:\*\*|Members?:)\s*([^\n]+)/gi;
-  let m;
-  while ((m = groupRegex.exec(text)) !== null) {
-    const num = parseInt(m[1]);
-    const position = m[2].trim();
-    const members = m[3].replace(/\*\*/g, '').split(/,\s*/).map(n => n.trim()).filter(Boolean);
-    if (members.length > 0) groups.push({ num, position, members });
+
+  // Structured path: positions honoured exactly as the regex path captured them
+  if (structured && Array.isArray(structured.groups)) {
+    structured.groups.forEach((g, i) => {
+      const members = (g.members || []).map(n => String(n).trim()).filter(Boolean);
+      if (members.length === 0) return;
+      const numMatch = String(g.name || '').match(/(\d+)/);
+      groups.push({
+        num: numMatch ? parseInt(numMatch[1]) : i + 1,
+        position: g.position || '',
+        members
+      });
+    });
+  }
+
+  // Legacy path: parse groups and positions from the AI seating plan text
+  if (groups.length === 0) {
+    const groupRegex = /###?\s*Group\s*(\d+)[^]*?(?:\*\*Position:\*\*|Position:)\s*([^\n]+)[^]*?(?:\*\*Members?:\*\*|Members?:)\s*([^\n]+)/gi;
+    let m;
+    while ((m = groupRegex.exec(text)) !== null) {
+      const num = parseInt(m[1]);
+      const position = m[2].trim();
+      const members = m[3].replace(/\*\*/g, '').split(/,\s*/).map(n => n.trim()).filter(Boolean);
+      if (members.length > 0) groups.push({ num, position, members });
+    }
   }
 
   // Fallback: try simpler patterns if structured parsing didn't work
@@ -993,6 +1021,10 @@ export function render(container) {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                   Save
                 </button>
+                <button class="btn btn-secondary btn-sm" id="stage-lesson-btn" title="Break this plan into a runnable sequence of segments">
+                  <span aria-hidden="true">&#127916;</span>
+                  Stage lesson
+                </button>
                 <button class="btn btn-ghost btn-sm" id="export-pdf-btn" title="Export as printable page">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                   Print
@@ -1362,6 +1394,42 @@ export function render(container) {
 
   // Save lesson
   container.querySelector('#save-lesson-btn').addEventListener('click', () => showSaveModal(classes));
+
+  // Stage lesson — break the plan into a runnable Run of Show (A1)
+  container.querySelector('#stage-lesson-btn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+
+    // Already staged: re-open the editor pre-filled, no AI call
+    if (lesson?.runOfShow?.segments?.length) {
+      showRunOfShowEditor(container, lesson.runOfShow);
+      return;
+    }
+
+    if (!currentLessonId) {
+      showToast('Save the lesson first — staging attaches the run of show to a saved lesson.', 'danger');
+      return;
+    }
+    const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) {
+      showToast('Chat with Co-Cher first to create a plan, then stage it.', 'danger');
+      return;
+    }
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span aria-hidden="true">&#127916;</span> Staging&hellip;';
+    try {
+      const runOfShow = await generateRunOfShow(buildRunOfShowRequest(lesson));
+      showRunOfShowEditor(container, runOfShow);
+    } catch (err) {
+      showToast(`Staging failed: ${err.message}`, 'danger');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalHTML;
+    }
+  });
 
   // Print / Export (includes all components)
   container.querySelector('#export-pdf-btn').addEventListener('click', () => {
@@ -2406,6 +2474,217 @@ function suggestTitle() {
 
 function escAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
 
+/* ══════════ Run of Show (A1) ══════════ */
+
+const ROS_MODE_OPTIONS = [
+  { value: '', label: 'No grouping' },
+  { value: 'individual', label: 'Individual' },
+  { value: 'pairs', label: 'Pairs' },
+  { value: 'groups', label: 'Groups' },
+  { value: 'whole-class', label: 'Whole class' }
+];
+
+function rosBlankSegment(n) {
+  return {
+    id: `seg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    name: `Segment ${n}`,
+    duration: 5,
+    activity: '',
+    studentInstructions: '',
+    layoutSceneId: null,
+    grouping: null,
+    resources: []
+  };
+}
+
+/* Assemble the generateRunOfShow() payload from the live conversation:
+ * latest plan text, class portrait (planClassContext wins, then the saved
+ * lesson's class), and a duration hint scraped from the teacher's prompts. */
+function buildRunOfShowRequest(lesson) {
+  const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+  const plan = aiMsgs.map(m => m.content).join('\n\n---\n\n') || lesson?.plan || '';
+  const classId = planClassContext?.id || lesson?.classId || null;
+  const portraitText = classId ? (Store.getPortraitPromptText?.(classId) || '') : '';
+  const className = planClassContext?.name || (classId ? (Store.getClass?.(classId)?.name || '') : '');
+
+  let durationHint = null;
+  const userTexts = chatMessages
+    .filter(m => m.role === 'user' && typeof m.content === 'string')
+    .map(m => m.content).join('\n');
+  const dm = userTexts.match(/(\d{2,3})\s*[- ]?min(?:ute)?s?\b/i);
+  if (dm) {
+    const n = parseInt(dm[1], 10);
+    if (n >= 20 && n <= 180) durationHint = n;
+  }
+
+  return { plan, className, portraitText, durationHint };
+}
+
+/* Editor modal: list of segment rows (name, duration, activity, student
+ * instructions, grouping mode) with reorder/remove/add and Save/Cancel.
+ * Saving writes lesson.runOfShow via Store.updateLesson. */
+function showRunOfShowEditor(container, runOfShow) {
+  let segs = (runOfShow?.segments || []).map((s, i) => ({
+    id: s.id || rosBlankSegment(i + 1).id,
+    name: String(s.name ?? '').trim() || `Segment ${i + 1}`,
+    duration: Math.min(240, Math.max(1, Math.round(Number(s.duration)) || 5)),
+    activity: String(s.activity ?? '').trim(),
+    studentInstructions: String(s.studentInstructions ?? '').trim(),
+    layoutSceneId: (typeof s.layoutSceneId === 'string' && s.layoutSceneId) ? s.layoutSceneId : null,
+    grouping: (s.grouping && s.grouping.mode)
+      ? { mode: s.grouping.mode, groups: Array.isArray(s.grouping.groups) ? s.grouping.groups : [] }
+      : null,
+    resources: Array.isArray(s.resources) ? s.resources : []
+  }));
+  if (segs.length === 0) segs = [rosBlankSegment(1)];
+
+  const { backdrop, close } = openModal({
+    title: 'Run of Show',
+    width: 640,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">
+        The runnable sequence of segments for this lesson. Edit, reorder, then save.
+        <span id="ros-total" style="font-weight:600;color:var(--ink);"></span>
+      </p>
+      <div id="ros-rows" style="display:flex;flex-direction:column;gap:var(--sp-3);max-height:52vh;overflow-y:auto;padding-right:4px;"></div>
+      <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-3);align-items:center;">
+        <button class="btn btn-ghost btn-sm" id="ros-add">+ Add segment</button>
+        <button class="btn btn-ghost btn-sm" id="ros-regenerate" style="margin-left:auto;" title="Replace these segments with a fresh AI staging of the current plan">
+          &#127916; Regenerate with AI
+        </button>
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save">Save Run of Show</button>
+    `
+  });
+
+  const rowsEl = backdrop.querySelector('#ros-rows');
+  const totalEl = backdrop.querySelector('#ros-total');
+
+  const updateTotal = () => {
+    const total = segs.reduce((n, s) => n + (Number(s.duration) || 0), 0);
+    totalEl.textContent = ` Total: ${total} min · ${segs.length} segment${segs.length === 1 ? '' : 's'}.`;
+  };
+
+  // Pull current input values back into segs (before reorder/remove/add/save)
+  const syncFromDOM = () => {
+    rowsEl.querySelectorAll('[data-seg-idx]').forEach(row => {
+      const s = segs[parseInt(row.dataset.segIdx, 10)];
+      if (!s) return;
+      s.name = row.querySelector('.ros-name').value.trim();
+      const d = parseInt(row.querySelector('.ros-duration').value, 10);
+      s.duration = Number.isFinite(d) ? Math.min(240, Math.max(1, d)) : 5;
+      s.activity = row.querySelector('.ros-activity').value.trim();
+      s.studentInstructions = row.querySelector('.ros-instructions').value.trim();
+      const mode = row.querySelector('.ros-mode').value;
+      s.grouping = mode ? { mode, groups: s.grouping?.groups || [] } : null;
+    });
+  };
+
+  const renderRows = () => {
+    rowsEl.innerHTML = segs.map((s, i) => `
+      <div data-seg-idx="${i}" style="border:1px solid var(--border-light);border-radius:var(--radius-md);padding:var(--sp-3);background:var(--bg-card);">
+        <div style="display:flex;align-items:center;gap:var(--sp-1);margin-bottom:var(--sp-2);">
+          <span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--accent-light);color:var(--accent);font-size:0.6875rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;">${i + 1}</span>
+          <input class="input ros-name" value="${esc(s.name)}" placeholder="Segment name" style="flex:1;min-width:0;padding:4px 8px;font-size:0.8125rem;" />
+          <input class="input ros-duration" type="number" min="1" max="240" value="${esc(String(s.duration))}" title="Duration (minutes)" style="width:60px;padding:4px 6px;font-size:0.8125rem;" />
+          <span style="font-size:0.6875rem;color:var(--ink-faint);">min</span>
+          <button class="btn btn-ghost btn-sm ros-up" data-idx="${i}" title="Move up" ${i === 0 ? 'disabled' : ''} style="padding:2px 6px;">&uarr;</button>
+          <button class="btn btn-ghost btn-sm ros-down" data-idx="${i}" title="Move down" ${i === segs.length - 1 ? 'disabled' : ''} style="padding:2px 6px;">&darr;</button>
+          <button class="btn btn-ghost btn-sm ros-remove" data-idx="${i}" title="Remove segment" style="padding:2px 6px;color:var(--danger);">&#10005;</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
+          <input class="input ros-activity" value="${esc(s.activity)}" placeholder="Teacher summary — what happens in this segment" style="padding:4px 8px;font-size:0.8125rem;" />
+          <textarea class="input ros-instructions" rows="2" placeholder="Student-facing instructions" style="font-size:0.8125rem;resize:vertical;">${esc(s.studentInstructions)}</textarea>
+          <select class="input ros-mode" title="Grouping mode" style="width:auto;align-self:flex-start;padding:4px 8px;font-size:0.8125rem;">
+            ${ROS_MODE_OPTIONS.map(m => `<option value="${m.value}" ${(s.grouping?.mode || '') === m.value ? 'selected' : ''}>${m.label}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    `).join('');
+    updateTotal();
+  };
+
+  // Structural actions are delegated so re-renders need no rewiring
+  rowsEl.addEventListener('click', (e) => {
+    const up = e.target.closest('.ros-up');
+    const down = e.target.closest('.ros-down');
+    const remove = e.target.closest('.ros-remove');
+    if (!up && !down && !remove) return;
+    e.preventDefault();
+    syncFromDOM();
+    if (up) {
+      const i = parseInt(up.dataset.idx, 10);
+      if (i > 0) [segs[i - 1], segs[i]] = [segs[i], segs[i - 1]];
+    } else if (down) {
+      const i = parseInt(down.dataset.idx, 10);
+      if (i < segs.length - 1) [segs[i + 1], segs[i]] = [segs[i], segs[i + 1]];
+    } else if (remove) {
+      segs.splice(parseInt(remove.dataset.idx, 10), 1);
+    }
+    renderRows();
+  });
+
+  // Keep the running total live as durations are typed
+  rowsEl.addEventListener('input', (e) => {
+    if (e.target.classList?.contains('ros-duration')) {
+      syncFromDOM();
+      updateTotal();
+    }
+  });
+
+  backdrop.querySelector('#ros-add').addEventListener('click', () => {
+    syncFromDOM();
+    segs.push(rosBlankSegment(segs.length + 1));
+    renderRows();
+    rowsEl.scrollTop = rowsEl.scrollHeight;
+  });
+
+  const regenBtn = backdrop.querySelector('#ros-regenerate');
+  regenBtn.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+    const req = buildRunOfShowRequest(lesson);
+    if (!req.plan) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+    const originalHTML = regenBtn.innerHTML;
+    regenBtn.disabled = true;
+    regenBtn.textContent = 'Regenerating…';
+    try {
+      const fresh = await generateRunOfShow(req);
+      segs = fresh.segments;
+      renderRows();
+      showToast('Segments regenerated — review and save.', 'success');
+    } catch (err) {
+      showToast(`Regenerate failed: ${err.message}`, 'danger');
+    } finally {
+      regenBtn.disabled = false;
+      regenBtn.innerHTML = originalHTML;
+    }
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
+    if (!currentLessonId) {
+      showToast('Save the lesson first — the run of show attaches to a saved lesson.', 'danger');
+      return;
+    }
+    syncFromDOM();
+    const segments = segs.map((s, i) => ({
+      ...s,
+      name: s.name || `Segment ${i + 1}`,
+      duration: Math.min(240, Math.max(1, Math.round(Number(s.duration)) || 5))
+    }));
+    if (segments.length === 0) { showToast('Add at least one segment.', 'danger'); return; }
+    Store.updateLesson(currentLessonId, { runOfShow: { generatedAt: Date.now(), segments } });
+    showToast('Run of show saved!', 'success');
+    close();
+  });
+
+  renderRows();
+}
+
 /* ── Last grouping result for seat assignment ── */
 let lastGroupingResult = null;
 let lastGroupingMeta = null;
@@ -2486,14 +2765,35 @@ function showGroupingModal(container, classes) {
     statusEl.scrollIntoView({ behavior: 'smooth' });
 
     try {
-      const grouping = await suggestGrouping(cls.students, activityType, { groupSize, considerations });
+      const grouping = await suggestGrouping(cls.students, activityType, {
+        groupSize,
+        considerations,
+        portraitText: Store.getPortraitPromptText?.(classId) || ''
+      });
 
-      // Store for seat assignment feature
-      lastGroupingResult = grouping;
+      // Map studentNames → studentIds here (api.js stays name-based; this
+      // file has cls.students). Unmatched names are simply skipped.
+      const nameToId = new Map((cls.students || []).map(s => [String(s.name).trim().toLowerCase(), s.id]));
+      const structured = {
+        groups: grouping.groups.map(g => ({
+          ...g,
+          studentIds: (g.studentNames || [])
+            .map(n => nameToId.get(String(n).trim().toLowerCase()))
+            .filter(Boolean)
+        })),
+        strategyNote: grouping.strategyNote || ''
+      };
+
+      // Store for seat assignment feature (structured object, not markdown)
+      lastGroupingResult = structured;
       lastGroupingMeta = { classId, className: cls.name, activityType, groupSize, studentCount: cls.students.length };
 
-      // Save as persistent component
-      setComponent('grouping', grouping, `${cls.name} · ${activityType} · groups of ${groupSize}`);
+      // Save as persistent component: markdown content for display/back-compat,
+      // raw structured JSON alongside it in meta.structured
+      setComponent('grouping', groupingToMarkdown(structured, { activityType }), {
+        label: `${cls.name} · ${activityType} · groups of ${groupSize}`,
+        structured
+      });
       renderComponents(container);
 
       // Show action buttons in status area
@@ -2545,9 +2845,12 @@ function showGroupingModal(container, classes) {
   });
 }
 
-/* ── Seat Assignment Modal ── */
-function showSeatAssignmentModal(container, groupingText, meta) {
-  if (!groupingText || !meta) {
+/* ── Seat Assignment Modal ──
+ * groupingResult is the structured suggestGrouping object
+ * ({ groups: [{ name, studentNames, ... }] }); a legacy markdown string is
+ * still accepted and regex-parsed for older call paths. */
+function showSeatAssignmentModal(container, groupingResult, meta) {
+  if (!groupingResult || !meta) {
     showToast('Generate groups first before assigning seats.', 'danger');
     return;
   }
@@ -2607,8 +2910,15 @@ function showSeatAssignmentModal(container, groupingText, meta) {
     const layoutPreset = layoutSelect.value;
     close();
 
-    // Parse groups from grouping text
-    const groups = parseGroupsFromText(groupingText);
+    // Structured grouping (new path) or regex parse of legacy markdown
+    const groups = (groupingResult && typeof groupingResult === 'object' && Array.isArray(groupingResult.groups))
+      ? groupingResult.groups
+          .map((g, i) => ({
+            name: g.name || `Group ${i + 1}`,
+            members: [...(g.studentNames || g.members || [])]
+          }))
+          .filter(g => g.members.length > 0)
+      : parseGroupsFromText(String(groupingResult));
 
     const statusEl = container.querySelector('#ai-result');
     statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Assigning seats for ${groups.length} groups in ${PRESET_NAMES[layoutPreset] || layoutPreset} layout...</div></div>`;
@@ -2616,7 +2926,12 @@ function showSeatAssignmentModal(container, groupingText, meta) {
 
     try {
       const seatPlan = await suggestSeatAssignment(groups, layoutPreset, meta.studentCount);
-      setComponent('seatPlan', seatPlan, PRESET_NAMES[layoutPreset] || layoutPreset);
+      // Markdown content for display/back-compat; raw structured JSON in meta
+      // so buildSeatPlanVisual can draw the SVG without re-parsing text.
+      setComponent('seatPlan', seatPlanToMarkdown(seatPlan), {
+        label: PRESET_NAMES[layoutPreset] || layoutPreset,
+        structured: seatPlan
+      });
       statusEl.innerHTML = '';
       renderComponents(container);
       showToast('Seating plan added to components.', 'success');

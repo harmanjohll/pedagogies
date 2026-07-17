@@ -5,7 +5,7 @@
  */
 
 import { trackEvent } from './utils/analytics.js';
-import { idbSetContent, idbDeleteContent, idbGetAllContent, idbClearContent } from './utils/storage.js';
+import { idbSetContent, idbDeleteContent, idbGetAllContent, idbClearContent, idbGetAllFrom, idbRemove } from './utils/storage.js';
 import { getSchemaForClass, getFieldValue } from './utils/tracking.js';
 import { applyIdentity } from './utils/identity.js';
 
@@ -668,7 +668,8 @@ export const Store = {
       e21ccFocus: data.e21ccFocus || [],
       attachedResources: data.attachedResources || [],
       components: data.components || {},
-      reflection: '',
+      runOfShow: data.runOfShow || null,
+      reflection: data.reflection || '',
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -739,8 +740,10 @@ export const Store = {
       name: data.name || 'Untitled Layout',
       items: data.items || [],
       preset: data.preset || null,
+      venue: data.venue || 'classroom',
       wallState: data.wallState || 'closed',
       studentCount: data.studentCount || 30,
+      scenes: data.scenes || [],
       createdAt: Date.now()
     };
     _state.savedLayouts = [...(_state.savedLayouts || []), layout];
@@ -1110,12 +1113,26 @@ export const Store = {
 
   /* ══════════ Data Export/Import ══════════ */
 
-  exportData() {
+  async exportData() {
     // Migrate any legacy localStorage-only libraries into export
     const stimLib = _state.stimulusLibrary?.length ? _state.stimulusLibrary
       : (() => { try { return JSON.parse(localStorage.getItem('cocher_stimulus_library') || '[]'); } catch { return []; } })();
     const srcLib = _state.sourceLibrary?.length ? _state.sourceLibrary
       : (() => { try { return JSON.parse(localStorage.getItem('cocher_source_library') || '[]'); } catch { return []; } })();
+
+    // Custom simulations: metadata lives in its own localStorage key and the
+    // heavy HTML in IndexedDB — inline the HTML so a backup is self-contained
+    // (version history is intentionally not exported, only the current HTML).
+    let customSims = [];
+    try {
+      customSims = JSON.parse(localStorage.getItem('cocher_custom_sims') || '[]');
+      const htmlById = await idbGetAllFrom('custom_sims');
+      customSims = customSims.map(s => {
+        const rec = htmlById.get(s.id);
+        const html = (rec && typeof rec.html === 'string') ? rec.html : (s.html || '');
+        return { ...s, html };
+      });
+    } catch { customSims = []; }
 
     return JSON.stringify({
       version: 2,
@@ -1137,6 +1154,7 @@ export const Store = {
       practiceGoal: _state.practiceGoal || null,
       trackingSchemas: _state.trackingSchemas || [],
       references: _state.references || [],
+      customSimulations: customSims,
       recentActivity: _state.recentActivity
     }, null, 2);
   },
@@ -1150,7 +1168,7 @@ export const Store = {
     const ARRAY_KEYS = ['classes', 'lessons', 'savedLayouts', 'adminEvents', 'knowledgeUploads',
       'pdFolders', 'assessmentRoutines', 'savedTOS', 'assessmentChecklists', 'stimulusLibrary',
       'sourceLibrary', 'departmentSchemes', 'assessmentBlueprints', 'practiceLog',
-      'trackingSchemas', 'references', 'recentActivity'];
+      'trackingSchemas', 'references', 'customSimulations', 'recentActivity'];
     let data;
     try { data = JSON.parse(jsonStr); } catch { return { ok: false, error: 'This file is not valid JSON.' }; }
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -1199,6 +1217,14 @@ export const Store = {
         // Imported backups may carry reference content — put it in IndexedDB
         syncRefContentToIdb([], data.references);
       }
+      if (Array.isArray(data.customSimulations)) {
+        // Written with HTML inline; the simulations portal offloads inline
+        // HTML to IndexedDB on its next render (migrateLegacySimHtml), so
+        // this also works where IndexedDB is unavailable.
+        try {
+          localStorage.setItem('cocher_custom_sims', JSON.stringify(data.customSimulations));
+        } catch { /* quota — sims skipped rather than failing the whole import */ }
+      }
       if (Array.isArray(data.recentActivity)) _state.recentActivity = data.recentActivity;
       // Also sync to legacy localStorage keys for backwards compat
       if (Array.isArray(data.stimulusLibrary)) localStorage.setItem('cocher_stimulus_library', JSON.stringify(data.stimulusLibrary));
@@ -1235,6 +1261,11 @@ export const Store = {
     // Clear legacy keys too
     localStorage.removeItem('cocher_stimulus_library');
     localStorage.removeItem('cocher_source_library');
+    // Custom simulations (metadata + IndexedDB HTML) go with everything else
+    localStorage.removeItem('cocher_custom_sims');
+    idbGetAllFrom('custom_sims')
+      .then(map => { for (const id of map.keys()) idbRemove('custom_sims', id).catch(() => {}); })
+      .catch(() => {});
     idbClearContent().catch(() => {});
     this._persist();
     this._notify();

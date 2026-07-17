@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Process — Co-Cher</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design.css">
+</head>
+<body>
+  <div class="design-app">
+    <header class="design-header">
+      <div class="design-brand">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/></svg>
+        <span>Design Process</span>
+      </div>
+      <div class="design-controls">
+        <button class="btn-action" id="save-btn">Save Progress</button>
+        <button class="btn-action" id="export-btn">Export Journal</button>
+        <button class="btn-action btn-clear" id="reset-btn">Reset</button>
+      </div>
+    </header>
+
+    <main class="design-main">
+      <!-- Stage Navigation -->
+      <nav class="stage-nav" id="stage-nav"></nav>
+
+      <!-- Stage Content -->
+      <div class="stage-content" id="stage-content"></div>
+
+      <!-- Tools Panel -->
+      <aside class="tools-panel" id="tools-panel">
+        <h3>External Tools</h3>
+        <div id="tool-links"></div>
+        <h3 style="margin-top:16px;">Stage Guide</h3>
+        <div id="stage-guide"></div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="design.js"></script>
+</body>
+</html>

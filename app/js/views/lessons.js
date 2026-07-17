@@ -340,6 +340,21 @@ export function renderList(container) {
 
       function processImport(data) {
         if (!data._cocher_lesson || !data.title) throw new Error('Invalid');
+        // Re-create the embedded spatial layout (if any) so the link survives
+        // across browsers — a bare ID from someone else's storage is useless.
+        let layoutId = null;
+        if (data.spatialLayoutData && Array.isArray(data.spatialLayoutData.items)) {
+          const saved = Store.saveLayout({
+            name: (data.spatialLayoutData.name || data.title) + ' (imported)',
+            items: data.spatialLayoutData.items,
+            preset: data.spatialLayoutData.preset || null,
+            venue: data.spatialLayoutData.venue || 'classroom',
+            wallState: data.spatialLayoutData.wallState || 'closed',
+            studentCount: data.spatialLayoutData.studentCount || 30,
+            scenes: data.spatialLayoutData.scenes || []
+          });
+          layoutId = saved.id;
+        }
         return Store.addLesson({
           title: data.title + ' (imported)',
           classId: null,
@@ -347,7 +362,12 @@ export function renderList(container) {
           chatHistory: data.chatHistory || [],
           plan: data.plan || '',
           e21ccFocus: data.e21ccFocus || [],
-          reflection: data.reflection || ''
+          reflection: data.reflection || '',
+          objectives: data.objectives || '',
+          lessonHook: data.lessonHook || '',
+          components: (data.components && typeof data.components === 'object') ? data.components : {},
+          spatialLayout: layoutId,
+          runOfShow: data.runOfShow || null
         });
       }
 
@@ -821,6 +841,38 @@ export function renderDetail(container, { id }) {
         </div>
 
         ${(() => {
+          // Run of Show — read-only strip of staged segments (editing lives in
+          // the Lesson Planner's "Stage lesson" editor).
+          const segments = lesson.runOfShow?.segments;
+          if (!Array.isArray(segments) || segments.length === 0) return '';
+          const total = segments.reduce((n, seg) => n + (Number(seg.duration) || 0), 0);
+          const modeLabels = { individual: 'Individual', pairs: 'Pairs', groups: 'Groups', 'whole-class': 'Whole class' };
+          return `
+            <div class="card" style="margin-bottom:var(--sp-6);">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);margin-bottom:var(--sp-4);flex-wrap:wrap;">
+                <h3 style="font-size:1rem;font-weight:600;color:var(--ink);">Run of Show</h3>
+                <span class="badge badge-blue">${total} min &middot; ${segments.length} segment${segments.length === 1 ? '' : 's'}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;">
+                ${segments.map((seg, i) => `
+                  <div style="display:flex;gap:var(--sp-3);padding:var(--sp-3) 0;${i < segments.length - 1 ? 'border-bottom:1px solid var(--border-light);' : ''}">
+                    <span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--accent-light,#eef1ff);color:var(--accent,#4361ee);font-size:0.6875rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;">${i + 1}</span>
+                    <div style="flex:1;min-width:0;">
+                      <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
+                        <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">${esc(seg.name || `Segment ${i + 1}`)}</span>
+                        <span style="font-size:0.75rem;color:var(--ink-muted);white-space:nowrap;">${Number(seg.duration) || 0} min</span>
+                        ${seg.grouping?.mode ? `<span class="badge badge-gray" style="font-size:0.625rem;">${esc(modeLabels[seg.grouping.mode] || seg.grouping.mode)}</span>` : ''}
+                      </div>
+                      ${seg.activity ? `<div style="font-size:0.8125rem;color:var(--ink-secondary);margin-top:2px;line-height:1.5;">${esc(seg.activity)}</div>` : ''}
+                      ${seg.studentInstructions ? `<div style="font-size:0.75rem;color:var(--ink-muted);margin-top:2px;line-height:1.5;font-style:italic;">${esc(seg.studentInstructions)}</div>` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>`;
+        })()}
+
+        ${(() => {
           const layout = lesson.spatialLayout ? Store.getSavedLayouts().find(l => l.id === lesson.spatialLayout) : null;
           if (!layout) return '';
           return `
@@ -1150,7 +1202,14 @@ export function renderDetail(container, { id }) {
       chatHistory: lesson.chatHistory || [],
       plan: lesson.plan || '',
       reflection: lesson.reflection || '',
-      spatialLayout: lesson.spatialLayout || null
+      objectives: lesson.objectives || '',
+      lessonHook: lesson.lessonHook || '',
+      components: lesson.components || {},
+      runOfShow: lesson.runOfShow || null,
+      spatialLayout: lesson.spatialLayout || null,
+      spatialLayoutData: lesson.spatialLayout
+        ? (Store.getSavedLayouts().find(l => l.id === lesson.spatialLayout) || null)
+        : null
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);

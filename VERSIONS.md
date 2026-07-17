@@ -10,7 +10,8 @@ The canonical URL always serves the **latest** version:
 | v3 | `archive/v3/` (frozen snapshot as of Jul 2026 — v3.1 feature set) | `/pedagogies/archive/v3/cocher.html` | `cocher_v3_*` (renamed at freeze time) | Archived |
 | v4 | `archive/v4/` (frozen snapshot as of Jul 2026 — "Staffroom Desk" design + learner portraits, growth engine, department packs, as originally shipped) | `/pedagogies/archive/v4/cocher.html` | `cocher_v4_*` (renamed at freeze time) | Archived |
 | v4.1 | `archive/v4.1/` (frozen snapshot as of Jul 2026 — domain-accuracy audit sweep: assessment/spatial/simulation fixes, admin workflow bug fix, Sec 1/2 CCE lessons, CCA exemplars, demo events, as originally shipped) | `/pedagogies/archive/v4.1/cocher.html` | `cocher_v4_1_*` (renamed at freeze time) | Archived |
-| v5.1 | `app/` (active development — inviting/engaging generation: living lesson journey, workflow modes, visual teacher identity, configurable per-class tracking schemas, bulk student upload, per-student remarks, My References library) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
+| v5.1 | `archive/v5.1/` (frozen snapshot as of Jul 2026 — inviting/engaging generation: living lesson journey, workflow modes, visual teacher identity, configurable tracking schemas, bulk student upload, remarks, My References; incl. Sem 2 timetable refresh, as originally shipped) | `/pedagogies/archive/v5.1/cocher.html` | `cocher_v5_1_*` (renamed at freeze time) | Archived |
+| v6 | `app/` (active development — "Showtime": run-of-show lesson staging, first-class spatial scenes, real students on the canvas, Class Screen projector view, simulation one-stop) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
 
 ## Notes
 

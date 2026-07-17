@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ohm's Law – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="ohms-law.css?v=5">
+</head>
+<body>
+
+  <!-- Top bar -->
+  <nav class="topbar">
+    <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+    <span class="topbar-breadcrumb">
+      <a href="../../index.html">Practicals</a>
+      <span class="separator">/</span>
+      Physics
+      <span class="separator">/</span>
+      Ohm's Law
+    </span>
+    <div class="topbar-actions">
+      <div id="record-mode-slot"></div>
+        <button id="btn-toggle-guide" class="btn btn-ghost btn-sm">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+        Guide
+      </button>
+      <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+    </div>
+  </nav>
+
+  <!-- Main layout -->
+  <div class="ohm-layout">
+
+    <!-- Left: Guide + Config -->
+    <aside id="guide-panel" class="ohm-guide-panel">
+      <div class="panel">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <ol class="procedure-list">
+            <li class="procedure-step active" data-step="setup">
+              <strong>Setup</strong> — Choose a resistor and set the voltage using the slider.
+            </li>
+            <li class="procedure-step" data-step="close">
+              <strong>Close switch</strong> — Click the switch to complete the circuit. Read the ammeter and voltmeter.
+            </li>
+            <li class="procedure-step" data-step="record">
+              <strong>Record</strong> — Click "Record Reading" to log V and I.
+            </li>
+            <li class="procedure-step" data-step="vary">
+              <strong>Vary voltage</strong> — Change the voltage and record more readings. Collect at least 5 data pairs.
+            </li>
+            <li class="procedure-step" data-step="graph">
+              <strong>Graph</strong> — Plot V vs I. The gradient gives R.
+            </li>
+            <li class="procedure-step" data-step="calculate">
+              <strong>Calculate</strong> — Determine R from the graph gradient. Verify Ohm's law.
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Config -->
+      <div class="panel mt-4">
+        <div class="panel-header">Configuration</div>
+        <div class="panel-body">
+          <div class="config-row">
+            <label for="emf-slider">EMF / V</label>
+            <div class="flex items-center gap-2">
+              <input type="range" id="emf-slider" min="1" max="12" step="0.5" value="2" class="slider">
+              <span id="emf-display" class="config-value">2.0 V</span>
+            </div>
+          </div>
+          <div class="config-row mt-3">
+            <label for="resistor-select">Resistor</label>
+            <select id="resistor-select" class="config-select">
+              <option value="10">10 &#937;</option>
+              <option value="22">22 &#937;</option>
+              <option value="47" selected>47 &#937;</option>
+              <option value="100">100 &#937;</option>
+            </select>
+          </div>
+          <div class="config-row mt-3">
+            <button id="btn-switch" class="btn btn-primary btn-sm w-full">Close Switch</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Centre: Circuit Canvas -->
+    <section class="ohm-workbench-panel">
+      <div class="ohm-workbench">
+        <canvas id="circuit-canvas" width="560" height="420"></canvas>
+
+        <!-- Meter readings overlay -->
+        <div class="meter-readings" id="meter-readings" style="display:none;">
+          <div class="meter-card ammeter">
+            <span class="meter-label">Ammeter</span>
+            <span class="meter-value" id="ammeter-value">0.000 A</span>
+          </div>
+          <div class="meter-card voltmeter">
+            <span class="meter-label">Voltmeter</span>
+            <span class="meter-value" id="voltmeter-value">0.00 V</span>
+          </div>
+          <button id="btn-record" class="btn btn-success btn-sm">Record Reading</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Data + Graph -->
+    <aside class="ohm-data-panel">
+      <div class="panel">
+        <div class="panel-header">Data Table</div>
+        <div class="panel-body">
+          <table class="data-table" id="data-table">
+            <thead>
+              <tr>
+                <th>V / V</th>
+                <th>I / A</th>
+              </tr>
+            </thead>
+            <tbody id="data-tbody"></tbody>
+          </table>
+          <p id="data-empty" class="text-sm text-muted text-center mt-2">
+            No data recorded yet.
+          </p>
+        </div>
+      </div>
+
+      <!-- Graph -->
+      <div class="panel mt-4">
+        <div class="panel-header">V vs I Graph</div>
+        <div class="panel-body graph-container">
+          <canvas id="graph-canvas" width="260" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Calculations -->
+      <div class="panel mt-4">
+        <div class="panel-header">Calculate R</div>
+        <div class="panel-body" id="calc-panel">
+          <p class="text-sm text-muted">Collect at least 3 data points to calculate R from the gradient.</p>
+        </div>
+      </div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="ohms-law"></div>
+    </aside>
+
+  </div>
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="ohms-law.js?v=5"></script>
+</body>
+</html>
