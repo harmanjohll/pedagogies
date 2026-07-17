@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paper Chromatography – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="chrom.css?v=5">
+</head>
+<body>
+
+  <a href="#main-canvas" class="skip-link">Skip to simulation</a>
+
+  <!-- Print-only header -->
+  <div class="print-header">
+    <h1>Paper Chromatography</h1>
+    <p>LabSim Chemistry Practical</p>
+  </div>
+
+  <!-- Top bar -->
+  <nav class="topbar" role="navigation" aria-label="Main navigation">
+    <div class="topbar-inner">
+      <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+      <span class="topbar-breadcrumb">
+        <a href="../../index.html">LabSim</a>
+        <span class="separator">/</span>
+        <a href="../../index.html">Chemistry</a>
+        <span class="separator">/</span>
+        Chromatography
+      </span>
+      <div class="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-toggle-guide" class="btn btn-ghost btn-sm" aria-label="Toggle procedure guide">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+          Guide
+        </button>
+        <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main 3-column layout -->
+  <main class="practical-layout">
+
+    <!-- Left: Sample Selector + Reference Dyes + Procedure -->
+    <aside id="guide-panel" class="guide-panel" aria-label="Sample selector and procedure guide">
+
+      <!-- Sample selector -->
+      <div class="panel sample-selector">
+        <div class="panel-header">Sample</div>
+        <div class="panel-body">
+          <label for="sample-select">Choose a sample to analyse</label>
+          <select id="sample-select" class="sample-select">
+            <option value="" disabled selected>-- Select a sample --</option>
+          </select>
+          <div id="sample-info" class="sample-info" style="display:none;">
+            <span class="sample-swatch" id="sample-swatch"></span>
+            <span id="sample-name-display"></span>
+            <span class="tag" id="sample-solvent-tag"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reference dyes -->
+      <div class="panel reference-section">
+        <div class="panel-header">Reference Dyes</div>
+        <div class="panel-body">
+          <div class="ref-dye-list" id="ref-dye-list"></div>
+        </div>
+      </div>
+
+      <!-- Procedure guide -->
+      <div class="panel mt-4">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <div class="procedure-steps" id="procedure-steps"></div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Centre: Simulation Canvas -->
+    <section class="workbench-panel" aria-label="Simulation">
+      <div class="workbench" id="workbench">
+        <canvas id="main-canvas" width="700" height="500"></canvas>
+      </div>
+
+      <!-- Workbench controls below canvas -->
+      <div class="workbench-controls" id="workbench-controls">
+        <span class="action-hint" id="action-hint">Select a sample to begin.</span>
+        <div class="solvent-display" id="solvent-display" style="display:none;">
+          <span class="solvent-dot" id="solvent-dot"></span>
+          <span id="solvent-name"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Results + Analysis -->
+    <aside class="data-panel" aria-label="Data and analysis">
+
+      <!-- Results table -->
+      <div class="panel">
+        <div class="panel-header">Results</div>
+        <div class="panel-body">
+          <table class="results-table" id="results-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Spot</th>
+                <th>Colour</th>
+                <th>Distance / cm</th>
+                <th>Rf</th>
+                <th>Identity</th>
+              </tr>
+            </thead>
+            <tbody id="results-tbody"></tbody>
+            <tfoot id="results-tfoot">
+              <tr>
+                <td colspan="2"><strong>Solvent front</strong></td>
+                <td id="sf-distance">—</td>
+                <td colspan="2">—</td>
+              </tr>
+            </tfoot>
+          </table>
+          <p id="results-empty" class="results-empty">
+            Select a sample and run the chromatogram to see results.
+          </p>
+        </div>
+      </div>
+
+      <!-- Rf Calculation -->
+      <div class="panel mt-4 rf-calc-area">
+        <div class="panel-header">Rf Calculation</div>
+        <div class="panel-body">
+          <div class="rf-formula">
+            Rf =
+            <span class="fraction">
+              <span class="numerator">distance moved by substance</span>
+              <span class="fraction-bar"></span>
+              <span class="denominator">distance moved by solvent front</span>
+            </span>
+          </div>
+          <div class="calc-workspace" id="calc-workspace" style="display:none;"></div>
+          <p id="calc-placeholder" class="text-sm text-muted">
+            Complete a chromatogram to unlock Rf calculations.
+          </p>
+        </div>
+      </div>
+
+      <!-- Pure / Mixture determination -->
+      <div class="panel mt-4" id="pure-mix-panel" style="display:none;">
+        <div class="panel-header">Conclusion</div>
+        <div class="panel-body" id="pure-mix-body"></div>
+      </div>
+
+      <!-- Analysis questions -->
+      <div class="panel mt-4 analysis-section">
+        <div class="panel-header">Analysis Questions</div>
+        <div class="panel-body">
+          <div id="analysis-list"></div>
+        </div>
+      </div>
+
+      <!-- Score summary slot -->
+      <div id="score-slot" class="mt-4"></div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="chromatography"></div>
+    </aside>
+
+  </main>
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="chrom-data.js?v=5"></script>
+  <script src="chrom.js?v=5"></script>
+</body>
+</html>
