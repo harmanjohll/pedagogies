@@ -13,6 +13,7 @@
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { escapeHtml, md } from '../utils/markdown.js';
+import { layoutToSVG } from './spatial-designer.js';
 
 let _timerId = null;
 let _remaining = 0;      // seconds left in the running segment
@@ -54,6 +55,30 @@ export function renderPresent(container, params) {
 
   const cls = (Store.get('classes') || []).find(c => c.id === lesson.classId) || null;
   const segments = lesson.runOfShow?.segments || [];
+  const layout = lesson.spatialLayout
+    ? (Store.getSavedLayouts().find(l => l.id === lesson.spatialLayout) || null) : null;
+
+  /* Room map for a segment: its linked scene's arrangement, else the layout
+   * itself — but only shown when there's something meaningful (an explicit
+   * scene, or seat assignments to display). */
+  function segmentMap(seg) {
+    if (!layout) return '';
+    const scene = seg.layoutSceneId
+      ? (layout.scenes || []).find(s => s.id === seg.layoutSceneId) : null;
+    const items = (scene?.items?.length ? scene.items : layout.items) || [];
+    const seatLabels = {};
+    (seg.grouping?.groups || []).forEach(g =>
+      (g.itemIds || []).forEach(iid => { seatLabels[iid] = g.name || 'Group'; }));
+    if (!scene && !Object.keys(seatLabels).length) return '';
+    if (!items.length) return '';
+    let svg = '';
+    try { svg = layoutToSVG(items, { width: 640, seatLabels, title: scene?.name || 'Room setup' }); }
+    catch { return ''; }
+    return `<div class="present-map">
+      <div class="present-meta" style="font-weight:700;margin-bottom:6px;">${Object.keys(seatLabels).length ? 'Find your seat' : 'How the room is set up'}${scene ? ' &middot; ' + escapeHtml(scene.name) : ''}</div>
+      ${svg}
+    </div>`;
+  }
   _segIdx = 0;
   _running = false;
 
@@ -91,6 +116,7 @@ export function renderPresent(container, params) {
       .present-ctrl { display:flex; gap: 8px; }
       .present-lisc { text-align: left; font-size: clamp(1rem, 2vw, 1.4rem); line-height: 1.6; max-width: 80vw; }
       .present-lisc h1, .present-lisc h2, .present-lisc h3 { font-size: 1.2em; }
+      .present-map svg { max-width: min(88vw, 760px); height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
       @media print { .present-bottom, .present-top .present-ctrl { display: none; } }
     </style>
     <div class="present-root">
@@ -192,7 +218,8 @@ export function renderPresent(container, params) {
         <div class="present-clock">${fmtClock(_remaining)}</div>
         ${modeLabel ? `<span class="present-groupmode">${escapeHtml(modeLabel)}</span>` : ''}
         ${seg.studentInstructions ? `<div class="present-instructions">${escapeHtml(seg.studentInstructions)}</div>` : ''}
-        ${groupCards}`;
+        ${groupCards}
+        ${segmentMap(seg)}`;
     }
     renderDots();
   }
