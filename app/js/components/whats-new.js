@@ -11,18 +11,16 @@ import { openModal } from './modals.js';
 const SEEN_KEY = 'cocher_whatsnew_seen';
 
 const CHANGES = [
-  { icon: '&#127793;', title: 'Your lessons, as a living journey',
-    text: 'Every lesson now has one clear next step at every stage — and finishing a reflection is quietly celebrated. See how many lessons you\'ve carried all the way through in the last fortnight. Press Ctrl+J to collapse everything to just the next thing to do.' },
-  { icon: '&#129517;', title: 'Workflow Modes',
-    text: 'One tap reshapes Co-Cher around what you\'re doing — Planning, Teaching Day, Assessment, or Reflection each surface the right tools and tuck the rest away. Clear the mode and your own setup comes straight back.' },
-  { icon: '&#127912;', title: 'Make it yours',
-    text: 'Pick a personal accent colour that flows through the whole app, a monogram, and your own mantra for the dashboard greeting — in Settings → Your Identity. And the guided tour now actually greets new teachers.' },
-  { icon: '&#128101;', title: 'Track what matters to YOUR class',
-    text: 'E21CC is powerful but heavy for everyday use — so now each class can track its own way: a simple Red/Amber/Green, a mastery band, effort, or a scheme you define yourself. Your existing E21CC data is untouched.' },
-  { icon: '&#128228;', title: 'Bulk-add students & jot remarks',
-    text: 'Upload a class list from CSV or Excel in one go (with duplicate-checking), and add a quick free-text remark on any student — which flows straight into your report-comment drafts.' },
-  { icon: '&#128218;', title: 'My References — your own teaching library',
-    text: 'Upload PDFs, Word, PowerPoint, Excel or notes into My Learning; Co-Cher summarises each one and lets you toggle it into the Lesson Planner as reference context — like giving the AI your own materials to work from.' },
+  { icon: '&#127916;', title: 'Stage your lesson, then just press play',
+    text: 'One click breaks your finished plan into a runnable sequence — hook, activities, plenary — each with a duration, student-facing instructions, and its own room setup. Edit every segment before you commit.' },
+  { icon: '&#128250;', title: 'Class Screen — your plan, on the wall',
+    text: 'Open Present on any staged lesson: a clean, student-facing screen with the current activity, a live countdown, instructions, and who\'s in which group. Walk in, one click, and the lesson runs itself. Nothing teacher-only ever shows.' },
+  { icon: '&#129681;', title: 'Rooms with scenes — and real students in them',
+    text: 'A saved layout can now hold several "scenes" (a discussion setup, a stations setup…) that travel with the layout. And groups can be placed onto the actual furniture — named seats on your real classroom map, not a generic grid.' },
+  { icon: '&#129513;', title: 'Simulations, properly one-stop',
+    text: 'AI-built sims now share the same polished widgets as the built-in labs (notebook, export, collapsible guides), can be attached to lessons in both directions, and your sim library gets search, subject filters, and duplicate-as-template.' },
+  { icon: '&#128190;', title: 'Backups now really back everything up',
+    text: 'Custom simulations are included in your full export/import at last — plus shared lessons now carry their layouts, groupings and components across to colleagues intact.' },
 ];
 
 export function maybeShowWhatsNew() {
