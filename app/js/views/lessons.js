@@ -340,6 +340,21 @@ export function renderList(container) {
 
       function processImport(data) {
         if (!data._cocher_lesson || !data.title) throw new Error('Invalid');
+        // Re-create the embedded spatial layout (if any) so the link survives
+        // across browsers — a bare ID from someone else's storage is useless.
+        let layoutId = null;
+        if (data.spatialLayoutData && Array.isArray(data.spatialLayoutData.items)) {
+          const saved = Store.saveLayout({
+            name: (data.spatialLayoutData.name || data.title) + ' (imported)',
+            items: data.spatialLayoutData.items,
+            preset: data.spatialLayoutData.preset || null,
+            venue: data.spatialLayoutData.venue || 'classroom',
+            wallState: data.spatialLayoutData.wallState || 'closed',
+            studentCount: data.spatialLayoutData.studentCount || 30,
+            scenes: data.spatialLayoutData.scenes || []
+          });
+          layoutId = saved.id;
+        }
         return Store.addLesson({
           title: data.title + ' (imported)',
           classId: null,
@@ -347,7 +362,12 @@ export function renderList(container) {
           chatHistory: data.chatHistory || [],
           plan: data.plan || '',
           e21ccFocus: data.e21ccFocus || [],
-          reflection: data.reflection || ''
+          reflection: data.reflection || '',
+          objectives: data.objectives || '',
+          lessonHook: data.lessonHook || '',
+          components: (data.components && typeof data.components === 'object') ? data.components : {},
+          spatialLayout: layoutId,
+          runOfShow: data.runOfShow || null
         });
       }
 
@@ -1150,7 +1170,14 @@ export function renderDetail(container, { id }) {
       chatHistory: lesson.chatHistory || [],
       plan: lesson.plan || '',
       reflection: lesson.reflection || '',
-      spatialLayout: lesson.spatialLayout || null
+      objectives: lesson.objectives || '',
+      lessonHook: lesson.lessonHook || '',
+      components: lesson.components || {},
+      runOfShow: lesson.runOfShow || null,
+      spatialLayout: lesson.spatialLayout || null,
+      spatialLayoutData: lesson.spatialLayout
+        ? (Store.getSavedLayouts().find(l => l.id === lesson.spatialLayout) || null)
+        : null
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);

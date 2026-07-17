@@ -946,10 +946,8 @@ export function render(container) {
     if (e21ccFocus.length > 0) briefPrompt += `- E21CC Focus: ${e21ccFocus.map(f => E21CC_MAP[f]).join(', ')}\n`;
     if (considerations) briefPrompt += `- Special considerations: ${considerations}\n`;
     if (cls?.students?.length) {
-      const avgCait = Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cait || 50), 0) / cls.students.length);
-      const avgCci = Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cci || 50), 0) / cls.students.length);
-      const avgCgc = Math.round(cls.students.reduce((s, st) => s + (st.e21cc?.cgc || 50), 0) / cls.students.length);
-      briefPrompt += `- Class E21CC profile: CAIT avg ${avgCait}, CCI avg ${avgCci}, CGC avg ${avgCgc}\n`;
+      const portrait = Store.getPortraitPromptText(cls.id);
+      if (portrait) briefPrompt += `- Class profile: ${portrait}\n`;
     }
     aiSuggestBtn.disabled = true;
     aiSuggestBtn.textContent = 'Thinking...';

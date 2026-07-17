@@ -1221,8 +1221,8 @@ export function render(container) {
   });
 
   // Export
-  container.querySelector('#export-btn').addEventListener('click', () => {
-    const data = Store.exportData();
+  container.querySelector('#export-btn').addEventListener('click', async () => {
+    const data = await Store.exportData();
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1252,7 +1252,9 @@ export function render(container) {
         knowledgeUploads: 'uploads', pdFolders: 'PD folders', stimulusLibrary: 'stimulus items',
         sourceLibrary: 'source sets', assessmentRoutines: 'routines', savedTOS: 'TOS',
         assessmentChecklists: 'checklists', assessmentBlueprints: 'blueprints',
-        adminEvents: 'admin events', departmentSchemes: 'schemes'
+        adminEvents: 'admin events', departmentSchemes: 'schemes',
+        customSimulations: 'custom simulations', references: 'references',
+        trackingSchemas: 'tracking schemas'
       };
       const summary = Object.entries(preview.counts)
         .filter(([k, n]) => n > 0 && LABELS[k])
