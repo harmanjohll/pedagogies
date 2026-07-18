@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Specific Heat Capacity – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="shc.css?v=5">
+</head>
+<body>
+
+  <a href="#main-canvas" class="skip-link">Skip to simulation</a>
+
+  <!-- Print-only header -->
+  <div class="print-header">
+    <h1>Specific Heat Capacity</h1>
+    <p>LabSim Physics Practical</p>
+  </div>
+
+  <!-- Top bar -->
+  <nav class="topbar" role="navigation" aria-label="Main navigation">
+    <div class="topbar-inner">
+      <a href="../../index.html" class="topbar-brand">Lab<span>Sim</span></a>
+      <span class="topbar-breadcrumb">
+        <a href="../../index.html">LabSim</a>
+        <span class="separator">/</span>
+        <a href="../../index.html">Physics</a>
+        <span class="separator">/</span>
+        Specific Heat Capacity
+      </span>
+      <div class="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-toggle-guide" class="btn btn-ghost btn-sm" aria-label="Toggle procedure guide">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1 1 0 110 2 1 1 0 010-2zM6.5 7h2l.5 6h-3l.5-6z"/></svg>
+          Guide
+        </button>
+        <button id="btn-reset" class="btn btn-danger btn-sm">Reset</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main 3-column layout -->
+  <main class="shc-layout">
+
+    <!-- ═══ Left: Procedure + Metal Selector ═══ -->
+    <aside id="guide-panel" class="shc-guide-panel" aria-label="Procedure guide">
+      <div class="panel">
+        <div class="panel-header">Procedure</div>
+        <div class="panel-body">
+          <ol class="procedure-list" id="procedure-list">
+            <li class="procedure-step active" data-step="select">
+              <strong>Select metal</strong> — Choose a metal block and note its mass (1.0 kg).
+            </li>
+            <li class="procedure-step" data-step="insert">
+              <strong>Insert heater &amp; thermometer</strong> — Place the immersion heater and thermometer into the holes in the block.
+            </li>
+            <li class="procedure-step" data-step="startTemp">
+              <strong>Record start temperature</strong> — Note the initial temperature before heating.
+            </li>
+            <li class="procedure-step" data-step="powerOn">
+              <strong>Switch on power supply</strong> — Turn on and note the ammeter (4 A) and voltmeter (12 V) readings.
+            </li>
+            <li class="procedure-step" data-step="collect">
+              <strong>Record data</strong> — Record the temperature every 60 s for 10 minutes (600 s).
+            </li>
+            <li class="procedure-step" data-step="calculate">
+              <strong>Calculate SHC</strong> — Use E = VIt and c = E / (m x &Delta;T) to find specific heat capacity.
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Metal selector -->
+      <div class="panel mt-4">
+        <div class="panel-header">Metal Block</div>
+        <div class="panel-body">
+          <div class="config-row">
+            <label for="metal-select">Choose metal</label>
+            <select id="metal-select" class="config-select">
+              <option value="aluminium" selected>Aluminium (1.0 kg)</option>
+              <option value="copper">Copper (1.0 kg)</option>
+              <option value="iron">Iron (1.0 kg)</option>
+              <option value="brass">Brass (1.0 kg)</option>
+            </select>
+          </div>
+          <div class="metal-info mt-2" id="metal-info">
+            <span class="tag tag-phys">Aluminium</span>
+            <span class="text-sm text-muted">m = 1.000 kg</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="panel mt-4">
+        <div class="panel-header">Controls</div>
+        <div class="panel-body flex-col gap-2">
+          <button id="btn-power" class="btn btn-primary btn-sm w-full" disabled>
+            Switch On Power Supply
+          </button>
+          <div class="power-status" id="power-status">
+            <span class="status-dot off"></span>
+            <span class="text-sm text-muted">Power off</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══ Centre: Simulation Canvas ═══ -->
+    <section class="shc-workbench-panel" aria-label="Simulation">
+      <div class="shc-workbench">
+        <canvas id="main-canvas" width="600" height="460"></canvas>
+
+        <!-- Meter readouts below canvas -->
+        <div class="meter-readings" id="meter-readings">
+          <div class="meter-card voltmeter">
+            <span class="meter-label">Voltmeter</span>
+            <span class="meter-value" id="voltmeter-value">0.0 V</span>
+          </div>
+          <div class="meter-card ammeter">
+            <span class="meter-label">Ammeter</span>
+            <span class="meter-value" id="ammeter-value">0.00 A</span>
+          </div>
+          <div class="meter-card timer-card">
+            <span class="meter-label">Time</span>
+            <span class="meter-value" id="timer-value">0 s</span>
+          </div>
+          <div class="meter-card temp-card">
+            <span class="meter-label">Temperature</span>
+            <span class="meter-value" id="temp-value">20.0 °C</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Right: Data + Graph + Calculation ═══ -->
+    <aside class="shc-data-panel" aria-label="Data and analysis">
+
+      <!-- Data table -->
+      <div class="panel">
+        <div class="panel-header">Data Table</div>
+        <div class="panel-body">
+          <table class="data-table" id="data-table">
+            <thead>
+              <tr>
+                <th>Time / s</th>
+                <th>Temp / °C</th>
+              </tr>
+            </thead>
+            <tbody id="data-tbody"></tbody>
+          </table>
+          <p id="data-empty" class="text-sm text-muted text-center mt-2">
+            Switch on the heater to begin collecting data.
+          </p>
+          <div id="export-buttons"></div>
+        </div>
+      </div>
+
+      <!-- Temperature-time graph -->
+      <div class="panel mt-4">
+        <div class="panel-header">Temperature vs Time</div>
+        <div class="panel-body graph-container">
+          <canvas id="graph-canvas" width="260" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Calculation panel -->
+      <div class="panel mt-4">
+        <div class="panel-header">Calculate SHC</div>
+        <div class="panel-body" id="calc-panel">
+          <div class="calc-formulae">
+            <div class="calc-formula-row">
+              <span class="calc-formula-label">Energy supplied:</span>
+              <span class="calc-formula font-mono">E = V &times; I &times; t</span>
+            </div>
+            <div class="calc-formula-row">
+              <span class="calc-formula-label">Specific heat:</span>
+              <span class="calc-formula font-mono">c = E / (m &times; &Delta;T)</span>
+            </div>
+          </div>
+          <div class="calc-inputs" id="calc-inputs" style="display:none;">
+            <div class="calc-input-row">
+              <label for="input-energy">E (J)</label>
+              <input type="number" id="input-energy" class="calc-input" placeholder="Enter energy..." step="any">
+            </div>
+            <div class="calc-input-row">
+              <label for="input-shc">c (J/kg°C)</label>
+              <input type="number" id="input-shc" class="calc-input" placeholder="Enter SHC..." step="any">
+            </div>
+            <button id="btn-check" class="btn btn-success btn-sm w-full mt-2">Check Answer</button>
+            <div id="calc-result" class="calc-result-box" style="display:none;"></div>
+          </div>
+          <p id="calc-placeholder" class="text-sm text-muted">
+            Complete data collection to unlock calculations.
+          </p>
+        </div>
+      </div>
+
+      <!-- Score summary slot -->
+      <div id="score-slot"></div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="specific-heat"></div>
+    </aside>
+
+  </main>
+  <!-- Toast container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="shc-data.js?v=5"></script>
+  <script src="shc.js?v=5"></script>
+</body>
+</html>

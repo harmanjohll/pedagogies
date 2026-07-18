@@ -8,19 +8,19 @@
 import { APP_VERSION } from '../version.js';
 import { openModal } from './modals.js';
 
-const SEEN_KEY = 'cocher_whatsnew_seen';
+const SEEN_KEY = 'cocher_v6_whatsnew_seen';
 
 const CHANGES = [
-  { icon: '&#129517;', title: 'Your planner is now a cockpit',
-    text: 'A journey bar walks you Plan → Components → Stage → Place → Present, and your staged Run of Show now lives right in the planner — with each segment carrying the E21CC competency it grows, shown to students on the Class Screen.' },
-  { icon: '&#128100;', title: 'Names on the seats',
-    text: 'Placing groups now puts actual student names on the actual furniture — in the planner\'s room map and on the Class Screen. "Find your seat" means YOUR seat.' },
-  { icon: '&#10024;', title: 'Sharp plans that expand on demand',
-    text: 'Plans and components now generate lean — the key moves, nothing padded. Tap ✨ Details, Exemplar or Model answer on any section and Co-Cher expands just that part, then remembers it with the lesson.' },
-  { icon: '&#129504;', title: 'Your school\'s pedagogy, everywhere',
-    text: 'ACT (feedback) and GROW (metacognition) are now first-class frameworks — woven into planning context, lesson segments, the Class Screen, and report comments. Upload your own school\'s framework and it joins them.' },
-  { icon: '&#129514;', title: 'Simulations that teach harder',
-    text: 'AI-built sims gain a Challenge mode with self-checking tasks, a printable predict-observe-explain inquiry sheet, an under-the-hood Model panel — and the quality gate now checks the controls actually drive the model.' },
+  { icon: '&#127916;', title: 'Stage your lesson, then just press play',
+    text: 'One click breaks your finished plan into a runnable sequence — hook, activities, plenary — each with a duration, student-facing instructions, and its own room setup. Edit every segment before you commit.' },
+  { icon: '&#128250;', title: 'Class Screen — your plan, on the wall',
+    text: 'Open Present on any staged lesson: a clean, student-facing screen with the current activity, a live countdown, instructions, and who\'s in which group. Walk in, one click, and the lesson runs itself. Nothing teacher-only ever shows.' },
+  { icon: '&#129681;', title: 'Rooms with scenes — and real students in them',
+    text: 'A saved layout can now hold several "scenes" (a discussion setup, a stations setup…) that travel with the layout. And groups can be placed onto the actual furniture — named seats on your real classroom map, not a generic grid.' },
+  { icon: '&#129513;', title: 'Simulations, properly one-stop',
+    text: 'AI-built sims now share the same polished widgets as the built-in labs (notebook, export, collapsible guides), can be attached to lessons in both directions, and your sim library gets search, subject filters, and duplicate-as-template.' },
+  { icon: '&#128190;', title: 'Backups now really back everything up',
+    text: 'Custom simulations are included in your full export/import at last — plus shared lessons now carry their layouts, groupings and components across to colleagues intact.' },
 ];
 
 export function maybeShowWhatsNew() {
