@@ -64,6 +64,13 @@ export function renderPresent(container, params) {
   const layout = lesson.spatialLayout
     ? (Store.getSavedLayouts().find(l => l.id === lesson.spatialLayout) || null) : null;
 
+  /* Resolve one stored studentId (or raw name, import/AI compat) to a
+   * display name — same resolution rule as resolveMembers, per entry. */
+  const seatName = idOrName => {
+    const byId = cls?.students?.find(s => s.id === idOrName);
+    return byId ? byId.name : String(idOrName);
+  };
+
   /* Room map for a segment: its linked scene's arrangement, else the layout
    * itself — but only shown when there's something meaningful (an explicit
    * scene, or seat assignments to display). */
@@ -73,8 +80,21 @@ export function renderPresent(container, params) {
       ? (layout.scenes || []).find(s => s.id === seg.layoutSceneId) : null;
     const items = (scene?.items?.length ? scene.items : layout.items) || [];
     const seatLabels = {};
-    (seg.grouping?.groups || []).forEach(g =>
-      (g.itemIds || []).forEach(iid => { seatLabels[iid] = g.name || 'Group'; }));
+    (seg.grouping?.groups || []).forEach(g => {
+      const groupLabel = g.name || 'Group';
+      const sm = (g.seatMap && typeof g.seatMap === 'object') ? g.seatMap : null;
+      if (sm && Object.keys(sm).length > 0) {
+        // Named seats: the badge lists the students sitting at each item
+        Object.entries(sm).forEach(([iid, ids]) => {
+          const names = (Array.isArray(ids) ? ids : []).map(seatName).filter(Boolean);
+          seatLabels[iid] = names.length ? names : groupLabel;
+        });
+        // Assigned items missing from the seatMap keep the group-name pill
+        (g.itemIds || []).forEach(iid => { if (!(iid in seatLabels)) seatLabels[iid] = groupLabel; });
+      } else {
+        (g.itemIds || []).forEach(iid => { seatLabels[iid] = groupLabel; });
+      }
+    });
     if (!scene && !Object.keys(seatLabels).length) return '';
     if (!items.length) return '';
     let svg = '';

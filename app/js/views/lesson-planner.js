@@ -19,6 +19,7 @@ import { md, escapeHtml } from '../utils/markdown.js';
 import { critiquePlan } from '../api.js';
 import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
+import { layoutToSVG } from './spatial-designer.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
@@ -3247,6 +3248,48 @@ function showDifferentiationModal(container, classes) {
 }
 
 /* ══════════ Spatial Context Bar (coupling) ══════════ */
+
+/* Resolve a stored studentId (or a raw name string, import/AI compat) to a
+ * display name against the lesson's class roster. */
+function seatDisplayName(idOrName, roster) {
+  const byId = (roster || []).find(st => st.id === idOrName);
+  return byId ? byId.name : String(idOrName);
+}
+
+/* Staged segments that have any seat placement — named seats (seatMap) or
+ * legacy furniture assignment (itemIds). */
+function segmentsWithSeats(segments) {
+  return (segments || []).filter(s =>
+    (s.grouping?.groups || []).some(g =>
+      (g.seatMap && typeof g.seatMap === 'object' && Object.keys(g.seatMap).length > 0) ||
+      (Array.isArray(g.itemIds) && g.itemIds.length > 0)));
+}
+
+/* Build layoutToSVG seatLabels from one segment: groups with a seatMap get an
+ * array of student names per item (stacked lines); itemIds-only groups keep
+ * the single group-name pill (back-compat). */
+function segmentSeatLabels(seg, roster) {
+  const labels = {};
+  (seg?.grouping?.groups || []).forEach((g, i) => {
+    const groupLabel = g.name || `Group ${i + 1}`;
+    const sm = (g.seatMap && typeof g.seatMap === 'object') ? g.seatMap : null;
+    if (sm && Object.keys(sm).length > 0) {
+      Object.entries(sm).forEach(([iid, ids]) => {
+        const names = (Array.isArray(ids) ? ids : [])
+          .map(v => seatDisplayName(v, roster)).filter(Boolean);
+        labels[iid] = names.length ? names : groupLabel;
+      });
+      // Items assigned to the group but missing from its seatMap keep the pill
+      (Array.isArray(g.itemIds) ? g.itemIds : []).forEach(iid => {
+        if (!(iid in labels)) labels[iid] = groupLabel;
+      });
+    } else {
+      (Array.isArray(g.itemIds) ? g.itemIds : []).forEach(iid => { labels[iid] = groupLabel; });
+    }
+  });
+  return labels;
+}
+
 function renderSpatialContextBar(container) {
   const barEl = container.querySelector('#spatial-context-bar');
   if (!barEl) return;
@@ -3259,20 +3302,66 @@ function renderSpatialContextBar(container) {
   const layout = savedLayouts.find(l => l.id === linkedLayoutId);
   if (!layout) { barEl.style.display = 'none'; return; }
 
+  const segments = currentLesson?.runOfShow?.segments || [];
+  const seated = segmentsWithSeats(segments);
+  const roster = currentLesson?.classId
+    ? (Store.getClass(currentLesson.classId)?.students || []) : [];
+  // Default shown seating: first segment with named seats, else first with any
+  let selSegId = (seated.find(s => (s.grouping?.groups || []).some(g =>
+    g.seatMap && typeof g.seatMap === 'object' && Object.keys(g.seatMap).length > 0))
+    || seated[0])?.id || null;
+
   barEl.style.display = '';
   barEl.innerHTML = `
-    <div style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);background:linear-gradient(135deg, rgba(0,12,83,0.04), rgba(167,243,208,0.08));border:1px solid var(--border-light);border-radius:var(--radius-lg);">
-      <div style="font-size:1.25rem;">${PRESET_ICONS[layout.preset] || '📐'}</div>
-      <div style="flex:1;">
-        <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);">
-          ${PRESET_NAMES[layout.preset] || 'Custom'} Layout Linked
+    <div style="padding:var(--sp-3) var(--sp-4);background:linear-gradient(135deg, rgba(0,12,83,0.04), rgba(167,243,208,0.08));border:1px solid var(--border-light);border-radius:var(--radius-lg);">
+      <div style="display:flex;align-items:center;gap:var(--sp-3);">
+        <div style="font-size:1.25rem;">${PRESET_ICONS[layout.preset] || '📐'}</div>
+        <div style="flex:1;">
+          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);">
+            ${PRESET_NAMES[layout.preset] || 'Custom'} Layout Linked
+          </div>
+          <div style="font-size:0.6875rem;color:var(--ink-muted);">
+            ${esc(layout.name)} · ${layout.studentCount || '?'} students · ${layout.items?.length || 0} items
+          </div>
         </div>
-        <div style="font-size:0.6875rem;color:var(--ink-muted);">
-          ${layout.name} · ${layout.studentCount || '?'} students · ${layout.items?.length || 0} items
-        </div>
+        <button class="btn btn-ghost btn-sm" id="spatial-context-open" style="font-size:0.75rem;">Open</button>
       </div>
-      <button class="btn btn-ghost btn-sm" id="spatial-context-open" style="font-size:0.75rem;">Open</button>
+      ${seated.length > 1 ? `
+      <div id="spatial-map-chips" style="display:flex;align-items:center;gap:var(--sp-1);flex-wrap:wrap;margin-top:var(--sp-2);">
+        <span style="font-size:0.625rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-muted);">Seating for</span>
+        ${seated.map(s => `
+          <button type="button" class="spatial-map-chip" data-seg-id="${esc(s.id)}" style="padding:2px 10px;border-radius:var(--radius-full);border:1px solid var(--border);background:var(--bg-card);color:var(--ink);font-size:0.6875rem;font-weight:600;cursor:pointer;">${esc(s.name || 'Segment')}</button>`).join('')}
+      </div>` : ''}
+      <div id="spatial-context-map" style="margin-top:var(--sp-2);overflow-x:auto;line-height:0;"></div>
     </div>`;
+
+  const mapEl = barEl.querySelector('#spatial-context-map');
+  const sceneOf = (s) => (s && s.layoutSceneId)
+    ? ((layout.scenes || []).find(sc => sc && sc.id === s.layoutSceneId) || null) : null;
+
+  const drawMap = () => {
+    const seg = seated.find(s => s.id === selSegId) || null;
+    // Items: the shown segment's scene, else the first staged segment's scene,
+    // else the layout's base arrangement.
+    const scene = sceneOf(seg) || sceneOf(segments.find(s => sceneOf(s))) || null;
+    const items = (scene?.items?.length ? scene.items : layout.items) || [];
+    const seatLabels = seg ? segmentSeatLabels(seg, roster) : {};
+    let svg = '';
+    try { svg = layoutToSVG(items, { width: 520, seatLabels, title: layout.name || 'Room layout' }); }
+    catch { svg = ''; }
+    mapEl.innerHTML = svg ? `<div style="border:1px solid var(--border-light);border-radius:var(--radius-md);overflow:hidden;background:#fff;display:inline-block;max-width:100%;">${svg}</div>` : '';
+    barEl.querySelectorAll('.spatial-map-chip').forEach(chip => {
+      const active = chip.dataset.segId === selSegId;
+      chip.style.background = active ? 'var(--accent)' : 'var(--bg-card)';
+      chip.style.color = active ? '#fff' : 'var(--ink)';
+      chip.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    });
+  };
+
+  barEl.querySelectorAll('.spatial-map-chip').forEach(chip => {
+    chip.addEventListener('click', () => { selSegId = chip.dataset.segId; drawMap(); });
+  });
+  drawMap();
 
   barEl.querySelector('#spatial-context-open')?.addEventListener('click', () => navigate('/spatial'));
 }
