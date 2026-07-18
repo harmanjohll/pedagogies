@@ -762,6 +762,7 @@ const AI_TOOLS = [
   // Enactment Enhancements (filtered by EEE selection)
   { id: 'ai-youtube-btn', label: 'YouTube', icon: '<polygon points="5 3 19 12 5 21 5 3"/>', color: '#ff0000', cat: 'core', eee: 'youtubeVideos' },
   { id: 'ai-simulations-btn', label: 'Simulations', icon: '<path d="M9 3h6v3H9z"/><path d="M7 6h10l2 4-4 3 4 3-2 5H7l-2-5 4-3-4-3z"/>', color: '#8b5cf6', cat: 'enactment', eee: 'simulations' },
+  { id: 'build-sim-btn', label: 'Build a sim for this lesson', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>', color: '#8b5cf6', cat: 'enactment', eee: 'simulations' },
   { id: 'ai-worksheet-btn', label: 'Worksheet', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>', color: '', cat: 'enactment', eee: 'worksheet' },
   { id: 'ai-stimulus-btn', label: 'Stimulus', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/>', color: '#0ea5e9', cat: 'enactment', eee: 'stimulus' },
   { id: 'ai-vocabulary-btn', label: 'Vocabulary', icon: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>', color: '#06b6d4', cat: 'enactment', eee: 'vocabulary' },
@@ -1726,6 +1727,36 @@ export function render(container) {
     }
   });
 
+  // C10 — Build a sim for this lesson: prefill the Simulation Builder from
+  // lesson context; simulations.js auto-attaches the built sim back to this
+  // lesson via the lessonId in 'cocher_sim_builder_prefill'.
+  container.querySelector('#build-sim-btn')?.addEventListener('click', () => {
+    if (!currentLessonId) {
+      showToast('Save the lesson first — the built simulation attaches to a saved lesson.', 'danger');
+      return;
+    }
+    const lesson = Store.getLesson(currentLessonId);
+    const cls = planClassContext
+      || (lesson?.classId ? Store.getClass(lesson.classId) : null)
+      || {};
+    const prefill = {
+      subject: cls.subject || '',
+      level: cls.level || '',
+      topic: lesson?.title || '',
+      lessonId: currentLessonId
+    };
+    if (typeof lesson?.objectives === 'string' && lesson.objectives.trim()) {
+      prefill.objective = lesson.objectives.trim();
+    }
+    try {
+      sessionStorage.setItem('cocher_sim_builder_prefill', JSON.stringify(prefill));
+    } catch {
+      showToast('Could not hand the lesson context to the Simulation Builder.', 'danger');
+      return;
+    }
+    navigate('/simulations');
+  });
+
   // Worksheet Generator
   container.querySelector('#ai-worksheet-btn')?.addEventListener('click', async () => {
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
@@ -2538,6 +2569,16 @@ function showRunOfShowEditor(container, runOfShow) {
   }));
   if (segs.length === 0) segs = [rosBlankSegment(1)];
 
+  // Scene picker source (A5): the linked layout's scenes, if the current
+  // lesson has one. No linked layout or no scenes → no picker, no clutter.
+  const editorLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const linkedLayout = editorLesson?.spatialLayout
+    ? (Store.getSavedLayouts() || []).find(l => l.id === editorLesson.spatialLayout)
+    : null;
+  const layoutScenes = Array.isArray(linkedLayout?.scenes)
+    ? linkedLayout.scenes.filter(sc => sc && sc.id)
+    : [];
+
   const { backdrop, close } = openModal({
     title: 'Run of Show',
     width: 640,
@@ -2580,6 +2621,10 @@ function showRunOfShowEditor(container, runOfShow) {
       s.studentInstructions = row.querySelector('.ros-instructions').value.trim();
       const mode = row.querySelector('.ros-mode').value;
       s.grouping = mode ? { mode, groups: s.grouping?.groups || [] } : null;
+      // Scene select only exists when the lesson has a linked layout with
+      // scenes; without it, any existing layoutSceneId is left untouched.
+      const sceneSel = row.querySelector('.ros-scene');
+      if (sceneSel) s.layoutSceneId = sceneSel.value || null;
     });
   };
 
@@ -2598,9 +2643,20 @@ function showRunOfShowEditor(container, runOfShow) {
         <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
           <input class="input ros-activity" value="${esc(s.activity)}" placeholder="Teacher summary — what happens in this segment" style="padding:4px 8px;font-size:0.8125rem;" />
           <textarea class="input ros-instructions" rows="2" placeholder="Student-facing instructions" style="font-size:0.8125rem;resize:vertical;">${esc(s.studentInstructions)}</textarea>
-          <select class="input ros-mode" title="Grouping mode" style="width:auto;align-self:flex-start;padding:4px 8px;font-size:0.8125rem;">
-            ${ROS_MODE_OPTIONS.map(m => `<option value="${m.value}" ${(s.grouping?.mode || '') === m.value ? 'selected' : ''}>${m.label}</option>`).join('')}
-          </select>
+          <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
+            <select class="input ros-mode" title="Grouping mode" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+              ${ROS_MODE_OPTIONS.map(m => `<option value="${m.value}" ${(s.grouping?.mode || '') === m.value ? 'selected' : ''}>${m.label}</option>`).join('')}
+            </select>
+            ${layoutScenes.length > 0 ? `
+            <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">Room scene
+              <select class="input ros-scene" title="Layout scene shown during this segment" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+                <option value="">(none)</option>
+                ${layoutScenes.map(sc => `<option value="${esc(sc.id)}" ${s.layoutSceneId === sc.id ? 'selected' : ''}>${esc(sc.name || 'Scene')}</option>`).join('')}
+              </select>
+            </label>` : ''}
+            ${(s.grouping?.mode === 'groups' || s.grouping?.mode === 'pairs') ? `
+            <button class="btn btn-ghost btn-sm ros-place" data-idx="${i}" title="Assign this segment's groups to furniture in the Spatial Designer" style="padding:4px 8px;font-size:0.75rem;color:var(--accent);">Place in room &rarr;</button>` : ''}
+          </div>
         </div>
       </div>
     `).join('');
@@ -2612,8 +2668,10 @@ function showRunOfShowEditor(container, runOfShow) {
     const up = e.target.closest('.ros-up');
     const down = e.target.closest('.ros-down');
     const remove = e.target.closest('.ros-remove');
-    if (!up && !down && !remove) return;
+    const place = e.target.closest('.ros-place');
+    if (!up && !down && !remove && !place) return;
     e.preventDefault();
+    if (place) { handlePlaceInRoom(parseInt(place.dataset.idx, 10)); return; }
     syncFromDOM();
     if (up) {
       const i = parseInt(up.dataset.idx, 10);
@@ -2632,6 +2690,15 @@ function showRunOfShowEditor(container, runOfShow) {
     if (e.target.classList?.contains('ros-duration')) {
       syncFromDOM();
       updateTotal();
+    }
+  });
+
+  // Grouping-mode changes re-render the rows so "Place in room" appears or
+  // disappears with the chosen mode (groups/pairs only).
+  rowsEl.addEventListener('change', (e) => {
+    if (e.target.classList?.contains('ros-mode')) {
+      syncFromDOM();
+      renderRows();
     }
   });
 
@@ -2664,11 +2731,12 @@ function showRunOfShowEditor(container, runOfShow) {
     }
   });
 
-  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
-  backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
+  // Shared by Save and "Place in room" — pulls the DOM state, validates and
+  // writes lesson.runOfShow. Returns the saved segments, or null on failure.
+  const persistSegments = () => {
     if (!currentLessonId) {
       showToast('Save the lesson first — the run of show attaches to a saved lesson.', 'danger');
-      return;
+      return null;
     }
     syncFromDOM();
     const segments = segs.map((s, i) => ({
@@ -2676,13 +2744,85 @@ function showRunOfShowEditor(container, runOfShow) {
       name: s.name || `Segment ${i + 1}`,
       duration: Math.min(240, Math.max(1, Math.round(Number(s.duration)) || 5))
     }));
-    if (segments.length === 0) { showToast('Add at least one segment.', 'danger'); return; }
+    if (segments.length === 0) { showToast('Add at least one segment.', 'danger'); return null; }
     Store.updateLesson(currentLessonId, { runOfShow: { generatedAt: Date.now(), segments } });
+    return segments;
+  };
+
+  // A6 — hand this segment's groups to the Spatial Designer for furniture
+  // assignment. The editor state is persisted first (same path as Save) so
+  // the designer writes itemIds back into the segment we just saved.
+  const handlePlaceInRoom = (idx) => {
+    const segments = persistSegments();
+    if (!segments) return;
+    const seg = segments[idx];
+    if (!seg) return;
+    const groups = buildPlacementGroups(seg);
+    if (groups.length === 0) {
+      showToast('Generate groups first (Grouping tool), then place them.', 'danger');
+      return;
+    }
+    try {
+      sessionStorage.setItem('cocher_place_groups', JSON.stringify({
+        lessonId: currentLessonId,
+        segmentId: seg.id,
+        groups
+      }));
+    } catch {
+      showToast('Could not hand the groups to the Spatial Designer.', 'danger');
+      return;
+    }
+    close();
+    navigate('/spatial');
+  };
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
+    if (!persistSegments()) return;
     showToast('Run of show saved!', 'success');
     close();
   });
 
   renderRows();
+}
+
+/* Build the { name, studentIds, studentNames } groups for the Spatial
+ * Designer handoff ('cocher_place_groups'). Sources, in order: the segment's
+ * own saved grouping, the in-memory lastGroupingResult (structured), then
+ * the saved grouping component (meta.structured). Whichever side is missing
+ * (names or ids) is completed from the lesson's class roster; unmatched
+ * entries are skipped and groups without resolvable studentIds dropped. */
+function buildPlacementGroups(seg) {
+  const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const roster = lesson?.classId ? (Store.getClass(lesson.classId)?.students || []) : [];
+  const idToName = new Map(roster.map(st => [st.id, st.name]));
+  const nameToId = new Map(roster.map(st => [String(st.name).trim().toLowerCase(), st.id]));
+
+  const normalize = (groups) => (Array.isArray(groups) ? groups : [])
+    .map((g, i) => {
+      const studentIds = (Array.isArray(g.studentIds) ? g.studentIds : []).filter(Boolean);
+      let studentNames = (Array.isArray(g.studentNames) ? g.studentNames : [])
+        .map(n => String(n).trim()).filter(Boolean);
+      if (studentIds.length === 0 && studentNames.length > 0) {
+        studentIds.push(...studentNames
+          .map(n => nameToId.get(n.toLowerCase()))
+          .filter(Boolean));
+      }
+      if (studentNames.length === 0 && studentIds.length > 0) {
+        studentNames = studentIds.map(sid => idToName.get(sid)).filter(Boolean);
+      }
+      return { name: String(g.name || `Group ${i + 1}`), studentIds, studentNames };
+    })
+    .filter(g => g.studentIds.length > 0);
+
+  let groups = normalize(seg.grouping?.groups);
+  if (groups.length === 0 && lastGroupingResult) groups = normalize(lastGroupingResult.groups);
+  if (groups.length === 0) {
+    const structured = lessonComponents.grouping?.meta?.structured
+      || lesson?.components?.grouping?.meta?.structured;
+    if (structured) groups = normalize(structured.groups);
+  }
+  return groups;
 }
 
 /* ── Last grouping result for seat assignment ── */

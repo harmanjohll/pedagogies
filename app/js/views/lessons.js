@@ -768,6 +768,31 @@ function studentPackParts(lesson) {
     .map(c => ({ label: c.label, content: comps[c.key].content }));
 }
 
+/* B7 — "Plan for the Day": the agenda page that opens the Student Pack when
+ * the lesson has a run of show. STUDENT-SAFE by design: only the segment
+ * name, duration and studentInstructions ever reach this page — seg.activity
+ * is the teacher's summary (and plan/chatHistory stay teacher-side too). */
+function studentDayPlanHTML(lesson) {
+  const segments = lesson.runOfShow?.segments;
+  if (!Array.isArray(segments) || segments.length === 0) return '';
+  const total = segments.reduce((n, seg) => n + (Number(seg.duration) || 0), 0);
+  return `<section>
+    <h2>Plan for the Day</h2>
+    <table>
+      <thead><tr><th style="width:40px;">Part</th><th>Activity</th><th style="width:60px;">Minutes</th><th>What you'll do</th></tr></thead>
+      <tbody>
+        ${segments.map((seg, i) => `<tr>
+          <td>${i + 1}</td>
+          <td><strong>${esc(seg.name || `Part ${i + 1}`)}</strong></td>
+          <td>${Number(seg.duration) || 0}</td>
+          <td>${seg.studentInstructions ? esc(seg.studentInstructions) : '&mdash;'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:#64748b;font-family:system-ui,sans-serif;">${total} minutes in total &middot; ${segments.length} part${segments.length === 1 ? '' : 's'}</p>
+  </section>`;
+}
+
 /* ══════════ Lesson Detail ══════════ */
 
 export function renderDetail(container, { id }) {
@@ -819,7 +844,7 @@ export function renderDetail(container, { id }) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
             Share
           </button>
-          ${studentPackParts(lesson).length > 0 ? `
+          ${(studentPackParts(lesson).length > 0 || lesson.runOfShow?.segments?.length > 0) ? `
           <button class="btn btn-ghost btn-sm" id="student-pack-btn" title="Print every student-facing handout in one go">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
             Student Pack
@@ -851,7 +876,10 @@ export function renderDetail(container, { id }) {
             <div class="card" style="margin-bottom:var(--sp-6);">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);margin-bottom:var(--sp-4);flex-wrap:wrap;">
                 <h3 style="font-size:1rem;font-weight:600;color:var(--ink);">Run of Show</h3>
-                <span class="badge badge-blue">${total} min &middot; ${segments.length} segment${segments.length === 1 ? '' : 's'}</span>
+                <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
+                  <span class="badge badge-blue">${total} min &middot; ${segments.length} segment${segments.length === 1 ? '' : 's'}</span>
+                  <button class="btn btn-primary btn-sm" id="present-lesson-btn" title="Open the Class Screen and run this lesson live">&#9654; Present</button>
+                </div>
               </div>
               <div style="display:flex;flex-direction:column;">
                 ${segments.map((seg, i) => `
@@ -1116,6 +1144,9 @@ export function renderDetail(container, { id }) {
   // Spatial layout - open in designer
   container.querySelector('#view-spatial-btn')?.addEventListener('click', () => navigate('/spatial'));
 
+  // Present — run the staged lesson on the Class Screen
+  container.querySelector('#present-lesson-btn')?.addEventListener('click', () => navigate(`/present/${id}`));
+
   // Print / PDF
   container.querySelector('#print-lesson-btn')?.addEventListener('click', () => {
     if (aiMsgs.length === 0) { showToast('No lesson content to print.', 'danger'); return; }
@@ -1161,7 +1192,8 @@ export function renderDetail(container, { id }) {
   // Student Pack — every student-facing handout, one print job, teacher-mediated
   container.querySelector('#student-pack-btn')?.addEventListener('click', () => {
     const parts = studentPackParts(lesson);
-    if (parts.length === 0) { showToast('No student-facing components yet — generate LI/SC, an exit ticket or a rubric in the Planner first.', 'danger'); return; }
+    const dayPlan = studentDayPlanHTML(lesson);
+    if (parts.length === 0 && !dayPlan) { showToast('No student-facing components yet — generate LI/SC, an exit ticket or a rubric in the Planner first.', 'danger'); return; }
     const pw = window.open('', '_blank');
     if (!pw) { showToast('Pop-up blocked — allow pop-ups for this site to print.', 'danger'); return; }
     pw.document.write(`<!DOCTYPE html><html><head><title>${esc(lesson.title)} — Student Pack</title>
@@ -1184,6 +1216,7 @@ export function renderDetail(container, { id }) {
           <div class="meta">${cn ? `${esc(cn)} &middot; ` : ''}${new Date().toLocaleDateString('en-SG')}</div>
           <div class="name-line">Name: ______________________________ &nbsp;&nbsp; Class: ____________ &nbsp;&nbsp; Date: ____________</div>
         </header>
+        ${dayPlan}
         ${parts.map(p => `<section><h2>${esc(p.label)}</h2>${mdFull(p.content)}</section>`).join('')}
         <footer>Prepared by your teacher with Co-Cher</footer>
       </body></html>`);
