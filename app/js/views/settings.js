@@ -4,10 +4,11 @@
  * API key, model selection, theme, and data management.
  */
 
-import { Store, getStorageEstimate } from '../state.js';
-import { validateApiKey, AVAILABLE_MODELS, normalizeModel } from '../api.js';
+import { Store, getStorageEstimate, FRAMEWORK_PURPOSES } from '../state.js';
+import { validateApiKey, AVAILABLE_MODELS, normalizeModel, sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
-import { confirmDialog } from '../components/modals.js';
+import { confirmDialog, openModal } from '../components/modals.js';
+import { extractText, fileExt } from '../utils/doc-extract.js';
 import { getCurrentUser, clearCurrentUser, getPreferredName, setPreferredName, guessFirstName } from '../components/login.js';
 import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks, isVigilanceEnabled, setVigilanceEnabled } from './lesson-planner.js';
 import { startTour, resetTour } from '../components/spotlight-tour.js';
@@ -259,6 +260,251 @@ function buildEEEListHTML() {
   </div>`;
 
   return html;
+}
+
+/* ── Pedagogy Frameworks card (WS-D) ── */
+
+const FW_PURPOSE_META = {
+  feedback:      { label: 'Feedback',      color: '#ef4444' },
+  metacognition: { label: 'Metacognition', color: '#8b5cf6' },
+  questioning:   { label: 'Questioning',   color: '#f59e0b' },
+  custom:        { label: 'Custom',        color: '#4361ee' }
+};
+
+const FW_LOCK_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+
+function buildFrameworksListHTML() {
+  const frameworks = Store.getFrameworks();
+  if (!frameworks.length) {
+    return '<div style="font-size:0.8125rem;color:var(--ink-faint);padding:12px;text-align:center;">No frameworks yet. Upload a document or create one manually.</div>';
+  }
+  return frameworks.map(fw => {
+    const meta = FW_PURPOSE_META[fw.purpose] || FW_PURPOSE_META.custom;
+    const stageCount = (fw.stages || []).length;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border-light,#e5e7eb);border-radius:10px;background:var(--bg-card,#fff);">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:0.8125rem;font-weight:600;color:var(--ink);">${escapeHtml(fw.name)}</span>
+            <span style="display:inline-block;font-size:0.625rem;font-weight:600;padding:2px 8px;border-radius:12px;background:${meta.color}1a;color:${meta.color};text-transform:uppercase;letter-spacing:0.03em;">${meta.label}</span>
+            ${fw.builtin ? `<span title="Built-in framework — cannot be deleted" style="display:inline-flex;align-items:center;">${FW_LOCK_ICON}</span>` : ''}
+          </div>
+          <div style="font-size:0.6875rem;color:var(--ink-muted);margin-top:2px;">
+            ${stageCount} stage${stageCount === 1 ? '' : 's'}${(fw.stages || []).length ? ': ' + fw.stages.map(s => escapeHtml(s.label || '')).join(' → ') : ''}
+          </div>
+        </div>
+        ${fw.builtin ? '' : `
+          <button class="btn btn-ghost btn-sm" data-fw-delete="${escapeHtml(fw.id)}" title="Delete framework" style="padding:4px 8px;font-size:0.6875rem;color:var(--danger);">Delete</button>`}
+      </div>`;
+  }).join('');
+}
+
+/** Coerce whatever the model (or the teacher) produced into the registry shape. */
+function normalizeFrameworkDraft(obj) {
+  const src = (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+  const purpose = FRAMEWORK_PURPOSES.includes(src.purpose) ? src.purpose : 'custom';
+  let stages = (Array.isArray(src.stages) ? src.stages : []).slice(0, 6).map((s, i) => ({
+    key: String(s?.key ?? '').trim().slice(0, 4) || String(i + 1),
+    label: String(s?.label ?? '').trim() || `Stage ${i + 1}`,
+    prompt: String(s?.prompt ?? '').trim(),
+    studentPrompt: String(s?.studentPrompt ?? '').trim()
+  }));
+  while (stages.length < 3) {
+    stages.push({ key: String(stages.length + 1), label: '', prompt: '', studentPrompt: '' });
+  }
+  return {
+    name: String(src.name ?? '').trim(),
+    purpose,
+    guidance: String(src.guidance ?? '').trim(),
+    stages
+  };
+}
+
+/** Editable review modal shared by upload (pre-filled) and manual create (blank). */
+function showFrameworkModal(draft, onSaved) {
+  const fw = normalizeFrameworkDraft(draft);
+
+  const stageRow = (s, i) => `
+    <div class="fw-stage-row" style="display:grid;grid-template-columns:52px 1fr 24px;gap:6px;align-items:start;padding:8px;border:1px solid var(--border-light,#e5e7eb);border-radius:8px;">
+      <input class="input fw-stage-key" value="${escapeHtml(s.key)}" maxlength="4" title="Stage key (e.g. G)" style="padding:4px 6px;font-size:0.75rem;text-align:center;" />
+      <div style="display:flex;flex-direction:column;gap:4px;min-width:0;">
+        <input class="input fw-stage-label" value="${escapeHtml(s.label)}" placeholder="Stage name" style="padding:4px 8px;font-size:0.8125rem;" />
+        <input class="input fw-stage-prompt" value="${escapeHtml(s.prompt)}" placeholder="Teacher description (one line)" style="padding:4px 8px;font-size:0.75rem;" />
+        <input class="input fw-stage-student" value="${escapeHtml(s.studentPrompt)}" placeholder="Student-facing question (optional)" style="padding:4px 8px;font-size:0.75rem;" />
+      </div>
+      <button class="fw-stage-remove" data-idx="${i}" title="Remove stage" style="background:none;border:none;cursor:pointer;color:var(--ink-muted);font-size:1rem;padding:2px;">&times;</button>
+    </div>`;
+
+  const { backdrop, close } = openModal({
+    title: 'Review Framework',
+    width: 560,
+    body: `
+      <div style="display:grid;grid-template-columns:1fr 180px;gap:10px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:0.6875rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:3px;">Name</label>
+          <input class="input" id="fw-edit-name" value="${escapeHtml(fw.name)}" placeholder="e.g. TAG Feedback" style="width:100%;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="font-size:0.6875rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:3px;">Purpose</label>
+          <select class="input" id="fw-edit-purpose" style="width:100%;box-sizing:border-box;">
+            ${FRAMEWORK_PURPOSES.map(p => `<option value="${p}" ${fw.purpose === p ? 'selected' : ''}>${(FW_PURPOSE_META[p] || {}).label || p}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:0.6875rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:3px;">Guidance (teacher summary)</label>
+        <textarea class="input" id="fw-edit-guidance" rows="2" placeholder="1-2 sentences on what this framework is for" style="width:100%;box-sizing:border-box;resize:vertical;font-size:0.8125rem;">${escapeHtml(fw.guidance)}</textarea>
+      </div>
+      <label style="font-size:0.6875rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:3px;">Stages (3-6)</label>
+      <div id="fw-edit-stages" style="display:flex;flex-direction:column;gap:8px;max-height:44vh;overflow-y:auto;padding-right:2px;">
+        ${fw.stages.map(stageRow).join('')}
+      </div>
+      <button class="btn btn-ghost btn-sm" id="fw-add-stage" style="margin-top:8px;">+ Add stage</button>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="save">Save Framework</button>
+    `
+  });
+
+  const stagesEl = backdrop.querySelector('#fw-edit-stages');
+
+  const readStages = () => [...stagesEl.querySelectorAll('.fw-stage-row')].map(row => ({
+    key: row.querySelector('.fw-stage-key').value.trim(),
+    label: row.querySelector('.fw-stage-label').value.trim(),
+    prompt: row.querySelector('.fw-stage-prompt').value.trim(),
+    studentPrompt: row.querySelector('.fw-stage-student').value.trim()
+  }));
+
+  backdrop.querySelector('#fw-add-stage').addEventListener('click', () => {
+    const count = stagesEl.querySelectorAll('.fw-stage-row').length;
+    if (count >= 6) { showToast('A framework can have at most 6 stages.', 'warning'); return; }
+    stagesEl.insertAdjacentHTML('beforeend',
+      stageRow({ key: String(count + 1), label: '', prompt: '', studentPrompt: '' }, count));
+  });
+
+  stagesEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.fw-stage-remove');
+    if (!btn) return;
+    if (stagesEl.querySelectorAll('.fw-stage-row').length <= 3) {
+      showToast('A framework needs at least 3 stages.', 'warning');
+      return;
+    }
+    btn.closest('.fw-stage-row').remove();
+  });
+
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="save"]').addEventListener('click', () => {
+    const name = backdrop.querySelector('#fw-edit-name').value.trim();
+    if (!name) { showToast('Give the framework a name.', 'warning'); return; }
+    const stages = readStages().filter(s => s.label);
+    if (stages.length < 3) { showToast('Fill in at least 3 stage names.', 'warning'); return; }
+    const saved = Store.addFramework({
+      name,
+      purpose: backdrop.querySelector('#fw-edit-purpose').value,
+      guidance: backdrop.querySelector('#fw-edit-guidance').value.trim(),
+      stages
+    });
+    close();
+    showToast(`Framework "${saved.name}" added.`, 'success');
+    if (typeof onSaved === 'function') onSaved(saved);
+  });
+}
+
+function wireFrameworkEvents(container) {
+  const listEl = container.querySelector('#fw-list');
+  if (!listEl) return;
+
+  const refresh = () => { listEl.innerHTML = buildFrameworksListHTML(); };
+
+  listEl.addEventListener('click', async (e) => {
+    const delBtn = e.target.closest('[data-fw-delete]');
+    if (!delBtn) return;
+    const id = delBtn.dataset.fwDelete;
+    const fw = Store.getFramework(id);
+    const ok = await confirmDialog({
+      title: 'Delete Framework',
+      message: `Delete "${escapeHtml(fw?.name || 'this framework')}"? Lessons and saved outputs that reference it will keep working, but the framework itself is removed.`
+    });
+    if (!ok) return;
+    if (Store.deleteFramework(id)) {
+      showToast('Framework deleted.', 'success');
+      refresh();
+    } else {
+      showToast('Built-in frameworks cannot be deleted.', 'warning');
+    }
+  });
+
+  container.querySelector('#fw-create-btn')?.addEventListener('click', () => {
+    showFrameworkModal(null, refresh);
+  });
+
+  const fileInput = container.querySelector('#fw-file-input');
+  const uploadBtn = container.querySelector('#fw-upload-btn');
+  uploadBtn?.addEventListener('click', () => fileInput?.click());
+  fileInput?.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    fileInput.value = '';
+    if (!file) return;
+
+    if (fileExt(file) === 'pdf') {
+      // Same routing message as the shared extractor — PDFs go through the PDF uploader.
+      showToast('For PDFs, use the PDF uploader (it lets you pick page ranges).', 'warning');
+      return;
+    }
+    if (!Store.get('apiKey')) {
+      showToast('Please set your API key in Settings first — Co-Cher reads the document with AI.', 'danger');
+      return;
+    }
+
+    const originalHTML = uploadBtn.innerHTML;
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Reading document…';
+    try {
+      const { text } = await extractText(file);
+      if (!text || !text.trim()) {
+        showToast('No text could be extracted from that file.', 'danger');
+        return;
+      }
+      const raw = await sendChat([{
+        role: 'user',
+        content: `Read the teacher's uploaded document and extract the pedagogy framework it describes.
+
+Return ONLY a JSON object with exactly this shape:
+{"name": "<short framework name>", "purpose": "feedback" | "metacognition" | "questioning" | "custom", "guidance": "<1-2 sentence teacher-facing summary>", "stages": [{"key": "<1-3 character stage key or initial>", "label": "<stage name>", "prompt": "<one-line teacher description of the stage>", "studentPrompt": "<short student-facing question for this stage>"}]}
+
+Rules:
+- 3 to 6 stages, in the order the document presents them.
+- purpose: "feedback" for acting-on-feedback frames, "metacognition" for reflection or self-regulation routines, "questioning" for questioning or discussion routines, otherwise "custom".
+- Keep wording faithful to the document; do not invent stages.
+
+Document ("${file.name}"):
+${text.slice(0, 12000)}`
+      }], {
+        jsonMode: true,
+        trackLabel: 'frameworkExtract',
+        trackDetail: file.name,
+        systemPrompt: 'You extract structured pedagogy frameworks from teacher documents. Return ONLY a valid JSON object — no markdown fences, no commentary.',
+        temperature: 0.3, maxTokens: 2048
+      });
+
+      let parsed = null;
+      try { parsed = JSON.parse(raw); } catch {
+        const m = String(raw).match(/\{[\s\S]*\}/);
+        if (m) { try { parsed = JSON.parse(m[0]); } catch { /* fall through */ } }
+      }
+      if (!parsed || typeof parsed !== 'object') {
+        showToast('Could not read a framework from that document — try Create manually.', 'danger');
+        return;
+      }
+      showFrameworkModal(parsed, refresh);
+    } catch (err) {
+      showToast(err.message, 'danger');
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = originalHTML;
+    }
+  });
 }
 
 /* ── Flat UI NL Palette for marketplace cards ──
@@ -675,6 +921,31 @@ export function render(container) {
                   <div style="font-size: 0.6875rem; color: var(--ink-muted); margin-top: 2px;">${o.desc}</div>
                 </button>`).join('');
             })()}
+          </div>
+        </div>
+
+        <!-- Pedagogy Frameworks registry -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Pedagogy Frameworks</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            Reusable staged routines (like GROW and ACT) that power the AaL cards, feedback framing in the
+            Report Comment Drafter, lesson-planning context, and framework moments in Present mode.
+            Upload a school document to add your own, or create one manually.
+          </p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <button class="btn btn-secondary btn-sm" id="fw-upload-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload framework document
+            </button>
+            <button class="btn btn-ghost btn-sm" id="fw-create-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Create manually
+            </button>
+            <span style="font-size:0.6875rem;color:var(--ink-faint);align-self:center;">.md, .docx or .txt — Co-Cher extracts the stages for your review.</span>
+          </div>
+          <input type="file" id="fw-file-input" accept=".md,.markdown,.docx,.txt,.text" style="display:none;" />
+          <div id="fw-list" style="display:flex;flex-direction:column;gap:8px;">
+            ${buildFrameworksListHTML()}
           </div>
         </div>
 
@@ -1254,7 +1525,8 @@ export function render(container) {
         assessmentChecklists: 'checklists', assessmentBlueprints: 'blueprints',
         adminEvents: 'admin events', departmentSchemes: 'schemes',
         customSimulations: 'custom simulations', references: 'references',
-        trackingSchemas: 'tracking schemas'
+        trackingSchemas: 'tracking schemas', frameworks: 'pedagogy frameworks',
+        assessmentArtifacts: 'saved AaL outputs'
       };
       const summary = Object.entries(preview.counts)
         .filter(([k, n]) => n > 0 && LABELS[k])
@@ -1308,6 +1580,9 @@ export function render(container) {
       window.location.reload();
     }
   });
+
+  // ── Pedagogy Frameworks ──
+  wireFrameworkEvents(container);
 
   // ── Dashboard Layout ──
   wireDashboardLayoutEvents(container);

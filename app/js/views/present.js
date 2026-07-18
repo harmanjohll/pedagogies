@@ -143,6 +143,9 @@ export function renderPresent(container, params) {
       .present-ctrl { display:flex; gap: 8px; }
       .present-lisc { text-align: left; font-size: clamp(1rem, 2vw, 1.4rem); line-height: 1.6; max-width: 80vw; }
       .present-lisc h1, .present-lisc h2, .present-lisc h3 { font-size: 1.2em; }
+      .present-framework { text-align: left; font-size: clamp(0.95rem, 1.8vw, 1.25rem); line-height: 1.6; max-width: 80vw; border: 2px solid var(--border); border-radius: 14px; padding: 12px 20px; background: var(--surface, #fff); }
+      .present-framework-title { font-weight: 800; color: var(--accent, #4361ee); margin-bottom: 4px; }
+      .present-framework-stage strong { color: var(--ink); }
       .present-map svg { max-width: min(88vw, 760px); height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
       @media print { .present-bottom, .present-top .present-ctrl { display: none; } }
     </style>
@@ -240,6 +243,18 @@ export function renderPresent(container, params) {
       const modeLabel = GROUP_LABEL[seg.grouping?.mode || seg.groupingMode] || '';
       const growthLabel = seg.e21ccFocus ? (E21CC_FOCUS_LABELS[seg.e21ccFocus] || '') : '';
 
+      /* Framework moment: the segment's pedagogy framework, shown as stage
+       * lines. Student-facing only — labels + studentPrompt questions; the
+       * teacher-facing stage prompt is never rendered here. */
+      const framework = seg.frameworkId
+        ? (Store.getFrameworks?.() || []).find(f => f.id === seg.frameworkId) || null : null;
+      const frameworkPanel = framework ? `
+        <div class="present-framework">
+          <div class="present-framework-title">${escapeHtml(framework.name)}</div>
+          ${(framework.stages || []).map(s => `
+            <div class="present-framework-stage"><strong>${escapeHtml(s.label || '')}</strong>${s.studentPrompt ? ` &mdash; ${escapeHtml(s.studentPrompt)}` : ''}</div>`).join('')}
+        </div>` : '';
+
       stage.innerHTML = `
         <div class="present-meta" style="font-weight:700;">Part ${_segIdx} of ${segments.length}</div>
         <div class="present-seg-name">${escapeHtml(seg.name || 'Activity')}</div>
@@ -247,6 +262,7 @@ export function renderPresent(container, params) {
         ${modeLabel ? `<span class="present-groupmode">${escapeHtml(modeLabel)}</span>` : ''}
         ${growthLabel ? `<span class="present-groupmode present-growth">This activity grows: ${escapeHtml(growthLabel)}</span>` : ''}
         ${seg.studentInstructions ? `<div class="present-instructions">${escapeHtml(seg.studentInstructions)}</div>` : ''}
+        ${frameworkPanel}
         ${groupCards}
         ${segmentMap(seg)}`;
     }

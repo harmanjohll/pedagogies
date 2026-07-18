@@ -122,6 +122,64 @@ function syncRefContentToIdb(oldList, newList) {
   } catch { /* non-fatal — content stays in memory this session */ }
 }
 
+/* ── Built-in pedagogy frameworks (WS-D) ──
+ * Stage structure + wording lifted faithfully from the previously hardcoded
+ * AaL cards in views/assessment.js (GROW by Reflecting / ACT on Feedback).
+ * Fixed ids make boot seeding idempotent and let shared lessons reference
+ * builtins across installs. Purposes: feedback | metacognition | questioning | custom. */
+export const FRAMEWORK_PURPOSES = ['feedback', 'metacognition', 'questioning', 'custom'];
+
+const BUILTIN_FRAMEWORKS = [
+  {
+    id: 'fw_builtin_grow',
+    name: 'GROW by Reflecting',
+    purpose: 'metacognition',
+    builtin: true,
+    guidance: 'The GROW by Reflecting routine empowers students to become proactive, self-reflective learners. Each stage guides personal reflection: celebrating success, planning improvement, owning knowledge, and looking ahead.',
+    stages: [
+      { key: 'G', label: 'Gift yourself success',
+        prompt: 'Celebrate what you DO understand. "What is one thing I understand? How would I teach this to a friend?"',
+        studentPrompt: 'What is one thing I understand?' },
+      { key: 'R', label: 'Rise above with small steps',
+        prompt: 'Identify gaps and plan improvement. "What do I not yet understand? What will I do to improve?"',
+        studentPrompt: 'What do I not yet understand?' },
+      { key: 'O', label: 'Own your knowledge',
+        prompt: 'Connect learning to real life and share it. "What is one real-life example? How have I shared this?"',
+        studentPrompt: 'What is one real-life example?' },
+      { key: 'W', label: 'Watch for what comes next',
+        prompt: 'Look ahead and prepare. "What do I already know about the next topic? What is coming up?"',
+        studentPrompt: 'What do I already know about the next topic?' }
+    ]
+  },
+  {
+    id: 'fw_builtin_act',
+    name: 'ACT on Feedback',
+    purpose: 'feedback',
+    builtin: true,
+    guidance: 'A learner-centred framework for acting on feedback received. ACT teaches students to treat feedback as a growth tool rather than a judgement, moving from passive receipt to active response.',
+    stages: [
+      { key: 'A', label: 'Acknowledge',
+        prompt: '"How do I feel about this feedback? How might it help me learn better?"',
+        studentPrompt: 'How do I feel about this feedback?' },
+      { key: 'C', label: 'Connect',
+        prompt: '"How does this connect with success criteria/my goals? How does this connect with previous feedback?"',
+        studentPrompt: 'How does this connect with the success criteria or my goals?' },
+      { key: 'T', label: 'Test',
+        prompt: '"What habit do I need to adjust? How will I know I am improving?"',
+        studentPrompt: 'What habit do I need to adjust?' }
+    ]
+  }
+];
+
+/** Fresh copies of the builtin frameworks (seed + clearAllData reseed). */
+function builtinFrameworkSeeds() {
+  return BUILTIN_FRAMEWORKS.map(b => ({
+    ...b,
+    stages: b.stages.map(s => ({ ...s })),
+    createdAt: Date.now()
+  }));
+}
+
 const DEFAULT_STATE = {
   apiKey: localStorage.getItem('cocher_api_key') || '',
   model: localStorage.getItem('cocher_model') || 'gemini-2.5-flash',
@@ -141,9 +199,11 @@ const DEFAULT_STATE = {
   sourceLibrary: [],
   departmentSchemes: [],
   assessmentBlueprints: [],
+  assessmentArtifacts: [],
   practiceLog: [],
   practiceGoal: null,
   trackingSchemas: [],
+  frameworks: [],
   references: [],
   onboardingComplete: false
 };
@@ -292,9 +352,11 @@ export const Store = {
       sourceLibrary: _state.sourceLibrary || [],
       departmentSchemes: _state.departmentSchemes || [],
       assessmentBlueprints: _state.assessmentBlueprints || [],
+      assessmentArtifacts: _state.assessmentArtifacts || [],
       practiceLog: _state.practiceLog || [],
       practiceGoal: _state.practiceGoal || null,
       trackingSchemas: _state.trackingSchemas || [],
+      frameworks: _state.frameworks || [],
       // Reference content lives in IndexedDB — persist metadata + summary only
       // once the content write is confirmed there.
       references: (_state.references || []).map(r => {
@@ -1054,6 +1116,82 @@ export const Store = {
     this._notify();
   },
 
+  /* ══════════ Pedagogy Frameworks (registry, teacher-level) ══════════ */
+
+  getFrameworks() {
+    return _state.frameworks || [];
+  },
+
+  getFramework(id) {
+    return (_state.frameworks || []).find(f => f.id === id) || null;
+  },
+
+  addFramework(data) {
+    const fw = {
+      id: data.id || generateId(),
+      name: data.name || 'Untitled Framework',
+      purpose: FRAMEWORK_PURPOSES.includes(data.purpose) ? data.purpose : 'custom',
+      stages: Array.isArray(data.stages) ? data.stages : [],
+      guidance: data.guidance || '',
+      ...(data.builtin ? { builtin: true } : {}),
+      createdAt: Date.now()
+    };
+    _state.frameworks = [...(_state.frameworks || []), fw];
+    this._persist();
+    this._notify();
+    return fw;
+  },
+
+  updateFramework(id, patch) {
+    _state.frameworks = (_state.frameworks || []).map(f => f.id === id ? { ...f, ...patch } : f);
+    this._persist();
+    this._notify();
+  },
+
+  /** Builtins cannot be deleted — returns false and leaves state untouched. */
+  deleteFramework(id) {
+    const fw = (_state.frameworks || []).find(f => f.id === id);
+    if (!fw || fw.builtin) return false;
+    _state.frameworks = (_state.frameworks || []).filter(f => f.id !== id);
+    this._persist();
+    this._notify();
+    return true;
+  },
+
+  /* ══════════ Assessment Artifacts (saved AaL framework outputs) ══════════ */
+
+  getAssessmentArtifacts() {
+    return _state.assessmentArtifacts || [];
+  },
+
+  addAssessmentArtifact(data) {
+    const art = {
+      id: generateId(),
+      frameworkId: data.frameworkId || null,
+      title: data.title || 'Untitled Output',
+      content: data.content || '',
+      createdAt: Date.now()
+    };
+    _state.assessmentArtifacts = [...(_state.assessmentArtifacts || []), art];
+    this._persist();
+    this._notify();
+    return art;
+  },
+
+  updateAssessmentArtifact(id, patch) {
+    _state.assessmentArtifacts = (_state.assessmentArtifacts || []).map(a =>
+      a.id === id ? { ...a, ...patch } : a
+    );
+    this._persist();
+    this._notify();
+  },
+
+  deleteAssessmentArtifact(id) {
+    _state.assessmentArtifacts = (_state.assessmentArtifacts || []).filter(a => a.id !== id);
+    this._persist();
+    this._notify();
+  },
+
   /* ══════════ References (teacher's reusable AI reference docs) ══════════ */
 
   getReferences() {
@@ -1150,9 +1288,11 @@ export const Store = {
       sourceLibrary: srcLib,
       departmentSchemes: _state.departmentSchemes || [],
       assessmentBlueprints: _state.assessmentBlueprints || [],
+      assessmentArtifacts: _state.assessmentArtifacts || [],
       practiceLog: _state.practiceLog || [],
       practiceGoal: _state.practiceGoal || null,
       trackingSchemas: _state.trackingSchemas || [],
+      frameworks: _state.frameworks || [],
       references: _state.references || [],
       customSimulations: customSims,
       recentActivity: _state.recentActivity
@@ -1167,8 +1307,9 @@ export const Store = {
   previewImportData(jsonStr) {
     const ARRAY_KEYS = ['classes', 'lessons', 'savedLayouts', 'adminEvents', 'knowledgeUploads',
       'pdFolders', 'assessmentRoutines', 'savedTOS', 'assessmentChecklists', 'stimulusLibrary',
-      'sourceLibrary', 'departmentSchemes', 'assessmentBlueprints', 'practiceLog',
-      'trackingSchemas', 'references', 'customSimulations', 'recentActivity'];
+      'sourceLibrary', 'departmentSchemes', 'assessmentBlueprints', 'assessmentArtifacts',
+      'practiceLog', 'trackingSchemas', 'frameworks', 'references', 'customSimulations',
+      'recentActivity'];
     let data;
     try { data = JSON.parse(jsonStr); } catch { return { ok: false, error: 'This file is not valid JSON.' }; }
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -1209,9 +1350,24 @@ export const Store = {
       if (Array.isArray(data.sourceLibrary)) _state.sourceLibrary = data.sourceLibrary;
       if (Array.isArray(data.departmentSchemes)) _state.departmentSchemes = data.departmentSchemes;
       if (Array.isArray(data.assessmentBlueprints)) _state.assessmentBlueprints = data.assessmentBlueprints;
+      if (Array.isArray(data.assessmentArtifacts)) _state.assessmentArtifacts = data.assessmentArtifacts;
       if (Array.isArray(data.practiceLog)) _state.practiceLog = data.practiceLog;
       if (data.practiceGoal && typeof data.practiceGoal === 'object' && !Array.isArray(data.practiceGoal)) _state.practiceGoal = data.practiceGoal;
       if (Array.isArray(data.trackingSchemas)) _state.trackingSchemas = data.trackingSchemas;
+      if (Array.isArray(data.frameworks)) {
+        // Merge, don't blind-replace: imported non-builtin frameworks replace
+        // by id; builtins are never duplicated (the local seeds win).
+        const current = _state.frameworks || [];
+        const builtinIds = new Set(current.filter(f => f.builtin).map(f => f.id));
+        const merged = [...current];
+        data.frameworks.forEach(raw => {
+          if (!raw || typeof raw !== 'object' || !raw.id) return;
+          if (raw.builtin || builtinIds.has(raw.id)) return;
+          const idx = merged.findIndex(f => f.id === raw.id);
+          if (idx >= 0) merged[idx] = raw; else merged.push(raw);
+        });
+        _state.frameworks = merged;
+      }
       if (Array.isArray(data.references)) {
         _state.references = data.references;
         // Imported backups may carry reference content — put it in IndexedDB
@@ -1251,9 +1407,13 @@ export const Store = {
     _state.sourceLibrary = [];
     _state.departmentSchemes = [];
     _state.assessmentBlueprints = [];
+    _state.assessmentArtifacts = [];
     _state.practiceLog = [];
     _state.practiceGoal = null;
     _state.trackingSchemas = [];
+    // Builtin pedagogy frameworks reseed immediately — they are app content,
+    // not teacher data, and other views assume GROW/ACT always exist.
+    _state.frameworks = builtinFrameworkSeeds();
     _state.references = [];
     _refContentInIdb.clear();
     _state.recentActivity = [];
@@ -1271,6 +1431,18 @@ export const Store = {
     this._notify();
   }
 };
+
+/* ── Seed builtin pedagogy frameworks (idempotent) ──
+ * Keyed by fixed id, not a localStorage flag: a reload, an import, or an old
+ * snapshot without `frameworks` all converge on exactly one GROW and one ACT.
+ * Custom frameworks are left untouched. */
+(function seedBuiltinFrameworks() {
+  const existing = _state.frameworks || [];
+  const missing = builtinFrameworkSeeds().filter(b => !existing.some(f => f.id === b.id));
+  if (!missing.length) return;
+  _state.frameworks = [...existing, ...missing];
+  Store._persist();
+})();
 
 /* ── One-time migration + hydration of Knowledge Base content ──
  * Older snapshots stored upload content inside cocher_app_data; move it to

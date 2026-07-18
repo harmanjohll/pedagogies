@@ -38,6 +38,7 @@ let vigilanceState = null;    // { prompt } while the nudge card is showing
 let attachedKBContext = [];   // attached knowledge base resources
 let lessonDateTime = null;    // { date, period, room, classCode } from timetable or manual
 let selectedIdeology = '';    // optional curriculum ideology lens
+let selectedFrameworkIds = []; // optional pedagogy framework lenses (multi-select chips)
 
 /* ── Reference library picker ──
  * Teacher-curated documents (My References, in My Learning) that can be toggled
@@ -1033,6 +1034,12 @@ export function render(container) {
                 <option value="social-efficiency" ${selectedIdeology === 'social-efficiency' ? 'selected' : ''}>Social Efficiency</option>
                 <option value="social-reconstructivist" ${selectedIdeology === 'social-reconstructivist' ? 'selected' : ''}>Social Reconstructivist</option>
               </select>
+              <div id="framework-chips" style="display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center;" title="Pedagogy frameworks to weave into this plan (toggle any)">
+                ${(Store.getFrameworks?.() || []).map(f => {
+                  const on = selectedFrameworkIds.includes(f.id);
+                  return `<button type="button" class="fw-chip" data-fw="${esc(f.id)}" aria-pressed="${on}" style="padding:2px 10px;height:28px;font-size:0.6875rem;font-weight:600;border-radius:999px;cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--border-light)'};color:${on ? 'var(--accent)' : 'var(--ink-muted)'};background:${on ? 'var(--accent-light, rgba(67,97,238,0.08))' : 'var(--bg-card)'};">${esc(f.name)}</button>`;
+                }).join('')}
+              </div>
             </div>
             <textarea class="chat-input" id="chat-input" placeholder="${planClassContext ? `Plan a lesson for ${planClassContext.name}...` : 'Describe your lesson idea, ask about spatial design, or explore frameworks...'}" rows="3"></textarea>
             <div class="chat-composer-footer">
@@ -1413,6 +1420,19 @@ export function render(container) {
       };
       contextParts.push(`[Curriculum Ideology Lens: ${ideologyLabels[selectedIdeology] || selectedIdeology}. Frame the lesson design, activity choices, and assessment approach through this orientation where it naturally fits.]`);
     }
+    // Pedagogy framework lenses — injected on the first message only, where
+    // they frame the whole plan (mirrors the ideology lens injection).
+    if (chatMessages.length === 0 && selectedFrameworkIds.length > 0) {
+      selectedFrameworkIds.forEach(id => {
+        const fw = (Store.getFrameworks?.() || []).find(f => f.id === id);
+        if (!fw) return;
+        const stageBits = (fw.stages || []).map(s => {
+          const line = String(s.prompt || s.studentPrompt || '').replace(/\s+/g, ' ').trim();
+          return `${s.label}${line ? `: ${line}` : ''}`;
+        }).join('; ');
+        contextParts.push(`[Pedagogy Framework — ${fw.name}: ${fw.guidance || ''} Stages: ${stageBits}]`);
+      });
+    }
 
     const enrichedContent = contextParts.length > 0
       ? `${contextParts.join('\n\n')}\n\n${text}`
@@ -1474,6 +1494,21 @@ export function render(container) {
   // Ideology lens
   container.querySelector('#ideology-lens')?.addEventListener('change', (e) => {
     selectedIdeology = e.target.value;
+  });
+
+  // Pedagogy framework chips — toggleable multi-select
+  container.querySelectorAll('#framework-chips .fw-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.fw;
+      const on = !selectedFrameworkIds.includes(id);
+      selectedFrameworkIds = on
+        ? [...selectedFrameworkIds, id]
+        : selectedFrameworkIds.filter(x => x !== id);
+      btn.setAttribute('aria-pressed', String(on));
+      btn.style.borderColor = on ? 'var(--accent)' : 'var(--border-light)';
+      btn.style.color = on ? 'var(--accent)' : 'var(--ink-muted)';
+      btn.style.background = on ? 'var(--accent-light, rgba(67,97,238,0.08))' : 'var(--bg-card)';
+    });
   });
 
   // KB context chips
@@ -2647,7 +2682,8 @@ function rosBlankSegment(n) {
     layoutSceneId: null,
     grouping: null,
     resources: [],
-    e21ccFocus: null
+    e21ccFocus: null,
+    frameworkId: null
   };
 }
 
@@ -2689,7 +2725,8 @@ function showRunOfShowEditor(container, runOfShow) {
       ? { mode: s.grouping.mode, groups: Array.isArray(s.grouping.groups) ? s.grouping.groups : [] }
       : null,
     resources: Array.isArray(s.resources) ? s.resources : [],
-    e21ccFocus: E21CC_SEGMENT_KEYS.includes(s.e21ccFocus) ? s.e21ccFocus : null
+    e21ccFocus: E21CC_SEGMENT_KEYS.includes(s.e21ccFocus) ? s.e21ccFocus : null,
+    frameworkId: (typeof s.frameworkId === 'string' && s.frameworkId) ? s.frameworkId : null
   }));
   if (segs.length === 0) segs = [rosBlankSegment(1)];
 
@@ -2751,6 +2788,8 @@ function showRunOfShowEditor(container, runOfShow) {
       if (sceneSel) s.layoutSceneId = sceneSel.value || null;
       const focusSel = row.querySelector('.ros-e21cc');
       if (focusSel) s.e21ccFocus = focusSel.value || null;
+      const fwSel = row.querySelector('.ros-framework');
+      if (fwSel) s.frameworkId = fwSel.value || null;
     });
   };
 
@@ -2777,6 +2816,12 @@ function showRunOfShowEditor(container, runOfShow) {
               <select class="input ros-e21cc" title="21st-century competency this segment develops (shown to students in Present mode)" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
                 <option value="">(none)</option>
                 ${E21CC_SEGMENT_FIELDS.map(f => `<option value="${esc(f.key)}" ${s.e21ccFocus === f.key ? 'selected' : ''}>${esc(f.label)}</option>`).join('')}
+              </select>
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">Framework moment
+              <select class="input ros-framework" title="Pedagogy framework enacted in this segment (its stages show to students in Present mode)" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+                <option value="">(none)</option>
+                ${(Store.getFrameworks?.() || []).map(f => `<option value="${esc(f.id)}" ${s.frameworkId === f.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}
               </select>
             </label>
             ${layoutScenes.length > 0 ? `

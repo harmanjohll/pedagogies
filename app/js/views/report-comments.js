@@ -74,6 +74,7 @@ export function render(container) {
   let selectedIds = new Set((Store.getClass(selectedClassId)?.students || []).map(s => s.id));
   let tone = 'Balanced';
   let length = 'short';
+  let frameworkId = '';   // optional feedback-purpose pedagogy framework
   let isGenerating = false;
   let results = [];       // [{ id, name, text }]
   let rawFallback = '';   // shown when JSON parsing fails
@@ -85,7 +86,7 @@ export function render(container) {
 
     container.innerHTML = `
       <style>
-        .rc-form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+        .rc-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 14px; }
         @media (max-width: 640px) { .rc-form-grid { grid-template-columns: 1fr; } }
         .rc-label { display: block; font-size: 0.6875rem; font-weight: 600; color: var(--ink-secondary); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.03em; }
         .rc-students { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
@@ -128,6 +129,14 @@ export function render(container) {
                 <select id="rc-length" class="input" style="width:100%;box-sizing:border-box;">
                   <option value="short" ${length === 'short' ? 'selected' : ''}>2-3 sentences</option>
                   <option value="paragraph" ${length === 'paragraph' ? 'selected' : ''}>Short paragraph</option>
+                </select>
+              </div>
+              <div>
+                <label class="rc-label" for="rc-frame">Feedback frame</label>
+                <select id="rc-frame" class="input" style="width:100%;box-sizing:border-box;">
+                  <option value="">None</option>
+                  ${Store.getFrameworks().filter(f => f.purpose === 'feedback').map(f => `
+                    <option value="${escapeHtml(f.id)}" ${f.id === frameworkId ? 'selected' : ''}>${escapeHtml(f.name)}</option>`).join('')}
                 </select>
               </div>
             </div>
@@ -184,6 +193,7 @@ export function render(container) {
     });
     container.querySelector('#rc-tone')?.addEventListener('change', (e) => { tone = e.target.value; });
     container.querySelector('#rc-length')?.addEventListener('change', (e) => { length = e.target.value; });
+    container.querySelector('#rc-frame')?.addEventListener('change', (e) => { frameworkId = e.target.value; });
 
     container.querySelector('#rc-toggle-all')?.addEventListener('click', () => {
       const students = Store.getClass(selectedClassId)?.students || [];
@@ -244,6 +254,16 @@ export function render(container) {
     renderView();
 
     const reflections = classReflections(cls.id);
+    // Optional feedback frame: the selected framework's stages shape each
+    // comment's flow (prose only — the JSON schema is unchanged).
+    const framework = frameworkId
+      ? Store.getFrameworks().find(f => f.id === frameworkId && f.purpose === 'feedback') || null
+      : null;
+    const frameworkRule = framework
+      ? `\n- Shape each comment to follow the "${framework.name}" feedback frame: move through its stages in order — ${
+          (framework.stages || []).map(s => `${s.label}${s.prompt ? ` (${s.prompt})` : ''}`).join(', then ')
+        } — as one natural prose flow. No headings, no stage labels, no lists; the stages must read as seamless sentences.`
+      : '';
     const schema = getSchemaForClass(cls, Store.getTrackingSchemas());
     const firstLevels = schema.fields[0]?.levels || [];
     const rubricLine = schema.id === 'e21cc'
@@ -266,7 +286,7 @@ ${reflections.length ? `Recent completed-lesson reflections for this class (shar
 - Write in third person using the student's name.
 - Ground each comment in that student's ${schema.id === 'e21cc' ? 'E21CC levels' : `${schema.name} levels`} and observations; never invent specific incidents.
 - Lead with genuine strengths, then one growth area phrased constructively.
-- No grades or marks, no comparisons between students, no generic filler.
+- No grades or marks, no comparisons between students, no generic filler.${frameworkRule}
 
 Return ONLY a JSON array with exactly ${students.length} items, in the same order as the student list:
 [{"name": "<student name>", "comment": "<the comment>"}]`;
@@ -275,8 +295,10 @@ Return ONLY a JSON array with exactly ${students.length} items, in the same orde
       const raw = await sendChat([{ role: 'user', content: prompt }], {
         jsonMode: true,
         trackLabel: 'reportComments',
-        trackDetail: `${cls.name} · ${students.length} students · ${tone}`,
-        systemPrompt: 'You are Co-Cher\'s report comment specialist for Singapore schools. You write warm, professional, parent-facing holistic report comments grounded in the evidence provided. Return ONLY a valid JSON array — no markdown fences, no commentary.'
+        trackDetail: `${cls.name} · ${students.length} students · ${tone}${framework ? ` · ${framework.name}` : ''}`,
+        systemPrompt: 'You are Co-Cher\'s report comment specialist for Singapore schools. You write warm, professional, parent-facing holistic report comments grounded in the evidence provided.'
+          + (framework ? ` You structure feedback using the "${framework.name}" framework, woven invisibly into natural prose.` : '')
+          + ' Return ONLY a valid JSON array — no markdown fences, no commentary.'
       });
 
       const arr = parseJsonArray(raw);
