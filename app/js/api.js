@@ -7,6 +7,7 @@
 import { Store } from './state.js';
 import { trackEvent } from './utils/analytics.js';
 import { getPreferredName } from './components/login.js';
+import { SCHEMA_PRESETS } from './utils/tracking.js';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -655,6 +656,9 @@ export function seatPlanToMarkdown(result) {
 /* ── Run of Show: stage a freeform plan into runnable segments ── */
 const RUN_OF_SHOW_MODES = ['individual', 'pairs', 'groups', 'whole-class'];
 
+// The six E21CC tracking dimensions (single source of truth: utils/tracking.js)
+const E21CC_FOCUS_KEYS = SCHEMA_PRESETS.e21cc.fields.map(f => f.key);
+
 function coerceGroupingMode(value) {
   const v = String(value ?? '').toLowerCase().trim();
   if (!v) return null;
@@ -697,7 +701,8 @@ export function normalizeRunOfShow(raw) {
       studentInstructions: String(s.studentInstructions ?? '').trim(),
       layoutSceneId: (typeof s.layoutSceneId === 'string' && s.layoutSceneId) ? s.layoutSceneId : null,
       grouping: mode ? { mode, groups: existingGroups } : null,
-      resources: Array.isArray(s.resources) ? s.resources : []
+      resources: Array.isArray(s.resources) ? s.resources : [],
+      e21ccFocus: E21CC_FOCUS_KEYS.includes(s.e21ccFocus) ? s.e21ccFocus : null
     };
   });
   if (segments.length === 0) {
@@ -734,10 +739,11 @@ Rules:
 - "activity" is a 1-line teacher-facing summary of what happens in the segment.
 - "studentInstructions" is 1-3 short imperative student-facing sentences (what students should do). No teacher jargon, no framework names, and never reveal answers.
 - "groupingMode" is exactly one of: individual | pairs | groups | whole-class.
+- "e21ccFocus" is OPTIONAL: when a segment clearly develops one 21st-century competency, set it to exactly one of: criticalThinking | creativeThinking | communication | collaboration | socialConnectedness | selfRegulation. Omit it when no single competency stands out.
 - Segments must be in chronological order and cover the whole lesson.
 
 Return STRICT JSON only (no markdown, no commentary) in exactly this shape:
-{"segments":[{"name":"Segment name","duration":10,"activity":"One-line teacher summary","studentInstructions":"Short student-facing instructions.","groupingMode":"pairs"}]}`,
+{"segments":[{"name":"Segment name","duration":10,"activity":"One-line teacher summary","studentInstructions":"Short student-facing instructions.","groupingMode":"pairs","e21ccFocus":"collaboration"}]}`,
     temperature: 0.4,
     maxTokens: 4096
   });

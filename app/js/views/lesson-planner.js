@@ -18,6 +18,7 @@ import { processLatex } from '../utils/latex.js';
 import { md, escapeHtml } from '../utils/markdown.js';
 import { critiquePlan } from '../api.js';
 import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
+import { SCHEMA_PRESETS } from '../utils/tracking.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
@@ -287,6 +288,9 @@ function autoSaveComponents() {
 function renderComponents(container) {
   const el = container.querySelector('#lesson-components');
   if (!el) return;
+
+  // Components done-state feeds the journey bar — keep it in step (WS-A)
+  renderJourneyBar(container);
 
   const keys = Object.keys(lessonComponents)
     .filter(k => lessonComponents[k]?.content)
@@ -1051,6 +1055,9 @@ export function render(container) {
               </div>
             </div>
 
+            <!-- Journey bar: Plan → Components → Stage → Place → Present (WS-A) -->
+            <div id="lp-journey"></div>
+
             <!-- Lesson Date/Time -->
             <div id="lesson-datetime-bar" style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-4);padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-radius:var(--radius-lg);flex-wrap:wrap;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -1082,6 +1089,9 @@ export function render(container) {
 
             <!-- Spatial Context Bar (when layout linked) -->
             <div id="spatial-context-bar" style="display:none;margin-bottom:var(--sp-4);"></div>
+
+            <!-- Persistent Run of Show panel (WS-A Cockpit) -->
+            <div id="run-of-show"></div>
 
             <!-- Plan Content -->
             <div id="plan-content"></div>
@@ -2045,6 +2055,10 @@ export function render(container) {
   renderSpatialSection(container);
   renderSpatialContextBar(container);
 
+  // Cockpit (WS-A): persistent Run of Show panel + journey bar
+  renderRunOfShow(container);
+  renderJourneyBar(container);
+
   // Linked Resources
   renderLinkedResourcesSection(container);
   // === NEW TOOLS: Arts, Music, NFS, D&T ===
@@ -2515,6 +2529,12 @@ const ROS_MODE_OPTIONS = [
   { value: 'whole-class', label: 'Whole class' }
 ];
 
+// The six E21CC tracking dimensions a segment can develop (key → label),
+// sourced from the tracking schema registry so wording stays centralised.
+const E21CC_SEGMENT_FIELDS = SCHEMA_PRESETS.e21cc.fields;
+const E21CC_SEGMENT_KEYS = E21CC_SEGMENT_FIELDS.map(f => f.key);
+const E21CC_SEGMENT_LABELS = Object.fromEntries(E21CC_SEGMENT_FIELDS.map(f => [f.key, f.label]));
+
 function rosBlankSegment(n) {
   return {
     id: `seg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
@@ -2524,7 +2544,8 @@ function rosBlankSegment(n) {
     studentInstructions: '',
     layoutSceneId: null,
     grouping: null,
-    resources: []
+    resources: [],
+    e21ccFocus: null
   };
 }
 
@@ -2565,7 +2586,8 @@ function showRunOfShowEditor(container, runOfShow) {
     grouping: (s.grouping && s.grouping.mode)
       ? { mode: s.grouping.mode, groups: Array.isArray(s.grouping.groups) ? s.grouping.groups : [] }
       : null,
-    resources: Array.isArray(s.resources) ? s.resources : []
+    resources: Array.isArray(s.resources) ? s.resources : [],
+    e21ccFocus: E21CC_SEGMENT_KEYS.includes(s.e21ccFocus) ? s.e21ccFocus : null
   }));
   if (segs.length === 0) segs = [rosBlankSegment(1)];
 
@@ -2625,6 +2647,8 @@ function showRunOfShowEditor(container, runOfShow) {
       // scenes; without it, any existing layoutSceneId is left untouched.
       const sceneSel = row.querySelector('.ros-scene');
       if (sceneSel) s.layoutSceneId = sceneSel.value || null;
+      const focusSel = row.querySelector('.ros-e21cc');
+      if (focusSel) s.e21ccFocus = focusSel.value || null;
     });
   };
 
@@ -2647,6 +2671,12 @@ function showRunOfShowEditor(container, runOfShow) {
             <select class="input ros-mode" title="Grouping mode" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
               ${ROS_MODE_OPTIONS.map(m => `<option value="${m.value}" ${(s.grouping?.mode || '') === m.value ? 'selected' : ''}>${m.label}</option>`).join('')}
             </select>
+            <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">E21CC focus
+              <select class="input ros-e21cc" title="21st-century competency this segment develops (shown to students in Present mode)" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+                <option value="">(none)</option>
+                ${E21CC_SEGMENT_FIELDS.map(f => `<option value="${esc(f.key)}" ${s.e21ccFocus === f.key ? 'selected' : ''}>${esc(f.label)}</option>`).join('')}
+              </select>
+            </label>
             ${layoutScenes.length > 0 ? `
             <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">Room scene
               <select class="input ros-scene" title="Layout scene shown during this segment" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
@@ -2746,6 +2776,9 @@ function showRunOfShowEditor(container, runOfShow) {
     }));
     if (segments.length === 0) { showToast('Add at least one segment.', 'danger'); return null; }
     Store.updateLesson(currentLessonId, { runOfShow: { generatedAt: Date.now(), segments } });
+    // Keep the cockpit in sync with what was just persisted (WS-A)
+    renderRunOfShow(container);
+    renderJourneyBar(container);
     return segments;
   };
 
@@ -3242,6 +3275,147 @@ function renderSpatialContextBar(container) {
     </div>`;
 
   barEl.querySelector('#spatial-context-open')?.addEventListener('click', () => navigate('/spatial'));
+}
+
+/* ══════════ Cockpit (WS-A): persistent Run of Show panel + journey bar ══════════ */
+
+/* Always-visible Run of Show card in the plan column. Staged lesson → segment
+ * strip (click = reopen the editor) + Present button. Saved-but-unstaged
+ * lesson with a plan → slim stage CTA. Anything else → nothing. */
+function renderRunOfShow(container) {
+  const el = container.querySelector('#run-of-show');
+  if (!el) return;
+
+  const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const segments = lesson?.runOfShow?.segments || [];
+
+  if (!lesson || segments.length === 0) {
+    const hasPlan = chatMessages.some(m => m.role === 'assistant');
+    if (lesson && hasPlan) {
+      el.innerHTML = `
+        <div class="card" style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-4);border-style:dashed;">
+          <span style="font-size:1.125rem;flex-shrink:0;" aria-hidden="true">&#127916;</span>
+          <div style="flex:1;min-width:140px;font-size:0.8125rem;color:var(--ink-muted);">Stage this lesson &mdash; turn the plan into a runnable sequence of timed segments.</div>
+          <button class="btn btn-secondary btn-sm" id="ros-panel-stage">Stage lesson</button>
+        </div>`;
+      el.querySelector('#ros-panel-stage')?.addEventListener('click', () =>
+        container.querySelector('#stage-lesson-btn')?.click());
+    } else {
+      el.innerHTML = '';
+    }
+    return;
+  }
+
+  const total = segments.reduce((n, s) => n + (Number(s.duration) || 0), 0);
+  const layout = lesson.spatialLayout
+    ? (Store.getSavedLayouts() || []).find(l => l.id === lesson.spatialLayout) : null;
+  const sceneName = (id) => {
+    const sc = (layout?.scenes || []).find(s => s && s.id === id);
+    return (sc?.name || 'Scene');
+  };
+  const modeLabel = (m) => ROS_MODE_OPTIONS.find(o => o.value === m)?.label || '';
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:var(--sp-4);overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);flex-wrap:wrap;">
+        <span aria-hidden="true">&#127916;</span>
+        <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">Run of Show</span>
+        <span class="badge badge-blue" style="font-size:0.6875rem;">${total} min &middot; ${segments.length} segment${segments.length === 1 ? '' : 's'}</span>
+        <button class="btn btn-primary btn-sm" id="ros-panel-present" style="margin-left:auto;" title="Open the student-facing class screen">&#9654; Present</button>
+      </div>
+      <div id="ros-panel-strip" role="button" tabindex="0" title="Edit run of show" style="display:flex;flex-direction:column;gap:var(--sp-1);padding:var(--sp-3) var(--sp-4);cursor:pointer;">
+        ${segments.map((s, i) => `
+          <div style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;flex-wrap:wrap;line-height:1.5;">
+            <span style="color:var(--ink);font-weight:500;">${i + 1}. ${esc(s.name || `Segment ${i + 1}`)}</span>
+            <span style="color:var(--ink-faint);">&middot; ${Number(s.duration) || 0}min</span>
+            ${s.grouping?.mode ? `<span class="badge badge-gray" style="font-size:0.625rem;">${esc(modeLabel(s.grouping.mode))}</span>` : ''}
+            ${s.layoutSceneId ? `<span class="badge badge-blue" style="font-size:0.625rem;">&#128208; ${esc(sceneName(s.layoutSceneId))}</span>` : ''}
+            ${s.e21ccFocus && E21CC_SEGMENT_LABELS[s.e21ccFocus] ? `<span style="display:inline-block;padding:1px 8px;border-radius:var(--radius-full);background:var(--growth-light,#e2f2e8);color:var(--growth,#2c7a4b);font-size:0.625rem;font-weight:600;">${esc(E21CC_SEGMENT_LABELS[s.e21ccFocus])}</span>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  el.querySelector('#ros-panel-present')?.addEventListener('click', () =>
+    navigate(`/present/${currentLessonId}`));
+  const openEditor = () => {
+    const fresh = currentLessonId ? Store.getLesson(currentLessonId) : null;
+    if (fresh?.runOfShow) showRunOfShowEditor(container, fresh.runOfShow);
+  };
+  const strip = el.querySelector('#ros-panel-strip');
+  strip?.addEventListener('click', openEditor);
+  strip?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditor(); }
+  });
+}
+
+/* Compact one-line journey strip: Plan → Components → Stage → Place → Present.
+ * Done steps fill growth-green; the next undone step on the runnable spine
+ * (Plan → Stage → Place) pulses accent; Components never nags (it is optional
+ * enrichment); Present renders as the action once the lesson is staged. */
+function renderJourneyBar(container) {
+  const el = container.querySelector('#lp-journey');
+  if (!el) return;
+
+  const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const segments = lesson?.runOfShow?.segments || [];
+  const done = {
+    plan: chatMessages.some(m => m.role === 'assistant'),
+    components: Object.keys(lessonComponents).length > 0,
+    stage: segments.length > 0,
+    place: segments.some(s => (s.grouping?.groups || []).some(g => Array.isArray(g.itemIds) && g.itemIds.length > 0))
+  };
+  const nextKey = !done.plan ? 'plan' : (!done.stage ? 'stage' : (!done.place ? 'place' : null));
+
+  const pillStyle = (key, isDone) => {
+    const base = 'display:inline-flex;align-items:center;padding:2px 10px;border-radius:var(--radius-full);font-size:0.6875rem;font-weight:600;cursor:pointer;white-space:nowrap;';
+    if (key === 'present') {
+      return base + (done.stage
+        ? 'background:var(--accent);color:#fff;border:1px solid var(--accent);'
+        : 'background:transparent;color:var(--ink-faint);border:1px solid var(--border-light);cursor:default;');
+    }
+    if (isDone) return base + 'background:var(--growth,#2c7a4b);color:#fff;border:1px solid var(--growth,#2c7a4b);';
+    if (key === nextKey) return base + 'background:var(--bg-card);color:var(--accent);border:1px solid var(--accent);animation:pulse-soft 2s ease-in-out infinite;';
+    return base + 'background:transparent;color:var(--ink-faint);border:1px solid var(--border-light);';
+  };
+
+  const steps = [
+    { key: 'plan', label: 'Plan', isDone: done.plan, title: 'Chat with Co-Cher to draft the plan' },
+    { key: 'components', label: 'Components', isDone: done.components, title: 'Add AI components (rubric, grouping, exit ticket…)' },
+    { key: 'stage', label: 'Stage', isDone: done.stage, title: 'Break the plan into runnable segments' },
+    { key: 'place', label: 'Place', isDone: done.place, title: 'Assign groups to furniture in the room' },
+    { key: 'present', label: '▶ Present', isDone: false, title: done.stage ? 'Open the student-facing class screen' : 'Stage the lesson first' }
+  ];
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:4px;margin-bottom:var(--sp-3);overflow-x:auto;padding-bottom:2px;">
+      ${steps.map((st, i) => `
+        ${i > 0 ? '<span style="color:var(--ink-faint);font-size:0.625rem;flex-shrink:0;">&rarr;</span>' : ''}
+        <button class="lp-journey-pill" data-step="${st.key}" title="${esc(st.title)}" style="${pillStyle(st.key, st.isDone)}">
+          ${st.isDone ? '<span aria-hidden="true" style="margin-right:3px;">&#10003;</span>' : ''}${esc(st.label)}
+        </button>`).join('')}
+    </div>`;
+
+  el.querySelectorAll('.lp-journey-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const step = btn.dataset.step;
+      if (step === 'plan') {
+        container.querySelector('#lp-layout')?.classList.remove('show-plan');
+        container.querySelector('#chat-input')?.focus();
+      } else if (step === 'components') {
+        container.querySelector('#lesson-components')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (step === 'stage') {
+        container.querySelector('#stage-lesson-btn')?.click();
+      } else if (step === 'place') {
+        // Placement lives in the run-of-show editor ("Place in room" per segment)
+        const fresh = currentLessonId ? Store.getLesson(currentLessonId) : null;
+        if (fresh?.runOfShow?.segments?.length) showRunOfShowEditor(container, fresh.runOfShow);
+        else container.querySelector('#stage-lesson-btn')?.click();
+      } else if (step === 'present') {
+        const fresh = currentLessonId ? Store.getLesson(currentLessonId) : null;
+        if (fresh?.runOfShow?.segments?.length) navigate(`/present/${currentLessonId}`);
+      }
+    });
+  });
 }
 
 /* ══════════ KB Context Attachment ══════════ */

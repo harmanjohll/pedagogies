@@ -14,6 +14,7 @@ import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { escapeHtml, md } from '../utils/markdown.js';
 import { layoutToSVG } from './spatial-designer.js';
+import { SCHEMA_PRESETS } from '../utils/tracking.js';
 
 let _timerId = null;
 let _remaining = 0;      // seconds left in the running segment
@@ -43,6 +44,11 @@ const GROUP_LABEL = {
   groups: 'Work in your groups',
   'whole-class': 'Whole class together',
 };
+
+/* Student-facing labels for a segment's E21CC focus (key → label), sourced
+ * from the tracking schema registry so wording stays centralised. */
+const E21CC_FOCUS_LABELS = Object.fromEntries(
+  SCHEMA_PRESETS.e21cc.fields.map(f => [f.key, f.label]));
 
 export function renderPresent(container, params) {
   const lesson = Store.getLesson(params.id);
@@ -104,6 +110,7 @@ export function renderPresent(container, params) {
       .present-clock { font-variant-numeric: tabular-nums; font-size: clamp(2.4rem, 7vw, 5.5rem); font-weight: 800; letter-spacing: 0.02em; color: var(--accent, #4361ee); }
       .present-clock.overrun { color: var(--danger, #dc2626); }
       .present-groupmode { display:inline-block; padding: 6px 18px; border-radius: 999px; background: var(--accent-light, #eef); color: var(--accent, #4361ee); font-weight: 700; font-size: clamp(0.9rem, 1.8vw, 1.25rem); }
+      .present-growth { background: var(--growth-light, #e2f2e8); color: var(--growth, #2c7a4b); }
       .present-groups { display:flex; flex-wrap:wrap; gap: 14px; justify-content:center; max-width: 92vw; }
       .present-group-card { border: 2px solid var(--border); border-radius: 14px; padding: 12px 18px; min-width: 160px; background: var(--surface, #fff); }
       .present-group-card h4 { margin: 0 0 6px; font-size: clamp(0.95rem, 1.8vw, 1.3rem); color: var(--accent, #4361ee); }
@@ -211,12 +218,14 @@ export function renderPresent(container, params) {
         </div>` : '';
 
       const modeLabel = GROUP_LABEL[seg.grouping?.mode || seg.groupingMode] || '';
+      const growthLabel = seg.e21ccFocus ? (E21CC_FOCUS_LABELS[seg.e21ccFocus] || '') : '';
 
       stage.innerHTML = `
         <div class="present-meta" style="font-weight:700;">Part ${_segIdx} of ${segments.length}</div>
         <div class="present-seg-name">${escapeHtml(seg.name || 'Activity')}</div>
         <div class="present-clock">${fmtClock(_remaining)}</div>
         ${modeLabel ? `<span class="present-groupmode">${escapeHtml(modeLabel)}</span>` : ''}
+        ${growthLabel ? `<span class="present-groupmode present-growth">This activity grows: ${escapeHtml(growthLabel)}</span>` : ''}
         ${seg.studentInstructions ? `<div class="present-instructions">${escapeHtml(seg.studentInstructions)}</div>` : ''}
         ${groupCards}
         ${segmentMap(seg)}`;
