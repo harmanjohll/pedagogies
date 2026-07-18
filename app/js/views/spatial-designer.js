@@ -400,15 +400,40 @@ export function layoutToSVG(items, { width = 720, seatLabels = {}, title = '' } 
     if (glyph) body += textEl(0, glyph[2], glyph[0], glyph[1], glyph[3] || '#64748b');
     shapes.push(`<g transform="translate(${x},${y}) rotate(${r})">${body}</g>`);
 
-    // Seat label badge (unrotated, on top of the item)
+    // Seat label badge (unrotated, on top of the item). A string value renders
+    // as a single pill; an array renders as stacked lines (e.g. the student
+    // names seated at this item), capped at 5 lines with a '+n more' overflow
+    // line. Font steps down as lines grow so the badge stays item-sized.
     const label = item.iid != null ? seatLabels[item.iid] : undefined;
-    if (label != null && String(label) !== '') {
-      const s = String(label);
+    const lines = (Array.isArray(label) ? label : [label])
+      .filter(v => v != null && String(v) !== '')
+      .map(v => String(v));
+    if (lines.length === 1) {
+      const s = lines[0];
       const bw = Math.max(22, Math.round(s.length * 6.5) + 12);
       badges.push(
         `<g transform="translate(${x},${y})">` +
         `<rect x="${-bw / 2}" y="-10" width="${bw}" height="20" rx="10" fill="#1e293b" opacity="0.92"/>` +
         textEl(0, 4, s, 11, '#fff', 700) +
+        `</g>`
+      );
+    } else if (lines.length > 1) {
+      const MAX_LINES = 5;
+      const shown = lines.length > MAX_LINES
+        ? [...lines.slice(0, MAX_LINES - 1), `+${lines.length - (MAX_LINES - 1)} more`]
+        : lines;
+      const fs = shown.length <= 2 ? 10 : (shown.length <= 3 ? 9 : 8);
+      const lineH = fs + 3;
+      const longest = shown.reduce((n, ln) => Math.max(n, ln.length), 0);
+      const bw = Math.max(26, Math.round(longest * fs * 0.62) + 14);
+      const bh = shown.length * lineH + 8;
+      const texts = shown.map((ln, k) =>
+        textEl(0, Math.round((k - (shown.length - 1) / 2) * lineH + fs * 0.36), ln, fs, '#fff', 700)
+      ).join('');
+      badges.push(
+        `<g transform="translate(${x},${y})">` +
+        `<rect x="${-bw / 2}" y="${-bh / 2}" width="${bw}" height="${bh}" rx="8" fill="#1e293b" opacity="0.92"/>` +
+        texts +
         `</g>`
       );
     }
@@ -2781,12 +2806,26 @@ export function render(container) {
         mode: seg.grouping?.mode || 'groups',
         groups: groups.map((g, i) => {
           const existing = prevGroups[i] || {};
-          return {
+          const itemIds = [...assignments.entries()].filter(([, gi]) => gi === i).map(([iid]) => iid);
+          const studentIds = Array.isArray(g.studentIds) ? g.studentIds : (existing.studentIds || []);
+          const next = {
             ...existing,
             name: g.name || existing.name || `Group ${i + 1}`,
-            studentIds: Array.isArray(g.studentIds) ? g.studentIds : (existing.studentIds || []),
-            itemIds: [...assignments.entries()].filter(([, gi]) => gi === i).map(([iid]) => iid)
+            studentIds,
+            itemIds // kept as-is for back-compat (group-name labels downstream)
           };
+          // Named seats: distribute members across this group's items
+          // round-robin in member order — 1 item seats everyone, N items get
+          // an even spread (e.g. 3 members over 2 items → 2 + 1).
+          if (itemIds.length > 0 && studentIds.length > 0) {
+            const seatMap = {};
+            itemIds.forEach(iid => { seatMap[iid] = []; });
+            studentIds.forEach((sid, j) => { seatMap[itemIds[j % itemIds.length]].push(sid); });
+            next.seatMap = seatMap;
+          } else {
+            delete next.seatMap; // no items (or no members) → stale map dropped
+          }
+          return next;
         })
       };
       Store.updateLesson(payload.lessonId, { runOfShow: ros });

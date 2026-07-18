@@ -12,14 +12,15 @@ import { Store, generateId } from '../state.js';
 import { getCurrentUser, getPreferredName } from '../components/login.js';
 import { idbGet, idbPut } from './storage.js';
 
-const ITEM_KEYS = ['lessons', 'stimulus', 'sources', 'layouts', 'uploads', 'simulations'];
+const ITEM_KEYS = ['lessons', 'stimulus', 'sources', 'layouts', 'uploads', 'simulations', 'frameworks'];
 const ITEM_LABELS = {
   lessons: ['lesson', 'lessons'],
   stimulus: ['stimulus material', 'stimulus materials'],
   sources: ['source', 'sources'],
   layouts: ['layout', 'layouts'],
   uploads: ['resource upload', 'resource uploads'],
-  simulations: ['simulation', 'simulations']
+  simulations: ['simulation', 'simulations'],
+  frameworks: ['pedagogy framework', 'pedagogy frameworks']
 };
 
 /* ── Custom simulations travel with their lessons ──
@@ -94,6 +95,18 @@ export async function exportPack({ title, lessons = [], stimulus = [], sources =
   lessons.forEach(l => (l.attachedResources || []).forEach(r => {
     if (r.type === 'simulation' && r.id) simIds.add(r.id);
   }));
+
+  /* Pedagogy frameworks travel with the lessons whose staged segments
+   * reference them (segment.frameworkId). Builtins (GROW / ACT) are seeded
+   * with the same fixed ids on every install, so only custom frameworks are
+   * bundled — the reference resolves either way. Ids are kept verbatim so
+   * segment links survive import. */
+  const fwIds = new Set();
+  lessons.forEach(l => (l.runOfShow?.segments || []).forEach(s => {
+    if (s && typeof s.frameworkId === 'string' && s.frameworkId) fwIds.add(s.frameworkId);
+  }));
+  const frameworks = (Store.getFrameworks?.() || [])
+    .filter(f => fwIds.has(f.id) && !f.builtin);
   const allSims = getCustomSims();
   const simulations = [];
   for (const id of simIds) {
@@ -117,7 +130,8 @@ export async function exportPack({ title, lessons = [], stimulus = [], sources =
       sources: sources.map(travelItem),
       layouts: layouts.map(travelItem),
       uploads: uploads.map(travelItem),
-      simulations
+      simulations,
+      frameworks
     }
   };
   const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
@@ -226,6 +240,17 @@ export function importPack(json) {
     mergeList('sourceLibrary', items.sources, 'sources');
     mergeList('knowledgeUploads', items.uploads, 'uploads');
 
+    /* Pedagogy frameworks before lessons — staged segments reference them by
+     * id, and those ids are kept VERBATIM (unlike other items) so the links
+     * resolve without remapping. Add only what's missing; builtins and any
+     * framework whose id already exists locally are skipped. */
+    (items.frameworks || []).forEach(raw => {
+      if (!raw || typeof raw !== 'object' || !raw.id) { skipped++; return; }
+      if (raw.builtin || Store.getFramework?.(raw.id)) { skipped++; return; }
+      Store.addFramework(raw); // addFramework whitelists fields and keeps raw.id
+      added.frameworks++;
+    });
+
     /* Simulations before lessons — lessons reference them through
      * attachedResources, so build an old→new id map (like layouts). The
      * html payload goes to IndexedDB ('custom_sims'); when IDB is
@@ -282,7 +307,10 @@ export function importPack(json) {
         lessonHook: clean.lessonHook || '',
         e21ccFocus: clean.e21ccFocus || [],
         attachedResources: attached,
-        components: clean.components || {}
+        components: clean.components || {},
+        // Staged segments travel too — their frameworkId links resolve
+        // because pack frameworks are merged with ids kept verbatim above.
+        runOfShow: clean.runOfShow || null
       });
       Store.updateLesson(lesson.id, stamp(raw.id));
       added.lessons++;

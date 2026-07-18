@@ -14,6 +14,7 @@ import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { escapeHtml, md } from '../utils/markdown.js';
 import { layoutToSVG } from './spatial-designer.js';
+import { SCHEMA_PRESETS } from '../utils/tracking.js';
 
 let _timerId = null;
 let _remaining = 0;      // seconds left in the running segment
@@ -44,6 +45,11 @@ const GROUP_LABEL = {
   'whole-class': 'Whole class together',
 };
 
+/* Student-facing labels for a segment's E21CC focus (key → label), sourced
+ * from the tracking schema registry so wording stays centralised. */
+const E21CC_FOCUS_LABELS = Object.fromEntries(
+  SCHEMA_PRESETS.e21cc.fields.map(f => [f.key, f.label]));
+
 export function renderPresent(container, params) {
   const lesson = Store.getLesson(params.id);
   if (!lesson) {
@@ -58,6 +64,13 @@ export function renderPresent(container, params) {
   const layout = lesson.spatialLayout
     ? (Store.getSavedLayouts().find(l => l.id === lesson.spatialLayout) || null) : null;
 
+  /* Resolve one stored studentId (or raw name, import/AI compat) to a
+   * display name — same resolution rule as resolveMembers, per entry. */
+  const seatName = idOrName => {
+    const byId = cls?.students?.find(s => s.id === idOrName);
+    return byId ? byId.name : String(idOrName);
+  };
+
   /* Room map for a segment: its linked scene's arrangement, else the layout
    * itself — but only shown when there's something meaningful (an explicit
    * scene, or seat assignments to display). */
@@ -67,8 +80,21 @@ export function renderPresent(container, params) {
       ? (layout.scenes || []).find(s => s.id === seg.layoutSceneId) : null;
     const items = (scene?.items?.length ? scene.items : layout.items) || [];
     const seatLabels = {};
-    (seg.grouping?.groups || []).forEach(g =>
-      (g.itemIds || []).forEach(iid => { seatLabels[iid] = g.name || 'Group'; }));
+    (seg.grouping?.groups || []).forEach(g => {
+      const groupLabel = g.name || 'Group';
+      const sm = (g.seatMap && typeof g.seatMap === 'object') ? g.seatMap : null;
+      if (sm && Object.keys(sm).length > 0) {
+        // Named seats: the badge lists the students sitting at each item
+        Object.entries(sm).forEach(([iid, ids]) => {
+          const names = (Array.isArray(ids) ? ids : []).map(seatName).filter(Boolean);
+          seatLabels[iid] = names.length ? names : groupLabel;
+        });
+        // Assigned items missing from the seatMap keep the group-name pill
+        (g.itemIds || []).forEach(iid => { if (!(iid in seatLabels)) seatLabels[iid] = groupLabel; });
+      } else {
+        (g.itemIds || []).forEach(iid => { seatLabels[iid] = groupLabel; });
+      }
+    });
     if (!scene && !Object.keys(seatLabels).length) return '';
     if (!items.length) return '';
     let svg = '';
@@ -104,6 +130,7 @@ export function renderPresent(container, params) {
       .present-clock { font-variant-numeric: tabular-nums; font-size: clamp(2.4rem, 7vw, 5.5rem); font-weight: 800; letter-spacing: 0.02em; color: var(--accent, #4361ee); }
       .present-clock.overrun { color: var(--danger, #dc2626); }
       .present-groupmode { display:inline-block; padding: 6px 18px; border-radius: 999px; background: var(--accent-light, #eef); color: var(--accent, #4361ee); font-weight: 700; font-size: clamp(0.9rem, 1.8vw, 1.25rem); }
+      .present-growth { background: var(--growth-light, #e2f2e8); color: var(--growth, #2c7a4b); }
       .present-groups { display:flex; flex-wrap:wrap; gap: 14px; justify-content:center; max-width: 92vw; }
       .present-group-card { border: 2px solid var(--border); border-radius: 14px; padding: 12px 18px; min-width: 160px; background: var(--surface, #fff); }
       .present-group-card h4 { margin: 0 0 6px; font-size: clamp(0.95rem, 1.8vw, 1.3rem); color: var(--accent, #4361ee); }
@@ -116,6 +143,9 @@ export function renderPresent(container, params) {
       .present-ctrl { display:flex; gap: 8px; }
       .present-lisc { text-align: left; font-size: clamp(1rem, 2vw, 1.4rem); line-height: 1.6; max-width: 80vw; }
       .present-lisc h1, .present-lisc h2, .present-lisc h3 { font-size: 1.2em; }
+      .present-framework { text-align: left; font-size: clamp(0.95rem, 1.8vw, 1.25rem); line-height: 1.6; max-width: 80vw; border: 2px solid var(--border); border-radius: 14px; padding: 12px 20px; background: var(--surface, #fff); }
+      .present-framework-title { font-weight: 800; color: var(--accent, #4361ee); margin-bottom: 4px; }
+      .present-framework-stage strong { color: var(--ink); }
       .present-map svg { max-width: min(88vw, 760px); height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
       @media print { .present-bottom, .present-top .present-ctrl { display: none; } }
     </style>
@@ -211,13 +241,28 @@ export function renderPresent(container, params) {
         </div>` : '';
 
       const modeLabel = GROUP_LABEL[seg.grouping?.mode || seg.groupingMode] || '';
+      const growthLabel = seg.e21ccFocus ? (E21CC_FOCUS_LABELS[seg.e21ccFocus] || '') : '';
+
+      /* Framework moment: the segment's pedagogy framework, shown as stage
+       * lines. Student-facing only — labels + studentPrompt questions; the
+       * teacher-facing stage prompt is never rendered here. */
+      const framework = seg.frameworkId
+        ? (Store.getFrameworks?.() || []).find(f => f.id === seg.frameworkId) || null : null;
+      const frameworkPanel = framework ? `
+        <div class="present-framework">
+          <div class="present-framework-title">${escapeHtml(framework.name)}</div>
+          ${(framework.stages || []).map(s => `
+            <div class="present-framework-stage"><strong>${escapeHtml(s.label || '')}</strong>${s.studentPrompt ? ` &mdash; ${escapeHtml(s.studentPrompt)}` : ''}</div>`).join('')}
+        </div>` : '';
 
       stage.innerHTML = `
         <div class="present-meta" style="font-weight:700;">Part ${_segIdx} of ${segments.length}</div>
         <div class="present-seg-name">${escapeHtml(seg.name || 'Activity')}</div>
         <div class="present-clock">${fmtClock(_remaining)}</div>
         ${modeLabel ? `<span class="present-groupmode">${escapeHtml(modeLabel)}</span>` : ''}
+        ${growthLabel ? `<span class="present-groupmode present-growth">This activity grows: ${escapeHtml(growthLabel)}</span>` : ''}
         ${seg.studentInstructions ? `<div class="present-instructions">${escapeHtml(seg.studentInstructions)}</div>` : ''}
+        ${frameworkPanel}
         ${groupCards}
         ${segmentMap(seg)}`;
     }

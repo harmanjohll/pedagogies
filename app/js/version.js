@@ -6,10 +6,11 @@
  * lineage and the freeze procedure (storage keys must be namespaced).
  */
 
-export const APP_VERSION = 'v6';
+export const APP_VERSION = 'v6.1';
 
 /* Relative to app/cocher.html */
 export const PREVIOUS_VERSIONS = [
+  { version: 'v6', url: '../archive/v6/cocher.html' },
   { version: 'v5.1', url: '../archive/v5.1/cocher.html' },
   { version: 'v4.1', url: '../archive/v4.1/cocher.html' },
   { version: 'v4', url: '../archive/v4/cocher.html' },

@@ -7,12 +7,13 @@
  *   AfL: Assessment for Learning (formative, Hattie's Visible Learning)
  */
 
-import { Store, generateId } from '../state.js';
+import { Store } from '../state.js';
 import { trackEvent } from '../utils/analytics.js';
 import { showToast } from '../components/toast.js';
 import { sendChat } from '../api.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { processLatex, renderMd } from '../utils/latex.js';
+import { openModal } from '../components/modals.js';
 
 /* ── Bloom's Cognitive Process Dimension ── */
 const BLOOMS = [
@@ -1377,200 +1378,23 @@ export function renderAaL(container) {
           </div>
         </div>
 
-        <!-- GROW by Reflecting -->
-        <div class="assess-card" id="aal-grow-card">
-          <div class="assess-section-title" style="cursor:pointer;" data-jump="aal-grow-card" title="Click to see this framework in action">
-            <span style="display:inline-flex;align-items:center;gap:6px;">
-              GROW by Reflecting
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </span>
+        <!-- Pedagogy framework cards (registry-driven; GROW + ACT are seeded builtins) -->
+        ${aalFrameworks().map(fw => renderFrameworkCard(fw)).join('')}
+
+        <!-- Enacted example popup area (shared across framework cards) -->
+        <div id="aal-enacted-example" style="display:none;margin-bottom:16px;padding:16px;border-radius:10px;border:2px solid var(--accent,#4361ee);background:rgba(67,97,238,0.04);animation:fadeIn 0.2s ease;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div style="font-weight:700;font-size:0.875rem;color:var(--accent,#4361ee);" id="enacted-title"></div>
+            <button class="btn btn-secondary btn-sm" id="close-enacted" style="padding:2px 8px;font-size:0.75rem;">Close</button>
           </div>
-          <div class="assess-section-desc">
-            The GROW by Reflecting routine empowers students to become proactive, self-reflective learners.
-            Each letter guides a stage of personal reflection, celebrating success, planning improvement, owning knowledge, and looking ahead.
-          </div>
-
-          <!-- Circular GROW Diagram (matched to reference: G top-right, R right, O bottom, W left) -->
-          <div style="display:flex;justify-content:center;margin-bottom:20px;">
-            <svg viewBox="0 0 380 380" width="320" height="320" style="max-width:100%;">
-
-              <!-- Outer circle border -->
-              <circle cx="190" cy="190" r="150" fill="none" stroke="#10b981" stroke-width="2.5"/>
-
-              <!-- Quadrant dividing lines -->
-              <line x1="190" y1="40" x2="190" y2="340" stroke="var(--border,#d1d5db)" stroke-width="1.5"/>
-              <line x1="40" y1="190" x2="340" y2="190" stroke="var(--border,#d1d5db)" stroke-width="1.5"/>
-
-              <!-- Quadrant fills -->
-              <!-- G (top-right): light orange/amber -->
-              <path d="M190,40 A150,150 0 0,1 340,190 L190,190 Z" fill="rgba(245,158,11,0.08)"/>
-              <!-- R (bottom-right): light amber/yellow -->
-              <path d="M340,190 A150,150 0 0,1 190,340 L190,190 Z" fill="rgba(245,158,11,0.06)"/>
-              <!-- O (bottom-left): light green -->
-              <path d="M190,340 A150,150 0 0,1 40,190 L190,190 Z" fill="rgba(16,185,129,0.08)"/>
-              <!-- W (top-left): light blue/purple -->
-              <path d="M40,190 A150,150 0 0,1 190,40 L190,190 Z" fill="rgba(139,92,246,0.06)"/>
-
-              <!-- Centre circle -->
-              <circle cx="190" cy="190" r="50" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
-              <text x="190" y="184" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink,#374151)">Believe</text>
-              <text x="190" y="200" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink,#374151)">you can</text>
-
-
-              <!-- G label (top-right quadrant) -->
-              <text x="255" y="108" text-anchor="middle" font-size="26" font-weight="800" fill="#f59e0b">G</text>
-              <text x="255" y="124" text-anchor="middle" font-size="12" font-weight="700" fill="#f59e0b" font-style="italic">Gift yourself</text>
-              <text x="255" y="136" text-anchor="middle" font-size="12" font-weight="700" fill="#f59e0b" font-style="italic">success</text>
-
-              <!-- R label (bottom-right quadrant) -->
-              <text x="255" y="272" text-anchor="middle" font-size="26" font-weight="800" fill="#f59e0b">R</text>
-              <text x="255" y="288" text-anchor="middle" font-size="12" font-weight="700" fill="#f59e0b" font-style="italic">Rise above</text>
-              <text x="255" y="300" text-anchor="middle" font-size="12" font-weight="700" fill="#f59e0b" font-style="italic">with small steps</text>
-
-              <!-- O label (bottom-left quadrant) -->
-              <text x="125" y="272" text-anchor="middle" font-size="26" font-weight="800" fill="#10b981">O</text>
-              <text x="125" y="288" text-anchor="middle" font-size="12" font-weight="700" fill="#10b981" font-style="italic">Own your</text>
-              <text x="125" y="300" text-anchor="middle" font-size="12" font-weight="700" fill="#10b981" font-style="italic">knowledge</text>
-
-              <!-- W label (top-left quadrant) -->
-              <text x="125" y="108" text-anchor="middle" font-size="26" font-weight="800" fill="#8b5cf6">W</text>
-              <text x="125" y="124" text-anchor="middle" font-size="12" font-weight="700" fill="#8b5cf6" font-style="italic">Watch for what</text>
-              <text x="125" y="136" text-anchor="middle" font-size="12" font-weight="700" fill="#8b5cf6" font-style="italic">comes next</text>
-            </svg>
-          </div>
-
-          <!-- GROW detail cards -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #f59e0b;background:rgba(245,158,11,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-g" title="Click to see what G looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">G: Gift yourself success</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Celebrate what you <em>do</em> understand. Recognise your strengths before focusing on gaps.</div>
-              <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cWhat is one thing I understand?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cHow would I teach this to a friend?\u201d
-              </div>
-            </div>
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #f59e0b;background:rgba(245,158,11,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-r" title="Click to see what R looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">R: Rise above with small steps</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Identify what you don\u2019t yet understand and plan a small, achievable step to improve.</div>
-              <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cWhat do I not yet understand?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cWhat will I do to improve?\u201d
-              </div>
-            </div>
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #10b981;background:rgba(16,185,129,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-o" title="Click to see what O looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#10b981;margin-bottom:4px;">O: Own your knowledge</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Make learning yours by connecting it to real life and sharing it with others.</div>
-              <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cWhat is one real-life example?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cHow have I shared this with someone?\u201d
-              </div>
-            </div>
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid #8b5cf6;background:rgba(139,92,246,0.04);cursor:pointer;" class="aal-panel-link" data-panel="grow-w" title="Click to see what W looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#8b5cf6;margin-bottom:4px;">W: Watch for what comes next</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Look ahead. Activate prior knowledge about the next topic so you arrive prepared.</div>
-              <div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cWhat do I already know about the next topic?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cWhat is coming up and how can I prepare?\u201d
-              </div>
-            </div>
-          </div>
-
-          <!-- Enacted example popup area -->
-          <div id="aal-enacted-example" style="display:none;margin-bottom:16px;padding:16px;border-radius:10px;border:2px solid var(--accent,#4361ee);background:rgba(67,97,238,0.04);animation:fadeIn 0.2s ease;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-              <div style="font-weight:700;font-size:0.875rem;color:var(--accent,#4361ee);" id="enacted-title"></div>
-              <button class="btn btn-secondary btn-sm" id="close-enacted" style="padding:2px 8px;font-size:0.75rem;">Close</button>
-            </div>
-            <div id="enacted-content" style="font-size:0.8125rem;color:var(--ink);line-height:1.7;"></div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-            <div>
-              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class (optional)</label>
-              <select id="grow-class" class="input" style="width:100%;">
-                ${classDropdownOptions()}
-              </select>
-            </div>
-            <div>
-              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic / context</label>
-              <input type="text" id="grow-topic" class="input" placeholder="e.g. Chemical bonding revision" style="width:100%;" />
-            </div>
-          </div>
-
-          <button class="btn btn-primary btn-sm" id="grow-generate-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            Generate GROW Reflection Prompts
-          </button>
-          <div id="grow-output" style="margin-top:12px;"></div>
+          <div id="enacted-content" style="font-size:0.8125rem;color:var(--ink);line-height:1.7;"></div>
         </div>
 
-        <!-- ACT on Feedback Framework -->
-        <div class="assess-card" id="aal-act-card">
-          <div class="assess-section-title" style="cursor:pointer;" data-jump="aal-act-card" title="Click to see this framework in action">
-            <span style="display:inline-flex;align-items:center;gap:6px;">
-              ACT on Feedback
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </span>
-          </div>
-          <div class="assess-section-desc">
-            A learner-centred framework for acting on feedback received. ACT teaches students to treat feedback as a growth tool
-            rather than a judgement, moving from passive receipt to active response.
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #ef4444;background:rgba(239,68,68,0.03);cursor:pointer;" class="aal-panel-link" data-panel="act-a" title="Click to see what A looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#ef4444;margin-bottom:4px;">A: Acknowledge</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Receive the feedback with an open mind. Notice your emotional response and look past it to the learning message.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cHow do I feel about this feedback?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cHow might it help me learn better?\u201d
-              </div>
-            </div>
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #f59e0b;background:rgba(245,158,11,0.03);cursor:pointer;" class="aal-panel-link" data-panel="act-c" title="Click to see what C looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#f59e0b;margin-bottom:4px;">C: Connect</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Link the feedback to your success criteria, your goals, and any previous feedback you\u2019ve received.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cHow does this connect with the success criteria or my goals?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cHow does this connect with previous feedback?\u201d
-              </div>
-            </div>
-            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-top:4px solid #3b82f6;background:rgba(59,130,246,0.03);cursor:pointer;" class="aal-panel-link" data-panel="act-t" title="Click to see what T looks like when enacted">
-              <div style="font-weight:700;font-size:0.9375rem;color:#3b82f6;margin-bottom:4px;">T: Test</div>
-              <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Put the feedback into action. Identify a specific habit to adjust and plan how to check your progress.</div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:8px;line-height:1.5;">
-                <strong>Ask yourself:</strong> \u201cWhat habit do I need to adjust?\u201d<br/>
-                <strong>Go deeper:</strong> \u201cHow will I know I am improving?\u201d
-              </div>
-            </div>
-          </div>
-
-          <div style="padding:12px 16px;border-radius:8px;background:var(--bg-subtle,#f8f9fa);border:1px solid var(--border,#e2e5ea);margin-bottom:12px;">
-            <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);margin-bottom:6px;">The Learning Practice</div>
-            <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">
-              GROW and ACT are part of a continuous learning cycle: <span style="color:#3b82f6;font-weight:600;">GROW</span> \u2192 <span style="color:#ef4444;font-weight:600;">ACT</span> \u2192 MAP \u2192 ASK.<br/>
-              Students cycle through these both <em>in</em> and <em>out</em> of lessons, supported by three learner behaviours: <strong>Prepare</strong> \u2192 <strong>Participate</strong> \u2192 <strong>Process</strong>.<br/>
-              See the full Learning Practice visual below.
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-            <div>
-              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class (optional)</label>
-              <select id="act-class" class="input" style="width:100%;">
-                ${classDropdownOptions()}
-              </select>
-            </div>
-            <div>
-              <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic / activity</label>
-              <input type="text" id="act-topic" class="input" placeholder="e.g. Essay feedback on argumentative writing" style="width:100%;" />
-            </div>
-          </div>
-
-          <button class="btn btn-primary btn-sm" id="act-generate-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            Generate ACT Feedback Prompts
-          </button>
-          <div id="act-output" style="margin-top:12px;"></div>
+        <!-- Saved framework outputs -->
+        <div class="assess-card" id="aal-saved-card">
+          <div class="assess-section-title">Saved Outputs</div>
+          <div class="assess-section-desc">Framework prompts you saved to your library from the cards above.</div>
+          <div id="aal-saved-list">${renderSavedArtifactsList()}</div>
         </div>
 
         <!-- Proactive Learner Cycle -->
@@ -1804,6 +1628,228 @@ const ENACTED_EXAMPLES = {
   }
 };
 
+/* ── Registry-driven framework cards ── */
+
+/** AaL shows the metacognition + feedback frameworks from the registry. */
+function aalFrameworks() {
+  return Store.getFrameworks().filter(f => f.purpose === 'metacognition' || f.purpose === 'feedback');
+}
+
+/** Stable card ids for the seeded builtins (deep links / tours rely on them). */
+const BUILTIN_CARD_IDS = { fw_builtin_grow: 'aal-grow-card', fw_builtin_act: 'aal-act-card' };
+
+const STAGE_COLORS = ['#f59e0b', '#ef4444', '#10b981', '#8b5cf6', '#3b82f6', '#ec4899'];
+
+const PURPOSE_LABELS = { feedback: 'Feedback', metacognition: 'Metacognition', questioning: 'Questioning', custom: 'Custom' };
+
+function slugifyFramework(name) {
+  return String(name || 'framework').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'framework';
+}
+
+/* The builtins keep their hand-written enacted examples (keyed grow-g … act-t). */
+function enactedPanelKey(fw, stage) {
+  const k = String(stage.key || '').toLowerCase();
+  if (fw.id === 'fw_builtin_grow') return `grow-${k}`;
+  if (fw.id === 'fw_builtin_act') return `act-${k}`;
+  return null;
+}
+
+function renderFrameworkCard(fw) {
+  const cardId = BUILTIN_CARD_IDS[fw.id] || `aal-fw-${fw.id}`;
+  const stages = fw.stages || [];
+  const topicPlaceholder = fw.purpose === 'feedback'
+    ? 'e.g. Essay feedback on argumentative writing'
+    : 'e.g. Chemical bonding revision';
+  return `
+    <div class="assess-card aal-fw-card" id="${cardId}" data-fw="${escHtml(fw.id)}">
+      <div class="assess-section-title">
+        <span style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          ${escHtml(fw.name)}
+          <span style="display:inline-block;font-size:0.625rem;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(67,97,238,0.1);color:var(--accent,#4361ee);text-transform:uppercase;letter-spacing:0.03em;">${escHtml(PURPOSE_LABELS[fw.purpose] || fw.purpose)}</span>
+        </span>
+      </div>
+      ${fw.guidance ? `<div class="assess-section-desc">${escHtml(fw.guidance)}</div>` : ''}
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px;">
+        ${stages.map((s, i) => {
+          const color = STAGE_COLORS[i % STAGE_COLORS.length];
+          const panel = enactedPanelKey(fw, s);
+          const clickable = panel && ENACTED_EXAMPLES[panel];
+          return `
+            <div style="padding:14px;border-radius:10px;border:1px solid var(--border,#e2e5ea);border-left:4px solid ${color};background:${color}0a;${clickable ? 'cursor:pointer;' : ''}"
+                 ${clickable ? `class="aal-panel-link" data-panel="${panel}" title="Click to see what ${escHtml(String(s.key || ''))} looks like when enacted"` : ''}>
+              <div style="font-weight:700;font-size:0.9375rem;color:${color};margin-bottom:4px;">${escHtml(String(s.key || ''))}${s.key ? ': ' : ''}${escHtml(s.label || '')}</div>
+              ${s.prompt ? `<div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">${escHtml(s.prompt)}</div>` : ''}
+              ${s.studentPrompt ? `<div style="font-size:0.8125rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;"><strong>Ask yourself:</strong> &ldquo;${escHtml(s.studentPrompt)}&rdquo;</div>` : ''}
+            </div>`;
+        }).join('')}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Class (optional)</label>
+          <select class="input aal-fw-class" style="width:100%;">
+            ${classDropdownOptions()}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Topic / context</label>
+          <input type="text" class="input aal-fw-topic" placeholder="${topicPlaceholder}" style="width:100%;" />
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-sm aal-fw-generate" data-fw="${escHtml(fw.id)}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Generate ${escHtml(fw.name)} Prompts
+      </button>
+      <div class="aal-fw-output" style="margin-top:12px;"></div>
+    </div>`;
+}
+
+/* ── Saved outputs (assessmentArtifacts) ── */
+
+function renderSavedArtifactsList() {
+  const artifacts = Store.getAssessmentArtifacts();
+  if (!artifacts.length) {
+    return '<p style="font-size:0.8125rem;color:var(--ink-muted);margin:0;">No saved outputs yet. Generate prompts above and click &ldquo;Save to library&rdquo;.</p>';
+  }
+  return `
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${[...artifacts].reverse().map(a => {
+        const fw = a.frameworkId ? Store.getFramework(a.frameworkId) : null;
+        return `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border:1px solid var(--border,#e2e5ea);border-radius:10px;background:var(--bg-card,#fff);">
+            <div style="min-width:0;">
+              <div style="font-weight:600;font-size:0.8125rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(a.title)}</div>
+              <div style="font-size:0.6875rem;color:var(--ink-muted);margin-top:2px;">
+                ${fw ? escHtml(fw.name) + ' &middot; ' : ''}${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <button class="btn btn-ghost btn-sm" data-art-view="${escHtml(a.id)}" style="font-size:0.6875rem;">View</button>
+              <button class="btn btn-ghost btn-sm" data-art-delete="${escHtml(a.id)}" style="font-size:0.6875rem;color:var(--danger,#dc3545);">Delete</button>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function refreshSavedArtifactsList(container) {
+  const list = container.querySelector('#aal-saved-list');
+  if (list) list.innerHTML = renderSavedArtifactsList();
+}
+
+function wireSavedArtifactEvents(container) {
+  const list = container.querySelector('#aal-saved-list');
+  if (!list) return;
+  list.addEventListener('click', (e) => {
+    const viewBtn = e.target.closest('[data-art-view]');
+    if (viewBtn) {
+      const art = Store.getAssessmentArtifacts().find(a => a.id === viewBtn.dataset.artView);
+      if (!art) return;
+      const { backdrop } = openModal({
+        title: escHtml(art.title),
+        width: 640,
+        body: `<div style="max-height:60vh;overflow-y:auto;">${renderAIOutput(art.content)}</div>`,
+        footer: '<button class="btn btn-secondary" data-action="close">Close</button>'
+      });
+      processLatex(backdrop);
+      backdrop.querySelector('[data-action="close"]')?.addEventListener('click', () =>
+        backdrop.querySelector('.modal-close')?.click());
+      return;
+    }
+    const delBtn = e.target.closest('[data-art-delete]');
+    if (delBtn) {
+      Store.deleteAssessmentArtifact(delBtn.dataset.artDelete);
+      showToast('Saved output deleted.', 'default');
+      refreshSavedArtifactsList(container);
+    }
+  });
+}
+
+/* Generic generate handler: prompt assembled from the framework's stages +
+ * guidance and the card's topic / class inputs (same request shape as the
+ * previously hardcoded GROW / ACT handlers). */
+async function generateFrameworkOutput(container, btn) {
+  const fw = Store.getFramework(btn.dataset.fw);
+  const card = btn.closest('.aal-fw-card');
+  if (!fw || !card) return;
+
+  const topic = card.querySelector('.aal-fw-topic')?.value.trim() || '';
+  const classId = card.querySelector('.aal-fw-class')?.value;
+  const output = card.querySelector('.aal-fw-output');
+
+  let context = '';
+  if (classId) {
+    const cls = Store.getClass(classId);
+    if (cls) context += `Class: ${cls.name}${cls.subject ? ` (${cls.subject})` : ''}. `;
+  }
+
+  const originalBtnHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  output.innerHTML = `<p style="color:var(--ink-muted);font-size:0.8125rem;">Generating ${escHtml(fw.name)} prompts…</p>`;
+
+  try {
+    const stageLines = (fw.stages || [])
+      .map(s => `${s.key ? `${s.key} = ` : ''}${s.label}: ${s.prompt || s.studentPrompt || ''}`.trim())
+      .join('\n');
+
+    const prompt = `Generate a set of ${fw.name} self-reflection prompts for Singapore secondary students (age 13-17) based on the "${fw.name}" routine.
+
+${fw.name} routine:
+${stageLines}
+${fw.guidance ? `\nAbout this routine: ${fw.guidance}` : ''}
+
+${topic ? `Topic/context: ${topic}` : ''}
+${context || ''}
+
+For each ${fw.name} stage, provide:
+1. A reflection question tailored to the topic
+2. A follow-up probe to go deeper
+3. A student sentence starter
+
+Make them concrete, empowering, and suitable for student self-reflection journals or exit tickets.`;
+
+    const systemPrompt = fw.purpose === 'feedback'
+      ? `You are a metacognition specialist for Singapore secondary schools using the ${fw.name} routine. Generate empowering student self-reflection prompts that help learners process and act on feedback.`
+      : `You are a metacognition specialist for Singapore secondary schools using the ${fw.name} routine. Generate empowering student self-reflection prompts.`;
+
+    const text = await sendChat([{ role: 'user', content: prompt }], {
+      trackLabel: `framework:${slugifyFramework(fw.name)}`,
+      trackDetail: topic || '',
+      systemPrompt,
+      temperature: 0.6, maxTokens: 4096
+    });
+
+    output.innerHTML = `
+      ${renderAIOutput(text)}
+      <button class="btn btn-secondary btn-sm aal-fw-save" style="margin-top:8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save to library
+      </button>`;
+    processLatex(output);
+
+    output.querySelector('.aal-fw-save')?.addEventListener('click', (e) => {
+      const saveBtn = e.currentTarget;
+      Store.addAssessmentArtifact({
+        frameworkId: fw.id,
+        title: `${fw.name}${topic ? ` — ${topic}` : ''}`,
+        content: text
+      });
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saved ✓';
+      showToast('Saved to your library.', 'success');
+      refreshSavedArtifactsList(container);
+    });
+  } catch (err) {
+    output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalBtnHTML;
+  }
+}
+
 function wireAaLEvents(container) {
   bindWorkflowClicks(container);
   // MAI collapsible toggle
@@ -1874,110 +1920,13 @@ function wireAaLEvents(container) {
     });
   }
 
-  // GROW generate
-  container.querySelector('#grow-generate-btn')?.addEventListener('click', async () => {
-    const topic = container.querySelector('#grow-topic')?.value.trim() || '';
-    const growClassId = container.querySelector('#grow-class')?.value;
-    const output = container.querySelector('#grow-output');
-    const btn = container.querySelector('#grow-generate-btn');
-
-    let context = '';
-    if (growClassId) {
-      const cls = Store.getClass(growClassId);
-      if (cls) context += `Class: ${cls.name}${cls.subject ? ` (${cls.subject})` : ''}. `;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Generating\u2026';
-    output.innerHTML = '<p style="color:var(--ink-muted);font-size:0.8125rem;">Generating GROW prompts\u2026</p>';
-
-    try {
-      const prompt = `Generate a set of GROW self-reflection prompts for Singapore secondary students (age 13-17) based on the "GROW by Reflecting" routine.
-
-GROW routine:
-G = Gift yourself success: Celebrate what you DO understand. "What is one thing I understand? How would I teach this to a friend?"
-R = Rise above with small steps: Identify gaps and plan improvement. "What do I not yet understand? What will I do to improve?"
-O = Own your knowledge: Connect learning to real life and share it. "What is one real-life example? How have I shared this?"
-W = Watch for what comes next: Look ahead and prepare. "What do I already know about the next topic? What is coming up?"
-
-${topic ? `Topic/context: ${topic}` : ''}
-${context || ''}
-
-For each GROW stage, provide:
-1. A reflection question tailored to the topic
-2. A follow-up probe to go deeper
-3. A student sentence starter
-
-Make them concrete, empowering, and suitable for student self-reflection journals or exit tickets.`;
-
-      const text = await sendChat([{ role: 'user', content: prompt }], {
-        trackLabel: 'generateGROW',
-        trackDetail: topic || '',
-        systemPrompt: 'You are a metacognition specialist for Singapore secondary schools using the GROW by Reflecting routine. Generate empowering student self-reflection prompts.',
-        temperature: 0.6, maxTokens: 4096
-      });
-
-      output.innerHTML = renderAIOutput(text);
-      processLatex(output);
-    } catch (err) {
-      output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Generate GROW Reflection Prompts';
-    }
+  // Framework cards: one generic handler for every registry framework
+  container.querySelectorAll('.aal-fw-generate').forEach(btn => {
+    btn.addEventListener('click', () => generateFrameworkOutput(container, btn));
   });
 
-  // ACT generate
-  container.querySelector('#act-generate-btn')?.addEventListener('click', async () => {
-    const topic = container.querySelector('#act-topic')?.value.trim() || '';
-    const actClassId = container.querySelector('#act-class')?.value;
-    const output = container.querySelector('#act-output');
-    const btn = container.querySelector('#act-generate-btn');
-
-    let context = '';
-    if (actClassId) {
-      const cls = Store.getClass(actClassId);
-      if (cls) context += `Class: ${cls.name}${cls.subject ? ` (${cls.subject})` : ''}. `;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Generating\u2026';
-    output.innerHTML = '<p style="color:var(--ink-muted);font-size:0.8125rem;">Generating ACT observation prompts\u2026</p>';
-
-    try {
-      const prompt = `Generate a set of ACT on Feedback prompts for Singapore secondary students (age 13-17) based on the ACT on Feedback routine.
-
-ACT on Feedback routine:
-A = Acknowledge: "How do I feel about this feedback? How might it help me learn better?"
-C = Connect: "How does this connect with success criteria/my goals? How does this connect with previous feedback?"
-T = Test: "What habit do I need to adjust? How will I know I am improving?"
-
-${topic ? `Feedback context: ${topic}` : ''}
-${context || ''}
-
-For each ACT stage, provide:
-1. A reflection question tailored to the context
-2. A follow-up probe to go deeper
-3. A student sentence starter
-4. A practical tip for how to use this stage effectively
-
-Make them empowering, non-defensive, and suitable for student self-reflection after receiving teacher or peer feedback.`;
-
-      const text = await sendChat([{ role: 'user', content: prompt }], {
-        trackLabel: 'generateACT',
-        systemPrompt: 'You are a metacognition specialist for Singapore secondary schools using the ACT on Feedback routine. Generate empowering student self-reflection prompts that help learners process and act on feedback.',
-        temperature: 0.6, maxTokens: 4096
-      });
-
-      output.innerHTML = renderAIOutput(text);
-      processLatex(output);
-    } catch (err) {
-      output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Generate ACT Feedback Prompts';
-    }
-  });
+  // Saved outputs list (view / delete)
+  wireSavedArtifactEvents(container);
 
   // SRL strategy click
   container.querySelectorAll('.srl-card').forEach(card => {

@@ -11,7 +11,8 @@ The canonical URL always serves the **latest** version:
 | v4 | `archive/v4/` (frozen snapshot as of Jul 2026 — "Staffroom Desk" design + learner portraits, growth engine, department packs, as originally shipped) | `/pedagogies/archive/v4/cocher.html` | `cocher_v4_*` (renamed at freeze time) | Archived |
 | v4.1 | `archive/v4.1/` (frozen snapshot as of Jul 2026 — domain-accuracy audit sweep: assessment/spatial/simulation fixes, admin workflow bug fix, Sec 1/2 CCE lessons, CCA exemplars, demo events, as originally shipped) | `/pedagogies/archive/v4.1/cocher.html` | `cocher_v4_1_*` (renamed at freeze time) | Archived |
 | v5.1 | `archive/v5.1/` (frozen snapshot as of Jul 2026 — inviting/engaging generation: living lesson journey, workflow modes, visual teacher identity, configurable tracking schemas, bulk student upload, remarks, My References; incl. Sem 2 timetable refresh, as originally shipped) | `/pedagogies/archive/v5.1/cocher.html` | `cocher_v5_1_*` (renamed at freeze time) | Archived |
-| v6 | `app/` (active development — "Showtime": run-of-show lesson staging, first-class spatial scenes, real students on the canvas, Class Screen projector view, simulation one-stop) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
+| v6 | `archive/v6/` (frozen snapshot as of Jul 2026 — "Showtime": run-of-show staging, first-class scenes, students on the canvas, Class Screen projector view, simulation one-stop, as originally shipped) | `/pedagogies/archive/v6/cocher.html` | `cocher_v6_*` (renamed at freeze time) | Archived |
+| v6.1 | `app/` (active development — "Wieldable": planner cockpit + journey bar, named seats on the real map, TLDR-first plans with expansion chips, pedagogy frameworks (ACT/GROW + school-uploadable), simulation challenge mode/inquiry sheets/behavioral probe) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
 
 ## Notes
 

@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion, expandSection } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -15,12 +15,19 @@ import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, ensureCalendar } from './dashboard.js';
 import { getWeekType } from '../utils/calendar.js';
 import { processLatex } from '../utils/latex.js';
-import { md, escapeHtml } from '../utils/markdown.js';
+import { md, escapeHtml, mountExpansion, stripExpandMarkers } from '../utils/markdown.js';
 import { critiquePlan } from '../api.js';
 import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
+import { SCHEMA_PRESETS } from '../utils/tracking.js';
+import { layoutToSVG } from './spatial-designer.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
+
+// md() for static print/export surfaces (popup windows, .doc download) —
+// no click handler lives there, so [EXPAND:] chips are stripped rather than
+// rendered as dead buttons. In-app surfaces keep md() so chips stay live.
+const mdStatic = (t) => md(stripExpandMarkers(t));
 
 let chatMessages = [];
 let isGenerating = false;
@@ -31,6 +38,7 @@ let vigilanceState = null;    // { prompt } while the nudge card is showing
 let attachedKBContext = [];   // attached knowledge base resources
 let lessonDateTime = null;    // { date, period, room, classCode } from timetable or manual
 let selectedIdeology = '';    // optional curriculum ideology lens
+let selectedFrameworkIds = []; // optional pedagogy framework lenses (multi-select chips)
 
 /* ── Reference library picker ──
  * Teacher-curated documents (My References, in My Learning) that can be toggled
@@ -284,9 +292,46 @@ function autoSaveComponents() {
   }
 }
 
+/* ── WS-C: on-demand [EXPAND:] expansion chips ──
+ * Plans/components are concise scaffolds; each chip generates one section
+ * expansion on demand. Results cache on the lesson as
+ * lesson.expansions = { "<slug>::<verb>": markdown } — one flat map for plan
+ * AND component chips (generator prompts namespace their own slugs). */
+
+/* Heading of the section a chip belongs to: nearest preceding h1-h5 inside
+ * the chip's rendered block. Falls back to the slug with dashes → spaces. */
+function expandChipHeading(chip) {
+  const scope = chip.closest('.doc-canvas, .chat-msg, #lesson-components') || chip.parentElement;
+  let best = null;
+  if (scope) {
+    scope.querySelectorAll('h1,h2,h3,h4,h5').forEach(h => {
+      if (h.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING) best = h;
+    });
+  }
+  const headingText = best?.textContent?.trim();
+  return headingText || (chip.dataset.expandSlug || '').replace(/-/g, ' ');
+}
+
+/* Auto-mount every cached expansion whose chip is present under rootEl.
+ * mountExpansion no-ops for keys with no matching chip on screen. */
+function mountCachedExpansions(rootEl) {
+  if (!rootEl || !currentLessonId) return;
+  const expansions = Store.getLesson(currentLessonId)?.expansions;
+  if (!expansions || typeof expansions !== 'object') return;
+  Object.entries(expansions).forEach(([key, body]) => {
+    const sep = key.indexOf('::');
+    if (sep < 1 || typeof body !== 'string' || !body) return;
+    mountExpansion(rootEl, key.slice(0, sep), key.slice(sep + 2), body)
+      .forEach(block => processLatex(block));
+  });
+}
+
 function renderComponents(container) {
   const el = container.querySelector('#lesson-components');
   if (!el) return;
+
+  // Components done-state feeds the journey bar — keep it in step (WS-A)
+  renderJourneyBar(container);
 
   const keys = Object.keys(lessonComponents)
     .filter(k => lessonComponents[k]?.content)
@@ -416,7 +461,7 @@ function renderComponents(container) {
       if (!comp?.content) return;
       const meta = COMPONENT_META[key] || { label: key };
       // Strip teacher notes, mark schemes, teacher-only annotations
-      let studentContent = comp.content
+      let studentContent = stripExpandMarkers(comp.content)
         .replace(/###?\s*Teacher Notes[\s\S]*?(?=###?\s|$)/gi, '')
         .replace(/###?\s*Mark Scheme[\s\S]*?(?=###?\s|$)/gi, '')
         .replace(/###?\s*Facilitation[\s\S]*?(?=###?\s|$)/gi, '')
@@ -445,6 +490,9 @@ function renderComponents(container) {
       previewWin.document.close();
     });
   });
+
+  // Cached expansions re-mount under their chips on every components re-render
+  mountCachedExpansions(el);
 }
 
 /* ── Visual Seating Plan: render an SVG classroom view ──
@@ -986,6 +1034,12 @@ export function render(container) {
                 <option value="social-efficiency" ${selectedIdeology === 'social-efficiency' ? 'selected' : ''}>Social Efficiency</option>
                 <option value="social-reconstructivist" ${selectedIdeology === 'social-reconstructivist' ? 'selected' : ''}>Social Reconstructivist</option>
               </select>
+              <div id="framework-chips" style="display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center;" title="Pedagogy frameworks to weave into this plan (toggle any)">
+                ${(Store.getFrameworks?.() || []).map(f => {
+                  const on = selectedFrameworkIds.includes(f.id);
+                  return `<button type="button" class="fw-chip" data-fw="${esc(f.id)}" aria-pressed="${on}" style="padding:2px 10px;height:28px;font-size:0.6875rem;font-weight:600;border-radius:999px;cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--border-light)'};color:${on ? 'var(--accent)' : 'var(--ink-muted)'};background:${on ? 'var(--accent-light, rgba(67,97,238,0.08))' : 'var(--bg-card)'};">${esc(f.name)}</button>`;
+                }).join('')}
+              </div>
             </div>
             <textarea class="chat-input" id="chat-input" placeholder="${planClassContext ? `Plan a lesson for ${planClassContext.name}...` : 'Describe your lesson idea, ask about spatial design, or explore frameworks...'}" rows="3"></textarea>
             <div class="chat-composer-footer">
@@ -1051,6 +1105,9 @@ export function render(container) {
               </div>
             </div>
 
+            <!-- Journey bar: Plan → Components → Stage → Place → Present (WS-A) -->
+            <div id="lp-journey"></div>
+
             <!-- Lesson Date/Time -->
             <div id="lesson-datetime-bar" style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-4);padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-radius:var(--radius-lg);flex-wrap:wrap;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -1082,6 +1139,9 @@ export function render(container) {
 
             <!-- Spatial Context Bar (when layout linked) -->
             <div id="spatial-context-bar" style="display:none;margin-bottom:var(--sp-4);"></div>
+
+            <!-- Persistent Run of Show panel (WS-A Cockpit) -->
+            <div id="run-of-show"></div>
 
             <!-- Plan Content -->
             <div id="plan-content"></div>
@@ -1121,6 +1181,62 @@ export function render(container) {
       if (input && send) {
         input.value = `Let's go with: ${opt.dataset.choice}`;
         send.click();
+      }
+    });
+  }
+
+  // [EXPAND:] chips (WS-C) — click → generate (or restore from cache) → mount
+  // + persist. Same delegated-listener pattern as choices; covers the chat
+  // pane, the plan panel and #lesson-components, since all render via md().
+  if (!container._expandWired) {
+    container._expandWired = true;
+    container.addEventListener('click', async (e) => {
+      const chip = e.target.closest('.expand-chip');
+      if (!chip || chip.dataset.loading === '1' || chip.dataset.mounted === '1') return;
+      const slug = chip.dataset.expandSlug || '';
+      const verb = chip.dataset.expandVerb || 'Details';
+      if (!slug) return;
+      if (!currentLessonId) {
+        showToast('Save the lesson first so expansions can be kept.', 'danger');
+        return;
+      }
+      const key = `${slug}::${verb}`;
+      const lesson = Store.getLesson(currentLessonId);
+      const cached = lesson?.expansions?.[key];
+      if (typeof cached === 'string' && cached) {
+        mountExpansion(container, slug, verb, cached).forEach(b => processLatex(b));
+        return;
+      }
+      if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+
+      const originalHtml = chip.innerHTML;
+      chip.dataset.loading = '1';
+      chip.disabled = true;
+      chip.innerHTML = '&#8230;';
+      try {
+        const heading = expandChipHeading(chip);
+        let planContext = chatMessages
+          .filter(m => m.role === 'assistant' && typeof m.content === 'string')
+          .map(m => m.content).join('\n\n---\n\n') || lesson?.plan || '';
+        // A chip inside a component expands that component — lead with its
+        // content so generator slugs (e.g. exit-q-2) resolve to real text.
+        if (chip.closest('#lesson-components') && activeComponentTab && lessonComponents[activeComponentTab]?.content) {
+          planContext = `${lessonComponents[activeComponentTab].content}\n\n---\n\nFull lesson plan:\n${planContext}`;
+        }
+        const classId = planClassContext?.id || lesson?.classId || null;
+        const classContext = classId ? (Store.getPortraitPromptText?.(classId) || '') : '';
+        const body = await expandSection({ planContext, sectionHeading: heading, verb, classContext });
+        const fresh = Store.getLesson(currentLessonId);
+        Store.updateLesson(currentLessonId, { expansions: { ...(fresh?.expansions || {}), [key]: body } });
+        chip.innerHTML = originalHtml;
+        chip.disabled = false;
+        delete chip.dataset.loading;
+        mountExpansion(container, slug, verb, body).forEach(b => processLatex(b));
+      } catch (err) {
+        chip.innerHTML = originalHtml;
+        chip.disabled = false;
+        delete chip.dataset.loading;
+        showToast(err.message, 'danger');
       }
     });
   }
@@ -1304,6 +1420,19 @@ export function render(container) {
       };
       contextParts.push(`[Curriculum Ideology Lens: ${ideologyLabels[selectedIdeology] || selectedIdeology}. Frame the lesson design, activity choices, and assessment approach through this orientation where it naturally fits.]`);
     }
+    // Pedagogy framework lenses — injected on the first message only, where
+    // they frame the whole plan (mirrors the ideology lens injection).
+    if (chatMessages.length === 0 && selectedFrameworkIds.length > 0) {
+      selectedFrameworkIds.forEach(id => {
+        const fw = (Store.getFrameworks?.() || []).find(f => f.id === id);
+        if (!fw) return;
+        const stageBits = (fw.stages || []).map(s => {
+          const line = String(s.prompt || s.studentPrompt || '').replace(/\s+/g, ' ').trim();
+          return `${s.label}${line ? `: ${line}` : ''}`;
+        }).join('; ');
+        contextParts.push(`[Pedagogy Framework — ${fw.name}: ${fw.guidance || ''} Stages: ${stageBits}]`);
+      });
+    }
 
     const enrichedContent = contextParts.length > 0
       ? `${contextParts.join('\n\n')}\n\n${text}`
@@ -1365,6 +1494,21 @@ export function render(container) {
   // Ideology lens
   container.querySelector('#ideology-lens')?.addEventListener('change', (e) => {
     selectedIdeology = e.target.value;
+  });
+
+  // Pedagogy framework chips — toggleable multi-select
+  container.querySelectorAll('#framework-chips .fw-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.fw;
+      const on = !selectedFrameworkIds.includes(id);
+      selectedFrameworkIds = on
+        ? [...selectedFrameworkIds, id]
+        : selectedFrameworkIds.filter(x => x !== id);
+      btn.setAttribute('aria-pressed', String(on));
+      btn.style.borderColor = on ? 'var(--accent)' : 'var(--border-light)';
+      btn.style.color = on ? 'var(--accent)' : 'var(--ink-muted)';
+      btn.style.background = on ? 'var(--accent-light, rgba(67,97,238,0.08))' : 'var(--bg-card)';
+    });
   });
 
   // KB context chips
@@ -1440,7 +1584,7 @@ export function render(container) {
     }
     const printWin = window.open('', '_blank');
     if (!printWin) { showToast('Allow pop-ups for this site to print/export.', 'danger'); return; }
-    const planHtml = aiMsgs.map(m => md(m.content)).join('<hr style="margin:24px 0;">');
+    const planHtml = aiMsgs.map(m => mdStatic(m.content)).join('<hr style="margin:24px 0;">');
 
     // Build components HTML for print
     const compKeys = Object.keys(lessonComponents)
@@ -1450,7 +1594,7 @@ export function render(container) {
       ? `<hr style="margin:32px 0;border-top:2px solid #000c53;"><h2>Lesson Components</h2>` +
         compKeys.map(key => {
           const m = COMPONENT_META[key] || { label: key };
-          return `<h3>${m.label}</h3>${md(lessonComponents[key].content)}`;
+          return `<h3>${m.label}</h3>${mdStatic(lessonComponents[key].content)}`;
         }).join('<hr style="margin:24px 0;">')
       : '';
 
@@ -1490,45 +1634,45 @@ export function render(container) {
 
     // LI/SC first (most important)
     if (lessonComponents.lisc?.content) {
-      sections.push(`<div class="snap-section snap-lisc"><h3>Learning Intentions & Success Criteria</h3>${md(lessonComponents.lisc.content)}</div>`);
+      sections.push(`<div class="snap-section snap-lisc"><h3>Learning Intentions & Success Criteria</h3>${mdStatic(lessonComponents.lisc.content)}</div>`);
     }
 
     // Timeline
     if (lessonComponents.timeline?.content) {
-      sections.push(`<div class="snap-section"><h3>Timeline / Pacing</h3>${md(lessonComponents.timeline.content)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Timeline / Pacing</h3>${mdStatic(lessonComponents.timeline.content)}</div>`);
     }
 
     // Groups
     if (lessonComponents.grouping?.content) {
-      sections.push(`<div class="snap-section"><h3>Student Groups</h3>${md(lessonComponents.grouping.content)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Student Groups</h3>${mdStatic(lessonComponents.grouping.content)}</div>`);
     }
 
     // Seat Plan
     if (lessonComponents.seatPlan?.content) {
-      sections.push(`<div class="snap-section"><h3>Seating Plan</h3>${md(lessonComponents.seatPlan.content)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Seating Plan</h3>${mdStatic(lessonComponents.seatPlan.content)}</div>`);
     }
 
     // Exit Ticket
     if (lessonComponents.exitTicket?.content) {
-      sections.push(`<div class="snap-section"><h3>Exit Ticket</h3>${md(lessonComponents.exitTicket.content)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Exit Ticket</h3>${mdStatic(lessonComponents.exitTicket.content)}</div>`);
     }
 
     // Resources (YouTube + Simulations + External — compact)
     const resourceKeys = ['youtubeVideos', 'simulations', 'externalLinks'].filter(k => lessonComponents[k]?.content);
     if (resourceKeys.length > 0) {
-      sections.push(`<div class="snap-section"><h3>Resources</h3>${resourceKeys.map(k => md(lessonComponents[k].content)).join('<br>')}</div>`);
+      sections.push(`<div class="snap-section"><h3>Resources</h3>${resourceKeys.map(k => mdStatic(lessonComponents[k].content)).join('<br>')}</div>`);
     }
 
     // Differentiation
     if (lessonComponents.differentiation?.content) {
-      sections.push(`<div class="snap-section"><h3>Differentiation</h3>${md(lessonComponents.differentiation.content)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Differentiation</h3>${mdStatic(lessonComponents.differentiation.content)}</div>`);
     }
 
     // Key points from chat (first assistant message only, as overview)
     const firstAiMsg = chatMessages.find(m => m.role === 'assistant');
     if (firstAiMsg && !lessonComponents.lisc?.content && !lessonComponents.timeline?.content) {
       const preview = firstAiMsg.content.length > 800 ? firstAiMsg.content.slice(0, 800) + '...' : firstAiMsg.content;
-      sections.push(`<div class="snap-section"><h3>Lesson Overview</h3>${md(preview)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Lesson Overview</h3>${mdStatic(preview)}</div>`);
     }
 
     printWin.document.write(`<!DOCTYPE html><html><head><title>Lesson Snapshot — ${esc(title)}</title>
@@ -2045,6 +2189,10 @@ export function render(container) {
   renderSpatialSection(container);
   renderSpatialContextBar(container);
 
+  // Cockpit (WS-A): persistent Run of Show panel + journey bar
+  renderRunOfShow(container);
+  renderJourneyBar(container);
+
   // Linked Resources
   renderLinkedResourcesSection(container);
   // === NEW TOOLS: Arts, Music, NFS, D&T ===
@@ -2405,6 +2553,9 @@ function renderPlanContent(el) {
     }
   });
 
+  // Cached expansions re-mount under their chips on every plan re-render
+  mountCachedExpansions(el);
+
   // Render LaTeX in plan content
   processLatex(el);
 }
@@ -2515,6 +2666,12 @@ const ROS_MODE_OPTIONS = [
   { value: 'whole-class', label: 'Whole class' }
 ];
 
+// The six E21CC tracking dimensions a segment can develop (key → label),
+// sourced from the tracking schema registry so wording stays centralised.
+const E21CC_SEGMENT_FIELDS = SCHEMA_PRESETS.e21cc.fields;
+const E21CC_SEGMENT_KEYS = E21CC_SEGMENT_FIELDS.map(f => f.key);
+const E21CC_SEGMENT_LABELS = Object.fromEntries(E21CC_SEGMENT_FIELDS.map(f => [f.key, f.label]));
+
 function rosBlankSegment(n) {
   return {
     id: `seg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
@@ -2524,7 +2681,9 @@ function rosBlankSegment(n) {
     studentInstructions: '',
     layoutSceneId: null,
     grouping: null,
-    resources: []
+    resources: [],
+    e21ccFocus: null,
+    frameworkId: null
   };
 }
 
@@ -2565,7 +2724,9 @@ function showRunOfShowEditor(container, runOfShow) {
     grouping: (s.grouping && s.grouping.mode)
       ? { mode: s.grouping.mode, groups: Array.isArray(s.grouping.groups) ? s.grouping.groups : [] }
       : null,
-    resources: Array.isArray(s.resources) ? s.resources : []
+    resources: Array.isArray(s.resources) ? s.resources : [],
+    e21ccFocus: E21CC_SEGMENT_KEYS.includes(s.e21ccFocus) ? s.e21ccFocus : null,
+    frameworkId: (typeof s.frameworkId === 'string' && s.frameworkId) ? s.frameworkId : null
   }));
   if (segs.length === 0) segs = [rosBlankSegment(1)];
 
@@ -2625,6 +2786,10 @@ function showRunOfShowEditor(container, runOfShow) {
       // scenes; without it, any existing layoutSceneId is left untouched.
       const sceneSel = row.querySelector('.ros-scene');
       if (sceneSel) s.layoutSceneId = sceneSel.value || null;
+      const focusSel = row.querySelector('.ros-e21cc');
+      if (focusSel) s.e21ccFocus = focusSel.value || null;
+      const fwSel = row.querySelector('.ros-framework');
+      if (fwSel) s.frameworkId = fwSel.value || null;
     });
   };
 
@@ -2647,6 +2812,18 @@ function showRunOfShowEditor(container, runOfShow) {
             <select class="input ros-mode" title="Grouping mode" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
               ${ROS_MODE_OPTIONS.map(m => `<option value="${m.value}" ${(s.grouping?.mode || '') === m.value ? 'selected' : ''}>${m.label}</option>`).join('')}
             </select>
+            <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">E21CC focus
+              <select class="input ros-e21cc" title="21st-century competency this segment develops (shown to students in Present mode)" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+                <option value="">(none)</option>
+                ${E21CC_SEGMENT_FIELDS.map(f => `<option value="${esc(f.key)}" ${s.e21ccFocus === f.key ? 'selected' : ''}>${esc(f.label)}</option>`).join('')}
+              </select>
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">Framework moment
+              <select class="input ros-framework" title="Pedagogy framework enacted in this segment (its stages show to students in Present mode)" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+                <option value="">(none)</option>
+                ${(Store.getFrameworks?.() || []).map(f => `<option value="${esc(f.id)}" ${s.frameworkId === f.id ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}
+              </select>
+            </label>
             ${layoutScenes.length > 0 ? `
             <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">Room scene
               <select class="input ros-scene" title="Layout scene shown during this segment" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
@@ -2746,6 +2923,9 @@ function showRunOfShowEditor(container, runOfShow) {
     }));
     if (segments.length === 0) { showToast('Add at least one segment.', 'danger'); return null; }
     Store.updateLesson(currentLessonId, { runOfShow: { generatedAt: Date.now(), segments } });
+    // Keep the cockpit in sync with what was just persisted (WS-A)
+    renderRunOfShow(container);
+    renderJourneyBar(container);
     return segments;
   };
 
@@ -3214,6 +3394,48 @@ function showDifferentiationModal(container, classes) {
 }
 
 /* ══════════ Spatial Context Bar (coupling) ══════════ */
+
+/* Resolve a stored studentId (or a raw name string, import/AI compat) to a
+ * display name against the lesson's class roster. */
+function seatDisplayName(idOrName, roster) {
+  const byId = (roster || []).find(st => st.id === idOrName);
+  return byId ? byId.name : String(idOrName);
+}
+
+/* Staged segments that have any seat placement — named seats (seatMap) or
+ * legacy furniture assignment (itemIds). */
+function segmentsWithSeats(segments) {
+  return (segments || []).filter(s =>
+    (s.grouping?.groups || []).some(g =>
+      (g.seatMap && typeof g.seatMap === 'object' && Object.keys(g.seatMap).length > 0) ||
+      (Array.isArray(g.itemIds) && g.itemIds.length > 0)));
+}
+
+/* Build layoutToSVG seatLabels from one segment: groups with a seatMap get an
+ * array of student names per item (stacked lines); itemIds-only groups keep
+ * the single group-name pill (back-compat). */
+function segmentSeatLabels(seg, roster) {
+  const labels = {};
+  (seg?.grouping?.groups || []).forEach((g, i) => {
+    const groupLabel = g.name || `Group ${i + 1}`;
+    const sm = (g.seatMap && typeof g.seatMap === 'object') ? g.seatMap : null;
+    if (sm && Object.keys(sm).length > 0) {
+      Object.entries(sm).forEach(([iid, ids]) => {
+        const names = (Array.isArray(ids) ? ids : [])
+          .map(v => seatDisplayName(v, roster)).filter(Boolean);
+        labels[iid] = names.length ? names : groupLabel;
+      });
+      // Items assigned to the group but missing from its seatMap keep the pill
+      (Array.isArray(g.itemIds) ? g.itemIds : []).forEach(iid => {
+        if (!(iid in labels)) labels[iid] = groupLabel;
+      });
+    } else {
+      (Array.isArray(g.itemIds) ? g.itemIds : []).forEach(iid => { labels[iid] = groupLabel; });
+    }
+  });
+  return labels;
+}
+
 function renderSpatialContextBar(container) {
   const barEl = container.querySelector('#spatial-context-bar');
   if (!barEl) return;
@@ -3226,22 +3448,209 @@ function renderSpatialContextBar(container) {
   const layout = savedLayouts.find(l => l.id === linkedLayoutId);
   if (!layout) { barEl.style.display = 'none'; return; }
 
+  const segments = currentLesson?.runOfShow?.segments || [];
+  const seated = segmentsWithSeats(segments);
+  const roster = currentLesson?.classId
+    ? (Store.getClass(currentLesson.classId)?.students || []) : [];
+  // Default shown seating: first segment with named seats, else first with any
+  let selSegId = (seated.find(s => (s.grouping?.groups || []).some(g =>
+    g.seatMap && typeof g.seatMap === 'object' && Object.keys(g.seatMap).length > 0))
+    || seated[0])?.id || null;
+
   barEl.style.display = '';
   barEl.innerHTML = `
-    <div style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);background:linear-gradient(135deg, rgba(0,12,83,0.04), rgba(167,243,208,0.08));border:1px solid var(--border-light);border-radius:var(--radius-lg);">
-      <div style="font-size:1.25rem;">${PRESET_ICONS[layout.preset] || '📐'}</div>
-      <div style="flex:1;">
-        <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);">
-          ${PRESET_NAMES[layout.preset] || 'Custom'} Layout Linked
+    <div style="padding:var(--sp-3) var(--sp-4);background:linear-gradient(135deg, rgba(0,12,83,0.04), rgba(167,243,208,0.08));border:1px solid var(--border-light);border-radius:var(--radius-lg);">
+      <div style="display:flex;align-items:center;gap:var(--sp-3);">
+        <div style="font-size:1.25rem;">${PRESET_ICONS[layout.preset] || '📐'}</div>
+        <div style="flex:1;">
+          <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);">
+            ${PRESET_NAMES[layout.preset] || 'Custom'} Layout Linked
+          </div>
+          <div style="font-size:0.6875rem;color:var(--ink-muted);">
+            ${esc(layout.name)} · ${layout.studentCount || '?'} students · ${layout.items?.length || 0} items
+          </div>
         </div>
-        <div style="font-size:0.6875rem;color:var(--ink-muted);">
-          ${layout.name} · ${layout.studentCount || '?'} students · ${layout.items?.length || 0} items
-        </div>
+        <button class="btn btn-ghost btn-sm" id="spatial-context-open" style="font-size:0.75rem;">Open</button>
       </div>
-      <button class="btn btn-ghost btn-sm" id="spatial-context-open" style="font-size:0.75rem;">Open</button>
+      ${seated.length > 1 ? `
+      <div id="spatial-map-chips" style="display:flex;align-items:center;gap:var(--sp-1);flex-wrap:wrap;margin-top:var(--sp-2);">
+        <span style="font-size:0.625rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-muted);">Seating for</span>
+        ${seated.map(s => `
+          <button type="button" class="spatial-map-chip" data-seg-id="${esc(s.id)}" style="padding:2px 10px;border-radius:var(--radius-full);border:1px solid var(--border);background:var(--bg-card);color:var(--ink);font-size:0.6875rem;font-weight:600;cursor:pointer;">${esc(s.name || 'Segment')}</button>`).join('')}
+      </div>` : ''}
+      <div id="spatial-context-map" style="margin-top:var(--sp-2);overflow-x:auto;line-height:0;"></div>
     </div>`;
 
+  const mapEl = barEl.querySelector('#spatial-context-map');
+  const sceneOf = (s) => (s && s.layoutSceneId)
+    ? ((layout.scenes || []).find(sc => sc && sc.id === s.layoutSceneId) || null) : null;
+
+  const drawMap = () => {
+    const seg = seated.find(s => s.id === selSegId) || null;
+    // Items: the shown segment's scene, else the first staged segment's scene,
+    // else the layout's base arrangement.
+    const scene = sceneOf(seg) || sceneOf(segments.find(s => sceneOf(s))) || null;
+    const items = (scene?.items?.length ? scene.items : layout.items) || [];
+    const seatLabels = seg ? segmentSeatLabels(seg, roster) : {};
+    let svg = '';
+    try { svg = layoutToSVG(items, { width: 520, seatLabels, title: layout.name || 'Room layout' }); }
+    catch { svg = ''; }
+    mapEl.innerHTML = svg ? `<div style="border:1px solid var(--border-light);border-radius:var(--radius-md);overflow:hidden;background:#fff;display:inline-block;max-width:100%;">${svg}</div>` : '';
+    barEl.querySelectorAll('.spatial-map-chip').forEach(chip => {
+      const active = chip.dataset.segId === selSegId;
+      chip.style.background = active ? 'var(--accent)' : 'var(--bg-card)';
+      chip.style.color = active ? '#fff' : 'var(--ink)';
+      chip.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    });
+  };
+
+  barEl.querySelectorAll('.spatial-map-chip').forEach(chip => {
+    chip.addEventListener('click', () => { selSegId = chip.dataset.segId; drawMap(); });
+  });
+  drawMap();
+
   barEl.querySelector('#spatial-context-open')?.addEventListener('click', () => navigate('/spatial'));
+}
+
+/* ══════════ Cockpit (WS-A): persistent Run of Show panel + journey bar ══════════ */
+
+/* Always-visible Run of Show card in the plan column. Staged lesson → segment
+ * strip (click = reopen the editor) + Present button. Saved-but-unstaged
+ * lesson with a plan → slim stage CTA. Anything else → nothing. */
+function renderRunOfShow(container) {
+  const el = container.querySelector('#run-of-show');
+  if (!el) return;
+
+  const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const segments = lesson?.runOfShow?.segments || [];
+
+  if (!lesson || segments.length === 0) {
+    const hasPlan = chatMessages.some(m => m.role === 'assistant');
+    if (lesson && hasPlan) {
+      el.innerHTML = `
+        <div class="card" style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-4);border-style:dashed;">
+          <span style="font-size:1.125rem;flex-shrink:0;" aria-hidden="true">&#127916;</span>
+          <div style="flex:1;min-width:140px;font-size:0.8125rem;color:var(--ink-muted);">Stage this lesson &mdash; turn the plan into a runnable sequence of timed segments.</div>
+          <button class="btn btn-secondary btn-sm" id="ros-panel-stage">Stage lesson</button>
+        </div>`;
+      el.querySelector('#ros-panel-stage')?.addEventListener('click', () =>
+        container.querySelector('#stage-lesson-btn')?.click());
+    } else {
+      el.innerHTML = '';
+    }
+    return;
+  }
+
+  const total = segments.reduce((n, s) => n + (Number(s.duration) || 0), 0);
+  const layout = lesson.spatialLayout
+    ? (Store.getSavedLayouts() || []).find(l => l.id === lesson.spatialLayout) : null;
+  const sceneName = (id) => {
+    const sc = (layout?.scenes || []).find(s => s && s.id === id);
+    return (sc?.name || 'Scene');
+  };
+  const modeLabel = (m) => ROS_MODE_OPTIONS.find(o => o.value === m)?.label || '';
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:var(--sp-4);overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);flex-wrap:wrap;">
+        <span aria-hidden="true">&#127916;</span>
+        <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">Run of Show</span>
+        <span class="badge badge-blue" style="font-size:0.6875rem;">${total} min &middot; ${segments.length} segment${segments.length === 1 ? '' : 's'}</span>
+        <button class="btn btn-primary btn-sm" id="ros-panel-present" style="margin-left:auto;" title="Open the student-facing class screen">&#9654; Present</button>
+      </div>
+      <div id="ros-panel-strip" role="button" tabindex="0" title="Edit run of show" style="display:flex;flex-direction:column;gap:var(--sp-1);padding:var(--sp-3) var(--sp-4);cursor:pointer;">
+        ${segments.map((s, i) => `
+          <div style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;flex-wrap:wrap;line-height:1.5;">
+            <span style="color:var(--ink);font-weight:500;">${i + 1}. ${esc(s.name || `Segment ${i + 1}`)}</span>
+            <span style="color:var(--ink-faint);">&middot; ${Number(s.duration) || 0}min</span>
+            ${s.grouping?.mode ? `<span class="badge badge-gray" style="font-size:0.625rem;">${esc(modeLabel(s.grouping.mode))}</span>` : ''}
+            ${s.layoutSceneId ? `<span class="badge badge-blue" style="font-size:0.625rem;">&#128208; ${esc(sceneName(s.layoutSceneId))}</span>` : ''}
+            ${s.e21ccFocus && E21CC_SEGMENT_LABELS[s.e21ccFocus] ? `<span style="display:inline-block;padding:1px 8px;border-radius:var(--radius-full);background:var(--growth-light,#e2f2e8);color:var(--growth,#2c7a4b);font-size:0.625rem;font-weight:600;">${esc(E21CC_SEGMENT_LABELS[s.e21ccFocus])}</span>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  el.querySelector('#ros-panel-present')?.addEventListener('click', () =>
+    navigate(`/present/${currentLessonId}`));
+  const openEditor = () => {
+    const fresh = currentLessonId ? Store.getLesson(currentLessonId) : null;
+    if (fresh?.runOfShow) showRunOfShowEditor(container, fresh.runOfShow);
+  };
+  const strip = el.querySelector('#ros-panel-strip');
+  strip?.addEventListener('click', openEditor);
+  strip?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditor(); }
+  });
+}
+
+/* Compact one-line journey strip: Plan → Components → Stage → Place → Present.
+ * Done steps fill growth-green; the next undone step on the runnable spine
+ * (Plan → Stage → Place) pulses accent; Components never nags (it is optional
+ * enrichment); Present renders as the action once the lesson is staged. */
+function renderJourneyBar(container) {
+  const el = container.querySelector('#lp-journey');
+  if (!el) return;
+
+  const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const segments = lesson?.runOfShow?.segments || [];
+  const done = {
+    plan: chatMessages.some(m => m.role === 'assistant'),
+    components: Object.keys(lessonComponents).length > 0,
+    stage: segments.length > 0,
+    place: segments.some(s => (s.grouping?.groups || []).some(g => Array.isArray(g.itemIds) && g.itemIds.length > 0))
+  };
+  const nextKey = !done.plan ? 'plan' : (!done.stage ? 'stage' : (!done.place ? 'place' : null));
+
+  const pillStyle = (key, isDone) => {
+    const base = 'display:inline-flex;align-items:center;padding:2px 10px;border-radius:var(--radius-full);font-size:0.6875rem;font-weight:600;cursor:pointer;white-space:nowrap;';
+    if (key === 'present') {
+      return base + (done.stage
+        ? 'background:var(--accent);color:#fff;border:1px solid var(--accent);'
+        : 'background:transparent;color:var(--ink-faint);border:1px solid var(--border-light);cursor:default;');
+    }
+    if (isDone) return base + 'background:var(--growth,#2c7a4b);color:#fff;border:1px solid var(--growth,#2c7a4b);';
+    if (key === nextKey) return base + 'background:var(--bg-card);color:var(--accent);border:1px solid var(--accent);animation:pulse-soft 2s ease-in-out infinite;';
+    return base + 'background:transparent;color:var(--ink-faint);border:1px solid var(--border-light);';
+  };
+
+  const steps = [
+    { key: 'plan', label: 'Plan', isDone: done.plan, title: 'Chat with Co-Cher to draft the plan' },
+    { key: 'components', label: 'Components', isDone: done.components, title: 'Add AI components (rubric, grouping, exit ticket…)' },
+    { key: 'stage', label: 'Stage', isDone: done.stage, title: 'Break the plan into runnable segments' },
+    { key: 'place', label: 'Place', isDone: done.place, title: 'Assign groups to furniture in the room' },
+    { key: 'present', label: '▶ Present', isDone: false, title: done.stage ? 'Open the student-facing class screen' : 'Stage the lesson first' }
+  ];
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:4px;margin-bottom:var(--sp-3);overflow-x:auto;padding-bottom:2px;">
+      ${steps.map((st, i) => `
+        ${i > 0 ? '<span style="color:var(--ink-faint);font-size:0.625rem;flex-shrink:0;">&rarr;</span>' : ''}
+        <button class="lp-journey-pill" data-step="${st.key}" title="${esc(st.title)}" style="${pillStyle(st.key, st.isDone)}">
+          ${st.isDone ? '<span aria-hidden="true" style="margin-right:3px;">&#10003;</span>' : ''}${esc(st.label)}
+        </button>`).join('')}
+    </div>`;
+
+  el.querySelectorAll('.lp-journey-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const step = btn.dataset.step;
+      if (step === 'plan') {
+        container.querySelector('#lp-layout')?.classList.remove('show-plan');
+        container.querySelector('#chat-input')?.focus();
+      } else if (step === 'components') {
+        container.querySelector('#lesson-components')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (step === 'stage') {
+        container.querySelector('#stage-lesson-btn')?.click();
+      } else if (step === 'place') {
+        // Placement lives in the run-of-show editor ("Place in room" per segment)
+        const fresh = currentLessonId ? Store.getLesson(currentLessonId) : null;
+        if (fresh?.runOfShow?.segments?.length) showRunOfShowEditor(container, fresh.runOfShow);
+        else container.querySelector('#stage-lesson-btn')?.click();
+      } else if (step === 'present') {
+        const fresh = currentLessonId ? Store.getLesson(currentLessonId) : null;
+        if (fresh?.runOfShow?.segments?.length) navigate(`/present/${currentLessonId}`);
+      }
+    });
+  });
 }
 
 /* ══════════ KB Context Attachment ══════════ */
@@ -3796,10 +4205,10 @@ hr{border:none;border-top:1px solid #e2e8f0;margin:16px 0}
 <body>
 <h1>${esc(title)}</h1>
 <p class="meta">${dateInfo ? esc(dateInfo) + '<br/>' : ''}Exported from Co-Cher &middot; ${new Date().toLocaleDateString('en-SG')}</p>
-${md(planText)}
+${mdStatic(planText)}
 ${compKeys.length > 0 ? '<hr/><h2>Lesson Components</h2>' + compKeys.map(key => {
     const m = COMPONENT_META[key] || { label: key };
-    return `<div class="component-header">${m.label}</div>${md(lessonComponents[key].content)}`;
+    return `<div class="component-header">${m.label}</div>${mdStatic(lessonComponents[key].content)}`;
   }).join('') : ''}
 </body></html>`;
 
