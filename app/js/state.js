@@ -731,6 +731,7 @@ export const Store = {
       attachedResources: data.attachedResources || [],
       components: data.components || {},
       runOfShow: data.runOfShow || null,
+      expansions: data.expansions || {},
       reflection: data.reflection || '',
       createdAt: Date.now(),
       updatedAt: Date.now()
