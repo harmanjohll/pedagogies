@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion, expandSection } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -15,7 +15,7 @@ import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, ensureCalendar } from './dashboard.js';
 import { getWeekType } from '../utils/calendar.js';
 import { processLatex } from '../utils/latex.js';
-import { md, escapeHtml } from '../utils/markdown.js';
+import { md, escapeHtml, mountExpansion, stripExpandMarkers } from '../utils/markdown.js';
 import { critiquePlan } from '../api.js';
 import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
@@ -23,6 +23,11 @@ import { layoutToSVG } from './spatial-designer.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
+
+// md() for static print/export surfaces (popup windows, .doc download) —
+// no click handler lives there, so [EXPAND:] chips are stripped rather than
+// rendered as dead buttons. In-app surfaces keep md() so chips stay live.
+const mdStatic = (t) => md(stripExpandMarkers(t));
 
 let chatMessages = [];
 let isGenerating = false;
@@ -286,6 +291,40 @@ function autoSaveComponents() {
   }
 }
 
+/* ── WS-C: on-demand [EXPAND:] expansion chips ──
+ * Plans/components are concise scaffolds; each chip generates one section
+ * expansion on demand. Results cache on the lesson as
+ * lesson.expansions = { "<slug>::<verb>": markdown } — one flat map for plan
+ * AND component chips (generator prompts namespace their own slugs). */
+
+/* Heading of the section a chip belongs to: nearest preceding h1-h5 inside
+ * the chip's rendered block. Falls back to the slug with dashes → spaces. */
+function expandChipHeading(chip) {
+  const scope = chip.closest('.doc-canvas, .chat-msg, #lesson-components') || chip.parentElement;
+  let best = null;
+  if (scope) {
+    scope.querySelectorAll('h1,h2,h3,h4,h5').forEach(h => {
+      if (h.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING) best = h;
+    });
+  }
+  const headingText = best?.textContent?.trim();
+  return headingText || (chip.dataset.expandSlug || '').replace(/-/g, ' ');
+}
+
+/* Auto-mount every cached expansion whose chip is present under rootEl.
+ * mountExpansion no-ops for keys with no matching chip on screen. */
+function mountCachedExpansions(rootEl) {
+  if (!rootEl || !currentLessonId) return;
+  const expansions = Store.getLesson(currentLessonId)?.expansions;
+  if (!expansions || typeof expansions !== 'object') return;
+  Object.entries(expansions).forEach(([key, body]) => {
+    const sep = key.indexOf('::');
+    if (sep < 1 || typeof body !== 'string' || !body) return;
+    mountExpansion(rootEl, key.slice(0, sep), key.slice(sep + 2), body)
+      .forEach(block => processLatex(block));
+  });
+}
+
 function renderComponents(container) {
   const el = container.querySelector('#lesson-components');
   if (!el) return;
@@ -421,7 +460,7 @@ function renderComponents(container) {
       if (!comp?.content) return;
       const meta = COMPONENT_META[key] || { label: key };
       // Strip teacher notes, mark schemes, teacher-only annotations
-      let studentContent = comp.content
+      let studentContent = stripExpandMarkers(comp.content)
         .replace(/###?\s*Teacher Notes[\s\S]*?(?=###?\s|$)/gi, '')
         .replace(/###?\s*Mark Scheme[\s\S]*?(?=###?\s|$)/gi, '')
         .replace(/###?\s*Facilitation[\s\S]*?(?=###?\s|$)/gi, '')
@@ -450,6 +489,9 @@ function renderComponents(container) {
       previewWin.document.close();
     });
   });
+
+  // Cached expansions re-mount under their chips on every components re-render
+  mountCachedExpansions(el);
 }
 
 /* ── Visual Seating Plan: render an SVG classroom view ──
@@ -1135,6 +1177,62 @@ export function render(container) {
       }
     });
   }
+
+  // [EXPAND:] chips (WS-C) — click → generate (or restore from cache) → mount
+  // + persist. Same delegated-listener pattern as choices; covers the chat
+  // pane, the plan panel and #lesson-components, since all render via md().
+  if (!container._expandWired) {
+    container._expandWired = true;
+    container.addEventListener('click', async (e) => {
+      const chip = e.target.closest('.expand-chip');
+      if (!chip || chip.dataset.loading === '1' || chip.dataset.mounted === '1') return;
+      const slug = chip.dataset.expandSlug || '';
+      const verb = chip.dataset.expandVerb || 'Details';
+      if (!slug) return;
+      if (!currentLessonId) {
+        showToast('Save the lesson first so expansions can be kept.', 'danger');
+        return;
+      }
+      const key = `${slug}::${verb}`;
+      const lesson = Store.getLesson(currentLessonId);
+      const cached = lesson?.expansions?.[key];
+      if (typeof cached === 'string' && cached) {
+        mountExpansion(container, slug, verb, cached).forEach(b => processLatex(b));
+        return;
+      }
+      if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+
+      const originalHtml = chip.innerHTML;
+      chip.dataset.loading = '1';
+      chip.disabled = true;
+      chip.innerHTML = '&#8230;';
+      try {
+        const heading = expandChipHeading(chip);
+        let planContext = chatMessages
+          .filter(m => m.role === 'assistant' && typeof m.content === 'string')
+          .map(m => m.content).join('\n\n---\n\n') || lesson?.plan || '';
+        // A chip inside a component expands that component — lead with its
+        // content so generator slugs (e.g. exit-q-2) resolve to real text.
+        if (chip.closest('#lesson-components') && activeComponentTab && lessonComponents[activeComponentTab]?.content) {
+          planContext = `${lessonComponents[activeComponentTab].content}\n\n---\n\nFull lesson plan:\n${planContext}`;
+        }
+        const classId = planClassContext?.id || lesson?.classId || null;
+        const classContext = classId ? (Store.getPortraitPromptText?.(classId) || '') : '';
+        const body = await expandSection({ planContext, sectionHeading: heading, verb, classContext });
+        const fresh = Store.getLesson(currentLessonId);
+        Store.updateLesson(currentLessonId, { expansions: { ...(fresh?.expansions || {}), [key]: body } });
+        chip.innerHTML = originalHtml;
+        chip.disabled = false;
+        delete chip.dataset.loading;
+        mountExpansion(container, slug, verb, body).forEach(b => processLatex(b));
+      } catch (err) {
+        chip.innerHTML = originalHtml;
+        chip.disabled = false;
+        delete chip.dataset.loading;
+        showToast(err.message, 'danger');
+      }
+    });
+  }
   const layoutEl = container.querySelector('#lp-layout');
 
   // Load components from existing lesson — always reset, otherwise a lesson
@@ -1451,7 +1549,7 @@ export function render(container) {
     }
     const printWin = window.open('', '_blank');
     if (!printWin) { showToast('Allow pop-ups for this site to print/export.', 'danger'); return; }
-    const planHtml = aiMsgs.map(m => md(m.content)).join('<hr style="margin:24px 0;">');
+    const planHtml = aiMsgs.map(m => mdStatic(m.content)).join('<hr style="margin:24px 0;">');
 
     // Build components HTML for print
     const compKeys = Object.keys(lessonComponents)
@@ -1461,7 +1559,7 @@ export function render(container) {
       ? `<hr style="margin:32px 0;border-top:2px solid #000c53;"><h2>Lesson Components</h2>` +
         compKeys.map(key => {
           const m = COMPONENT_META[key] || { label: key };
-          return `<h3>${m.label}</h3>${md(lessonComponents[key].content)}`;
+          return `<h3>${m.label}</h3>${mdStatic(lessonComponents[key].content)}`;
         }).join('<hr style="margin:24px 0;">')
       : '';
 
@@ -1501,45 +1599,45 @@ export function render(container) {
 
     // LI/SC first (most important)
     if (lessonComponents.lisc?.content) {
-      sections.push(`<div class="snap-section snap-lisc"><h3>Learning Intentions & Success Criteria</h3>${md(lessonComponents.lisc.content)}</div>`);
+      sections.push(`<div class="snap-section snap-lisc"><h3>Learning Intentions & Success Criteria</h3>${mdStatic(lessonComponents.lisc.content)}</div>`);
     }
 
     // Timeline
     if (lessonComponents.timeline?.content) {
-      sections.push(`<div class="snap-section"><h3>Timeline / Pacing</h3>${md(lessonComponents.timeline.content)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Timeline / Pacing</h3>${mdStatic(lessonComponents.timeline.content)}</div>`);
     }
 
     // Groups
     if (lessonComponents.grouping?.content) {
-      sections.push(`<div class="snap-section"><h3>Student Groups</h3>${md(lessonComponents.grouping.content)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Student Groups</h3>${mdStatic(lessonComponents.grouping.content)}</div>`);
     }
 
     // Seat Plan
     if (lessonComponents.seatPlan?.content) {
-      sections.push(`<div class="snap-section"><h3>Seating Plan</h3>${md(lessonComponents.seatPlan.content)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Seating Plan</h3>${mdStatic(lessonComponents.seatPlan.content)}</div>`);
     }
 
     // Exit Ticket
     if (lessonComponents.exitTicket?.content) {
-      sections.push(`<div class="snap-section"><h3>Exit Ticket</h3>${md(lessonComponents.exitTicket.content)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Exit Ticket</h3>${mdStatic(lessonComponents.exitTicket.content)}</div>`);
     }
 
     // Resources (YouTube + Simulations + External — compact)
     const resourceKeys = ['youtubeVideos', 'simulations', 'externalLinks'].filter(k => lessonComponents[k]?.content);
     if (resourceKeys.length > 0) {
-      sections.push(`<div class="snap-section"><h3>Resources</h3>${resourceKeys.map(k => md(lessonComponents[k].content)).join('<br>')}</div>`);
+      sections.push(`<div class="snap-section"><h3>Resources</h3>${resourceKeys.map(k => mdStatic(lessonComponents[k].content)).join('<br>')}</div>`);
     }
 
     // Differentiation
     if (lessonComponents.differentiation?.content) {
-      sections.push(`<div class="snap-section"><h3>Differentiation</h3>${md(lessonComponents.differentiation.content)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Differentiation</h3>${mdStatic(lessonComponents.differentiation.content)}</div>`);
     }
 
     // Key points from chat (first assistant message only, as overview)
     const firstAiMsg = chatMessages.find(m => m.role === 'assistant');
     if (firstAiMsg && !lessonComponents.lisc?.content && !lessonComponents.timeline?.content) {
       const preview = firstAiMsg.content.length > 800 ? firstAiMsg.content.slice(0, 800) + '...' : firstAiMsg.content;
-      sections.push(`<div class="snap-section"><h3>Lesson Overview</h3>${md(preview)}</div>`);
+      sections.push(`<div class="snap-section"><h3>Lesson Overview</h3>${mdStatic(preview)}</div>`);
     }
 
     printWin.document.write(`<!DOCTYPE html><html><head><title>Lesson Snapshot — ${esc(title)}</title>
@@ -2419,6 +2517,9 @@ function renderPlanContent(el) {
       btn.disabled = false;
     }
   });
+
+  // Cached expansions re-mount under their chips on every plan re-render
+  mountCachedExpansions(el);
 
   // Render LaTeX in plan content
   processLatex(el);
@@ -4059,10 +4160,10 @@ hr{border:none;border-top:1px solid #e2e8f0;margin:16px 0}
 <body>
 <h1>${esc(title)}</h1>
 <p class="meta">${dateInfo ? esc(dateInfo) + '<br/>' : ''}Exported from Co-Cher &middot; ${new Date().toLocaleDateString('en-SG')}</p>
-${md(planText)}
+${mdStatic(planText)}
 ${compKeys.length > 0 ? '<hr/><h2>Lesson Components</h2>' + compKeys.map(key => {
     const m = COMPONENT_META[key] || { label: key };
-    return `<div class="component-header">${m.label}</div>${md(lessonComponents[key].content)}`;
+    return `<div class="component-header">${m.label}</div>${mdStatic(lessonComponents[key].content)}`;
   }).join('') : ''}
 </body></html>`;
 

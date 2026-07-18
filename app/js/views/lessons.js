@@ -170,7 +170,11 @@ function renderLayoutThumbnail(items) {
 }
 
 function mdBasic(text) {
-  return text
+  // The detail page (and its print view) has no [EXPAND:] click handler —
+  // strip the markers so plans never show dead chips here. Expanding lives
+  // in the Lesson Planner; cached expansions stay on the lesson object.
+  return String(text ?? '')
+    .replace(/\[EXPAND:[^\]]*\]/g, '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/```([\s\S]*?)```/g, '<pre style="background:rgba(0,0,0,0.06);padding:8px 12px;border-radius:8px;font-size:0.8rem;overflow-x:auto;margin:6px 0;"><code>$1</code></pre>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -355,7 +359,7 @@ export function renderList(container) {
           });
           layoutId = saved.id;
         }
-        return Store.addLesson({
+        const lesson = Store.addLesson({
           title: data.title + ' (imported)',
           classId: null,
           status: 'draft',
@@ -369,6 +373,13 @@ export function renderList(container) {
           spatialLayout: layoutId,
           runOfShow: data.runOfShow || null
         });
+        // Cached [EXPAND:] expansions ride along. addLesson whitelists its
+        // fields, so unknown keys drop — merge them back via updateLesson.
+        if (data.expansions && typeof data.expansions === 'object' && !Array.isArray(data.expansions)
+            && Object.keys(data.expansions).length > 0) {
+          Store.updateLesson(lesson.id, { expansions: { ...data.expansions } });
+        }
+        return lesson;
       }
 
       backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
@@ -1217,7 +1228,7 @@ export function renderDetail(container, { id }) {
           <div class="name-line">Name: ______________________________ &nbsp;&nbsp; Class: ____________ &nbsp;&nbsp; Date: ____________</div>
         </header>
         ${dayPlan}
-        ${parts.map(p => `<section><h2>${esc(p.label)}</h2>${mdFull(p.content)}</section>`).join('')}
+        ${parts.map(p => `<section><h2>${esc(p.label)}</h2>${mdFull(String(p.content ?? '').replace(/\[EXPAND:[^\]]*\]/g, ''))}</section>`).join('')}
         <footer>Prepared by your teacher with Co-Cher</footer>
       </body></html>`);
     pw.document.close();
@@ -1238,6 +1249,7 @@ export function renderDetail(container, { id }) {
       objectives: lesson.objectives || '',
       lessonHook: lesson.lessonHook || '',
       components: lesson.components || {},
+      expansions: lesson.expansions || {},
       runOfShow: lesson.runOfShow || null,
       spatialLayout: lesson.spatialLayout || null,
       spatialLayoutData: lesson.spatialLayout

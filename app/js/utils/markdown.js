@@ -46,6 +46,61 @@ export function sanitizeUrl(url) {
     .replace(/ /g, '%20');
 }
 
+/** Kebab-case + hard-limit an [EXPAND:] section slug to [a-z0-9-]. */
+function sanitizeExpandSlug(raw) {
+  return String(raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
+/** Remove [EXPAND: …] markers entirely — for surfaces with no click handler
+ * (lesson detail page, print/preview windows) where chips would be dead. */
+export function stripExpandMarkers(text) {
+  return String(text ?? '').replace(/\[EXPAND:[^\]]*\]/g, '');
+}
+
+/* Mount a generated expansion under its chip(s).
+ * Finds every .expand-chip in containerEl matching (slug, verb) that isn't
+ * already mounted, inserts a <details open class="expansion-block"> right
+ * after the chip with md(markdownBody) inside, and hides the chip.
+ * Returns the array of mounted <details> elements (empty when no chip found —
+ * callers use this to no-op when a cached expansion has no chip on screen). */
+export function mountExpansion(containerEl, slug, verb, markdownBody) {
+  const mounted = [];
+  if (!containerEl || typeof containerEl.querySelectorAll !== 'function') return mounted;
+  const safeSlug = sanitizeExpandSlug(slug);
+  const wantVerb = String(verb ?? '').trim();
+  const body = String(markdownBody ?? '').trim();
+  if (!safeSlug || !wantVerb || !body) return mounted;
+  containerEl.querySelectorAll(`.expand-chip[data-expand-slug="${safeSlug}"]`).forEach(chip => {
+    if (chip.dataset.expandVerb !== wantVerb || chip.dataset.mounted === '1') return;
+    const block = document.createElement('details');
+    block.open = true;
+    block.className = 'expansion-block';
+    block.setAttribute('data-slug-verb', `${safeSlug}::${wantVerb}`);
+    block.style.cssText = 'margin:6px 0 10px;padding:8px 12px;border:1px solid var(--border-light,#e5e5e5);border-left:3px solid var(--accent,#4361ee);border-radius:8px;background:var(--accent-light,rgba(67,97,238,0.06));';
+    const summary = document.createElement('summary');
+    summary.style.cssText = 'cursor:pointer;font-size:0.6875rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent,#4361ee);';
+    summary.textContent = `✨ ${wantVerb}`;
+    const bodyEl = document.createElement('div');
+    bodyEl.className = 'expansion-body';
+    bodyEl.style.cssText = 'font-size:0.8125rem;line-height:1.6;color:var(--ink-secondary);margin-top:4px;';
+    // Defensive: an expansion never nests further chips, even if the model
+    // disobeys its "no markers in output" instruction.
+    bodyEl.innerHTML = md(stripExpandMarkers(body));
+    block.appendChild(summary);
+    block.appendChild(bodyEl);
+    chip.insertAdjacentElement('afterend', block);
+    chip.dataset.mounted = '1';
+    chip.style.display = 'none';
+    mounted.push(block);
+  });
+  return mounted;
+}
+
 export function md(text) {
   // Normalize: collapse line breaks inside markdown link syntax [label](url)
   // The AI often wraps long links across lines, breaking the regex
@@ -159,6 +214,18 @@ export function md(text) {
       const body = inner.slice(pipeIdx + 1).trim();
       if (!label || !body) return m;
       return `<details class="md-detail"><summary>${label}</summary><div class="md-detail-body">${body}</div></details>`;
+    })
+    // On-demand expansion chips: [EXPAND: Verb|section-slug]
+    // Renders a small pill button; the Lesson Planner wires the click (calls
+    // the model, mounts the result via mountExpansion below, caches it on the
+    // lesson). Verb text is already HTML-escaped here (quotes escaped for the
+    // attribute); the slug is hard-sanitized to [a-z0-9-] so it is attr-safe.
+    .replace(/\[EXPAND:\s*([^|\]]+)\|([^\]]+)\]/g, (m, rawVerb, rawSlug) => {
+      const verb = rawVerb.trim();
+      const slug = sanitizeExpandSlug(rawSlug);
+      if (!verb || !slug) return m;
+      const verbAttr = verb.replace(/"/g, '&quot;');
+      return `<button type="button" class="expand-chip" data-expand-verb="${verbAttr}" data-expand-slug="${slug}" title="Generate on demand" style="display:inline-flex;align-items:center;gap:4px;padding:2px 10px;margin:2px 6px 2px 0;border:1px solid var(--accent,#4361ee);background:transparent;color:var(--accent,#4361ee);border-radius:999px;font-size:0.6875rem;font-weight:600;line-height:1.6;cursor:pointer;">&#10024; ${verb}</button>`;
     })
     // Blockquotes (for "copy this prompt" sections)
     .replace(/&gt; (.+)/g, '<blockquote style="border-left:3px solid var(--accent);padding:8px 12px;margin:6px 0;background:var(--accent-light,rgba(67,97,238,0.06));border-radius:0 6px 6px 0;font-size:0.8125rem;color:var(--ink-secondary);">$1</blockquote>')
