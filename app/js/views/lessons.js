@@ -15,6 +15,7 @@ import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { applyJourneyMinimal, toggleJourneyMinimal } from '../components/keyboard-shortcuts.js';
+import { openDeckById, getMediaContent } from '../utils/deck.js';
 
 const STATUS_MAP = {
   draft: { label: 'Draft', badge: 'badge-gray' },
@@ -38,6 +39,39 @@ const E21CC_BADGE = {
 };
 const e21Label = (f) => E21CC_LABELS[f] || f;
 const e21Badge = (f) => E21CC_BADGE[f] || 'badge-gray';
+
+/* Linked-resource chip styling per type. Unknown/legacy types keep the
+ * historical Source styling so old lessons render unchanged. WS-4 adds
+ * 'deck' (compiled HTML slide decks) and 'audio' (AI-voiced clips). */
+const RESOURCE_CHIP = {
+  stimulus:   { badge: 'badge-blue',   label: 'Stimulus' },
+  simulation: { badge: 'badge-green',  label: 'Simulation' },
+  source:     { badge: 'badge-amber',  label: 'Source' },
+  deck:       { badge: 'badge-violet', label: 'Deck' },
+  audio:      { badge: 'badge-rose',   label: 'Audio' }
+};
+const chipMeta = (t) => RESOURCE_CHIP[t] || { badge: 'badge-amber', label: 'Source' };
+
+/* Inline playback for an attached audio clip (WS-4). The WAV Blob lives in
+ * the IndexedDB 'media' store; playback is fully offline via an object URL. */
+async function showAudioClipModal(id, title) {
+  const blob = await getMediaContent(id);
+  if (!(blob instanceof Blob)) {
+    showToast('Audio content not found on this device.', 'danger');
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const { backdrop, close } = openModal({
+    title: `&#127911; ${esc(title || 'Audio clip')}`,
+    width: 420,
+    onClose: () => setTimeout(() => URL.revokeObjectURL(url), 1000),
+    body: `
+      <audio controls src="${url}" style="width:100%;"></audio>
+      <p style="font-size:0.75rem;color:var(--ink-muted);margin-top:var(--sp-2);">AI voices only &mdash; no music or sound effects.</p>`,
+    footer: `<button class="btn btn-secondary" data-action="close">Close</button>`
+  });
+  backdrop.querySelector('[data-action="close"]').addEventListener('click', close);
+}
 
 function timeAgo(ts) {
   const d = Date.now() - ts, m = Math.floor(d / 60000);
@@ -271,12 +305,6 @@ export function renderList(container) {
   // Term filter
   const termFilter = container.querySelector('#term-filter');
   if (termFilter) {
-    // Auto-select current term
-    const now = new Date();
-    const month = now.getMonth(); // 0-indexed
-    const autoTerm = month <= 2 ? '1' : month <= 4 ? '2' : month <= 7 ? '3' : month <= 10 ? '4' : '1';
-    termFilter.value = 'all';
-
     termFilter.addEventListener('change', () => {
       const term = termFilter.value;
       if (term === 'all') {
@@ -936,7 +964,7 @@ export function renderDetail(container, { id }) {
               <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
                 ${resources.map(r => `
                   <button class="btn btn-ghost btn-sm linked-resource-chip" data-type="${r.type}" data-res-id="${esc(r.id || '')}" style="display:inline-flex;align-items:center;gap:var(--sp-1);padding:var(--sp-1) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-lg);font-size:0.8125rem;border:1px solid var(--border-light);cursor:pointer;">
-                    <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : r.type === 'simulation' ? 'badge-green' : 'badge-amber'}" style="font-size:0.625rem;">${r.type === 'stimulus' ? 'Stimulus' : r.type === 'simulation' ? 'Simulation' : 'Source'}</span>
+                    <span class="badge ${chipMeta(r.type).badge}" style="font-size:0.625rem;">${chipMeta(r.type).label}</span>
                     <span style="color:var(--ink);">${esc(r.title)}</span>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2" style="margin-left:2px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </button>
@@ -1048,10 +1076,22 @@ export function renderDetail(container, { id }) {
   });
 
   // Linked resource chip navigation — simulations deep-link straight into
-  // the attached sim's overlay rather than dropping the teacher at the gallery
+  // the attached sim's overlay rather than dropping the teacher at the gallery.
+  // WS-4 materials open in place: decks in a new tab (blob URL), audio inline.
   container.querySelectorAll('.linked-resource-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const type = chip.dataset.type;
+      if (type === 'deck') {
+        openDeckById(chip.dataset.resId).then(ok => {
+          if (!ok) showToast('Deck content not found on this device.', 'danger');
+        });
+        return;
+      }
+      if (type === 'audio') {
+        const res = (lesson.attachedResources || []).find(r => r.id === chip.dataset.resId);
+        showAudioClipModal(chip.dataset.resId, res?.title || 'Audio clip');
+        return;
+      }
       if (type === 'simulation') {
         if (chip.dataset.resId) sessionStorage.setItem('cocher_open_sim_id', chip.dataset.resId);
         navigate('/simulations');
@@ -1260,7 +1300,7 @@ export function renderDetail(container, { id }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${lesson.title.replace(/[^a-zA-Z0-9]/g, '_')}.cocher.json`;
+    a.download = `${lesson.title.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'lesson'}.cocher.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('Lesson exported! Share the file with colleagues.', 'success');

@@ -1054,6 +1054,11 @@ export function render(container) {
             navigate('/lesson-planner');
           });
         }
+      } else {
+        // Weekend / non-teaching week / outside timetabled hours — the banner
+        // still shows, so give it an honest body instead of a blank line.
+        textEl.innerHTML = `<strong>${teacherName}</strong>${dept ? ` &middot; ${dept}` : ''}<br/>
+          <span style="color:var(--ink-muted);">No lesson right now</span>`;
       }
       banner.style.display = '';
     } catch { /* silently fail; TT is optional */ }
@@ -2191,7 +2196,14 @@ export function render(container) {
 
   function initChart() {
     const canvas = container.querySelector('#radar-chart');
-    if (!canvas || typeof Chart === 'undefined') return;
+    if (!canvas) return;
+    // Offline / blocked CDN: Chart.js never loaded — say so instead of
+    // leaving a silent blank hole where the radar should be.
+    if (typeof Chart === 'undefined') {
+      const holder = canvas.parentElement || canvas;
+      holder.innerHTML = '<p style="font-size:0.75rem;color:var(--ink-faint);text-align:center;line-height:1.5;padding:var(--sp-3) 0;">Effectiveness radar needs an internet connection for its chart library.</p>';
+      return;
+    }
 
     const isDark = document.documentElement.classList.contains('dark');
     const gridColor = isDark ? 'rgba(107,114,128,0.5)' : 'rgba(209,213,219,1)';
@@ -2566,9 +2578,52 @@ export function render(container) {
     updateMetrics();
   }
 
+  /* Layouts saved before per-item iids existed (seeded samples, legacy saves)
+   * used to get session-only iids minted on every load, so seat assignments
+   * written into lessons referenced ids that never matched the stored layout
+   * again after a reload. Backfill missing iids ONCE into the stored record —
+   * layout items first, then each scene's items (a scene item matching a
+   * layout item's palette id + position inherits its iid; the rest get fresh
+   * ones) — and persist. Layouts already carrying iids are left untouched.
+   * Lessons holding pre-fix session iids can't be repaired retroactively;
+   * re-running seat placement once heals them. */
+  function ensureLayoutIids(layout) {
+    if (!layout || !Array.isArray(layout.items)) return layout;
+    const sceneList = Array.isArray(layout.scenes) ? layout.scenes : [];
+    const missingItem = layout.items.some(it => it && !it.iid);
+    const missingScene = sceneList.some(s => Array.isArray(s?.items) && s.items.some(it => it && !it.iid));
+    if (!missingItem && !missingScene) return layout;
+
+    const items = layout.items.map(it => (it && !it.iid) ? { ...it, iid: newItemIid() } : it);
+    const nextScenes = sceneList.map(s => {
+      if (!s || !Array.isArray(s.items)) return s;
+      const taken = new Set(s.items.map(it => it?.iid).filter(Boolean));
+      return {
+        ...s,
+        items: s.items.map(it => {
+          if (!it || it.iid) return it;
+          const match = items.find(li => li?.iid && !taken.has(li.iid) && li.id === it.id &&
+            Math.abs((Number(li.x) || 0) - (Number(it.x) || 0)) <= 1 &&
+            Math.abs((Number(li.y) || 0) - (Number(it.y) || 0)) <= 1);
+          if (match) { taken.add(match.iid); return { ...it, iid: match.iid }; }
+          return { ...it, iid: newItemIid() };
+        })
+      };
+    });
+
+    const updated = { ...layout, items };
+    if (Array.isArray(layout.scenes)) updated.scenes = nextScenes;
+    const all = Store.getSavedLayouts();
+    if (all.some(l => l.id === layout.id)) {
+      Store.set('savedLayouts', all.map(l => (l.id === layout.id ? updated : l)));
+    }
+    return updated;
+  }
+
   /* Load a saved layout record (venue, items, walls, student count, scenes) */
   function loadSavedLayout(layout) {
     if (!layout) return;
+    layout = ensureLayoutIids(layout);
     if (layout.venue && layout.venue !== currentVenue) {
       applyVenue(layout.venue);
       if (briefVenue) briefVenue.value = layout.venue;
@@ -2609,7 +2664,15 @@ export function render(container) {
       });
     });
     el.querySelectorAll('.del-layout').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
+        const layout = layouts.find(l => l.id === btn.dataset.idx);
+        const ok = await confirmDialog({
+          title: 'Delete Layout',
+          message: `Delete "${escapeHtml(layout?.name || 'this layout')}"? Lessons linked to it will lose the layout. This cannot be undone.`,
+          confirmLabel: 'Delete',
+          confirmClass: 'btn btn-danger'
+        });
+        if (!ok) return;
         Store.deleteLayout(btn.dataset.idx);
         showToast('Layout deleted');
         renderSavedLayouts();
@@ -2653,16 +2716,19 @@ export function render(container) {
   (function initPlaceGroupsMode() {
     const raw = sessionStorage.getItem('cocher_place_groups');
     if (!raw) return;
-    sessionStorage.removeItem('cocher_place_groups');
     let payload = null;
     try { payload = JSON.parse(raw); } catch { payload = null; }
     const groups = Array.isArray(payload?.groups) ? payload.groups : [];
     const lesson = payload?.lessonId ? Store.getLesson(payload.lessonId) : null;
     const segment = lesson?.runOfShow?.segments?.find(s => s.id === payload.segmentId) || null;
     if (!lesson || !segment || groups.length === 0) {
+      // Stale or invalid handoff — drop it so it doesn't re-fire on every visit
+      sessionStorage.removeItem('cocher_place_groups');
       showToast('Could not find that lesson segment — open seating from the Lesson Planner again.', 'danger');
       return;
     }
+    // Valid handoff: keep the key until Done/Cancel so a reload mid-placement
+    // re-enters place mode (prior assignments prefill from the lesson state).
 
     // Bring in the lesson's linked layout when the canvas is empty
     if (lesson.spatialLayout && layoutRoot.querySelectorAll('g[data-id]').length === 0) {
@@ -2788,15 +2854,23 @@ export function render(container) {
     placeGroupsCleanup = dismiss;
 
     panel.querySelector('#place-groups-cancel').addEventListener('click', () => {
+      sessionStorage.removeItem('cocher_place_groups');
       dismiss();
       showToast('Seat placement cancelled');
     });
 
     panel.querySelector('#place-groups-done').addEventListener('click', () => {
+      // Nothing assigned: warn and stay in place mode rather than writing
+      // empty itemIds and reporting success.
+      if (assignments.size === 0) {
+        showToast('No seats assigned yet — click a group, then click desks.', 'warning');
+        return;
+      }
       const fresh = Store.getLesson(payload.lessonId);
       const ros = fresh?.runOfShow ? JSON.parse(JSON.stringify(fresh.runOfShow)) : null;
       const seg = ros?.segments?.find(s => s.id === payload.segmentId);
       if (!seg) {
+        sessionStorage.removeItem('cocher_place_groups');
         showToast('That lesson segment no longer exists.', 'danger');
         dismiss();
         return;
@@ -2829,6 +2903,7 @@ export function render(container) {
         })
       };
       Store.updateLesson(payload.lessonId, { runOfShow: ros });
+      sessionStorage.removeItem('cocher_place_groups');
       showToast(`Seating placed for ${segment.name || 'segment'}`, 'success');
       dismiss();
       navigate('/lesson-planner/' + payload.lessonId);

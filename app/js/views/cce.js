@@ -9,6 +9,7 @@ import { Store, generateId } from '../state.js';
 import { sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog, openModal } from '../components/modals.js';
+import { navigate } from '../router.js';
 import { processLatex } from '../utils/latex.js';
 import { md as renderMarkdown, escapeHtml as escapeHTML } from '../utils/markdown.js';
 
@@ -210,6 +211,31 @@ One journal/exit ticket prompt. One commitment prompt. 2-3 sentences total.
 
 ### Teacher Notes
 Bullets only: background context, sensitive handling tips, 2-3 extension ideas.`;
+}
+
+/* ── Planner handoff (WS-5): distilled CCE2021 framing for one content area ──
+ * Consumed by the Lesson Planner on the first chat message of a lesson that
+ * arrives via "Plan a CCE lesson". Built from the same constants that drive
+ * buildSystemPrompt, so the framing stays in one place. Returns a bracketed
+ * context block ready to join into the planner's contextParts. */
+export function cceContextBlock(areaKey) {
+  const area = CONTENT_AREAS.find(a => a.id === areaKey) || null;
+  const label = area ? `${area.label} (${area.id})` : 'Character & Citizenship Education';
+  const lines = [
+    `[CCE Lesson — ${label}]`,
+    'This is a Character & Citizenship Education (CCE2021, Singapore) lesson. Design it against the CCE2021 framework:',
+    `- Big Ideas: ${BIG_IDEAS.join(', ')}`,
+    `- Core Values (R3ICH): ${R3ICH_VALUES.join(', ')}`,
+    `- SEL Competencies: ${SEL_COMPETENCIES.join(', ')}`,
+    `- NE Citizenship Dispositions: ${NE_DISPOSITIONS.join(', ')}`
+  ];
+  if (area) {
+    lines.push(`- Content area: ${area.description}`);
+    lines.push(`- Key themes: ${area.themes.join(', ')}`);
+    if (area.framework) lines.push(`- Content-area framework: ${area.framework}`);
+  }
+  lines.push('Keep scenarios age-appropriate and rooted in Singapore contexts. CCE assessment is process-focused — quality of reasoning, perspective-taking and values articulation, not right answers.');
+  return lines.join('\n');
 }
 
 /* ── Render ── */
@@ -546,6 +572,30 @@ export function render(container) {
           </div>
         </div>
 
+        <!-- Plan a full CCE lesson through the Lesson Planner (WS-5) -->
+        <div class="cce-gen-section">
+          <h2>Plan a CCE Lesson</h2>
+          <div class="cce-card">
+            <p style="font-size:0.8125rem;color:var(--ink-secondary,#666);line-height:1.6;margin:0 0 12px;">
+              Take a topic into the full Lesson Planner — the plan opens with the ${escapeHTML(area.label)} (${escapeHTML(area.id)}) framing already loaded, and the saved lesson inherits staging, seating and Present mode.
+            </p>
+            <div class="cce-gen-form">
+              <div class="full-width">
+                <label for="cce-plan-topic">Topic / Issue</label>
+                <input id="cce-plan-topic" class="input" type="text" placeholder="e.g. Digital citizenship and online kindness" style="width:100%;box-sizing:border-box;">
+              </div>
+              <div class="full-width">
+                <label for="cce-plan-class">Class (optional)</label>
+                <select id="cce-plan-class" class="input" style="width:100%;box-sizing:border-box;">
+                  <option value="">No class context</option>
+                  ${Store.getClasses().map(c => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.name)}${c.subject ? ' · ' + escapeHTML(c.subject) : ''}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <button id="cce-plan-btn" class="btn btn-primary" style="width:100%;">Plan a CCE lesson &rarr;</button>
+          </div>
+        </div>
+
         <!-- Saved Discussions Library -->
         <div class="cce-gen-section">
           <h2>Saved Discussions</h2>
@@ -567,8 +617,9 @@ export function render(container) {
                   <div style="font-size:0.75rem;color:var(--ink-secondary,#666);">
                     ${d.level || ''} · ${d.format || ''} · ${new Date(d.createdAt).toLocaleDateString('en-SG', {day:'numeric',month:'short',year:'numeric'})}
                   </div>
-                  <div style="display:flex;gap:8px;margin-top:10px;">
+                  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
                     <button class="btn btn-sm btn-primary cce-view-btn" data-id="${d.id}">View</button>
+                    <button class="btn btn-sm btn-ghost cce-plan-lesson-btn" data-id="${d.id}" title="Prefill the Plan a CCE Lesson topic with this discussion">Plan as lesson</button>
                     <button class="btn btn-sm btn-ghost cce-delete-btn" data-id="${d.id}" style="color:var(--danger);">Delete</button>
                   </div>
                 </div>
@@ -576,6 +627,43 @@ export function render(container) {
             </div>`;
           })()}
         </div>
+
+        <!-- My CCE Lessons (planned through the Lesson Planner, kind: 'cce') -->
+        ${(() => {
+          const cceLessons = Store.getLessons().filter(l => l.kind === 'cce');
+          if (cceLessons.length === 0) return '';
+          const statusMeta = {
+            draft: { label: 'Draft', color: '#6b7280' },
+            ready: { label: 'Ready', color: '#3b82f6' },
+            completed: { label: 'Done', color: '#22c55e' }
+          };
+          return `<div class="cce-gen-section">
+            <h2>My CCE Lessons</h2>
+            <div class="cce-library-grid">
+              ${cceLessons.map(l => {
+                const staged = (l.runOfShow?.segments || []).length > 0;
+                const st = statusMeta[l.status] || statusMeta.draft;
+                const stageBadge = staged
+                  ? `<span class="cce-badge" style="background:var(--accent,#4361ee);color:#fff;font-size:0.6875rem;" title="Staged — has a Run of Show">Staged</span>`
+                  : `<span class="cce-badge" style="background:${st.color}1a;color:${st.color};font-size:0.6875rem;">${st.label}</span>`;
+                return `
+                <div class="cce-lib-card">
+                  <div style="font-weight:700;font-size:0.9375rem;color:var(--ink);margin-bottom:6px;">${escapeHTML(l.title)}</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                    <span class="cce-badge" style="background:var(--accent-light,#eef1ff);color:var(--accent,#4361ee);font-size:0.6875rem;">CCE</span>
+                    ${stageBadge}
+                  </div>
+                  <div style="font-size:0.75rem;color:var(--ink-secondary,#666);">
+                    ${new Date(l.updatedAt || l.createdAt).toLocaleDateString('en-SG', {day:'numeric',month:'short',year:'numeric'})}
+                  </div>
+                  <div style="display:flex;gap:8px;margin-top:10px;">
+                    <a class="btn btn-sm btn-primary" href="#/lesson-planner/${escapeHTML(l.id)}" style="text-decoration:none;">Open</a>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+        })()}
 
         <!-- Content Area Reference (below generator) -->
         <div class="cce-overview">
@@ -771,6 +859,41 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
           loadingEl.classList.remove('visible');
         }
       }
+    });
+
+    // Plan a CCE lesson (WS-5): hand topic + class + content-area framing to
+    // the Lesson Planner via the same sessionStorage handoffs it already reads.
+    container.querySelector('#cce-plan-btn')?.addEventListener('click', () => {
+      const topic = container.querySelector('#cce-plan-topic').value.trim();
+      if (!topic) {
+        showToast('Enter a topic for the CCE lesson.', 'warning');
+        return;
+      }
+      const clsId = container.querySelector('#cce-plan-class').value;
+      const cls = clsId ? Store.getClasses().find(c => c.id === clsId) : null;
+      if (cls) {
+        sessionStorage.setItem('cocher_plan_class_id', cls.id);
+        sessionStorage.setItem('cocher_plan_class_name', cls.name || '');
+        sessionStorage.setItem('cocher_plan_class_subject', cls.subject || '');
+        sessionStorage.setItem('cocher_plan_class_level', cls.level || '');
+      }
+      sessionStorage.setItem('cocher_planner_prefill', JSON.stringify({ topic, kind: 'cce', contentArea: activeTab }));
+      navigate('/lesson-planner');
+    });
+
+    // "Plan as lesson" on a saved discussion: prefill the plan card's topic
+    // from the discussion title, then let the teacher pick a class and go.
+    container.querySelectorAll('.cce-plan-lesson-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const d = getSavedDiscussions().find(x => x.id === btn.dataset.id);
+        if (!d) return;
+        const topicInput = container.querySelector('#cce-plan-topic');
+        if (!topicInput) return;
+        topicInput.value = d.title || '';
+        topicInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        topicInput.focus();
+      });
     });
 
     // Save discussion

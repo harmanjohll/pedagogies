@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microscopy &amp; Cell Drawing – LabSim</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../shared/design-system.css?v=5">
+  <link rel="stylesheet" href="microscopy.css?v=5">
+</head>
+<body>
+
+  <a class="skip-link" href="#viewport">Skip to microscope</a>
+
+  <header class="topbar">
+    <div class="topbar-inner container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="../../index.html">LabSim</a> <span class="sep">/</span>
+        <a href="../../index.html">Biology</a> <span class="sep">/</span>
+        <span>Microscopy</span>
+      </nav>
+      <div class="topbar-actions">
+        <div id="record-mode-slot"></div>
+        <button id="btn-guide" class="btn btn-ghost btn-sm" aria-label="Toggle guide panel">Guide</button>
+        <button id="btn-reset" class="btn btn-ghost btn-sm" aria-label="Reset practical">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="micro-layout container">
+
+    <!-- Left: Guide + Controls -->
+    <aside id="guide-panel" class="micro-guide-panel panel" role="complementary" aria-label="Procedure guide">
+      <div class="panel-header">Procedure</div>
+      <div class="panel-body">
+        <ol class="procedure-list" id="procedure-list" role="list" aria-label="Procedure steps"></ol>
+
+        <div class="slide-selector">
+          <label for="slide-select" class="selector-label">Specimen slide</label>
+          <select id="slide-select" class="selector-dropdown">
+            <option value="">— Choose a slide —</option>
+          </select>
+        </div>
+
+        <div class="slide-prep" id="slide-prep" hidden>
+          <div class="prep-title">Preparation</div>
+          <p class="prep-text" id="prep-text"></p>
+          <div class="prep-stain" id="prep-stain"></div>
+        </div>
+
+        <div class="magnification-row" id="mag-row">
+          <span class="mag-label">Magnification</span>
+          <div class="mag-buttons">
+            <button class="btn btn-sm mag-btn" data-mag="x40" disabled>x40</button>
+            <button class="btn btn-sm mag-btn" data-mag="x100" disabled>x100</button>
+            <button class="btn btn-sm mag-btn" data-mag="x400" disabled>x400</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Centre: Microscope Viewport -->
+    <section class="micro-viewport-panel" role="main" aria-label="Microscope viewport" id="viewport">
+
+      <div class="viewport-wrap">
+        <div class="eyepiece-ring">
+          <div class="viewport-clip" id="viewport-clip">
+            <canvas id="specimen-canvas" aria-label="Microscope view of specimen"></canvas>
+            <div class="viewport-empty" id="viewport-empty">Select a slide and set magnification to begin</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="focus-row">
+        <label for="focus-slider" class="focus-label">Focus</label>
+        <input type="range" id="focus-slider" class="focus-slider" min="0" max="100" value="50" aria-label="Focus adjustment">
+        <span class="focus-value" id="focus-value">Focused</span>
+      </div>
+
+      <div class="viewport-info" id="viewport-info">
+        <span class="info-slide" id="info-slide">No slide loaded</span>
+        <span class="info-mag" id="info-mag">&mdash;</span>
+      </div>
+      <div class="mag-calc" id="mag-calc" hidden>
+        <span class="calc-formula">Total magnification = eyepiece &times; objective</span>
+        <span class="calc-value" id="mag-calc-value">&mdash;</span>
+      </div>
+
+    </section>
+
+    <!-- Right: Drawing + Labels -->
+    <aside class="micro-draw-panel panel" role="complementary" aria-label="Drawing area and labels">
+      <div class="panel-header">Drawing &amp; Labels</div>
+      <div class="panel-body">
+
+        <div class="draw-toolbar">
+          <button class="btn btn-sm draw-tool active" id="btn-pencil" aria-label="Pencil tool">Pencil</button>
+          <button class="btn btn-sm draw-tool" id="btn-eraser" aria-label="Eraser tool">Eraser</button>
+          <input type="color" id="draw-colour" class="draw-colour" value="#1a1b25" title="Drawing colour" aria-label="Drawing colour">
+          <select id="draw-size" class="draw-size" title="Line width" aria-label="Line width">
+            <option value="1">Fine</option>
+            <option value="2" selected>Medium</option>
+            <option value="4">Thick</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" id="btn-clear-draw" aria-label="Clear drawing">Clear</button>
+        </div>
+
+        <div class="draw-canvas-wrap">
+          <canvas id="draw-canvas" aria-label="Your biological drawing"></canvas>
+        </div>
+
+        <div class="draw-actions">
+          <button class="btn btn-ghost btn-sm" id="btn-export-draw" aria-label="Save drawing as PNG">Save PNG</button>
+          <button class="btn btn-success btn-sm" id="btn-complete" disabled aria-label="Complete drawing">Complete Drawing</button>
+        </div>
+
+        <div class="specimen-info" id="specimen-info" hidden>
+          <div class="info-title" id="info-title"></div>
+          <p class="info-desc" id="info-desc"></p>
+        </div>
+
+        <div class="label-checklist" id="label-checklist" hidden>
+          <div class="checklist-title">Structures to identify</div>
+          <ul class="checklist-list" id="checklist-list" role="list" aria-label="Structures checklist"></ul>
+        </div>
+
+        <div id="score-container"></div>
+
+      </div>
+    
+      <!-- Lab Notebook -->
+      <div class="lab-notebook-slot" data-practical="microscopy"></div>
+    </aside>
+
+  </div>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="../../shared/lab-audio.js?v=5"></script>
+  <script src="../../shared/lab-score.js?v=5"></script>
+  <script src="../../shared/lab-export.js?v=5"></script>
+  <script src="../../shared/lab-progress.js?v=5"></script>
+  <script src="../../shared/dark-mode.js?v=5"></script>
+  <script src="../../shared/lab-record-mode.js?v=5"></script>
+  <script src="../../shared/guide-collapse.js?v=5"></script>
+  <script src="../../shared/lab-notebook.js?v=5"></script>
+  <script src="microscopy-data.js?v=5"></script>
+  <script src="microscopy.js?v=5"></script>
+</body>
+</html>

@@ -6,7 +6,9 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion, expandSection } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech } from '../api.js';
+import { cceContextBlock } from './cce.js';
+import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, openDeckById, downloadBlob } from '../utils/deck.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -39,6 +41,7 @@ let attachedKBContext = [];   // attached knowledge base resources
 let lessonDateTime = null;    // { date, period, room, classCode } from timetable or manual
 let selectedIdeology = '';    // optional curriculum ideology lens
 let selectedFrameworkIds = []; // optional pedagogy framework lenses (multi-select chips)
+let cceContext = null;        // WS-5: { contentArea, topic, pendingInput } when arriving via "Plan a CCE lesson"
 
 /* ── Reference library picker ──
  * Teacher-curated documents (My References, in My Learning) that can be toggled
@@ -174,6 +177,9 @@ export const EEE_REGISTRY = {
   discussionPrompts:{ label: 'Discussion Prompts', cat: 'core', type: 'tool', desc: 'Structured questions for classroom discourse', pedagogy: ['inquiry', 'collaborative', 'engagement'] },
   rubric:         { label: 'Rubric',             cat: 'core', type: 'resource', desc: 'Assessment rubrics with criteria & levels', pedagogy: ['assessment'] },
   crossSubject:   { label: 'Cross-Subject Links', cat: 'core', type: 'tool', desc: 'Find connections to other subjects and suggest integration points', pedagogy: ['inquiry', 'e21cc', 'collaborative'] },
+  // WS-4 Materials (core: always available — they attach to the saved lesson)
+  slideDeck:      { label: 'Slide Deck',          cat: 'core', type: 'resource', desc: 'Self-contained HTML slide deck compiled from the plan (present or print to PDF)', subjects: ['all'], pedagogy: ['direct', 'edtech'] },
+  audioClip:      { label: 'Audio Clip',          cat: 'core', type: 'resource', desc: 'Short AI-voiced audio clip (voice only — no music or sound effects)', subjects: ['all'], pedagogy: ['engagement', 'edtech'] },
   resourceRec:    { label: 'Resource Recommender', cat: 'core', type: 'tool', desc: 'Auto-suggest Knowledge Base items, simulations, and resources for the lesson', pedagogy: ['edtech', 'inquiry', 'engagement'] },
   // === ENACTMENT ENHANCEMENTS (teacher chooses) ===
   // type: 'tool' = Teaching Tool (interactive, run in class)
@@ -777,6 +783,7 @@ export function renderForLesson(container, { id }) {
   chatMessages = [...(lesson.chatHistory || [])];
   vigilanceNudged = false;
   vigilanceState = null;
+  cceContext = null;  // kind already lives on the saved lesson
   render(container);
 }
 
@@ -790,6 +797,7 @@ export function renderNew(container) {
     chatMessages = [];
     lessonComponents = {};
     planClassContext = null;
+    cceContext = null;
   }
   vigilanceNudged = false;
   vigilanceState = null;
@@ -825,6 +833,9 @@ const AI_TOOLS = [
   { id: 'spatial-layout-btn', label: 'Spatial Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', color: '', cat: 'planning', eee: 'seatPlan' },
   { id: 'ai-cross-subject-btn', label: 'Cross-Subject', icon: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>', color: '#0891b2', cat: 'core', eee: 'crossSubject' },
   { id: 'ai-resource-rec-btn', label: 'Recommend', icon: '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>', color: '#059669', cat: 'core', eee: 'resourceRec' },
+  // WS-4 Materials
+  { id: 'ai-deck-btn', label: 'Slide Deck', icon: '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M7 8h10"/><path d="M7 12h6"/>', color: '#b45309', cat: 'enactment', eee: 'slideDeck' },
+  { id: 'ai-audio-btn', label: 'Audio Clip', icon: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>', color: '#be123c', cat: 'enactment', eee: 'audioClip' },
 ];
 
 function buildToolbarHTML(mode) {
@@ -918,6 +929,26 @@ export function render(container) {
     sessionStorage.removeItem('cocher_plan_class_name');
     sessionStorage.removeItem('cocher_plan_class_subject');
     sessionStorage.removeItem('cocher_plan_class_level');
+  }
+
+  // WS-5: CCE planner prefill — topic + content-area framing handed over by
+  // the CCE view's "Plan a CCE lesson". Removed once consumed (same handoff
+  // semantics as cocher_plan_class_* above); an unsaved draft keeps priority
+  // and the prefill applies on the next fresh conversation instead.
+  const plannerPrefillRaw = sessionStorage.getItem('cocher_planner_prefill');
+  if (plannerPrefillRaw && !currentLessonId && chatMessages.length === 0) {
+    sessionStorage.removeItem('cocher_planner_prefill');
+    try {
+      const prefill = JSON.parse(plannerPrefillRaw);
+      if (prefill?.kind === 'cce') {
+        cceContext = { contentArea: prefill.contentArea || '', topic: prefill.topic || '', pendingInput: true };
+        // GROW is the natural coaching frame for CCE conversations — pre-select
+        // its chip when the builtin exists (the teacher can still toggle it off).
+        if ((Store.getFrameworks?.() || []).some(f => f.id === 'fw_builtin_grow') && !selectedFrameworkIds.includes('fw_builtin_grow')) {
+          selectedFrameworkIds = [...selectedFrameworkIds, 'fw_builtin_grow'];
+        }
+      }
+    } catch { /* malformed prefill — ignore */ }
   }
 
   // Pick up reflection insights from previous lesson
@@ -1066,7 +1097,7 @@ export function render(container) {
                 </button>
                 <div>
                   <h2 style="font-size:1.125rem;font-weight:600;color:var(--ink);">Lesson Canvas</h2>
-                  <p style="font-size:0.8125rem;color:var(--ink-muted);">
+                  <p id="lp-canvas-subtitle" style="font-size:0.8125rem;color:var(--ink-muted);">
                     ${currentLessonId ? `Editing: ${currentLesson?.title || 'Lesson'}` : 'New lesson — save when ready'}
                   </p>
                 </div>
@@ -1075,6 +1106,10 @@ export function render(container) {
                 <button class="btn btn-secondary btn-sm" id="save-lesson-btn">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                   Save
+                </button>
+                <button class="btn btn-primary btn-sm" id="auto-stage-btn" title="Stage, group and seat this lesson in one go">
+                  <span aria-hidden="true">&#9889;</span>
+                  Auto-stage
                 </button>
                 <button class="btn btn-secondary btn-sm" id="stage-lesson-btn" title="Break this plan into a runnable sequence of segments">
                   <span aria-hidden="true">&#127916;</span>
@@ -1166,6 +1201,16 @@ export function render(container) {
   const messagesEl = container.querySelector('#chat-messages');
   const chatInput = container.querySelector('#chat-input');
   const chatSend = container.querySelector('#chat-send');
+
+  // WS-5: prefill the composer with the CCE topic — ready to edit or send.
+  // One-shot: internal re-renders must not resurrect the prefill text.
+  if (cceContext?.pendingInput) {
+    cceContext.pendingInput = false;
+    if (cceContext.topic && !chatInput.value) {
+      chatInput.value = `Plan a CCE lesson on: ${cceContext.topic}`;
+    }
+    chatInput.focus();
+  }
 
   // Teacher's-call choice blocks ([CHOICE: A | B]) — one delegated listener
   // on the persistent container; elements are re-created on every render.
@@ -1283,6 +1328,7 @@ export function render(container) {
     lessonComponents = {};
     vigilanceNudged = false;
     vigilanceState = null;
+    cceContext = null;
     render(container);
   });
 
@@ -1343,6 +1389,11 @@ export function render(container) {
       if (portrait) {
         contextParts.push(`[Class Portrait — design FOR these learners; differentiate by default for the dimensions most students are still developing]:\n${portrait}`);
       }
+    }
+    // WS-5: CCE lesson framing — first message only, mirrors the other lenses.
+    // cceContextBlock returns the bracketed [CCE Lesson — <area>] block.
+    if (cceContext && chatMessages.length === 0) {
+      contextParts.push(cceContextBlock(cceContext.contentArea));
     }
     // Teacher's active practice goal: support it quietly, never lecture about it
     if (chatMessages.length === 0) {
@@ -1538,7 +1589,7 @@ export function render(container) {
   });
 
   // Save lesson
-  container.querySelector('#save-lesson-btn').addEventListener('click', () => showSaveModal(classes));
+  container.querySelector('#save-lesson-btn').addEventListener('click', () => showSaveModal(container, classes));
 
   // Stage lesson — break the plan into a runnable Run of Show (A1)
   container.querySelector('#stage-lesson-btn')?.addEventListener('click', async (e) => {
@@ -1574,6 +1625,12 @@ export function render(container) {
       btn.disabled = false;
       btn.innerHTML = originalHTML;
     }
+  });
+
+  // Auto-stage (WS-3) — stage, group, room-link and seat in one pre-flight
+  // pipeline. The manual Stage button above stays untouched.
+  container.querySelector('#auto-stage-btn')?.addEventListener('click', () => {
+    showAutoStageModal(container);
   });
 
   // Print / Export (includes all components)
@@ -2167,6 +2224,15 @@ export function render(container) {
     }
   });
 
+  // WS-4 Materials: Slide Deck — generate from the current plan, preview, attach
+  container.querySelector('#ai-deck-btn')?.addEventListener('click', () => generateDeckFlow(container));
+
+  // WS-4 Materials: Audio Clip — script → AI voices (voice only) → attach
+  container.querySelector('#ai-audio-btn')?.addEventListener('click', () => {
+    if (!currentLessonId) { showToast('Save the lesson first — materials attach to a saved lesson.', 'danger'); return; }
+    showAudioClipModal(container);
+  });
+
 
   // Share Lesson (export/import JSON)
   // Word export
@@ -2438,10 +2504,35 @@ function renderMessages(el, classes) {
         nudges.push({ icon: '&#9998;', text: 'No assessment checkpoint detected. Consider adding a formative check to monitor understanding.', color: '#3b82f6' });
       }
 
-      // Check for estimated time (if plan mentions minutes)
-      const timeMatches = lastAI.match(/(\d+)\s*min/gi) || [];
-      if (timeMatches.length >= 2) {
-        const totalMin = timeMatches.reduce((sum, m) => sum + parseInt(m), 0);
+      // Check for estimated time (if plan mentions minutes). Still a heuristic,
+      // but no double counting: a stated total ("55-minute lesson", "Total: 55
+      // min") wins outright; otherwise only durations on list items / section
+      // headings are summed — never every "N min" token in the prose.
+      const planTextRaw = chatMessages[chatMessages.length - 1].content;
+      const allTimeTokens = lastAI.match(/(\d+)\s*min/gi) || [];
+      if (allTimeTokens.length >= 2) {
+        const planLines = planTextRaw.split('\n');
+        const isHeadingLine = (line) => /^\s*#{1,6}\s/.test(line) || /^\s*\*\*[^*]+\*\*:?\s*$/.test(line);
+        let totalMin = 0;
+        // 1) Stated total: "NN-minute lesson" in the first line or a heading,
+        //    or an explicit "Total/Duration: NN min" anywhere in the plan.
+        const firstLineIdx = planLines.findIndex(l => l.trim() !== '');
+        for (let i = 0; i < planLines.length; i++) {
+          if (i !== firstLineIdx && !isHeadingLine(planLines[i])) continue;
+          const m = planLines[i].match(/(\d+)\s*[-‑– ]\s*min(?:ute)?s?\s+(?:lesson|period|class|session|plan)/i);
+          if (m) { totalMin = parseInt(m[1], 10); break; }
+        }
+        if (!totalMin) {
+          const m = planTextRaw.match(/\b(?:total|duration)\b[^0-9\n]{0,20}(\d+)\s*min/i);
+          if (m) totalMin = parseInt(m[1], 10);
+        }
+        // 2) No stated total → sum segment durations from list items / headings.
+        if (!totalMin) {
+          planLines.forEach(line => {
+            if (!/^\s*(?:[-*+]|\d+[.)])\s/.test(line) && !isHeadingLine(line)) return;
+            (line.match(/(\d+)\s*min/gi) || []).forEach(t => { totalMin += parseInt(t, 10); });
+          });
+        }
         if (totalMin > 0) {
           nudges.push({ icon: '&#9200;', text: `Estimated lesson time: ~${totalMin} minutes`, color: '#8b5cf6' });
         }
@@ -2561,7 +2652,7 @@ function renderPlanContent(el) {
 }
 
 /* ── Save lesson modal ── */
-function showSaveModal(classes) {
+function showSaveModal(container, classes) {
   if (chatMessages.length === 0) {
     showToast('Chat with Co-Cher first before saving.', 'danger');
     return;
@@ -2631,18 +2722,32 @@ function showSaveModal(classes) {
       chatHistory: [...chatMessages],
       plan: chatMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n\n---\n\n')
     };
+    // WS-5: a lesson planned via "Plan a CCE lesson" is tagged on first save;
+    // updates never touch kind, so existing lessons keep whatever they have.
+    if (!existing && cceContext) data.kind = 'cce';
 
     if (existing) {
       Store.updateLesson(currentLessonId, data);
       showToast('Lesson updated!', 'success');
+      close();
+      // Refresh the cockpit in place — title, run of show, journey, spatial bar
+      const subtitleEl = container.querySelector('#lp-canvas-subtitle');
+      if (subtitleEl) subtitleEl.textContent = `Editing: ${title}`;
+      renderRunOfShow(container);
+      renderJourneyBar(container);
+      renderSpatialContextBar(container);
     } else {
       const lesson = Store.addLesson(data);
       currentLessonId = lesson.id;
       // A spatial layout linked before the lesson was saved can now be attached.
       consumePendingSpatialLayout();
       showToast('Lesson saved!', 'success');
+      close();
+      // P3/P4: land on the lesson's canonical URL. renderForLesson rehydrates
+      // the whole cockpit (stage CTA, journey bar, status badge) and an F5 now
+      // reloads this lesson instead of silently detaching into a fresh draft.
+      navigate(`/lesson-planner/${lesson.id}`);
     }
-    close();
   });
 
   setTimeout(() => backdrop.querySelector('#save-title')?.focus(), 100);
@@ -3003,6 +3108,418 @@ function buildPlacementGroups(seg) {
     if (structured) groups = normalize(structured.groups);
   }
   return groups;
+}
+
+/* ══════════ Auto-stage (WS-3): one-prompt staging pipeline ══════════ */
+
+/* "Let Co-Cher choose" resolves to the teacher's most recent saved layout
+ * (by createdAt; later entries win ties). Null when nothing is saved. */
+function mostRecentLayout(layouts) {
+  return (layouts || []).reduce((best, l) =>
+    (!best || (l.createdAt || 0) >= (best.createdAt || 0)) ? l : best, null);
+}
+
+/* Deterministic auto-placement (no AI). Seatable furniture — items whose
+ * catalog id starts with 'desk' or is 'stand_table', falling back to all
+ * items — is ordered row-major (y bands with 60px tolerance, then x), split
+ * into as many contiguous clusters as the segment has groups (balanced
+ * sizes, first remainder clusters get one extra), and group i takes cluster
+ * i. Writes EXACTLY the manual "Place groups" shape the Spatial Designer
+ * produces: grouping.groups[i].itemIds (instance iids) + seatMap
+ * { itemIid: [studentIds] } filled round-robin in member order; a group
+ * with no items or no members carries no seatMap. Returns true when at
+ * least one group received items. */
+function autoPlaceSegment(seg, layout) {
+  const items = Array.isArray(layout?.items) ? layout.items : [];
+  let seatable = items.filter(it => String(it?.id || '').startsWith('desk') || it?.id === 'stand_table');
+  if (seatable.length === 0) seatable = items.slice();
+
+  const byY = [...seatable].sort((a, b) => ((a.y || 0) - (b.y || 0)) || ((a.x || 0) - (b.x || 0)));
+  const rows = [];
+  let row = null, rowY = -Infinity;
+  byY.forEach(it => {
+    const y = Number(it.y) || 0;
+    if (!row || y - rowY > 60) { row = []; rows.push(row); rowY = y; }
+    row.push(it);
+  });
+  const ordered = rows.flatMap(r => [...r].sort((a, b) => ((a.x || 0) - (b.x || 0)) || ((a.y || 0) - (b.y || 0))));
+
+  const groups = Array.isArray(seg.grouping?.groups) ? seg.grouping.groups : [];
+  if (groups.length === 0 || ordered.length === 0) return false;
+
+  const base = Math.floor(ordered.length / groups.length);
+  const extra = ordered.length % groups.length;
+  let cursor = 0;
+
+  seg.grouping = {
+    mode: seg.grouping?.mode || 'groups',
+    groups: groups.map((g, i) => {
+      const size = base + (i < extra ? 1 : 0);
+      const cluster = ordered.slice(cursor, cursor + size);
+      cursor += size;
+      const itemIds = cluster.map(it => String(it.iid ?? it.id));
+      const studentIds = Array.isArray(g.studentIds) ? g.studentIds : [];
+      const next = { ...g, name: g.name || `Group ${i + 1}`, studentIds, itemIds };
+      if (itemIds.length > 0 && studentIds.length > 0) {
+        const seatMap = {};
+        itemIds.forEach(iid => { seatMap[iid] = []; });
+        studentIds.forEach((sid, j) => { seatMap[itemIds[j % itemIds.length]].push(sid); });
+        next.seatMap = seatMap;
+      } else {
+        delete next.seatMap;
+      }
+      return next;
+    })
+  };
+  return true;
+}
+
+/* Pre-flight modal + sequential pipeline: Stage (one AI call) → Group (one
+ * AI call, reused across every groups/pairs segment) → link Room → auto-seat
+ * (deterministic). Every ingredient is confirmed by the teacher up front —
+ * nothing is chosen for them unless they delegate it ("Let Co-Cher choose").
+ * Each step persists its own COMPLETE result via Store.updateLesson before
+ * the next begins, so a later failure never rolls back or half-writes an
+ * earlier one; failed steps show a short reason and the run continues where
+ * sensible. */
+function showAutoStageModal(container) {
+  const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  if (!lesson) {
+    showToast('Save the lesson first — auto-staging attaches the run of show to a saved lesson.', 'danger');
+    return;
+  }
+  if (!chatMessages.some(m => m.role === 'assistant')) {
+    showToast('Chat with Co-Cher first to create a plan, then auto-stage it.', 'danger');
+    return;
+  }
+  if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+
+  const classes = Store.getClasses();
+  const savedLayouts = Store.getSavedLayouts() || [];
+  const recent = mostRecentLayout(savedLayouts);
+  const preselectClassId = planClassContext?.id || lesson.classId || '';
+  const defaultDuration = buildRunOfShowRequest(lesson).durationHint || 55;
+  const defaultRoom = (lesson.spatialLayout && savedLayouts.some(l => l.id === lesson.spatialLayout))
+    ? 'linked' : (recent ? 'auto' : 'skip');
+
+  const AS_STEPS = [
+    { key: 'staging', label: 'Staging' },
+    { key: 'grouping', label: 'Grouping' },
+    { key: 'room', label: 'Room' },
+    { key: 'seating', label: 'Seating' },
+    { key: 'done', label: 'Done' }
+  ];
+  const AS_PILL_BASE = 'display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:var(--radius-full);font-size:0.6875rem;font-weight:600;white-space:nowrap;border:1px solid var(--border-light);color:var(--ink-faint);background:transparent;';
+  const radioLabelStyle = (disabled) =>
+    `display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;color:var(--ink);${disabled ? 'opacity:0.55;' : 'cursor:pointer;'}`;
+
+  const { backdrop, close } = openModal({
+    title: '&#9889; Auto-stage',
+    width: 560,
+    body: `
+      <style>
+        .as-spin{display:inline-block;width:10px;height:10px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:as-rotate .7s linear infinite;}
+        @keyframes as-rotate{to{transform:rotate(360deg)}}
+      </style>
+      <div id="as-form">
+        <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-4);">
+          One pass: stage the plan into segments, form groups, link the room and seat everyone.
+        </p>
+        ${lesson.runOfShow?.segments?.length ? `
+        <div style="font-size:0.75rem;color:var(--warning,#b45309);background:var(--bg-subtle);border-radius:var(--radius-md);padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-3);">
+          This lesson is already staged &mdash; auto-staging replaces the current segments.
+        </div>` : ''}
+        <div class="input-group">
+          <label class="input-label">Class <span style="color:var(--danger);">*</span></label>
+          <select class="input" id="as-class">
+            <option value="">Choose a class&hellip;</option>
+            ${classes.map(c => `<option value="${esc(c.id)}" ${c.id === preselectClassId ? 'selected' : ''}>${esc(c.name)} (${(c.students || []).length} students)</option>`).join('')}
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Room source</label>
+          <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
+            <label style="${radioLabelStyle(savedLayouts.length === 0)}">
+              <input type="radio" name="as-room" value="linked" ${defaultRoom === 'linked' ? 'checked' : ''} ${savedLayouts.length === 0 ? 'disabled' : ''} />
+              <span style="flex-shrink:0;">Linked / saved layout</span>
+              ${savedLayouts.length > 0 ? `
+              <select class="input" id="as-layout" style="flex:1;min-width:0;padding:4px 8px;font-size:0.8125rem;">
+                ${savedLayouts.map(l => `<option value="${esc(l.id)}" ${l.id === (lesson.spatialLayout || recent?.id) ? 'selected' : ''}>${esc(l.name)} (${l.studentCount || '?'} students)</option>`).join('')}
+              </select>` : `<span style="font-size:0.6875rem;color:var(--ink-faint);">&mdash; no saved layouts yet</span>`}
+            </label>
+            <label style="${radioLabelStyle(!recent)}">
+              <input type="radio" name="as-room" value="auto" ${defaultRoom === 'auto' ? 'checked' : ''} ${recent ? '' : 'disabled'} />
+              <span>Let Co-Cher choose ${recent
+                ? `<span style="color:var(--ink-muted);font-size:0.75rem;">(most recent: ${esc(recent.name)})</span>`
+                : `<span style="color:var(--ink-faint);font-size:0.75rem;">&mdash; save a layout in the Spatial Designer first</span>`}</span>
+            </label>
+            <label style="${radioLabelStyle(false)}">
+              <input type="radio" name="as-room" value="skip" ${defaultRoom === 'skip' ? 'checked' : ''} />
+              <span>Skip room &amp; seating</span>
+            </label>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Duration (minutes)</label>
+          <input type="number" class="input" id="as-duration" min="10" max="240" value="${esc(String(defaultDuration))}" style="width:110px;" />
+        </div>
+        <div class="input-group" style="display:flex;gap:var(--sp-5);flex-wrap:wrap;margin-bottom:0;">
+          <label style="display:inline-flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;color:var(--ink);cursor:pointer;">
+            <input type="checkbox" id="as-groups" checked /> Generate groups
+          </label>
+          <label style="display:inline-flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;color:var(--ink);cursor:pointer;">
+            <input type="checkbox" id="as-seat" ${defaultRoom === 'skip' ? 'disabled' : 'checked'} /> Auto-seat groups
+          </label>
+        </div>
+      </div>
+      <div id="as-progress" style="display:none;">
+        <div id="as-steps" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:var(--sp-2) 0;">
+          ${AS_STEPS.map((st, i) => `
+            ${i > 0 ? '<span style="color:var(--ink-faint);font-size:0.625rem;flex-shrink:0;">&rarr;</span>' : ''}
+            <span class="as-step" data-step="${st.key}" style="${AS_PILL_BASE}"><span class="as-step-icon" style="display:inline-flex;align-items:center;"></span>${st.label}</span>`).join('')}
+        </div>
+        <div id="as-step-notes"></div>
+        <div id="as-summary" style="margin-top:var(--sp-3);"></div>
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="confirm" title="Run the pipeline with these choices">Auto-stage</button>
+    `
+  });
+
+  const classSel = backdrop.querySelector('#as-class');
+  const layoutSel = backdrop.querySelector('#as-layout');
+  const seatToggle = backdrop.querySelector('#as-seat');
+  const cancelBtn = backdrop.querySelector('[data-action="cancel"]');
+  const confirmBtn = backdrop.querySelector('[data-action="confirm"]');
+
+  // Class is mandatory — Confirm stays disabled without one
+  const syncConfirm = () => { confirmBtn.disabled = !classSel.value; };
+  classSel.addEventListener('change', syncConfirm);
+  syncConfirm();
+
+  // "Skip room & seating" turns the seat toggle off; leaving skip restores it
+  let seatWanted = seatToggle ? seatToggle.checked : false;
+  seatToggle?.addEventListener('change', () => { seatWanted = seatToggle.checked; });
+  const roomChoiceNow = () => backdrop.querySelector('input[name="as-room"]:checked')?.value || 'skip';
+  backdrop.querySelectorAll('input[name="as-room"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const skip = roomChoiceNow() === 'skip';
+      if (seatToggle) {
+        seatToggle.disabled = skip;
+        seatToggle.checked = skip ? false : seatWanted;
+      }
+    });
+  });
+  // Picking from the layout select is an implicit "linked" choice
+  layoutSel?.addEventListener('change', () => {
+    const linked = backdrop.querySelector('input[name="as-room"][value="linked"]');
+    if (linked && !linked.disabled && !linked.checked) {
+      linked.checked = true;
+      linked.dispatchEvent(new Event('change'));
+    }
+  });
+
+  /* Progress strip state: pending | active (spinner) | done (✓) | skip (–) |
+   * fail (✗). Skip/fail reasons collect beneath the strip. */
+  const stepLabel = Object.fromEntries(AS_STEPS.map(st => [st.key, st.label]));
+  const stepState = {};
+  const setStep = (key, state, note) => {
+    stepState[key] = state;
+    const pill = backdrop.querySelector(`.as-step[data-step="${key}"]`);
+    if (!pill) return;
+    const styles = {
+      pending: 'border:1px solid var(--border-light);color:var(--ink-faint);background:transparent;',
+      active: 'border:1px solid var(--accent);color:var(--accent);background:var(--bg-card);',
+      done: 'border:1px solid var(--growth,#2c7a4b);color:#fff;background:var(--growth,#2c7a4b);',
+      skip: 'border:1px solid var(--border-light);color:var(--ink-faint);background:var(--bg-subtle);',
+      fail: 'border:1px solid var(--danger);color:var(--danger);background:transparent;'
+    };
+    pill.style.cssText = AS_PILL_BASE + (styles[state] || styles.pending);
+    const icon = pill.querySelector('.as-step-icon');
+    if (icon) {
+      icon.innerHTML = state === 'active' ? '<span class="as-spin"></span>'
+        : state === 'done' ? '&#10003;'
+        : state === 'fail' ? '&#10007;'
+        : state === 'skip' ? '&ndash;' : '';
+    }
+    if (note && (state === 'fail' || state === 'skip')) {
+      backdrop.querySelector('#as-step-notes')?.insertAdjacentHTML('beforeend',
+        `<div style="font-size:0.6875rem;color:${state === 'fail' ? 'var(--danger)' : 'var(--ink-muted)'};margin-top:2px;">${state === 'fail' ? '&#10007;' : '&ndash;'} ${esc(stepLabel[key] || key)}: ${esc(String(note).slice(0, 120))}</div>`);
+    }
+  };
+
+  const runPipeline = async ({ classId, roomChoice, layoutId, duration, wantGroups, wantSeats }) => {
+    const lessonId = currentLessonId;
+    const cls = Store.getClasses().find(c => c.id === classId) || null;
+    const roster = cls?.students || [];
+    const portraitText = classId ? (Store.getPortraitPromptText?.(classId) || '') : '';
+    // Sync steps resolve instantly — a beat keeps the strip readable
+    const beat = () => new Promise(r => setTimeout(r, 180));
+
+    // Adopt the chosen class when the lesson has none — seat maps and Present
+    // resolve student names through lesson.classId. An existing link is kept.
+    if (cls && !Store.getLesson(lessonId)?.classId) Store.updateLesson(lessonId, { classId });
+
+    let ros = null;
+    let layout = null;
+    let builtGroups = null;
+    let seatedSegs = 0;
+
+    // a. Staging — one AI call; the whole runOfShow persists before anything
+    // else touches it (never a half-written segment).
+    setStep('staging', 'active');
+    try {
+      const req = buildRunOfShowRequest(Store.getLesson(lessonId));
+      ros = await generateRunOfShow({
+        plan: req.plan,
+        className: cls?.name || req.className,
+        portraitText,
+        durationHint: duration
+      });
+      Store.updateLesson(lessonId, { runOfShow: ros });
+      setStep('staging', 'done');
+    } catch (err) {
+      setStep('staging', 'fail', err.message);
+    }
+
+    // b. Grouping — ONE suggestGrouping call keyed to the first groups/pairs
+    // segment's activity; the result is copied into every such segment.
+    const groupable = ros ? ros.segments.filter(s => s.grouping?.mode === 'groups' || s.grouping?.mode === 'pairs') : [];
+    if (!ros) setStep('grouping', 'skip', 'staging failed');
+    else if (!wantGroups) setStep('grouping', 'skip', 'turned off');
+    else if (groupable.length === 0) setStep('grouping', 'skip', 'no group or pair segments');
+    else if (roster.length === 0) setStep('grouping', 'skip', 'no students in this class');
+    else {
+      setStep('grouping', 'active');
+      try {
+        const activityType = groupable[0].activity || groupable[0].name || 'Collaborative group work';
+        const result = await suggestGrouping(roster, activityType, { portraitText });
+        // studentNames → studentIds against the roster, case-insensitive;
+        // unmatched names are simply skipped (same policy as the manual tool)
+        const nameToId = new Map(roster.map(st => [String(st.name).trim().toLowerCase(), st.id]));
+        builtGroups = result.groups.map((g, i) => ({
+          name: g.name || `Group ${i + 1}`,
+          studentNames: [...(g.studentNames || [])],
+          rationale: g.rationale || '',
+          studentIds: (g.studentNames || [])
+            .map(n => nameToId.get(String(n).trim().toLowerCase()))
+            .filter(Boolean)
+        }));
+        // Each segment gets its own deep copy — placement mutates per segment
+        groupable.forEach(s => {
+          s.grouping.groups = builtGroups.map(g =>
+            ({ ...g, studentNames: [...g.studentNames], studentIds: [...g.studentIds] }));
+        });
+        Store.updateLesson(lessonId, { runOfShow: ros });
+        setStep('grouping', 'done');
+      } catch (err) {
+        builtGroups = null;
+        setStep('grouping', 'fail', err.message);
+      }
+    }
+
+    // c. Room — link the confirmed layout to the lesson
+    if (roomChoice === 'skip') setStep('room', 'skip', 'room & seating skipped');
+    else {
+      setStep('room', 'active');
+      await beat();
+      layout = (Store.getSavedLayouts() || []).find(l => l.id === layoutId) || null;
+      if (!layout) setStep('room', 'fail', 'layout no longer exists');
+      else {
+        Store.updateLesson(lessonId, { spatialLayout: layout.id });
+        setStep('room', 'done');
+      }
+    }
+
+    // d. Seating — deterministic auto-placement, no AI
+    const seatTargets = ros ? ros.segments.filter(s =>
+      (s.grouping?.mode === 'groups' || s.grouping?.mode === 'pairs') &&
+      (s.grouping.groups || []).length > 0) : [];
+    if (roomChoice === 'skip') setStep('seating', 'skip', 'room & seating skipped');
+    else if (!wantSeats) setStep('seating', 'skip', 'turned off');
+    else if (!ros) setStep('seating', 'skip', 'staging failed');
+    else if (!layout) setStep('seating', 'skip', 'no layout linked');
+    else if (seatTargets.length === 0) setStep('seating', 'skip', 'no groups to seat');
+    else {
+      setStep('seating', 'active');
+      await beat();
+      try {
+        seatTargets.forEach(s => { if (autoPlaceSegment(s, layout)) seatedSegs++; });
+        if (seatedSegs > 0) {
+          Store.updateLesson(lessonId, { runOfShow: ros });
+          setStep('seating', 'done');
+        } else {
+          setStep('seating', 'skip', 'no seatable furniture in the layout');
+        }
+      } catch (err) {
+        setStep('seating', 'fail', err.message);
+      }
+    }
+
+    // e. Refresh the cockpit with whatever the pipeline achieved
+    renderRunOfShow(container);
+    renderJourneyBar(container);
+    renderSpatialContextBar(container);
+    renderSpatialSection(container);
+
+    // f. Done — summary + next actions
+    setStep('done', 'done');
+    const segs = Store.getLesson(lessonId)?.runOfShow?.segments || [];
+    const bits = [];
+    if (ros) bits.push(`${segs.length} segment${segs.length === 1 ? '' : 's'}`);
+    if (builtGroups?.length) bits.push(`${builtGroups.length} group${builtGroups.length === 1 ? '' : 's'}${seatedSegs > 0 ? ' seated' : ''}`);
+    if (layout && stepState.room === 'done') bits.push(`layout: ${layout.name}`);
+    const headline = ros
+      ? bits.map(esc).join(' &middot; ')
+      : 'Staging failed &mdash; the lesson was left as it was.';
+    const summaryEl = backdrop.querySelector('#as-summary');
+    if (!summaryEl) return;
+    summaryEl.innerHTML = `
+      <div style="padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-radius:var(--radius-md);">
+        <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-2);">${headline}</div>
+        <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;align-items:center;">
+          ${ros ? `
+          <button class="btn btn-secondary btn-sm" id="as-review">Review segments</button>
+          <button class="btn btn-primary btn-sm" id="as-present" title="Open the student-facing class screen">&#9654; Present now</button>` : ''}
+          <button class="btn btn-ghost btn-sm" id="as-done-close" style="margin-left:auto;">Close</button>
+        </div>
+      </div>`;
+    summaryEl.querySelector('#as-review')?.addEventListener('click', () => {
+      close();
+      const fresh = Store.getLesson(lessonId);
+      if (fresh?.runOfShow) showRunOfShowEditor(container, fresh.runOfShow);
+    });
+    summaryEl.querySelector('#as-present')?.addEventListener('click', () => {
+      close();
+      navigate(`/present/${lessonId}`);
+    });
+    summaryEl.querySelector('#as-done-close')?.addEventListener('click', close);
+  };
+
+  cancelBtn.addEventListener('click', close);
+  confirmBtn.addEventListener('click', async () => {
+    if (!classSel.value) return;
+    const roomChoice = roomChoiceNow();
+    const d = parseInt(backdrop.querySelector('#as-duration')?.value, 10);
+    const opts = {
+      classId: classSel.value,
+      roomChoice,
+      layoutId: roomChoice === 'linked' ? (layoutSel?.value || null)
+        : roomChoice === 'auto' ? (recent?.id || null) : null,
+      duration: Number.isFinite(d) ? Math.min(240, Math.max(10, d)) : 55,
+      wantGroups: backdrop.querySelector('#as-groups')?.checked ?? true,
+      wantSeats: (seatToggle?.checked ?? false) && roomChoice !== 'skip'
+    };
+    // Flip the modal to the progress strip; closing early is safe because
+    // every finished step has already persisted its complete result.
+    backdrop.querySelector('#as-form').style.display = 'none';
+    backdrop.querySelector('#as-progress').style.display = '';
+    confirmBtn.style.display = 'none';
+    cancelBtn.textContent = 'Close';
+    await runPipeline(opts);
+  });
 }
 
 /* ── Last grouping result for seat assignment ── */
@@ -3639,7 +4156,11 @@ function renderJourneyBar(container) {
       } else if (step === 'components') {
         container.querySelector('#lesson-components')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else if (step === 'stage') {
-        container.querySelector('#stage-lesson-btn')?.click();
+        // Unstaged → the one-prompt auto-stage flow (WS-3); staged → the
+        // manual button, which reopens the editor without an AI call.
+        const fresh = currentLessonId ? Store.getLesson(currentLessonId) : null;
+        if (fresh?.runOfShow?.segments?.length) container.querySelector('#stage-lesson-btn')?.click();
+        else container.querySelector('#auto-stage-btn')?.click();
       } else if (step === 'place') {
         // Placement lives in the run-of-show editor ("Place in room" per segment)
         const fresh = currentLessonId ? Store.getLesson(currentLessonId) : null;
@@ -3889,6 +4410,18 @@ function renderSpatialSection(container, forceShow = false) {
 }
 
 /* ══════════ Linked Resources Section ══════════ */
+
+/* Badge + label per attachedResources type. Unknown/legacy types keep the
+ * historical Source styling so old lessons render unchanged. */
+const RESOURCE_META = {
+  stimulus:   { badge: 'badge-blue',   label: 'Stimulus' },
+  source:     { badge: 'badge-amber',  label: 'Source' },
+  simulation: { badge: 'badge-green',  label: 'Simulation' },
+  deck:       { badge: 'badge-violet', label: 'Deck' },
+  audio:      { badge: 'badge-rose',   label: 'Audio' }
+};
+const resourceMeta = (type) => RESOURCE_META[type] || { badge: 'badge-amber', label: 'Source' };
+
 function renderLinkedResourcesSection(container) {
   const el = container.querySelector('#linked-resources-section');
   if (!el) return;
@@ -3897,7 +4430,8 @@ function renderLinkedResourcesSection(container) {
   const attachedResources = currentLesson?.attachedResources || [];
   const stimulusLib = Store.getStimulusLibrary();
   const sourceLib = Store.getSourceLibrary();
-  const hasLibrary = stimulusLib.length > 0 || sourceLib.length > 0;
+  const hasLibrary = stimulusLib.length > 0 || sourceLib.length > 0
+    || listDeckMeta().length > 0 || listAudioMeta().length > 0;
 
   if (attachedResources.length === 0 && !hasLibrary) {
     el.innerHTML = '';
@@ -3917,14 +4451,18 @@ function renderLinkedResourcesSection(container) {
           Link Resources
         </button>` : ''}
       </div>
-      ${!currentLessonId ? `<p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Save the lesson first, then link Stimulus Material or Source Analysis sets.</p>` : ''}
-      ${currentLessonId && attachedResources.length === 0 && hasLibrary ? `<p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-2);">Attach Stimulus Material or Source Analysis sets to this lesson.</p>` : ''}
+      ${!currentLessonId ? `<p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Save the lesson first, then link Stimulus Material, Source Analysis sets, slide decks or audio clips.</p>` : ''}
+      ${currentLessonId && attachedResources.length === 0 && hasLibrary ? `<p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-2);">Attach Stimulus Material, Source Analysis sets, slide decks or audio clips to this lesson.</p>` : ''}
       ${attachedResources.length > 0 ? `
         <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
           ${attachedResources.map((r, idx) => `
             <div style="display:flex;align-items:center;gap:var(--sp-1);padding:var(--sp-1) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-lg);font-size:0.8125rem;border:1px solid var(--border-light);">
-              <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : 'badge-amber'}" style="font-size:0.625rem;">${r.type === 'stimulus' ? 'Stimulus' : 'Source'}</span>
-              <span style="color:var(--ink);">${esc(r.title)}</span>
+              <span class="badge ${resourceMeta(r.type).badge}" style="font-size:0.625rem;">${resourceMeta(r.type).label}</span>
+              ${(r.type === 'deck' || r.type === 'audio') && r.id ? `
+                <button class="btn btn-ghost btn-sm open-material-btn" data-type="${r.type}" data-id="${escAttr(r.id)}" data-title="${escAttr(r.title || '')}" title="${r.type === 'deck' ? 'Open deck in a new tab' : 'Play audio clip'}" style="padding:1px 4px;color:var(--ink);">
+                  ${esc(r.title)} <span aria-hidden="true">${r.type === 'deck' ? '&#8599;' : '&#9654;'}</span>
+                </button>`
+              : `<span style="color:var(--ink);">${esc(r.title)}</span>`}
               <button class="btn btn-ghost btn-sm unlink-resource-btn" data-idx="${idx}" title="Remove" style="padding:1px 3px;color:var(--danger);margin-left:2px;">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
@@ -3937,6 +4475,19 @@ function renderLinkedResourcesSection(container) {
   // Wire link resources button
   el.querySelector('#link-resources-btn')?.addEventListener('click', () => {
     showLinkResourcesModal(container);
+  });
+
+  // Wire deck/audio open buttons (WS-4 materials)
+  el.querySelectorAll('.open-material-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (btn.dataset.type === 'deck') {
+        const ok = await openDeckById(btn.dataset.id);
+        if (!ok) showToast('Deck content not found on this device.', 'danger');
+      } else {
+        showAudioPlaybackModal(btn.dataset.id, btn.dataset.title);
+      }
+    });
   });
 
   // Wire unlink buttons
@@ -3964,7 +4515,9 @@ function showLinkResourcesModal(container) {
 
   const allResources = [
     ...stimulusLib.map(s => ({ type: 'stimulus', id: s.id, title: s.title || s.topic || 'Untitled Stimulus' })),
-    ...sourceLib.map(s => ({ type: 'source', id: s.id, title: s.title || s.topic || 'Untitled Source' }))
+    ...sourceLib.map(s => ({ type: 'source', id: s.id, title: s.title || s.topic || 'Untitled Source' })),
+    ...listDeckMeta().map(d => ({ type: 'deck', id: d.id, title: d.title || 'Untitled Deck' })),
+    ...listAudioMeta().map(a => ({ type: 'audio', id: a.id, title: a.title || 'Untitled Clip' }))
   ];
 
   const available = allResources.filter(r => !attachedIds.has(r.id));
@@ -3984,7 +4537,7 @@ function showLinkResourcesModal(container) {
         ${available.map(r => `
           <label style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius-md);cursor:pointer;transition:background 0.15s;" class="resource-option">
             <input type="checkbox" class="resource-check" data-type="${r.type}" data-id="${r.id}" data-title="${escAttr(r.title)}" />
-            <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : 'badge-amber'}" style="font-size:0.625rem;flex-shrink:0;">${r.type === 'stimulus' ? 'Stimulus' : 'Source'}</span>
+            <span class="badge ${resourceMeta(r.type).badge}" style="font-size:0.625rem;flex-shrink:0;">${resourceMeta(r.type).label}</span>
             <span style="font-size:0.8125rem;color:var(--ink);">${esc(r.title)}</span>
           </label>
         `).join('')}
@@ -4014,6 +4567,318 @@ function showLinkResourcesModal(container) {
     close();
     renderLinkedResourcesSection(container);
   });
+}
+
+/* ══════════ WS-4 Materials: Slide Deck + Audio Clip flows ══════════ */
+
+// Honest-copy constant: the TTS pipeline produces voices only. Repeated in
+// every audio modal so the teacher is never surprised by the output.
+const AUDIO_HONESTY = 'AI voices only &mdash; no music or sound effects.';
+const AUDIO_VOICES = { A: 'Kore', B: 'Puck' };  // fixed sensible defaults
+const AUDIO_STYLES = [
+  { id: 'murder mystery clip', label: 'Murder mystery clip', speakers: 2 },
+  { id: 'news soundbite',      label: 'News soundbite',      speakers: 1 },
+  { id: 'dialogue',            label: 'Two-voice dialogue',  speakers: 2 },
+  { id: 'narration',           label: 'Narration',           speakers: 1 }
+];
+
+/** Append one {type,id,title} entry to the current lesson's attachedResources. */
+function attachMaterialToLesson(entry) {
+  if (!currentLessonId) return;
+  const lesson = Store.getLesson(currentLessonId);
+  Store.updateLesson(currentLessonId, {
+    attachedResources: [...(lesson?.attachedResources || []), entry]
+  });
+}
+
+/* ── Slide deck: generate from the current plan → preview modal ── */
+async function generateDeckFlow(container) {
+  if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+  if (!currentLessonId) { showToast('Save the lesson first — materials attach to a saved lesson.', 'danger'); return; }
+  const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+  if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+  const lesson = Store.getLesson(currentLessonId);
+  const args = {
+    plan: aiMsgs.map(m => m.content).join('\n\n'),
+    lessonTitle: lesson?.title || 'Lesson',
+    className: planClassContext?.name || '',
+    slideTarget: 8
+  };
+  const resultEl = container.querySelector('#ai-result');
+  if (resultEl) {
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Generating slide deck&hellip;</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+  }
+  try {
+    const deck = await generateDeck(args);
+    if (resultEl) resultEl.innerHTML = '';
+    showDeckPreviewModal(container, deck, args);
+  } catch (err) {
+    if (resultEl) resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${esc(err.message)}</div>`;
+  }
+}
+
+function showDeckPreviewModal(container, deck, args) {
+  const { backdrop, close } = openModal({
+    title: '&#128444;&#65039; Slide Deck Preview',
+    width: 620,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">
+        <strong>${esc(deck.title)}</strong> &middot; ${deck.slides.length} slides &middot;
+        one self-contained HTML file (works offline) &mdash; present in a browser tab, or print it to PDF.
+      </p>
+      <div style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp-2);">
+        ${deck.slides.map((s, i) => `
+          <div style="border:1px solid var(--border-light);border-radius:var(--radius-md);padding:var(--sp-2) var(--sp-3);">
+            <div style="display:flex;align-items:baseline;gap:var(--sp-2);">
+              <span style="flex-shrink:0;font-size:0.6875rem;font-weight:700;color:var(--accent);">${i + 1}</span>
+              <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">${esc(s.title || `Slide ${i + 1}`)}</span>
+            </div>
+            ${s.bullets.length ? `<ul style="margin:4px 0 0 22px;padding:0;">${s.bullets.map(b => `<li style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;">${esc(b)}</li>`).join('')}</ul>` : ''}
+            ${s.notes ? `<div style="margin:4px 0 0 22px;font-size:0.75rem;color:var(--ink-muted);font-style:italic;">Note: ${esc(s.notes)}</div>` : ''}
+          </div>`).join('')}
+      </div>`,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-ghost" data-action="regen">Regenerate</button>
+      <button class="btn btn-ghost" data-action="download">Download .html</button>
+      <button class="btn btn-primary" data-action="attach">Save &amp; attach</button>`
+  });
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="download"]').addEventListener('click', () => {
+    downloadBlob(new Blob([compileDeckHTML(deck)], { type: 'text/html' }), deckFilename(deck.title));
+  });
+  backdrop.querySelector('[data-action="regen"]').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Regenerating…';
+    try {
+      const fresh = await generateDeck(args);
+      close();
+      showDeckPreviewModal(container, fresh, args);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Regenerate';
+      showToast(`Regenerate failed: ${err.message}`, 'danger');
+    }
+  });
+  backdrop.querySelector('[data-action="attach"]').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const meta = await saveDeckMaterial({
+      lessonId: currentLessonId,
+      title: deck.title,
+      html: compileDeckHTML(deck),
+      slideCount: deck.slides.length
+    });
+    if (!meta) {
+      btn.disabled = false;
+      showToast('Could not store the deck — browser storage unavailable.', 'danger');
+      return;
+    }
+    attachMaterialToLesson({ type: 'deck', id: meta.id, title: meta.title });
+    showToast('Slide deck attached to this lesson!', 'success');
+    close();
+    renderLinkedResourcesSection(container);
+  });
+}
+
+/* ── Audio clip: form → script preview (editable) → voice → attach ── */
+function showAudioClipModal(container) {
+  const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const { backdrop, close } = openModal({
+    title: '&#127908; Audio Clip',
+    width: 520,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">
+        Generate a short scripted clip for this lesson, review the script, then voice it.<br>
+        <em>${AUDIO_HONESTY}</em>
+      </p>
+      <div class="input-group" style="margin-bottom:var(--sp-3);">
+        <label class="input-label">Topic</label>
+        <input class="input" id="audio-topic" value="${escAttr(lesson?.title || '')}" placeholder="e.g. The fall of Singapore, 1942" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-3);">
+        <div class="input-group">
+          <label class="input-label">Style</label>
+          <select class="input" id="audio-style">
+            ${AUDIO_STYLES.map(s => `<option value="${escAttr(s.id)}">${esc(s.label)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Length</label>
+          <select class="input" id="audio-minutes">
+            ${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === 3 ? ' selected' : ''}>${n} min</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <p style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Voices are fixed sensible defaults (${esc(AUDIO_VOICES.A)} &amp; ${esc(AUDIO_VOICES.B)}).</p>
+      <div id="audio-form-status" style="margin-top:var(--sp-2);font-size:0.8125rem;color:var(--danger);"></div>`,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="script">Generate script</button>`
+  });
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="script"]').addEventListener('click', async (e) => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const topic = backdrop.querySelector('#audio-topic').value.trim();
+    if (!topic) { showToast('Please enter a topic.', 'danger'); return; }
+    const styleId = backdrop.querySelector('#audio-style').value;
+    const minutes = Number(backdrop.querySelector('#audio-minutes').value) || 3;
+    const speakers = (AUDIO_STYLES.find(s => s.id === styleId)?.speakers) || 2;
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Writing script…';
+    try {
+      const script = await generatePodcastScript({ topic, style: styleId, minutes, speakers });
+      close();
+      showAudioScriptModal(container, script, { topic, style: styleId, minutes, speakers });
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Generate script';
+      const status = backdrop.querySelector('#audio-form-status');
+      if (status) status.textContent = `Error: ${err.message}`;
+    }
+  });
+}
+
+function showAudioScriptModal(container, script, opts) {
+  const hasKey = !!Store.get('apiKey');
+  const { backdrop, close } = openModal({
+    title: '&#127908; Audio Clip &mdash; Script',
+    width: 560,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">
+        <strong>${esc(script.title)}</strong> &middot; ${esc(opts.style)} &middot; ~${opts.minutes} min.
+        Edit any turn below, then voice it. <em>${AUDIO_HONESTY}</em>
+      </p>
+      <div style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp-2);">
+        ${script.turns.map(t => `
+          <div class="input-group">
+            <label class="input-label" style="font-size:0.6875rem;">Speaker ${esc(t.speaker)} (${esc(t.speaker === 'B' ? AUDIO_VOICES.B : AUDIO_VOICES.A)})</label>
+            <textarea class="input audio-turn" data-speaker="${escAttr(t.speaker)}" rows="2">${esc(t.text)}</textarea>
+          </div>`).join('')}
+      </div>
+      <div id="audio-voice-status" style="margin-top:var(--sp-3);font-size:0.8125rem;color:var(--danger);line-height:1.5;"></div>`,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-ghost" data-action="browser-voice" title="Reads the script with your browser's built-in voices — no API key needed">Play with browser voice &mdash; free, robotic</button>
+      <button class="btn btn-primary" data-action="voice"${hasKey ? '' : ' disabled title="Add your Gemini API key in Settings to use AI voices"'}>&#127908; Voice it</button>`
+  });
+  const collectTurns = () => [...backdrop.querySelectorAll('.audio-turn')]
+    .map(t => ({ speaker: t.dataset.speaker, text: t.value.trim() }))
+    .filter(t => t.text);
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="browser-voice"]').addEventListener('click', () => {
+    playWithBrowserVoice(collectTurns());
+  });
+  backdrop.querySelector('[data-action="voice"]').addEventListener('click', async (e) => {
+    const turns = collectTurns();
+    if (turns.length === 0) { showToast('The script is empty.', 'danger'); return; }
+    const btn = e.currentTarget;
+    const status = backdrop.querySelector('#audio-voice-status');
+    btn.disabled = true;
+    btn.textContent = 'Voicing…';
+    if (status) {
+      status.style.color = 'var(--ink-muted)';
+      status.textContent = 'Generating AI voices — this can take a little while…';
+    }
+    try {
+      const result = await generateSpeech({ turns, voices: AUDIO_VOICES, style: opts.style });
+      close();
+      showAudioResultModal(container, result, { ...script, turns }, opts);
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '&#127908; Voice it';
+      if (status) {
+        status.style.color = 'var(--danger)';
+        status.textContent = `AI voicing failed: ${err.message} You can still use "Play with browser voice" — free, robotic.`;
+      }
+    }
+  });
+}
+
+function showAudioResultModal(container, result, script, opts) {
+  const url = URL.createObjectURL(result.blob);
+  const { backdrop, close } = openModal({
+    title: '&#127908; Audio Clip &mdash; Preview',
+    width: 480,
+    onClose: () => setTimeout(() => URL.revokeObjectURL(url), 1000),
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">
+        <strong>${esc(script.title)}</strong> &middot; ${esc(opts.style)}${result.durationHint ? ` &middot; ~${result.durationHint}s` : ''}<br>
+        <em>${AUDIO_HONESTY}</em>
+      </p>
+      <audio controls src="${url}" style="width:100%;"></audio>`,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Discard</button>
+      <button class="btn btn-ghost" data-action="download">Download .wav</button>
+      <button class="btn btn-primary" data-action="attach">Save &amp; attach</button>`
+  });
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="download"]').addEventListener('click', () => {
+    downloadBlob(result.blob, slugify(script.title) + '.wav');
+  });
+  backdrop.querySelector('[data-action="attach"]').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const meta = await saveAudioMaterial({
+      lessonId: currentLessonId,
+      title: script.title,
+      style: opts.style,
+      blob: result.blob
+    });
+    if (!meta) {
+      btn.disabled = false;
+      showToast('Could not store the clip — browser storage unavailable.', 'danger');
+      return;
+    }
+    attachMaterialToLesson({ type: 'audio', id: meta.id, title: meta.title });
+    showToast('Audio clip attached to this lesson!', 'success');
+    close();
+    renderLinkedResourcesSection(container);
+  });
+}
+
+/* Browser speechSynthesis fallback — free and robotic, but works with no
+ * API key and when the TTS tier is unavailable. */
+function playWithBrowserVoice(turns) {
+  const synth = window.speechSynthesis;
+  if (!synth || typeof SpeechSynthesisUtterance === 'undefined') {
+    showToast('This browser has no built-in voices.', 'danger');
+    return;
+  }
+  if (!turns.length) { showToast('The script is empty.', 'danger'); return; }
+  synth.cancel();
+  const voices = synth.getVoices();
+  turns.forEach(t => {
+    const u = new SpeechSynthesisUtterance(t.text);
+    // Two distinct browser voices when available, so A/B stay tellable-apart
+    if (voices.length > 1 && t.speaker === 'B') u.voice = voices[1];
+    else if (voices.length > 0) u.voice = voices[0];
+    synth.speak(u);
+  });
+  showToast("Playing with your browser's built-in voice…", 'success');
+}
+
+/** Small playback modal for an attached audio clip (planner surface). */
+async function showAudioPlaybackModal(id, title) {
+  const blob = await getMediaContent(id);
+  if (!(blob instanceof Blob)) {
+    showToast('Audio content not found on this device.', 'danger');
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const { backdrop, close } = openModal({
+    title: `&#127911; ${esc(title || 'Audio clip')}`,
+    width: 420,
+    onClose: () => setTimeout(() => URL.revokeObjectURL(url), 1000),
+    body: `
+      <audio controls src="${url}" style="width:100%;"></audio>
+      <p style="font-size:0.75rem;color:var(--ink-muted);margin-top:var(--sp-2);">${AUDIO_HONESTY}</p>`,
+    footer: `<button class="btn btn-secondary" data-action="close">Close</button>`
+  });
+  backdrop.querySelector('[data-action="close"]').addEventListener('click', close);
 }
 
 /* ══════════ Resizable Panel Handle ══════════ */
