@@ -1076,6 +1076,10 @@ export function render(container) {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                   Save
                 </button>
+                <button class="btn btn-primary btn-sm" id="auto-stage-btn" title="Stage, group and seat this lesson in one go">
+                  <span aria-hidden="true">&#9889;</span>
+                  Auto-stage
+                </button>
                 <button class="btn btn-secondary btn-sm" id="stage-lesson-btn" title="Break this plan into a runnable sequence of segments">
                   <span aria-hidden="true">&#127916;</span>
                   Stage lesson
@@ -1574,6 +1578,12 @@ export function render(container) {
       btn.disabled = false;
       btn.innerHTML = originalHTML;
     }
+  });
+
+  // Auto-stage (WS-3) — stage, group, room-link and seat in one pre-flight
+  // pipeline. The manual Stage button above stays untouched.
+  container.querySelector('#auto-stage-btn')?.addEventListener('click', () => {
+    showAutoStageModal(container);
   });
 
   // Print / Export (includes all components)
@@ -3005,6 +3015,418 @@ function buildPlacementGroups(seg) {
   return groups;
 }
 
+/* ══════════ Auto-stage (WS-3): one-prompt staging pipeline ══════════ */
+
+/* "Let Co-Cher choose" resolves to the teacher's most recent saved layout
+ * (by createdAt; later entries win ties). Null when nothing is saved. */
+function mostRecentLayout(layouts) {
+  return (layouts || []).reduce((best, l) =>
+    (!best || (l.createdAt || 0) >= (best.createdAt || 0)) ? l : best, null);
+}
+
+/* Deterministic auto-placement (no AI). Seatable furniture — items whose
+ * catalog id starts with 'desk' or is 'stand_table', falling back to all
+ * items — is ordered row-major (y bands with 60px tolerance, then x), split
+ * into as many contiguous clusters as the segment has groups (balanced
+ * sizes, first remainder clusters get one extra), and group i takes cluster
+ * i. Writes EXACTLY the manual "Place groups" shape the Spatial Designer
+ * produces: grouping.groups[i].itemIds (instance iids) + seatMap
+ * { itemIid: [studentIds] } filled round-robin in member order; a group
+ * with no items or no members carries no seatMap. Returns true when at
+ * least one group received items. */
+function autoPlaceSegment(seg, layout) {
+  const items = Array.isArray(layout?.items) ? layout.items : [];
+  let seatable = items.filter(it => String(it?.id || '').startsWith('desk') || it?.id === 'stand_table');
+  if (seatable.length === 0) seatable = items.slice();
+
+  const byY = [...seatable].sort((a, b) => ((a.y || 0) - (b.y || 0)) || ((a.x || 0) - (b.x || 0)));
+  const rows = [];
+  let row = null, rowY = -Infinity;
+  byY.forEach(it => {
+    const y = Number(it.y) || 0;
+    if (!row || y - rowY > 60) { row = []; rows.push(row); rowY = y; }
+    row.push(it);
+  });
+  const ordered = rows.flatMap(r => [...r].sort((a, b) => ((a.x || 0) - (b.x || 0)) || ((a.y || 0) - (b.y || 0))));
+
+  const groups = Array.isArray(seg.grouping?.groups) ? seg.grouping.groups : [];
+  if (groups.length === 0 || ordered.length === 0) return false;
+
+  const base = Math.floor(ordered.length / groups.length);
+  const extra = ordered.length % groups.length;
+  let cursor = 0;
+
+  seg.grouping = {
+    mode: seg.grouping?.mode || 'groups',
+    groups: groups.map((g, i) => {
+      const size = base + (i < extra ? 1 : 0);
+      const cluster = ordered.slice(cursor, cursor + size);
+      cursor += size;
+      const itemIds = cluster.map(it => String(it.iid ?? it.id));
+      const studentIds = Array.isArray(g.studentIds) ? g.studentIds : [];
+      const next = { ...g, name: g.name || `Group ${i + 1}`, studentIds, itemIds };
+      if (itemIds.length > 0 && studentIds.length > 0) {
+        const seatMap = {};
+        itemIds.forEach(iid => { seatMap[iid] = []; });
+        studentIds.forEach((sid, j) => { seatMap[itemIds[j % itemIds.length]].push(sid); });
+        next.seatMap = seatMap;
+      } else {
+        delete next.seatMap;
+      }
+      return next;
+    })
+  };
+  return true;
+}
+
+/* Pre-flight modal + sequential pipeline: Stage (one AI call) → Group (one
+ * AI call, reused across every groups/pairs segment) → link Room → auto-seat
+ * (deterministic). Every ingredient is confirmed by the teacher up front —
+ * nothing is chosen for them unless they delegate it ("Let Co-Cher choose").
+ * Each step persists its own COMPLETE result via Store.updateLesson before
+ * the next begins, so a later failure never rolls back or half-writes an
+ * earlier one; failed steps show a short reason and the run continues where
+ * sensible. */
+function showAutoStageModal(container) {
+  const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  if (!lesson) {
+    showToast('Save the lesson first — auto-staging attaches the run of show to a saved lesson.', 'danger');
+    return;
+  }
+  if (!chatMessages.some(m => m.role === 'assistant')) {
+    showToast('Chat with Co-Cher first to create a plan, then auto-stage it.', 'danger');
+    return;
+  }
+  if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+
+  const classes = Store.getClasses();
+  const savedLayouts = Store.getSavedLayouts() || [];
+  const recent = mostRecentLayout(savedLayouts);
+  const preselectClassId = planClassContext?.id || lesson.classId || '';
+  const defaultDuration = buildRunOfShowRequest(lesson).durationHint || 55;
+  const defaultRoom = (lesson.spatialLayout && savedLayouts.some(l => l.id === lesson.spatialLayout))
+    ? 'linked' : (recent ? 'auto' : 'skip');
+
+  const AS_STEPS = [
+    { key: 'staging', label: 'Staging' },
+    { key: 'grouping', label: 'Grouping' },
+    { key: 'room', label: 'Room' },
+    { key: 'seating', label: 'Seating' },
+    { key: 'done', label: 'Done' }
+  ];
+  const AS_PILL_BASE = 'display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:var(--radius-full);font-size:0.6875rem;font-weight:600;white-space:nowrap;border:1px solid var(--border-light);color:var(--ink-faint);background:transparent;';
+  const radioLabelStyle = (disabled) =>
+    `display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;color:var(--ink);${disabled ? 'opacity:0.55;' : 'cursor:pointer;'}`;
+
+  const { backdrop, close } = openModal({
+    title: '&#9889; Auto-stage',
+    width: 560,
+    body: `
+      <style>
+        .as-spin{display:inline-block;width:10px;height:10px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:as-rotate .7s linear infinite;}
+        @keyframes as-rotate{to{transform:rotate(360deg)}}
+      </style>
+      <div id="as-form">
+        <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-4);">
+          One pass: stage the plan into segments, form groups, link the room and seat everyone.
+        </p>
+        ${lesson.runOfShow?.segments?.length ? `
+        <div style="font-size:0.75rem;color:var(--warning,#b45309);background:var(--bg-subtle);border-radius:var(--radius-md);padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-3);">
+          This lesson is already staged &mdash; auto-staging replaces the current segments.
+        </div>` : ''}
+        <div class="input-group">
+          <label class="input-label">Class <span style="color:var(--danger);">*</span></label>
+          <select class="input" id="as-class">
+            <option value="">Choose a class&hellip;</option>
+            ${classes.map(c => `<option value="${esc(c.id)}" ${c.id === preselectClassId ? 'selected' : ''}>${esc(c.name)} (${(c.students || []).length} students)</option>`).join('')}
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Room source</label>
+          <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
+            <label style="${radioLabelStyle(savedLayouts.length === 0)}">
+              <input type="radio" name="as-room" value="linked" ${defaultRoom === 'linked' ? 'checked' : ''} ${savedLayouts.length === 0 ? 'disabled' : ''} />
+              <span style="flex-shrink:0;">Linked / saved layout</span>
+              ${savedLayouts.length > 0 ? `
+              <select class="input" id="as-layout" style="flex:1;min-width:0;padding:4px 8px;font-size:0.8125rem;">
+                ${savedLayouts.map(l => `<option value="${esc(l.id)}" ${l.id === (lesson.spatialLayout || recent?.id) ? 'selected' : ''}>${esc(l.name)} (${l.studentCount || '?'} students)</option>`).join('')}
+              </select>` : `<span style="font-size:0.6875rem;color:var(--ink-faint);">&mdash; no saved layouts yet</span>`}
+            </label>
+            <label style="${radioLabelStyle(!recent)}">
+              <input type="radio" name="as-room" value="auto" ${defaultRoom === 'auto' ? 'checked' : ''} ${recent ? '' : 'disabled'} />
+              <span>Let Co-Cher choose ${recent
+                ? `<span style="color:var(--ink-muted);font-size:0.75rem;">(most recent: ${esc(recent.name)})</span>`
+                : `<span style="color:var(--ink-faint);font-size:0.75rem;">&mdash; save a layout in the Spatial Designer first</span>`}</span>
+            </label>
+            <label style="${radioLabelStyle(false)}">
+              <input type="radio" name="as-room" value="skip" ${defaultRoom === 'skip' ? 'checked' : ''} />
+              <span>Skip room &amp; seating</span>
+            </label>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Duration (minutes)</label>
+          <input type="number" class="input" id="as-duration" min="10" max="240" value="${esc(String(defaultDuration))}" style="width:110px;" />
+        </div>
+        <div class="input-group" style="display:flex;gap:var(--sp-5);flex-wrap:wrap;margin-bottom:0;">
+          <label style="display:inline-flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;color:var(--ink);cursor:pointer;">
+            <input type="checkbox" id="as-groups" checked /> Generate groups
+          </label>
+          <label style="display:inline-flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;color:var(--ink);cursor:pointer;">
+            <input type="checkbox" id="as-seat" ${defaultRoom === 'skip' ? 'disabled' : 'checked'} /> Auto-seat groups
+          </label>
+        </div>
+      </div>
+      <div id="as-progress" style="display:none;">
+        <div id="as-steps" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:var(--sp-2) 0;">
+          ${AS_STEPS.map((st, i) => `
+            ${i > 0 ? '<span style="color:var(--ink-faint);font-size:0.625rem;flex-shrink:0;">&rarr;</span>' : ''}
+            <span class="as-step" data-step="${st.key}" style="${AS_PILL_BASE}"><span class="as-step-icon" style="display:inline-flex;align-items:center;"></span>${st.label}</span>`).join('')}
+        </div>
+        <div id="as-step-notes"></div>
+        <div id="as-summary" style="margin-top:var(--sp-3);"></div>
+      </div>
+    `,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="confirm" title="Run the pipeline with these choices">Auto-stage</button>
+    `
+  });
+
+  const classSel = backdrop.querySelector('#as-class');
+  const layoutSel = backdrop.querySelector('#as-layout');
+  const seatToggle = backdrop.querySelector('#as-seat');
+  const cancelBtn = backdrop.querySelector('[data-action="cancel"]');
+  const confirmBtn = backdrop.querySelector('[data-action="confirm"]');
+
+  // Class is mandatory — Confirm stays disabled without one
+  const syncConfirm = () => { confirmBtn.disabled = !classSel.value; };
+  classSel.addEventListener('change', syncConfirm);
+  syncConfirm();
+
+  // "Skip room & seating" turns the seat toggle off; leaving skip restores it
+  let seatWanted = seatToggle ? seatToggle.checked : false;
+  seatToggle?.addEventListener('change', () => { seatWanted = seatToggle.checked; });
+  const roomChoiceNow = () => backdrop.querySelector('input[name="as-room"]:checked')?.value || 'skip';
+  backdrop.querySelectorAll('input[name="as-room"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const skip = roomChoiceNow() === 'skip';
+      if (seatToggle) {
+        seatToggle.disabled = skip;
+        seatToggle.checked = skip ? false : seatWanted;
+      }
+    });
+  });
+  // Picking from the layout select is an implicit "linked" choice
+  layoutSel?.addEventListener('change', () => {
+    const linked = backdrop.querySelector('input[name="as-room"][value="linked"]');
+    if (linked && !linked.disabled && !linked.checked) {
+      linked.checked = true;
+      linked.dispatchEvent(new Event('change'));
+    }
+  });
+
+  /* Progress strip state: pending | active (spinner) | done (✓) | skip (–) |
+   * fail (✗). Skip/fail reasons collect beneath the strip. */
+  const stepLabel = Object.fromEntries(AS_STEPS.map(st => [st.key, st.label]));
+  const stepState = {};
+  const setStep = (key, state, note) => {
+    stepState[key] = state;
+    const pill = backdrop.querySelector(`.as-step[data-step="${key}"]`);
+    if (!pill) return;
+    const styles = {
+      pending: 'border:1px solid var(--border-light);color:var(--ink-faint);background:transparent;',
+      active: 'border:1px solid var(--accent);color:var(--accent);background:var(--bg-card);',
+      done: 'border:1px solid var(--growth,#2c7a4b);color:#fff;background:var(--growth,#2c7a4b);',
+      skip: 'border:1px solid var(--border-light);color:var(--ink-faint);background:var(--bg-subtle);',
+      fail: 'border:1px solid var(--danger);color:var(--danger);background:transparent;'
+    };
+    pill.style.cssText = AS_PILL_BASE + (styles[state] || styles.pending);
+    const icon = pill.querySelector('.as-step-icon');
+    if (icon) {
+      icon.innerHTML = state === 'active' ? '<span class="as-spin"></span>'
+        : state === 'done' ? '&#10003;'
+        : state === 'fail' ? '&#10007;'
+        : state === 'skip' ? '&ndash;' : '';
+    }
+    if (note && (state === 'fail' || state === 'skip')) {
+      backdrop.querySelector('#as-step-notes')?.insertAdjacentHTML('beforeend',
+        `<div style="font-size:0.6875rem;color:${state === 'fail' ? 'var(--danger)' : 'var(--ink-muted)'};margin-top:2px;">${state === 'fail' ? '&#10007;' : '&ndash;'} ${esc(stepLabel[key] || key)}: ${esc(String(note).slice(0, 120))}</div>`);
+    }
+  };
+
+  const runPipeline = async ({ classId, roomChoice, layoutId, duration, wantGroups, wantSeats }) => {
+    const lessonId = currentLessonId;
+    const cls = Store.getClasses().find(c => c.id === classId) || null;
+    const roster = cls?.students || [];
+    const portraitText = classId ? (Store.getPortraitPromptText?.(classId) || '') : '';
+    // Sync steps resolve instantly — a beat keeps the strip readable
+    const beat = () => new Promise(r => setTimeout(r, 180));
+
+    // Adopt the chosen class when the lesson has none — seat maps and Present
+    // resolve student names through lesson.classId. An existing link is kept.
+    if (cls && !Store.getLesson(lessonId)?.classId) Store.updateLesson(lessonId, { classId });
+
+    let ros = null;
+    let layout = null;
+    let builtGroups = null;
+    let seatedSegs = 0;
+
+    // a. Staging — one AI call; the whole runOfShow persists before anything
+    // else touches it (never a half-written segment).
+    setStep('staging', 'active');
+    try {
+      const req = buildRunOfShowRequest(Store.getLesson(lessonId));
+      ros = await generateRunOfShow({
+        plan: req.plan,
+        className: cls?.name || req.className,
+        portraitText,
+        durationHint: duration
+      });
+      Store.updateLesson(lessonId, { runOfShow: ros });
+      setStep('staging', 'done');
+    } catch (err) {
+      setStep('staging', 'fail', err.message);
+    }
+
+    // b. Grouping — ONE suggestGrouping call keyed to the first groups/pairs
+    // segment's activity; the result is copied into every such segment.
+    const groupable = ros ? ros.segments.filter(s => s.grouping?.mode === 'groups' || s.grouping?.mode === 'pairs') : [];
+    if (!ros) setStep('grouping', 'skip', 'staging failed');
+    else if (!wantGroups) setStep('grouping', 'skip', 'turned off');
+    else if (groupable.length === 0) setStep('grouping', 'skip', 'no group or pair segments');
+    else if (roster.length === 0) setStep('grouping', 'skip', 'no students in this class');
+    else {
+      setStep('grouping', 'active');
+      try {
+        const activityType = groupable[0].activity || groupable[0].name || 'Collaborative group work';
+        const result = await suggestGrouping(roster, activityType, { portraitText });
+        // studentNames → studentIds against the roster, case-insensitive;
+        // unmatched names are simply skipped (same policy as the manual tool)
+        const nameToId = new Map(roster.map(st => [String(st.name).trim().toLowerCase(), st.id]));
+        builtGroups = result.groups.map((g, i) => ({
+          name: g.name || `Group ${i + 1}`,
+          studentNames: [...(g.studentNames || [])],
+          rationale: g.rationale || '',
+          studentIds: (g.studentNames || [])
+            .map(n => nameToId.get(String(n).trim().toLowerCase()))
+            .filter(Boolean)
+        }));
+        // Each segment gets its own deep copy — placement mutates per segment
+        groupable.forEach(s => {
+          s.grouping.groups = builtGroups.map(g =>
+            ({ ...g, studentNames: [...g.studentNames], studentIds: [...g.studentIds] }));
+        });
+        Store.updateLesson(lessonId, { runOfShow: ros });
+        setStep('grouping', 'done');
+      } catch (err) {
+        builtGroups = null;
+        setStep('grouping', 'fail', err.message);
+      }
+    }
+
+    // c. Room — link the confirmed layout to the lesson
+    if (roomChoice === 'skip') setStep('room', 'skip', 'room & seating skipped');
+    else {
+      setStep('room', 'active');
+      await beat();
+      layout = (Store.getSavedLayouts() || []).find(l => l.id === layoutId) || null;
+      if (!layout) setStep('room', 'fail', 'layout no longer exists');
+      else {
+        Store.updateLesson(lessonId, { spatialLayout: layout.id });
+        setStep('room', 'done');
+      }
+    }
+
+    // d. Seating — deterministic auto-placement, no AI
+    const seatTargets = ros ? ros.segments.filter(s =>
+      (s.grouping?.mode === 'groups' || s.grouping?.mode === 'pairs') &&
+      (s.grouping.groups || []).length > 0) : [];
+    if (roomChoice === 'skip') setStep('seating', 'skip', 'room & seating skipped');
+    else if (!wantSeats) setStep('seating', 'skip', 'turned off');
+    else if (!ros) setStep('seating', 'skip', 'staging failed');
+    else if (!layout) setStep('seating', 'skip', 'no layout linked');
+    else if (seatTargets.length === 0) setStep('seating', 'skip', 'no groups to seat');
+    else {
+      setStep('seating', 'active');
+      await beat();
+      try {
+        seatTargets.forEach(s => { if (autoPlaceSegment(s, layout)) seatedSegs++; });
+        if (seatedSegs > 0) {
+          Store.updateLesson(lessonId, { runOfShow: ros });
+          setStep('seating', 'done');
+        } else {
+          setStep('seating', 'skip', 'no seatable furniture in the layout');
+        }
+      } catch (err) {
+        setStep('seating', 'fail', err.message);
+      }
+    }
+
+    // e. Refresh the cockpit with whatever the pipeline achieved
+    renderRunOfShow(container);
+    renderJourneyBar(container);
+    renderSpatialContextBar(container);
+    renderSpatialSection(container);
+
+    // f. Done — summary + next actions
+    setStep('done', 'done');
+    const segs = Store.getLesson(lessonId)?.runOfShow?.segments || [];
+    const bits = [];
+    if (ros) bits.push(`${segs.length} segment${segs.length === 1 ? '' : 's'}`);
+    if (builtGroups?.length) bits.push(`${builtGroups.length} group${builtGroups.length === 1 ? '' : 's'}${seatedSegs > 0 ? ' seated' : ''}`);
+    if (layout && stepState.room === 'done') bits.push(`layout: ${layout.name}`);
+    const headline = ros
+      ? bits.map(esc).join(' &middot; ')
+      : 'Staging failed &mdash; the lesson was left as it was.';
+    const summaryEl = backdrop.querySelector('#as-summary');
+    if (!summaryEl) return;
+    summaryEl.innerHTML = `
+      <div style="padding:var(--sp-3) var(--sp-4);background:var(--bg-subtle);border-radius:var(--radius-md);">
+        <div style="font-size:0.875rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-2);">${headline}</div>
+        <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;align-items:center;">
+          ${ros ? `
+          <button class="btn btn-secondary btn-sm" id="as-review">Review segments</button>
+          <button class="btn btn-primary btn-sm" id="as-present" title="Open the student-facing class screen">&#9654; Present now</button>` : ''}
+          <button class="btn btn-ghost btn-sm" id="as-done-close" style="margin-left:auto;">Close</button>
+        </div>
+      </div>`;
+    summaryEl.querySelector('#as-review')?.addEventListener('click', () => {
+      close();
+      const fresh = Store.getLesson(lessonId);
+      if (fresh?.runOfShow) showRunOfShowEditor(container, fresh.runOfShow);
+    });
+    summaryEl.querySelector('#as-present')?.addEventListener('click', () => {
+      close();
+      navigate(`/present/${lessonId}`);
+    });
+    summaryEl.querySelector('#as-done-close')?.addEventListener('click', close);
+  };
+
+  cancelBtn.addEventListener('click', close);
+  confirmBtn.addEventListener('click', async () => {
+    if (!classSel.value) return;
+    const roomChoice = roomChoiceNow();
+    const d = parseInt(backdrop.querySelector('#as-duration')?.value, 10);
+    const opts = {
+      classId: classSel.value,
+      roomChoice,
+      layoutId: roomChoice === 'linked' ? (layoutSel?.value || null)
+        : roomChoice === 'auto' ? (recent?.id || null) : null,
+      duration: Number.isFinite(d) ? Math.min(240, Math.max(10, d)) : 55,
+      wantGroups: backdrop.querySelector('#as-groups')?.checked ?? true,
+      wantSeats: (seatToggle?.checked ?? false) && roomChoice !== 'skip'
+    };
+    // Flip the modal to the progress strip; closing early is safe because
+    // every finished step has already persisted its complete result.
+    backdrop.querySelector('#as-form').style.display = 'none';
+    backdrop.querySelector('#as-progress').style.display = '';
+    confirmBtn.style.display = 'none';
+    cancelBtn.textContent = 'Close';
+    await runPipeline(opts);
+  });
+}
+
 /* ── Last grouping result for seat assignment ── */
 let lastGroupingResult = null;
 let lastGroupingMeta = null;
@@ -3639,7 +4061,11 @@ function renderJourneyBar(container) {
       } else if (step === 'components') {
         container.querySelector('#lesson-components')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else if (step === 'stage') {
-        container.querySelector('#stage-lesson-btn')?.click();
+        // Unstaged → the one-prompt auto-stage flow (WS-3); staged → the
+        // manual button, which reopens the editor without an AI call.
+        const fresh = currentLessonId ? Store.getLesson(currentLessonId) : null;
+        if (fresh?.runOfShow?.segments?.length) container.querySelector('#stage-lesson-btn')?.click();
+        else container.querySelector('#auto-stage-btn')?.click();
       } else if (step === 'place') {
         // Placement lives in the run-of-show editor ("Place in room" per segment)
         const fresh = currentLessonId ? Store.getLesson(currentLessonId) : null;
