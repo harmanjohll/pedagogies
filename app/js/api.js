@@ -90,17 +90,39 @@ Respond conversationally, but keep it tight. Help the teacher think through thei
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function fetchWithRetry(url, init, retries = 2) {
+/* Default per-attempt timeout. TTS / large builds can pass a longer ms. */
+const DEFAULT_TIMEOUT_MS = 60000;
+
+/* ── Honest offline guard ──
+ * When the browser knows it's offline there's no point running the retry loop
+ * against a connection that isn't there — fail fast with a message the UI can
+ * show as-is. Guarded on navigator so it's a no-op under node/tests. */
+function assertOnline() {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    throw new Error("You're offline — AI generation needs a connection. Everything you've made is saved here and works offline.");
+  }
+}
+
+async function fetchWithRetry(url, init, { retries = 2, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  assertOnline();
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
     if (attempt > 0) await sleep(1500 * Math.pow(2, attempt - 1));
+    // Abort a hung socket so a dead connection rejects instead of hanging forever.
+    const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
     try {
-      const res = await fetch(url, init);
+      const res = await fetch(url, controller ? { ...init, signal: controller.signal } : init);
       if (!RETRYABLE_STATUS.has(res.status) || attempt === retries) return res;
       lastErr = new Error(`API error ${res.status}`);
     } catch (e) {
+      if (e && e.name === 'AbortError') {
+        throw new Error('The request timed out — check your connection and try again.');
+      }
       lastErr = e;
       if (attempt === retries) throw new Error('Could not reach Gemini — check your internet connection and try again.');
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
   throw lastErr;
@@ -214,7 +236,7 @@ export async function sendChat(messages, options = {}) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify(body)
-  });
+  }, { timeoutMs: options.timeoutMs });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -1367,7 +1389,7 @@ export async function generateImage(prompt, options = {}) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
-  });
+  }, { timeoutMs: options.timeoutMs });
   if (!res.ok) {
     if (res.status === 404 || res.status === 400) {
       throw new Error('Image generation is not available on this API key or model tier.');
@@ -1551,6 +1573,8 @@ function normalizePodcastScript(data, { topic, style, wordBudget, nSpeakers } = 
  */
 const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 const TTS_DEFAULT_VOICES = { A: 'Kore', B: 'Puck' };
+/* TTS synthesis of a full clip is slower than a text call — give it longer. */
+const TTS_TIMEOUT_MS = 120000;
 
 /**
  * Wrap raw 16-bit PCM (base64) in a 44-byte RIFF/WAVE header so browsers can
@@ -1588,7 +1612,7 @@ export function pcmToWavBlob(base64, sampleRate = 24000, numChannels = 1, bitsPe
  * scripts use multiSpeakerVoiceConfig with "Speaker A"/"Speaker B" labels
  * matching the joined text. Returns { blob (WAV), mimeType, durationHint }.
  */
-export async function generateSpeech({ turns, voices, style } = {}) {
+export async function generateSpeech({ turns, voices, style, timeoutMs } = {}) {
   trackEvent('ai', 'generate', 'speech', String(style || '').slice(0, 60));
   const apiKey = Store.get('apiKey');
   if (!apiKey) {
@@ -1629,7 +1653,7 @@ export async function generateSpeech({ turns, voices, style } = {}) {
         speechConfig
       }
     })
-  });
+  }, { timeoutMs: timeoutMs ?? TTS_TIMEOUT_MS });
   if (!res.ok) {
     if (res.status === 404 || res.status === 400) {
       throw new Error('AI voice generation is not available on this API key or model tier.');
