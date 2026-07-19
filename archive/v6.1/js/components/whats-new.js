@@ -8,19 +8,19 @@
 import { APP_VERSION } from '../version.js';
 import { openModal } from './modals.js';
 
-const SEEN_KEY = 'cocher_whatsnew_seen';
+const SEEN_KEY = 'cocher_v6_1_whatsnew_seen';
 
 const CHANGES = [
-  { icon: '&#9889;', title: 'Auto-stage: one click, whole lesson ready',
-    text: 'Confirm your class, room and duration — Co-Cher stages the plan into segments, forms the groups, links the room, and seats everyone on the actual furniture. Nothing is random unless you tick "let Co-Cher choose." The step-by-step way still works too.' },
-  { icon: '&#127908;', title: 'Decks and audio, made in the planner',
-    text: 'Ask for a slide deck and get a clean, self-contained one you can present or print to PDF. Ask for a podcast clip or sound bite and Co-Cher writes the script, then voices it with AI voices (your API key; voice only — no music or effects). Both attach to the lesson and launch from the Class Screen.' },
-  { icon: '&#10084;&#65039;', title: 'CCE lessons, full power',
-    text: 'Plan a CCE lesson from the CCE hub and it flows through the full planner — staging, grouping, named seats, Present, GROW built in — with CCE2021 framing for your chosen content area.' },
-  { icon: '&#128269;', title: 'Two deep flow audits, fixed',
-    text: 'Named seats now survive reloads on the bundled layouts (the big one), saving a lesson keeps you on it, weekend dashboards explain themselves instead of going blank, frameworks are editable, layout deletion asks first — plus a dozen smaller smoothings.' },
-  { icon: '&#128250;', title: 'Everything fits on the projector',
-    text: 'The Class Screen now scrolls safely, compacts busy segments, caps the seat map, and shows a "more" cue when something\'s below the fold — even at 1366×768.' },
+  { icon: '&#129517;', title: 'Your planner is now a cockpit',
+    text: 'A journey bar walks you Plan → Components → Stage → Place → Present, and your staged Run of Show now lives right in the planner — with each segment carrying the E21CC competency it grows, shown to students on the Class Screen.' },
+  { icon: '&#128100;', title: 'Names on the seats',
+    text: 'Placing groups now puts actual student names on the actual furniture — in the planner\'s room map and on the Class Screen. "Find your seat" means YOUR seat.' },
+  { icon: '&#10024;', title: 'Sharp plans that expand on demand',
+    text: 'Plans and components now generate lean — the key moves, nothing padded. Tap ✨ Details, Exemplar or Model answer on any section and Co-Cher expands just that part, then remembers it with the lesson.' },
+  { icon: '&#129504;', title: 'Your school\'s pedagogy, everywhere',
+    text: 'ACT (feedback) and GROW (metacognition) are now first-class frameworks — woven into planning context, lesson segments, the Class Screen, and report comments. Upload your own school\'s framework and it joins them.' },
+  { icon: '&#129514;', title: 'Simulations that teach harder',
+    text: 'AI-built sims gain a Challenge mode with self-checking tasks, a printable predict-observe-explain inquiry sheet, an under-the-hood Model panel — and the quality gate now checks the controls actually drive the model.' },
 ];
 
 export function maybeShowWhatsNew() {

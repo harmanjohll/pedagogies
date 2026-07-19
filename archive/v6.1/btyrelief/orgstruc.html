@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Org Chart Planner</title>
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Use Inter font */
+        body {
+            font-family: "Inter", sans-serif;
+        }
+        /* Canvas needs explicit dimensions to avoid blurriness */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: #f9fafb; /* bg-gray-50 */
+        }
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; /* slate-300 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; /* slate-100 */
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden antialiased text-gray-800">
+
+    <!-- 1. Header & Toolbar -->
+    <header class="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-semibold text-gray-700">Org Chart Planner</h1>
+            <div class="flex items-center space-x-2">
+                <!-- Toolbar Buttons -->
+                <button id="addEmployeeBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150">
+                    Add Employee
+                </button>
+                <button id="importDataBtn" class="px-4 py-2 bg-teal-600 text-white rounded-lg shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50 transition duration-150">
+                    Import Data
+                </button>
+                <button id="exportDataBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition duration-150">
+                    Export Data
+                </button>
+                <button id="exportPngBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition duration-150">
+                    Export as .png
+                </button>
+                <button id="clearChartBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition duration-150">
+                    Clear Chart
+                </button>
+                <button id="resetViewBtn" class="px-4 py-2 bg-gray-500 text-white rounded-lg shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition duration-150">
+                    Reset View
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. Main Canvas Area -->
+    <main class="flex-grow relative bg-gray-50">
+        <!-- The canvas where the org chart is drawn -->
+        <canvas id="orgCanvas"></canvas>
+        
+        <!-- Instructions Text -->
+        <div class="absolute top-4 left-4 bg-white bg-opacity-80 p-3 rounded-lg shadow-md pointer-events-none">
+            <h3 class="font-semibold text-gray-700">Controls</h3>
+            <ul class="list-disc list-inside text-sm text-gray-600">
+                <li><span class="font-medium">Click an employee</span> to edit or delete.</li>
+                <li><span class="font-medium">Click & Drag</span> to pan the chart.</li>
+                <li><span class="font-medium">Ctrl/Cmd + Drag</span> to move an employee tile.</li>
+                <li><span class="font-medium">Mouse Wheel</span> to zoom in/out.</li>
+            </ul>
+        </div>
+    </main>
+    
+    <!-- Hidden file input for importing data -->
+    <input type="file" id="importFileInput" accept=".json" class="hidden">
+
+    <!-- 3. Employee Editor Modal -->
+    <div id="employeeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 transition-opacity">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md m-4 transform transition-all" id="modalContent">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modalTitle" class="text-2xl font-semibold text-gray-800">Edit Employee</h2>
+                <button id="modalCloseBtn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- Form for adding/editing employee details -->
+            <form id="employeeForm">
+                <div class="space-y-4">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                        <input type="text" id="name" name="name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="designation" class="block text-sm font-medium text-gray-700">Designation</label>
+                        <input type="text" id="designation" name="designation" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <!-- "Level" is now a dropdown -->
+                        <label for="level" class="block text-sm font-medium text-gray-700">Level / Tier (Required)</label>
+                        <select id="level" name="level" required class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Level...</option>
+                            <option value="L1">L1</option>
+                            <option value="L2">L2</option>
+                            <option value="L3">L3</option>
+                            <option value="L4">L4</option>
+                            <option value="L5">L5</option>
+                        </select>
+                    </div>
+                    <div>
+                        <!-- "Department" is now a dropdown -->
+                        <label for="department" class="block text-sm font-medium text-gray-700">Department</label>
+                        <select id="department" name="department" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Department...</option>
+                            <option value="Aesthetics & Technology">Aesthetics & Technology</option>
+                            <option value="English Language & Literature">English Language & Literature</option>
+                            <option value="Humanities">Humanities</option>
+                            <option value="Mathematics">Mathematics</option>
+                            <option value="Mother Tongue Languages">Mother Tongue Languages</option>
+                            <option value="Physical Education">Physical Education</option>
+                            <option value="Science">Science</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="reportsTo" class="block text-sm font-medium text-gray-700">Reports To</label>
+                        <select id="reportsTo" name="reportsTo" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Form Action Buttons -->
+                <div class="mt-6 flex justify-between">
+                    <button id="deleteEmployeeBtn" type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 transition duration-150">
+                        Delete
+                    </button>
+                    <div class="space-x-2">
+                         <button id="modalCancelBtn" type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 transition duration-150">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script type="module">
+        // --- STATE & CONSTANTS ---
+        const canvas = document.getElementById('orgCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Modal elements
+        const modal = document.getElementById('employeeModal');
+        const modalContent = document.getElementById('modalContent');
+        const modalTitle = document.getElementById('modalTitle');
+        const form = document.getElementById('employeeForm');
+        const deleteEmployeeBtn = document.getElementById('deleteEmployeeBtn');
+
+        // Toolbar buttons
+        const addEmployeeBtn = document.getElementById('addEmployeeBtn');
+        const exportPngBtn = document.getElementById('exportPngBtn');
+        const resetViewBtn = document.getElementById('resetViewBtn');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+        const modalCancelBtn = document.getElementById('modalCancelBtn');
+        const importDataBtn = document.getElementById('importDataBtn');
+        const exportDataBtn = document.getElementById('exportDataBtn');
+        const clearChartBtn = document.getElementById('clearChartBtn');
+        const importFileInput = document.getElementById('importFileInput');
+
+        // App state
+        let employees = []; // Holds all employee objects
+        let currentEditingId = null; // ID of the employee being edited
+        let treeCache = []; // Caches the drawn tree structure for click detection
+        let nodeMap = new Map(); // Caches calculated node positions and data
+        
+        // Drawing constants
+        const BOX_WIDTH = 220;
+        const BOX_HEIGHT = 100;
+        const H_SPACING = 40;
+        const V_SPACING = 80;
+        const FONT_SIZE_NAME = 16;
+        const FONT_SIZE_DETAILS = 12;
+        const PADDING = 10;
+        
+        // Viewport state
+        let scale = 1;
+        let panX = 0;
+        let panY = 50;
+        let isPanning = false;
+        let panStart = { x: 0, y: 0 };
+        let hasPanned = false;
+        let resizeId;
+
+        // --- NEW: Drag-and-Drop State ---
+        let isDraggingNode = false;
+        let draggedNode = null;
+        let dragStartMouse = { x: 0, y: 0 };
+
+
+        // --- CORE LOGIC ---
+
+        /**
+         * Loads employees from localStorage or creates a default root if empty.
+         */
+        function loadFromLocalStorage() {
+            const data = localStorage.getItem('orgChartData');
+            if (data) {
+                employees = JSON.parse(data);
+            } else {
+                // Create a default root node if no data exists
+                const rootId = crypto.randomUUID();
+                employees = [{
+                    id: rootId,
+                    name: 'CEO',
+                    designation: 'Chief Executive Officer',
+                    department: 'Executive',
+                    level: 'L1',
+                    reportsTo: null,
+                    manualX: 0 // <-- NEW: Store manual X offset
+                }];
+                saveToLocalStorage();
+            }
+        }
+
+        /**
+         * Saves the current employees array to localStorage.
+         */
+        function saveToLocalStorage() {
+            localStorage.setItem('orgChartData', JSON.stringify(employees));
+        }
+
+        /**
+         * Converts the flat employee list into a hierarchical tree.
+         * @returns {Array} An array of root nodes (nodes with reportsTo: null).
+         */
+        function buildTree() {
+            const map = new Map();
+            const roots = [];
+            
+            // Initialize map and children array for each employee
+            employees.forEach(emp => {
+                map.set(emp.id, { ...emp, children: [] });
+            });
+
+            // Populate children arrays
+            map.forEach(node => {
+                if (node.reportsTo) {
+                    const manager = map.get(node.reportsTo);
+                    if (manager) {
+                        manager.children.push(node);
+                    } else {
+                        // Orphan node, treat as a root
+                        roots.push(node);
+                    }
+                } else {
+                    // Root node
+                    roots.push(node);
+                }
+            });
+            return roots;
+        }
+
+        /**
+         * Recursively calculates the total width of a subtree.
+         * This is used to center managers above their reports.
+         */
+        function calculateSubtreeWidth(node) {
+            if (node.children.length === 0) {
+                return BOX_WIDTH;
+            }
+            let totalWidth = 0;
+            node.children.forEach(child => {
+                totalWidth += calculateSubtreeWidth(child) + H_SPACING;
+            });
+            return Math.max(BOX_WIDTH, totalWidth - H_SPACING);
+        }
+
+        /**
+         * Calculates the Y-position for each level.
+         */
+        function calculateLevelYMap(employees) {
+            const levels = new Set(employees.map(e => e.level).filter(Boolean));
+            
+            // "Natural" sort handles L1, L2, L10 correctly.
+            const sortedLevels = Array.from(levels).sort((a, b) => {
+                return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+            });
+            
+            const levelYMap = new Map();
+            let currentY = 0; // Start Y at 0 in world space
+            sortedLevels.forEach(level => {
+                levelYMap.set(level, currentY);
+                currentY += BOX_HEIGHT + V_SPACING;
+            });
+            return levelYMap;
+        }
+
+        /**
+         * NEW: Recursive function to calculate layout.
+         * This populates nodeMap with x, y, and bounds.
+         * @param {object} node - The current node to process.
+         * @param {number} x - The *calculated* center X coordinate for this node.
+         * @param {number} hierarchicalY - The Y coordinate if this were a normal tree. Used as a fallback.
+         * @param {Map} levelYMap - The map of level names to Y positions.
+         */
+        function calculateLayout(node, x, hierarchicalY, levelYMap) {
+            
+            // --- NEW: Apply manual offset ---
+            // The calculated position 'x' is the automatic layout position.
+            // We add the manually dragged offset to get the final position.
+            const manualOffset = node.manualX || 0;
+            const finalX = x + manualOffset;
+            
+            // The Y-position is determined by the node's level.
+            const finalY = levelYMap.get(node.level) || hierarchicalY;
+
+            // Store calculated position and bounds
+            node.x = finalX; // Store the *final* X
+            node.y = finalY;
+            node.bounds = { 
+                x: finalX - BOX_WIDTH / 2, 
+                y: finalY, 
+                width: BOX_WIDTH, 
+                height: BOX_HEIGHT 
+            };
+            
+            nodeMap.set(node.id, node);
+            treeCache.push(node); // For click detection
+
+            // --- Calculate positions for children ---
+            if (node.children.length > 0) {
+                const totalSubtreeWidth = calculateSubtreeWidth(node);
+                // --- NEW ---
+                // The children's layout block is centered relative to the parent's *finalX* position.
+                // This makes the whole subtree move with the parent.
+                let currentX = finalX - totalSubtreeWidth / 2;
+
+                node.children.forEach(child => {
+                    const childSubtreeWidth = calculateSubtreeWidth(child);
+                    const childX = currentX + childSubtreeWidth / 2;
+
+                    // Recurse, passing the *calculated* childX.
+                    // The child's *own* manual offset will be added inside its own call.
+                    const nextHierarchicalY = finalY + BOX_HEIGHT + V_SPACING;
+                    calculateLayout(child, childX, nextHierarchicalY, levelYMap);
+                    
+                    currentX += childSubtreeWidth + H_SPACING;
+                });
+            }
+        }
+
+        /**
+         * Draws a single employee box (no connectors).
+         * @param {object} node - The node (from nodeMap) to draw.
+         * @param {boolean} [noShadow=false] - If true, draws without shadow (for PNG export).
+         */
+        function drawNodeBox(node, noShadow = false) {
+            const x = node.x;
+            const y = node.y;
+            const boxX = node.bounds.x;
+            const boxY = node.bounds.y;
+
+            // --- Draw the Box ---
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = '#94a3b8'; // slate-400
+            ctx.lineWidth = 1.5;
+            
+            if (noShadow) {
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+            } else {
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+                ctx.shadowBlur = 8;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 4;
+            }
+            
+            ctx.beginPath();
+            ctx.roundRect(boxX, boxY, BOX_WIDTH, BOX_HEIGHT, 8);
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.shadowColor = 'transparent'; // Reset shadow
+
+            // --- Draw the Text ---
+            ctx.fillStyle = '#1e293b'; // slate-800
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
+            // Name (Bold)
+            let yPos = y + PADDING;
+            ctx.font = `bold ${FONT_SIZE_NAME}px Inter`;
+            ctx.fillText(node.name, x, yPos, BOX_WIDTH - PADDING * 2);
+
+            // Designation (Italic)
+            yPos += FONT_SIZE_NAME + 6;
+            ctx.fillStyle = '#475569'; // slate-600
+            ctx.font = `italic ${FONT_SIZE_DETAILS}px Inter`;
+            ctx.fillText(node.designation, x, yPos, BOX_WIDTH - PADDING * 2);
+            
+            // Department
+            yPos += FONT_SIZE_DETAILS + 6;
+            ctx.font = `${FONT_SIZE_DETAILS}px Inter`;
+            ctx.fillText(node.department, x, yPos, BOX_WIDTH - PADDING * 2);
+        }
+
+        /**
+         * Draws an elbow connector between two nodes.
+         */
+        function drawElbowConnector(parent, child) {
+            const p_bottom = { x: parent.x, y: parent.y + BOX_HEIGHT };
+            const c_top = { x: child.x, y: child.y };
+
+            if (isNaN(p_bottom.x) || isNaN(c_top.x)) return;
+            
+            // Place horizontal line *always* V_SPACING/2 above child, unless parent is lower.
+            let horizontalLineY = c_top.y - V_SPACING / 2;
+            
+            // If parent is *below* this line, move the line down.
+            if (p_bottom.y > horizontalLineY) {
+                horizontalLineY = p_bottom.y + V_SPACING / 2;
+            }
+
+            ctx.strokeStyle = '#94a3b8'; // slate-400
+            ctx.lineWidth = 1;
+            
+            ctx.beginPath();
+            ctx.moveTo(p_bottom.x, p_bottom.y);     // Start at parent bottom
+            ctx.lineTo(p_bottom.x, horizontalLineY); // Line down/up to horizontal
+            ctx.lineTo(c_top.x, horizontalLineY);   // Line horizontal
+            ctx.lineTo(c_top.x, c_top.y);           // Line to child top
+            ctx.stroke();
+        }
+
+
+        /**
+         * Main drawing function. Clears and redraws the entire canvas.
+         */
+        function drawChart(options = {}) {
+            const { forExport = false } = options;
+
+            // Clear canvas
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            // Apply pan and zoom
+            ctx.save();
+            ctx.translate(panX, panY);
+            ctx.scale(scale, scale);
+
+            // --- LAYOUT & DRAWING LOGIC ---
+            treeCache = []; // Clear click cache
+            nodeMap.clear(); // Clear position cache
+            
+            const roots = buildTree();
+            if (roots.length === 0) {
+                ctx.restore();
+                return; // No nodes to draw
+            }
+
+            // 1. Calculate Y positions for each level
+            const levelYMap = calculateLevelYMap(employees);
+
+            // 2. Calculate horizontal layout
+            let totalWidth = 0;
+            const rootWidths = roots.map(root => calculateSubtreeWidth(root));
+            totalWidth = rootWidths.reduce((acc, w) => acc + w, 0) + Math.max(0, roots.length - 1) * H_SPACING;
+
+            let currentX = -totalWidth / 2;
+            const startY = 0; // Hierarchical Y starts at 0
+
+            // 3. Recurse to calculate all node positions (X and Y)
+            // This now applies the manualX offsets automatically.
+            roots.forEach((root, index) => {
+                const rootWidth = rootWidths[index];
+                calculateLayout(root, currentX + rootWidth / 2, startY, levelYMap);
+                currentX += rootWidth + H_SPACING;
+            });
+
+            // 4. Draw connectors
+            employees.forEach(emp => {
+                if (emp.reportsTo) {
+                    const child = nodeMap.get(emp.id);
+                    const parent = nodeMap.get(emp.reportsTo);
+                    if (child && parent) {
+                        drawElbowConnector(parent, child);
+                    }
+                }
+            });
+
+            // 5. Draw node boxes (now drawn *after* lines)
+            for (const node of nodeMap.values()) {
+                drawNodeBox(node, forExport);
+            }
+            // --- END OF LOGIC ---
+
+            ctx.restore();
+        }
+
+        /**
+         * Finds all descendants of a given employee.
+         * @param {string} employeeId - The ID of the employee to start from.
+         * @returns {Set<string>} A Set of all descendant IDs.
+         */
+        function getDescendants(employeeId) {
+            const descendants = new Set();
+            const queue = [employeeId];
+            
+            while(queue.length > 0) {
+                const currentId = queue.shift();
+                employees.forEach(emp => {
+                    if (emp.reportsTo === currentId) {
+                        descendants.add(emp.id);
+                        queue.push(emp.id);
+                    }
+                });
+            }
+            return descendants;
+        }
+
+        /**
+         * Finds a node in the treeCache/nodeMap at a given world coordinate.
+         */
+        function getNodeAtPoint(worldX, worldY) {
+            // Find the top-most (last drawn) node that was clicked
+            for (let i = treeCache.length - 1; i >= 0; i--) {
+                const node = treeCache[i];
+                const bounds = node.bounds;
+                if (worldX >= bounds.x && worldX <= bounds.x + bounds.width && 
+                    worldY >= bounds.y && worldY <= bounds.y + bounds.height) {
+                    return node;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Populates the "Reports To" dropdown in the modal.
+         * Disables the employee being edited and their descendants to prevent circular references.
+         */
+        function populateReportsToDropdown() {
+            const reportsToSelect = document.getElementById('reportsTo');
+            reportsToSelect.innerHTML = ''; // Clear existing options
+
+            // Add "None (Root)" option
+            const noneOption = document.createElement('option');
+            noneOption.value = 'null';
+            noneOption.textContent = 'None (Root Level)';
+            reportsToSelect.appendChild(noneOption);
+
+            let descendants = new Set();
+            if (currentEditingId) {
+                descendants = getDescendants(currentEditingId);
+            }
+
+            // Add all other employees
+            employees.forEach(emp => {
+                // Cannot report to yourself or your own reports
+                if (emp.id === currentEditingId || descendants.has(emp.id)) {
+                    return;
+                }
+                const option = document.createElement('option');
+                option.value = emp.id;
+                option.textContent = `${emp.name} (${emp.level || '?'}) - ${emp.designation}`;
+                reportsToSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Shows or hides the employee editor modal.
+         * @param {boolean} show - True to show, false to hide.
+         * @param {boolean} [isNew=false] - True if adding a new employee.
+         */
+        function showModal(show, isNew = false) {
+            if (show) {
+                populateReportsToDropdown();
+                if (isNew) {
+                    currentEditingId = null;
+                    modalTitle.textContent = 'Add New Employee';
+                    form.reset();
+                    document.getElementById('reportsTo').value = 'null'; // Default to root
+                    deleteEmployeeBtn.classList.add('hidden');
+                    modal.classList.remove('hidden');
+                } else {
+                    const employee = employees.find(e => e.id === currentEditingId);
+                    if (!employee) return;
+                    
+                    modalTitle.textContent = 'Edit Employee';
+                    document.getElementById('name').value = employee.name;
+                    document.getElementById('designation').value = employee.designation;
+                    document.getElementById('level').value = employee.level || '';
+                    document.getElementById('department').value = employee.department;
+                    document.getElementById('reportsTo').value = employee.reportsTo || 'null';
+                    
+                    deleteEmployeeBtn.classList.remove('hidden');
+                    modal.classList.remove('hidden');
+                }
+                // Animate modal content
+                modalContent.classList.add('opacity-100', 'scale-100');
+                modalContent.classList.remove('opacity-0', 'scale-95');
+
+            } else {
+                currentEditingId = null;
+                // Animate modal out
+                modalContent.classList.add('opacity-0', 'scale-95');
+                modalContent.classList.remove('opacity-100', 'scale-100');
+                // Hide modal after animation
+                setTimeout(() => modal.classList.add('hidden'), 150);
+            }
+        }
+
+        /**
+         * Converts canvas coordinates to world coordinates (accounting for pan/zoom).
+         */
+        function getTransformedPoint(x, y) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (x - rect.left);
+            const mouseY = (y - rect.top);
+            
+            const worldX = (mouseX - panX) / scale;
+            const worldY = (mouseY - panY) / scale;
+            return { x: worldX, y: worldY };
+        }
+
+        // --- EVENT HANDLERS ---
+
+        /**
+         * Handles the form submission for saving an employee.
+         */
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const employeeData = {
+                name: formData.get('name'),
+                designation: formData.get('designation'),
+                level: formData.get('level'),
+                department: formData.get('department'),
+                reportsTo: formData.get('reportsTo') === 'null' ? null : formData.get('reportsTo'),
+            };
+
+            if (currentEditingId) {
+                // Update existing employee
+                const index = employees.findIndex(e => e.id === currentEditingId);
+                if (index !== -1) {
+                    // Preserve existing manualX offset
+                    const manualX = employees[index].manualX || 0;
+                    employees[index] = { ...employees[index], ...employeeData, manualX };
+                }
+            } else {
+                // Add new employee
+                employees.push({
+                    id: crypto.randomUUID(),
+                    ...employeeData,
+                    manualX: 0 // New employees have 0 offset
+                });
+            }
+
+            saveToLocalStorage();
+            drawChart();
+            showModal(false);
+        }
+
+        /**
+         * Handles deleting an employee.
+         */
+        function handleDeleteClick() {
+            if (!currentEditingId) return;
+
+            const employeeToDelete = employees.find(e => e.id === currentEditingId);
+            if (!employeeToDelete) return;
+
+            // Re-assign direct reports to this employee's manager
+            const newManagerId = employeeToDelete.reportsTo;
+            employees.forEach(emp => {
+                if (emp.reportsTo === currentEditingId) {
+                    emp.reportsTo = newManagerId;
+                }
+            });
+
+            // Remove the employee
+            employees = employees.filter(e => e.id !== currentEditingId);
+
+            saveToLocalStorage();
+            drawChart();
+            showModal(false);
+        }
+
+        /**
+         * Handles canvas click to detect which employee was clicked.
+         */
+        function handleCanvasClick(e) {
+            // If we just finished a pan or drag, don't register it as a click.
+            if (hasPanned) {
+                return;
+            }
+
+            const { x, y } = getTransformedPoint(e.clientX, e.clientY);
+            const clickedEmployee = getNodeAtPoint(x, y);
+
+            if (clickedEmployee) {
+                currentEditingId = clickedEmployee.id;
+                showModal(true, false);
+            }
+        }
+
+        // --- INITIALIZATION & EVENT LISTENERS ---
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            // Setup canvas size
+            // Use ResizeObserver to handle layout changes
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    if(entry.target.id === 'orgCanvas') {
+                        // Use rAF to debounce the resize logic.
+                        if (resizeId) {
+                            cancelAnimationFrame(resizeId);
+                        }
+                        resizeId = requestAnimationFrame(() => {
+                            const dpr = window.devicePixelRatio || 1;
+                            const newWidth = Math.round(entry.contentRect.width * dpr);
+                            const newHeight = Math.round(entry.contentRect.height * dpr);
+
+                            if (canvas.width !== newWidth || canvas.height !== newHeight) {
+                                canvas.width = newWidth;
+                                canvas.height = newHeight;
+                                
+                                ctx.scale(dpr, dpr); // Scale context for high-DPI displays
+                                
+                                // Re-center view on resize, using the CSS width
+                                panX = entry.contentRect.width / 2; 
+                                panY = 50; 
+                                
+                                drawChart();
+                            }
+                        });
+                    }
+                }
+            });
+            resizeObserver.observe(canvas);
+            
+            // Initial load
+            loadFromLocalStorage();
+            
+            // The ResizeObserver will fire automatically on load
+            // to set the initial size and draw the chart.
+
+            // Toolbar buttons
+            addEmployeeBtn.addEventListener('click', () => showModal(true, true));
+            
+            exportPngBtn.addEventListener('click', () => {
+                // Redraw chart using the no-shadow function
+                drawChart({ forExport: true }); 
+
+                // Create download link
+                const link = document.createElement('a');
+                link.download = 'org-chart.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                // Redraw chart with shadows for the live view
+                drawChart({ forExport: false }); 
+            });
+
+            resetViewBtn.addEventListener('click', () => {
+                scale = 1;
+                panX = canvas.width / (window.devicePixelRatio || 1) / 2;
+                panY = 50;
+                
+                // --- NEW: Resetting view also resets manual layouts ---
+                employees.forEach(emp => emp.manualX = 0);
+                saveToLocalStorage();
+                drawChart();
+            });
+
+            // --- New Data I/O Handlers ---
+            importDataBtn.addEventListener('click', () => {
+                importFileInput.click();
+            });
+            
+            importFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (Array.isArray(data) && data.every(item => item.id && item.name && item.level)) {
+                            employees = data;
+                            // Ensure manualX exists, default to 0
+                            employees.forEach(emp => {
+                                if (emp.manualX === undefined) {
+                                    emp.manualX = 0;
+                                }
+                            });
+                            saveToLocalStorage();
+                            drawChart();
+                        } else {
+                            console.error('Invalid JSON format. Make sure all employees have id, name, and level.');
+                        }
+                    } catch (err) {
+                        console.error('Failed to parse JSON file:', err);
+                    }
+                };
+                reader.readAsText(file);
+                
+                e.target.value = null;
+            });
+
+            exportDataBtn.addEventListener('click', () => {
+                const dataStr = JSON.stringify(employees, null, 2); // Pretty-print JSON
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.download = 'org-chart-data.json';
+                link.href = url;
+                link.click();
+                URL.revokeObjectURL(url);
+            });
+            
+            clearChartBtn.addEventListener('click', () => {
+                const rootId = crypto.randomUUID();
+                employees = [{
+                    id: rootId,
+                    name: 'CEO',
+                    designation: 'Chief Executive Officer',
+                    department: 'Executive',
+                    level: 'L1',
+                    reportsTo: null,
+                    manualX: 0
+                }];
+                saveToLocalStorage();
+                drawChart();
+            });
+
+
+            // Modal buttons
+            form.addEventListener('submit', handleFormSubmit);
+            deleteEmployeeBtn.addEventListener('click', handleDeleteClick);
+            modalCloseBtn.addEventListener('click', () => showModal(false));
+            modalCancelBtn.addEventListener('click', () => showModal(false));
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    showModal(false);
+                }
+            });
+
+            // --- Canvas Pan & Zoom Listeners ---
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomIntensity = 0.05;
+                const wheel = e.deltaY < 0 ? 1 : -1;
+                const zoom = Math.exp(wheel * zoomIntensity);
+                
+                const { x, y } = getTransformedPoint(e.clientX, e.clientY);
+                
+                panX -= x * (zoom - 1) * scale;
+                panY -= y * (zoom - 1) * scale;
+                scale *= zoom;
+
+                drawChart();
+            });
+
+            // --- UPDATED: mousedown listener for Pan vs. Drag ---
+            canvas.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return; // Only left click
+                hasPanned = false; // Reset pan/drag flag
+                
+                const worldPos = getTransformedPoint(e.clientX, e.clientY);
+                const clickedNode = getNodeAtPoint(worldPos.x, worldPos.y);
+
+                // Check for Ctrl key (or Cmd on Mac)
+                if ((e.ctrlKey || e.metaKey) && clickedNode) {
+                    // --- Start DRAGGING NODE ---
+                    isDraggingNode = true;
+                    draggedNode = clickedNode; // This is the node from nodeMap
+                    dragStartMouse = worldPos;
+                    canvas.style.cursor = 'move';
+                } else {
+                    // --- Start PANNING ---
+                    isPanning = true;
+                    panStart.x = e.clientX - panX;
+                    panStart.y = e.clientY - panY;
+                    canvas.style.cursor = 'grabbing';
+                }
+            });
+
+            // --- UPDATED: mousemove listener for Pan vs. Drag ---
+            canvas.addEventListener('mousemove', (e) => {
+                if (isDraggingNode) {
+                    // --- Handle NODE DRAG ---
+                    hasPanned = true; // Mark as dragged to prevent click
+                    const worldPos = getTransformedPoint(e.clientX, e.clientY);
+                    
+                    // Calculate horizontal mouse movement in world space
+                    const deltaX = worldPos.x - dragStartMouse.x;
+                    
+                    // Find the employee in the main data array
+                    const emp = employees.find(e => e.id === draggedNode.id);
+                    if (emp) {
+                        // Add the delta to its manual offset
+                        emp.manualX = (emp.manualX || 0) + deltaX;
+                    }
+                    
+                    // Update start position for next frame's delta
+                    dragStartMouse.x = worldPos.x; 
+                    
+                    drawChart();
+
+                } else if (isPanning) {
+                    // --- Handle PAN ---
+                    hasPanned = true; // Mark as panned to prevent click
+                    panX = e.clientX - panStart.x;
+                    panY = e.clientY - panStart.y;
+                    drawChart();
+                }
+            });
+
+            // --- UPDATED: mouseup listener for Pan vs. Drag ---
+            canvas.addEventListener('mouseup', () => {
+                if (isDraggingNode) {
+                    // --- Stop DRAGGING ---
+                    isDraggingNode = false;
+                    draggedNode = null;
+                    saveToLocalStorage(); // Save the new manualX positions
+                    canvas.style.cursor = 'grab';
+                }
+                
+                if (isPanning) {
+                    // --- Stop PANNING ---
+                    isPanning = false;
+                    canvas.style.cursor = 'grab';
+                }
+            });
+            
+            // --- UPDATED: mouseleave listener for Pan vs. Drag ---
+            canvas.addEventListener('mouseleave', () => {
+                 if (isDraggingNode) {
+                    isDraggingNode = false;
+                    draggedNode = null;
+                    saveToLocalStorage();
+                 }
+                 if (isPanning) {
+                    isPanning = false;
+                 }
+                 canvas.style.cursor = 'default';
+            });
+            
+            canvas.addEventListener('mouseenter', () => {
+                if (!isPanning && !isDraggingNode) {
+                    canvas.style.cursor = 'grab';
+                }
+            });
+
+            canvas.addEventListener('click', handleCanvasClick);
+        });
+
+    </script>
+</body>
+</html>
