@@ -16,6 +16,7 @@ import {
   SCHEMA_PRESETS, getSchemaForClass, getFieldValue, applyFieldUpdate,
   levelMeta as fieldLevelMeta
 } from '../utils/tracking.js';
+import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 
 const E21CC_DIMS = [
   { key: 'criticalThinking',    label: 'Critical Thinking',     short: 'CT',  color: '#6366f1' },
@@ -35,6 +36,87 @@ const E21CC_LEVELS = [
 
 function levelToValue(level) { return E21CC_LEVELS.find(l => l.key === level)?.value || 1; }
 function levelMeta(level) { return E21CC_LEVELS.find(l => l.key === level) || E21CC_LEVELS[0]; }
+
+/* ══════════ Voice dictation mic (WS-V) ══════════
+ * Press-to-talk mic that FILLS a text field — it never saves or commits. The
+ * teacher leads: dictation drops recognised text at the cursor, and the
+ * existing Save / Add button is still the only thing that writes to the Store.
+ * Rendered ONLY when the browser supports speech input; unsupported browsers
+ * get no mic and the capture fields behave exactly as before. */
+function micButtonHTML({ id, statusId, label = 'Dictate', title = 'Dictate — fills the field; you still press the button to save' }) {
+  if (!isVoiceInputSupported()) return '';
+  return `<button type="button" class="cocher-mic-btn btn btn-ghost btn-sm" id="${escapeHtml(id)}" aria-pressed="false" aria-label="${escapeHtml(label)}" title="${escapeHtml(title)}" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;">
+      <svg class="cocher-mic-glyph" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      <span class="cocher-mic-word" style="font-size:0.6875rem;font-weight:600;">${escapeHtml(label)}</span>
+    </button>
+    <span id="${escapeHtml(statusId)}" class="cocher-mic-status" role="status" aria-live="polite" style="display:none;font-size:0.6875rem;color:var(--ink-muted);align-self:center;"></span>`;
+}
+
+/* Insert recognised text at the caret (or end) of a text field, adding a
+ * separating space when joining onto existing words, then fire 'input' so any
+ * listeners react to the programmatic change. */
+function insertTextAtCursor(field, text) {
+  const chunk = (text || '').trim();
+  if (!field || !chunk) return;
+  const hasSel = typeof field.selectionStart === 'number' && typeof field.selectionEnd === 'number';
+  const start = hasSel ? field.selectionStart : field.value.length;
+  const end = hasSel ? field.selectionEnd : field.value.length;
+  const before = field.value.slice(0, start);
+  const after = field.value.slice(end);
+  const needsSpace = before.length > 0 && !/\s$/.test(before);
+  const piece = (needsSpace ? ' ' : '') + chunk;
+  field.value = before + piece + after;
+  const caret = start + piece.length;
+  try { field.selectionStart = field.selectionEnd = caret; } catch (_) { /* input types without selection */ }
+  field.focus();
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/* Wire a mic button (from micButtonHTML) to a target field. No-op when speech
+ * is unsupported or elements are missing. Toggles listening state (aria-pressed
+ * + a visible "Listening…" label) and only ever FILLS the field. */
+function wireMic(root, { buttonId, statusId, fieldId, lang = 'en-SG' }) {
+  if (!isVoiceInputSupported() || !root) return;
+  const button = root.querySelector('#' + buttonId);
+  const field = root.querySelector('#' + fieldId);
+  const statusEl = statusId ? root.querySelector('#' + statusId) : null;
+  if (!button || !field) return;
+
+  const idleLabel = button.getAttribute('aria-label') || 'Dictate';
+  const wordEl = button.querySelector('.cocher-mic-word');
+  let listening = false;
+
+  const setState = (on) => {
+    listening = on;
+    button.setAttribute('aria-pressed', String(on));
+    button.classList.toggle('is-listening', on);
+    button.setAttribute('aria-label', on ? 'Stop dictation' : idleLabel);
+    button.style.color = on ? 'var(--danger, #dc2626)' : '';
+    if (wordEl) wordEl.textContent = on ? 'Listening…' : idleLabel;
+    if (statusEl) {
+      statusEl.textContent = on ? 'Listening…' : '';
+      statusEl.style.display = on ? '' : 'none';
+    }
+  };
+
+  const dictation = createDictation({
+    lang,
+    onInterim(interim) {
+      if (statusEl && interim) { statusEl.textContent = interim; statusEl.style.display = ''; }
+    },
+    onResult(finalText) {
+      // FILL only — never save. The teacher still presses Save / Add.
+      insertTextAtCursor(field, finalText);
+    },
+    onError() { setState(false); },
+    onEnd() { setState(false); },
+  });
+
+  button.addEventListener('click', () => {
+    if (listening) { dictation.stop(); return; }
+    if (dictation.start()) setState(true);
+  });
+}
 
 /* ═══════════ Schema-aware display helpers ═══════════
  * The tracking-schema registry (utils/tracking.js) centralises field labels,
@@ -649,6 +731,9 @@ export function renderDetail(container, { id }) {
         });
       }
 
+      // WS-V: dictation mic FILLS #note-input; "Add Note" is still the only commit.
+      wireMic(container, { buttonId: 'note-mic-btn', statusId: 'note-mic-status', fieldId: 'note-input' });
+
       container.querySelectorAll('.delete-note-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           Store.deleteNote(id, btn.dataset.noteId);
@@ -978,9 +1063,14 @@ function renderNotesTab(cls) {
   return `
     <div style="margin-bottom: var(--sp-6);">
       <textarea class="input" id="note-input" placeholder="Write a class note — observations, ideas, reflections..." rows="3" style="margin-bottom: var(--sp-3);"></textarea>
-      <div style="display: flex; justify-content: flex-end; gap: var(--sp-2);">
-        ${notes.length >= 2 ? `<button class="btn btn-secondary btn-sm" id="summarize-notes-btn">Summarize with AI</button>` : ''}
-        <button class="btn btn-primary btn-sm" id="add-note-btn">Add Note</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: var(--sp-2);">
+          ${micButtonHTML({ id: 'note-mic-btn', statusId: 'note-mic-status', label: 'Dictate' })}
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--sp-2);">
+          ${notes.length >= 2 ? `<button class="btn btn-secondary btn-sm" id="summarize-notes-btn">Summarize with AI</button>` : ''}
+          <button class="btn btn-primary btn-sm" id="add-note-btn">Add Note</button>
+        </div>
       </div>
     </div>
 
@@ -1293,6 +1383,9 @@ function showEditStudentModal(classId, student, schema, onUpdate) {
       <div class="input-group" style="margin-top:var(--sp-4);">
         <label class="input-label">Observation Note (optional)</label>
         <textarea class="input" id="student-observation" rows="3" placeholder="Brief note about this student's development..." style="resize:vertical;"></textarea>
+        <div style="display:flex;align-items:center;gap:var(--sp-2);margin-top:var(--sp-2);">
+          ${micButtonHTML({ id: 'observation-mic-btn', statusId: 'observation-mic-status', label: 'Dictate' })}
+        </div>
       </div>
     `,
     footer: `
@@ -1300,6 +1393,9 @@ function showEditStudentModal(classId, student, schema, onUpdate) {
       <button class="btn btn-primary" data-action="save">Save</button>
     `
   });
+
+  // WS-V: dictation mic FILLS #student-observation; "Save" is still the only commit.
+  wireMic(backdrop, { buttonId: 'observation-mic-btn', statusId: 'observation-mic-status', fieldId: 'student-observation' });
 
   // Style radio pills on change
   backdrop.querySelectorAll('input[type="radio"]').forEach(radio => {

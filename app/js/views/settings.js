@@ -16,6 +16,7 @@ import { trackEvent, analyticsEnabled, setAnalyticsEnabled } from '../utils/anal
 import { APP_VERSION, PREVIOUS_VERSIONS } from '../version.js';
 import { getIdentity, setIdentity, applyIdentity } from '../utils/identity.js';
 import { escapeHtml } from '../utils/markdown.js';
+import { isTouch } from '../utils/viewport.js';
 
 /* ── Dashboard Layout Prefs ── */
 const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
@@ -96,10 +97,20 @@ function buildWidgetListHTML(prefs) {
   const order = prefs.widgetOrder.length > 0 ? [...prefs.widgetOrder] : [...DEFAULT_WIDGET_ORDER];
   DEFAULT_WIDGET_ORDER.forEach(w => { if (!order.includes(w)) order.push(w); });
 
-  return order.map(wId => {
+  // On touch devices HTML5 drag-and-drop is unusable, so we also render ▲/▼
+  // move buttons. They reorder the same DOM list the drag writes to, so the
+  // existing "Save layout" button persists them identically (no separate path).
+  const touch = isTouch();
+
+  return order.map((wId, idx) => {
     const visible = !prefs.hiddenWidgets.includes(wId);
     const customName = prefs.widgetNames?.[wId] || '';
     const displayName = customName || DEFAULT_WIDGET_LABELS[wId] || wId;
+    const nameAttr = escapeHtml(displayName);
+    const arrows = touch ? `<span class="dash-widget-move" style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+        <button type="button" class="dash-widget-up btn btn-ghost" data-widget="${wId}" aria-label="Move ${nameAttr} up" title="Move up" ${idx === 0 ? 'disabled' : ''} style="padding:2px 8px;line-height:1;font-size:0.75rem;min-width:32px;">&#9650;</button>
+        <button type="button" class="dash-widget-down btn btn-ghost" data-widget="${wId}" aria-label="Move ${nameAttr} down" title="Move down" ${idx === order.length - 1 ? 'disabled' : ''} style="padding:2px 8px;line-height:1;font-size:0.75rem;min-width:32px;">&#9660;</button>
+      </span>` : '';
     return `<div class="dash-widget-row" data-widget="${wId}" draggable="true" style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light, #e5e7eb);border-radius:var(--radius, 8px);cursor:grab;background:var(--bg-card, #fff);transition:box-shadow 0.15s;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" style="flex-shrink:0;cursor:grab;"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       <label style="display:flex;align-items:center;gap:var(--sp-2);flex-shrink:0;">
@@ -107,8 +118,21 @@ function buildWidgetListHTML(prefs) {
       </label>
       <span class="dash-widget-name" data-widget="${wId}" style="flex:1;font-size:0.8125rem;font-weight:500;color:var(--ink);cursor:pointer;padding:2px 4px;border-radius:4px;border:1px solid transparent;" title="Click to rename">${displayName}</span>
       ${customName ? `<button class="dash-widget-reset-name btn btn-ghost" data-widget="${wId}" style="padding:2px 6px;font-size:0.625rem;color:var(--ink-faint);" title="Reset to default name">reset</button>` : ''}
+      ${arrows}
     </div>`;
   }).join('');
+}
+
+/* Keep the ▲/▼ disabled state correct after a DOM move: the first row can't go
+ * up, the last can't go down. Called after each button-driven reorder. */
+function refreshWidgetArrowStates(list) {
+  const rows = [...list.querySelectorAll('.dash-widget-row')];
+  rows.forEach((row, i) => {
+    const up = row.querySelector('.dash-widget-up');
+    const down = row.querySelector('.dash-widget-down');
+    if (up) up.disabled = (i === 0);
+    if (down) down.disabled = (i === rows.length - 1);
+  });
 }
 
 /* ── Subject detection from class name / CSV ── */
@@ -1730,6 +1754,32 @@ function wireDashboardLayoutEvents(container) {
         const tgtIdx = rows.indexOf(row);
         if (srcIdx < tgtIdx) row.after(dragSrc);
         else row.before(dragSrc);
+        refreshWidgetArrowStates(list);
+      }
+    });
+  });
+
+  // Touch reorder: ▲/▼ buttons move rows in the SAME DOM list drag writes to,
+  // so "Save layout" persists them identically. Desktop drag stays intact.
+  list.querySelectorAll('.dash-widget-up').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('.dash-widget-row');
+      const prev = row?.previousElementSibling;
+      if (prev) {
+        list.insertBefore(row, prev);
+        refreshWidgetArrowStates(list);
+        row.querySelector('.dash-widget-up')?.focus();
+      }
+    });
+  });
+  list.querySelectorAll('.dash-widget-down').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('.dash-widget-row');
+      const next = row?.nextElementSibling;
+      if (next) {
+        list.insertBefore(next, row);
+        refreshWidgetArrowStates(list);
+        row.querySelector('.dash-widget-down')?.focus();
       }
     });
   });

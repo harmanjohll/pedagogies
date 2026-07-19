@@ -22,6 +22,7 @@ import { critiquePlan } from '../api.js';
 import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
 import { layoutToSVG } from './spatial-designer.js';
+import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
@@ -885,7 +886,7 @@ function buildToolbarHTML(mode) {
         <div style="flex:1;height:1px;background:var(--border-light);"></div>
       </div>`;
       html += recommended.map(t =>
-        `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
+        `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" aria-label="${esc(t.label)}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
         </button>`
       ).join('');
@@ -895,7 +896,7 @@ function buildToolbarHTML(mode) {
           <div style="flex:1;height:1px;background:var(--border-light);"></div>
         </div>`;
         html += others.map(t =>
-          `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
+          `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" aria-label="${esc(t.label)}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
           </button>`
         ).join('');
@@ -905,10 +906,91 @@ function buildToolbarHTML(mode) {
   }
   // No subject context — flat list
   return visibleTools.map(t =>
-    `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
+    `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" aria-label="${esc(t.label)}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
     </button>`
   ).join('');
+}
+
+/* ══════════ Voice dictation mic (WS-V) ══════════
+ * Press-to-talk mic that FILLS a text field — it never sends or saves. The
+ * teacher leads: dictation only drops recognised text at the cursor, and the
+ * existing Send control is still the only thing that submits. The mic is
+ * rendered ONLY when the browser supports speech input; unsupported browsers
+ * get no mic at all and the composer behaves exactly as before. */
+function micButtonHTML({ id, statusId, label = 'Dictate', title = 'Dictate — fills the box; you still press Send yourself' }) {
+  if (!isVoiceInputSupported()) return '';
+  return `<button type="button" class="cocher-mic-btn btn btn-ghost btn-sm" id="${esc(id)}" aria-pressed="false" aria-label="${esc(label)}" title="${esc(title)}" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;">
+      <svg class="cocher-mic-glyph" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      <span class="cocher-mic-word" style="font-size:0.6875rem;font-weight:600;">${esc(label)}</span>
+    </button>
+    <span id="${esc(statusId)}" class="cocher-mic-status" role="status" aria-live="polite" style="display:none;font-size:0.6875rem;color:var(--ink-muted);align-self:center;"></span>`;
+}
+
+/* Insert recognised text at the caret (or the end) of a text field, adding a
+ * separating space when joining onto existing words, then fire an 'input' event
+ * so auto-resize / counters react to the programmatic change. */
+function insertTextAtCursor(field, text) {
+  const chunk = (text || '').trim();
+  if (!field || !chunk) return;
+  const hasSel = typeof field.selectionStart === 'number' && typeof field.selectionEnd === 'number';
+  const start = hasSel ? field.selectionStart : field.value.length;
+  const end = hasSel ? field.selectionEnd : field.value.length;
+  const before = field.value.slice(0, start);
+  const after = field.value.slice(end);
+  const needsSpace = before.length > 0 && !/\s$/.test(before);
+  const piece = (needsSpace ? ' ' : '') + chunk;
+  field.value = before + piece + after;
+  const caret = start + piece.length;
+  try { field.selectionStart = field.selectionEnd = caret; } catch (_) { /* input types without selection */ }
+  field.focus();
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/* Wire a mic button (built by micButtonHTML) to a target field. No-op when
+ * speech is unsupported or the elements are missing. Toggles listening state
+ * (aria-pressed + a visible "Listening…" label) and only ever FILLS the field. */
+function wireMic(root, { buttonId, statusId, fieldId, lang = 'en-SG' }) {
+  if (!isVoiceInputSupported() || !root) return;
+  const button = root.querySelector('#' + buttonId);
+  const field = root.querySelector('#' + fieldId);
+  const statusEl = statusId ? root.querySelector('#' + statusId) : null;
+  if (!button || !field) return;
+
+  const idleLabel = button.getAttribute('aria-label') || 'Dictate';
+  const wordEl = button.querySelector('.cocher-mic-word');
+  let listening = false;
+
+  const setState = (on) => {
+    listening = on;
+    button.setAttribute('aria-pressed', String(on));
+    button.classList.toggle('is-listening', on);
+    button.setAttribute('aria-label', on ? 'Stop dictation' : idleLabel);
+    button.style.color = on ? 'var(--danger, #dc2626)' : '';
+    if (wordEl) wordEl.textContent = on ? 'Listening…' : idleLabel;
+    if (statusEl) {
+      statusEl.textContent = on ? 'Listening…' : '';
+      statusEl.style.display = on ? '' : 'none';
+    }
+  };
+
+  const dictation = createDictation({
+    lang,
+    onInterim(interim) {
+      if (statusEl && interim) { statusEl.textContent = interim; statusEl.style.display = ''; }
+    },
+    onResult(finalText) {
+      // FILL only — never submit. The teacher still presses Send.
+      insertTextAtCursor(field, finalText);
+    },
+    onError() { setState(false); },
+    onEnd() { setState(false); },
+  });
+
+  button.addEventListener('click', () => {
+    if (listening) { dictation.stop(); return; }
+    if (dictation.start()) setState(true);
+  });
 }
 
 /* ══════════ Main render ══════════ */
@@ -1058,6 +1140,7 @@ export function render(container) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 Attach Context
               </button>
+              ${micButtonHTML({ id: 'composer-mic-btn', statusId: 'composer-mic-status', label: 'Dictate' })}
               <select id="ideology-lens" class="input" title="Optional: frame lesson through a curriculum ideology" style="width:auto;padding:2px 8px;font-size:0.6875rem;color:var(--ink-muted);border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-card);height:28px;">
                 <option value="">Ideology lens (optional)</option>
                 <option value="learner-centred" ${selectedIdeology === 'learner-centred' ? 'selected' : ''}>Learner-Centred</option>
@@ -1572,6 +1655,10 @@ export function render(container) {
   container.querySelector('#attach-kb-btn')?.addEventListener('click', () => {
     showAttachKBModal(container);
   });
+
+  // WS-V: composer dictation mic — FILLS #chat-input at the cursor; it never
+  // calls sendMessage(). The teacher still presses Send to submit.
+  wireMic(container, { buttonId: 'composer-mic-btn', statusId: 'composer-mic-status', fieldId: 'chat-input' });
 
   // Quick prompts
   messagesEl.addEventListener('click', e => {
