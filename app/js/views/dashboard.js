@@ -19,6 +19,7 @@ import { escapeHtml } from '../utils/markdown.js';
 import { lessonStage, lessonNextStep, LIFECYCLE_STAGES } from './lessons.js';
 import { getIdentity } from '../utils/identity.js';
 import { levelMeta, getPreset } from '../utils/tracking.js';
+import { isTouch } from '../utils/viewport.js';
 
 /* ── Visual identity helpers (A3) ──
  * The teacher's monogram + colour. Initials come from the chosen identity, else
@@ -1168,6 +1169,241 @@ function buildPrepChecklist(teacherRow, lessons, classes) {
     </div>`;
 }
 
+/* ══════════ WS-A: "Your next lesson" anticipatory surface ══════════
+ * The first thing the teacher sees: the class they are walking into next,
+ * with one-tap ways to open its plan, present it, or (when nothing is linked
+ * yet) start planning it. HARD PRINCIPLE — teacher LEADS: this only ever
+ * renders tappable suggestions; it NEVER calls navigate() on its own. */
+
+/* Generalised class name-match (the same rule buildPrepChecklist uses): a
+ * class whose name equals the timetable class code, or contains it. */
+function matchClassByCode(classes, classCode) {
+  if (!classCode) return null;
+  return (classes || []).find(c => c.name === classCode || c.name?.includes(classCode)) || null;
+}
+
+/* Best lesson to surface for a class: prefer a 'ready' one (most recent),
+ * else the most-recently-touched lesson that isn't completed (NOT only
+ * 'ready'). Returns null when the class has no such lesson. */
+function bestLessonForClass(lessons, classId) {
+  if (!classId) return null;
+  const byRecent = (a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0);
+  const forClass = (lessons || []).filter(l => l.classId === classId);
+  const ready = forClass.filter(l => l.status === 'ready').sort(byRecent);
+  if (ready.length) return ready[0];
+  const active = forClass.filter(l => l.status !== 'completed').sort(byRecent);
+  return active[0] || null;
+}
+
+/* A calm, non-actionable line for free periods / after school / weekends. */
+function nextLessonCalmLine(message) {
+  return `<div class="card next-lesson-card" style="margin-bottom:var(--sp-5);padding:var(--sp-3) var(--sp-4);display:flex;align-items:center;gap:var(--sp-3);">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">${escapeHtml(message)}</span>
+  </div>`;
+}
+
+function buildNextLessonCard(teacherRow, lessons, classes) {
+  const pk = getTTPeriodKey();
+  // Weekend / non-teaching week — a calm line, independent of the timetable row.
+  if (!pk) {
+    return nextLessonCalmLine(isWeekendToday()
+      ? 'No lessons today — enjoy the breather.'
+      : 'Non-teaching week — no classes scheduled today.');
+  }
+  if (!teacherRow) return ''; // No timetable row for this teacher — nothing to anticipate.
+
+  const { dayStr, period, weekType } = pk;
+
+  // Today's teaching periods (same parse as buildPrepChecklist).
+  const allPeriods = [];
+  for (const p of periodsForDay(teacherRow, weekType, dayStr)) {
+    const val = teacherRow[periodCol(weekType, dayStr, p)];
+    if (val && val !== '0') {
+      const parts = val.split(' / ');
+      allPeriods.push({ p, classCode: parts[0]?.trim(), room: parts[1]?.trim() || '' });
+    }
+  }
+
+  // Next upcoming class today. period === null means no teaching period has
+  // started yet (before school / the 07:30 form window) → first class today.
+  const noPeriodYet = period === null;
+  const nextLesson = allPeriods.find(s => noPeriodYet || s.p >= period);
+  if (!nextLesson) {
+    return nextLessonCalmLine(allPeriods.length
+      ? 'No more classes today — a good window to plan or reflect.'
+      : 'No classes on your timetable today.');
+  }
+
+  const matchingClass = matchClassByCode(classes, nextLesson.classCode);
+  const lesson = matchingClass ? bestLessonForClass(lessons, matchingClass.id) : null;
+  const canPresent = !!(lesson && lesson.runOfShow && Array.isArray(lesson.runOfShow.segments) && lesson.runOfShow.segments.length);
+  const timeStr = fmtClockShort(periodStartMin(nextLesson.p));
+  const whenKicker = noPeriodYet ? 'First class today' : (nextLesson.p === period ? 'On now' : 'Next class');
+
+  // CTAs — tappable suggestions only (wired to navigate on click in render()).
+  let ctas = '';
+  if (lesson) {
+    ctas += `<button class="btn btn-sm btn-primary next-lesson-cta" data-nl-action="open" data-nl-lesson="${escapeHtml(lesson.id)}" style="white-space:nowrap;">Open plan</button>`;
+    if (canPresent) {
+      ctas += `<button class="btn btn-sm btn-secondary next-lesson-cta" data-nl-action="present" data-nl-lesson="${escapeHtml(lesson.id)}" style="white-space:nowrap;">Present</button>`;
+    }
+  } else {
+    // No lesson linked — offer to plan it (prefilling the class when we have one).
+    ctas += `<button class="btn btn-sm btn-primary next-lesson-cta" data-nl-action="plan" data-nl-class="${escapeHtml(matchingClass?.id || '')}" style="white-space:nowrap;">Plan it</button>`;
+  }
+
+  const detail = lesson
+    ? escapeHtml(lesson.title || 'Untitled lesson')
+    : (matchingClass ? 'No plan linked to this class yet.' : 'This class isn’t set up in Co-Cher yet.');
+
+  return `
+    <div class="card next-lesson-card" style="margin-bottom:var(--sp-5);padding:var(--sp-4) var(--sp-5);border-left:4px solid var(--marker,#FFE200);background:var(--surface,#fff);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;">
+        <div style="min-width:0;">
+          <div style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-muted);margin-bottom:2px;">${whenKicker}</div>
+          <div style="font-size:1.0625rem;font-weight:700;color:var(--ink);overflow-wrap:anywhere;">
+            ${escapeHtml(nextLesson.classCode || 'Class')} <span style="color:var(--ink-faint);font-weight:600;">&middot; P${nextLesson.p}${timeStr ? ' at ' + timeStr : ''}${nextLesson.room ? ' &middot; ' + escapeHtml(nextLesson.room) : ''}</span>
+          </div>
+          <div style="font-size:0.875rem;color:${lesson ? 'var(--ink-secondary)' : 'var(--ink-faint)'};margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">${detail}</div>
+        </div>
+        <div style="display:flex;gap:var(--sp-2);flex-shrink:0;flex-wrap:wrap;">
+          ${ctas}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* Wire the next-lesson card's CTAs. Navigation happens ONLY here, on an
+ * explicit tap — the card never navigates on its own. */
+function wireNextLessonCard(scopeEl) {
+  scopeEl.querySelectorAll('.next-lesson-cta').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const action = btn.dataset.nlAction;
+      const lessonId = btn.dataset.nlLesson;
+      if (action === 'open' && lessonId) {
+        navigate(`/lesson-planner/${lessonId}`);
+      } else if (action === 'present' && lessonId) {
+        navigate(`/present/${lessonId}`);
+      } else if (action === 'plan') {
+        const clsId = btn.dataset.nlClass;
+        if (clsId) {
+          const cls = Store.getClasses().find(c => c.id === clsId);
+          if (cls) {
+            // Same handoff keys the lesson planner reads (cocher_plan_class_*).
+            sessionStorage.setItem('cocher_plan_class_id', cls.id);
+            sessionStorage.setItem('cocher_plan_class_name', cls.name || '');
+            sessionStorage.setItem('cocher_plan_class_subject', cls.subject || '');
+            sessionStorage.setItem('cocher_plan_class_level', cls.level || '');
+          }
+        }
+        navigate('/lesson-planner');
+      }
+    });
+  });
+}
+
+/* ══════════ WS-D: milestone OFFERS (teacher-led delight) ══════════
+ * At gentle lifetime thresholds, surface ONE warm, dismissible offer to
+ * revisit growth. Never auto-navigates. Dismissal (or acting on it) persists
+ * per-threshold so each milestone shows at most once and never nags. Only the
+ * single highest unseen, achieved milestone is shown at a time. */
+const MILESTONES_SEEN_KEY = 'cocher_milestones_seen';
+
+/* Ordered least → most significant; the highest achieved & unseen wins. */
+const MILESTONES = [
+  { key: 'presented-1',    stat: 'lessonsPresented', n: 1,  headline: 'You presented your first lesson on the class screen.', note: 'The first of many.' },
+  { key: 'created-10',     stat: 'lessonsCreated',   n: 10, headline: 'You&rsquo;ve designed 10 lessons with Co-Cher.',        note: 'A real body of work is taking shape.' },
+  { key: 'reflections-10', stat: 'reflectionsCount', n: 10, headline: 'You&rsquo;ve written 10 lesson reflections.',           note: 'Closing the loop, lesson after lesson.' },
+  { key: 'presented-10',   stat: 'lessonsPresented', n: 10, headline: 'You&rsquo;ve presented 10 lessons.',                    note: 'That&rsquo;s real craft.' },
+  { key: 'reflections-25', stat: 'reflectionsCount', n: 25, headline: 'You&rsquo;ve written 25 reflections.',                  note: 'Deliberate practice, made visible.' },
+  { key: 'presented-25',   stat: 'lessonsPresented', n: 25, headline: 'You&rsquo;ve presented 25 lessons.',                    note: 'Your students have felt every one.' },
+  { key: 'created-50',     stat: 'lessonsCreated',   n: 50, headline: 'You&rsquo;ve designed 50 lessons.',                     note: 'A remarkable library of your own making.' },
+  { key: 'presented-50',   stat: 'lessonsPresented', n: 50, headline: 'You&rsquo;ve presented 50 lessons.',                    note: 'Fifty times you&rsquo;ve brought a room to life.' },
+];
+
+function getMilestonesSeen() {
+  try {
+    const raw = localStorage.getItem(MILESTONES_SEEN_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch { return new Set(); }
+}
+function markMilestoneSeen(key) {
+  if (!key) return;
+  const seen = getMilestonesSeen();
+  seen.add(key);
+  try { localStorage.setItem(MILESTONES_SEEN_KEY, JSON.stringify([...seen])); } catch {}
+}
+
+/* The single highest unseen, achieved milestone — or null. */
+function pickMilestone(stats) {
+  const seen = getMilestonesSeen();
+  let pick = null;
+  for (const m of MILESTONES) {
+    if (!seen.has(m.key) && (stats?.[m.stat] || 0) >= m.n) pick = m; // last match = highest
+  }
+  return pick;
+}
+
+function buildMilestoneOffer(stats) {
+  const m = pickMilestone(stats);
+  if (!m) return '';
+  // headline/note are static, hand-authored HTML (safe entities) — not escaped.
+  return `
+    <div class="card milestone-offer" data-milestone-key="${escapeHtml(m.key)}" style="margin-bottom:var(--sp-5);padding:var(--sp-4) var(--sp-5);border-left:4px solid var(--growth,#2c7a4b);background:var(--growth-light,#e2f2e8);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;">
+        <div style="min-width:0;display:flex;align-items:center;gap:var(--sp-3);">
+          <span style="font-size:1.4rem;flex-shrink:0;line-height:1;" aria-hidden="true">&#127881;</span>
+          <div style="min-width:0;">
+            <div style="font-size:0.9375rem;font-weight:700;color:var(--growth,#2c7a4b);">${m.headline}</div>
+            <div style="font-size:0.8125rem;color:var(--ink-secondary);margin-top:1px;">${m.note}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--sp-2);flex-shrink:0;">
+          <button class="btn btn-sm milestone-growth" style="background:var(--growth,#2c7a4b);color:#fff;border:none;font-weight:700;white-space:nowrap;">See my growth &rarr;</button>
+          <button class="btn btn-ghost btn-sm milestone-dismiss" style="color:var(--ink-muted);">Dismiss</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ══════════ Mobile widget reorder (touch) ══════════
+ * The HTML5 drag reorder is dead on touch, so under isTouch() each reorderable
+ * widget gains ▲/▼ buttons (see widgetWrap). They move the widget within the
+ * very same widgetOrder pref the drag writes, then re-render. Non-touch keeps
+ * drag untouched (the buttons are simply never emitted). */
+function reorderParentEl(container) {
+  return container.querySelector('#calm-more-container') || container.querySelector('.page-container');
+}
+
+function moveWidget(container, wId, dir) {
+  const parent = reorderParentEl(container);
+  if (!parent || !wId) return;
+  // Visible, top-level reorderable widgets in current DOM order (deduped —
+  // async widgets nest a duplicate .dashboard-widget inside their placeholder,
+  // but only the placeholder is a direct child here).
+  const ids = [];
+  const seen = new Set();
+  [...parent.children].forEach(el => {
+    if (el.matches && el.matches('.dashboard-widget[data-widget-id]')) {
+      const id = el.dataset.widgetId;
+      if (id && !seen.has(id)) { seen.add(id); ids.push(id); }
+    }
+  });
+  const idx = ids.indexOf(wId);
+  if (idx < 0) return;
+  const target = dir === 'up' ? idx - 1 : idx + 1;
+  if (target < 0 || target >= ids.length) return; // already at an edge
+  [ids[idx], ids[target]] = [ids[target], ids[idx]];
+  const p = getDashPrefs();
+  p.widgetOrder = ids;
+  saveDashPrefs(p);
+  render(container);
+}
+
 /* ── Pinned Links bar ── */
 function renderPinnedLinks(pinnedIds) {
   if (!pinnedIds || pinnedIds.length === 0) return '';
@@ -1420,6 +1656,12 @@ function widgetWrap(id, title, content, prefs, extraHeaderHtml = '') {
         <h2 class="section-title" style="font-size:1.125rem;margin:0;">${title}</h2>
         <div style="display:flex;align-items:center;gap:var(--sp-2);">
           ${extraHeaderHtml}
+          ${isTouch() ? `<button class="btn-widget-move" data-widget-move="up" data-widget-id="${id}" title="Move up" aria-label="Move ${escapeHtml(title)} up" style="background:none;border:none;cursor:pointer;padding:2px;opacity:0.55;line-height:0;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
+          <button class="btn-widget-move" data-widget-move="down" data-widget-id="${id}" title="Move down" aria-label="Move ${escapeHtml(title)} down" style="background:none;border:none;cursor:pointer;padding:2px;opacity:0.55;line-height:0;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>` : ''}
           <button class="btn-widget-resize" data-resize-widget="${id}" title="Resize: ${size}" style="background:none;border:none;cursor:pointer;padding:2px;opacity:0.5;transition:opacity 0.15s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.5'">
             <svg width="14" height="14" viewBox="0 0 24 24">${getSizeIcon(size)}</svg>
           </button>
@@ -2072,6 +2314,9 @@ export function render(container) {
         <div class="page-container">
           ${CALM_STYLE_BLOCK}
 
+          <!-- WS-A: anticipatory next-lesson surface (populated async; top of the fold) -->
+          <div id="next-lesson-card"></div>
+
           <!-- Serif greeting (no card) with teacher monogram + optional mantra -->
           <div class="animate-fade-in-up" style="padding:var(--sp-2) 0 var(--sp-5);display:flex;align-items:flex-start;gap:var(--sp-3);">
             ${teacherMonogramHTML('avatar-lg')}
@@ -2082,6 +2327,9 @@ export function render(container) {
               ${fortnightLine}
             </div>
           </div>
+
+          <!-- WS-D: milestone offer (teacher-led delight; shown only at thresholds) -->
+          ${buildMilestoneOffer(Store.getLifetimeStats())}
 
           <!-- Up Next hero, calm styling -->
           ${buildUpNextHero(lessons, classes, true)}
@@ -2124,6 +2372,9 @@ export function render(container) {
     <div class="main-scroll">
       <div class="page-container">
 
+        <!-- WS-A: anticipatory next-lesson surface (populated async; top of the fold) -->
+        <div id="next-lesson-card"></div>
+
         <!-- Greeting -->
         <div class="greeting-card animate-fade-in-up">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);">
@@ -2148,6 +2399,9 @@ export function render(container) {
           </div>
         </div>
 
+        <!-- WS-D: milestone offer (teacher-led delight; shown only at thresholds) -->
+        ${buildMilestoneOffer(Store.getLifetimeStats())}
+
         <!-- Up Next: the most actionable lesson in the pipeline -->
         ${buildUpNextHero(lessons, classes)}
 
@@ -2169,6 +2423,35 @@ export function render(container) {
   container.querySelector('#customise-dashboard-btn')?.addEventListener('click', () => {
     showCustomiseModal(container);
   });
+
+  // ── WS-D: milestone offer (never auto-navigates; both actions settle it) ──
+  container.querySelector('.milestone-growth')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const card = e.currentTarget.closest('.milestone-offer');
+    if (card) markMilestoneSeen(card.dataset.milestoneKey);
+    navigate('/my-growth');
+  });
+  container.querySelector('.milestone-dismiss')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const card = e.currentTarget.closest('.milestone-offer');
+    if (card) { markMilestoneSeen(card.dataset.milestoneKey); card.remove(); }
+  });
+
+  // ── Mobile widget reorder: one delegated listener on the (fresh-per-render)
+  // page container catches ▲/▼ on both sync and async widgets without stacking
+  // listeners across re-renders. Non-touch never emits the buttons. ──
+  if (isTouch()) {
+    const pc = container.querySelector('.page-container');
+    pc?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-widget-move');
+      if (!btn || !pc.contains(btn)) return;
+      e.preventDefault();   // don't toggle the widget's <details>
+      e.stopPropagation();
+      moveWidget(container, btn.dataset.widgetId, btn.dataset.widgetMove);
+    });
+  }
 
   // ── Calm layout wiring (elements absent in classic; all guarded) ──
   const calmMoreBtn = container.querySelector('#calm-more-btn');
@@ -2392,6 +2675,16 @@ export function render(container) {
         const ribbonHTML = buildCalmRibbon(teacherRow);
         if (ribbonHTML) ribbonEl.innerHTML = ribbonHTML;
         else ribbonEl.style.display = 'none'; // weekend / no timetable row
+      }
+
+      // WS-A: anticipatory next-lesson card. Rendered even without a teacher
+      // row so the weekend / no-timetable calm line resolves the placeholder.
+      // It only ever renders tappable suggestions — never navigates on its own.
+      const nlEl = container.querySelector('#next-lesson-card');
+      if (nlEl) {
+        const nlHTML = buildNextLessonCard(teacherRow, Store.getLessons(), classes);
+        if (nlHTML) { nlEl.innerHTML = nlHTML; wireNextLessonCard(nlEl); }
+        else nlEl.style.display = 'none';
       }
 
       if (!teacherRow) return;
