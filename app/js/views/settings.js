@@ -293,6 +293,7 @@ function buildFrameworksListHTML() {
             ${stageCount} stage${stageCount === 1 ? '' : 's'}${(fw.stages || []).length ? ': ' + fw.stages.map(s => escapeHtml(s.label || '')).join(' → ') : ''}
           </div>
         </div>
+        <button class="btn btn-ghost btn-sm" data-fw-edit="${escapeHtml(fw.id)}" title="${fw.builtin ? 'Edit — saves as your own copy; the built-in original is untouched' : 'Edit framework'}" style="padding:4px 8px;font-size:0.6875rem;">Edit</button>
         ${fw.builtin ? '' : `
           <button class="btn btn-ghost btn-sm" data-fw-delete="${escapeHtml(fw.id)}" title="Delete framework" style="padding:4px 8px;font-size:0.6875rem;color:var(--danger);">Delete</button>`}
       </div>`;
@@ -320,8 +321,11 @@ function normalizeFrameworkDraft(obj) {
   };
 }
 
-/** Editable review modal shared by upload (pre-filled) and manual create (blank). */
-function showFrameworkModal(draft, onSaved) {
+/** Editable review modal shared by upload (pre-filled), manual create (blank)
+ * and edit (S3). Pass `editing` (the stored framework) to edit: customs update
+ * in place (id preserved); builtins save as an edited copy with a new id —
+ * the built-in original is never touched. */
+function showFrameworkModal(draft, onSaved, editing = null) {
   const fw = normalizeFrameworkDraft(draft);
 
   const stageRow = (s, i) => `
@@ -336,9 +340,14 @@ function showFrameworkModal(draft, onSaved) {
     </div>`;
 
   const { backdrop, close } = openModal({
-    title: 'Review Framework',
+    title: editing ? 'Edit Framework' : 'Review Framework',
     width: 560,
     body: `
+      ${editing?.builtin ? `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:10px;border-radius:8px;background:var(--bg-subtle,#f3f4f6);border:1px solid var(--border-light,#e5e7eb);font-size:0.75rem;color:var(--ink-muted);">
+        ${FW_LOCK_ICON}
+        <span>You are editing a built-in framework &mdash; saving creates your own editable copy; the original stays unchanged.</span>
+      </div>` : ''}
       <div style="display:grid;grid-template-columns:1fr 180px;gap:10px;margin-bottom:10px;">
         <div>
           <label style="font-size:0.6875rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:3px;">Name</label>
@@ -399,14 +408,26 @@ function showFrameworkModal(draft, onSaved) {
     if (!name) { showToast('Give the framework a name.', 'warning'); return; }
     const stages = readStages().filter(s => s.label);
     if (stages.length < 3) { showToast('Fill in at least 3 stage names.', 'warning'); return; }
-    const saved = Store.addFramework({
+    const payload = {
       name,
       purpose: backdrop.querySelector('#fw-edit-purpose').value,
       guidance: backdrop.querySelector('#fw-edit-guidance').value.trim(),
       stages
-    });
+    };
+    let saved;
+    if (editing && !editing.builtin) {
+      // Custom framework: update in place, id preserved.
+      Store.updateFramework(editing.id, payload);
+      saved = Store.getFramework(editing.id);
+      showToast(`Framework "${payload.name}" updated.`, 'success');
+    } else {
+      // New framework — or an edited COPY of a builtin (new id, builtin:false).
+      saved = Store.addFramework(payload);
+      showToast(editing?.builtin
+        ? `Saved "${saved.name}" as your editable copy.`
+        : `Framework "${saved.name}" added.`, 'success');
+    }
     close();
-    showToast(`Framework "${saved.name}" added.`, 'success');
     if (typeof onSaved === 'function') onSaved(saved);
   });
 }
@@ -418,6 +439,14 @@ function wireFrameworkEvents(container) {
   const refresh = () => { listEl.innerHTML = buildFrameworksListHTML(); };
 
   listEl.addEventListener('click', async (e) => {
+    // Edit (S3): reuse the create/review modal prefilled with the stored
+    // framework. Customs update in place; builtins save as an edited copy.
+    const editBtn = e.target.closest('[data-fw-edit]');
+    if (editBtn) {
+      const fw = Store.getFramework(editBtn.dataset.fwEdit);
+      if (fw) showFrameworkModal(fw, refresh, fw);
+      return;
+    }
     const delBtn = e.target.closest('[data-fw-delete]');
     if (!delBtn) return;
     const id = delBtn.dataset.fwDelete;

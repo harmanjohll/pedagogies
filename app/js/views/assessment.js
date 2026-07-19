@@ -1379,6 +1379,9 @@ export function renderAaL(container) {
         </div>
 
         <!-- Pedagogy framework cards (registry-driven; GROW + ACT are seeded builtins) -->
+        <div style="text-align:right;margin-bottom:8px;">
+          <a href="#/settings" style="font-size:0.75rem;font-weight:600;color:var(--accent,#4361ee);text-decoration:none;">Manage frameworks &rarr;</a>
+        </div>
         ${aalFrameworks().map(fw => renderFrameworkCard(fw)).join('')}
 
         <!-- Enacted example popup area (shared across framework cards) -->

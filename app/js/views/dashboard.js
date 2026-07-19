@@ -359,6 +359,21 @@ export function findTeacherRow(ttData, email) {
   return null;
 }
 
+/* ── S1: weekend / non-teaching-week widget filler ──
+ * Timetable widgets keep their slot with a slim friendly card instead of
+ * rendering an empty div, so the Customise toggles stay truthful. */
+function noSchoolCard(message) {
+  return `<div class="card" style="padding:var(--sp-3) var(--sp-4);display:flex;align-items:center;gap:var(--sp-3);">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+    <span style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">${message}</span>
+  </div>`;
+}
+/** Why is there no timetable today? Weekend vs a non-teaching (N.A.) week. */
+function isWeekendToday() {
+  const day = new Date().getDay();
+  return day === 0 || day === 6;
+}
+
 /* ── Top-of-dashboard status banner: next lesson or done for the day ── */
 function buildStatusBanner(teacherRow) {
   if (!teacherRow) return '';
@@ -461,7 +476,11 @@ function buildStatusBanner(teacherRow) {
 function buildTTScheduleCard(teacherRow) {
   if (!teacherRow) return '';
   const pk = getTTPeriodKey();
-  if (!pk) return ''; // Weekend
+  if (!pk) {
+    return noSchoolCard(isWeekendToday()
+      ? 'No school day today &mdash; enjoy the breather.'
+      : 'Non-teaching week &mdash; no classes scheduled today.');
+  }
 
   const name = teacherRow['NAME'] || '';
   const dept = teacherRow['DEPARTMENT'] || '';
@@ -1014,11 +1033,21 @@ function buildNotifications(classes, lessons, events) {
 function buildWeeklyOverview(teacherRow, lessons, classes) {
   if (!teacherRow) return '';
   const pk = getTTPeriodKey();
-  if (!pk) return '';
-  const { weekType } = pk;
+  // Weekends still render the Mon–Fri grid (there is just no 'today' column);
+  // only a non-teaching (N.A.) week has no timetable to draw.
+  let weekType = pk?.weekType || null;
+  if (!weekType) {
+    const wt = getWeekTypeForDate(new Date());
+    if (wt === 'Odd' || wt === 'Even') weekType = wt;
+  }
+  if (!weekType) {
+    return noSchoolCard(isWeekendToday()
+      ? 'No timetable this week &mdash; enjoy the breather.'
+      : 'Non-teaching week &mdash; no timetable to preview.');
+  }
 
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-  const today = new Date().getDay(); // 0=Sun, 1=Mon...
+  const today = new Date().getDay(); // 0=Sun, 1=Mon... (weekend → no highlight)
   const todayIdx = today >= 1 && today <= 5 ? today - 1 : -1;
 
   const dayColumns = days.map((day, idx) => {
@@ -1069,7 +1098,11 @@ function buildWeeklyOverview(teacherRow, lessons, classes) {
 function buildPrepChecklist(teacherRow, lessons, classes) {
   if (!teacherRow) return '';
   const pk = getTTPeriodKey();
-  if (!pk) return '';
+  if (!pk) {
+    return noSchoolCard(isWeekendToday()
+      ? 'No lessons to prep today &mdash; enjoy the breather.'
+      : 'Non-teaching week &mdash; nothing on the prep list.');
+  }
   const { dayStr, period, weekType, mins } = pk;
 
   // Find next upcoming lesson
@@ -2494,7 +2527,11 @@ function buildNotificationItems(classes, lessons, events) {
 export function buildMyTimetable(teacherRow) {
   if (!teacherRow) return '';
   const pk = getTTPeriodKey();
-  if (!pk) return '';
+  if (!pk) {
+    return noSchoolCard(isWeekendToday()
+      ? 'No school day today &mdash; your timetable resumes on the next school day.'
+      : 'Non-teaching week &mdash; no periods to show.');
+  }
   const { dayStr, period, weekType } = pk;
 
   const rows = [];

@@ -167,7 +167,7 @@ function injectModeStyles() {
     .sidebar-modes-clear { background: none; border: none; cursor: pointer; color: var(--ink-faint); font-size: 0.625rem; font-weight: 600; padding: 0; text-transform: none; letter-spacing: 0; }
     .sidebar-modes-clear:hover { color: var(--accent); }
     .sidebar-modes-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-    .sidebar-mode-chip { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: var(--radius-md, 8px); border: 1px solid var(--border-light); background: var(--bg-card); color: var(--ink-muted); font-size: 0.6875rem; font-weight: 600; cursor: pointer; text-align: left; transition: all var(--dur-fast, 0.15s) var(--ease, ease); font-family: inherit; min-width: 0; }
+    .sidebar-mode-chip { display: flex; align-items: center; gap: 4px; padding: 5px 6px; border-radius: var(--radius-md, 8px); border: 1px solid var(--border-light); background: var(--bg-card); color: var(--ink-muted); font-size: 0.625rem; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; text-align: left; transition: all var(--dur-fast, 0.15s) var(--ease, ease); font-family: inherit; min-width: 0; }
     .sidebar-mode-chip:hover { border-color: var(--accent); color: var(--ink); }
     .sidebar-mode-chip svg { width: 13px; height: 13px; flex-shrink: 0; opacity: 0.7; }
     .sidebar-mode-chip .sidebar-mode-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

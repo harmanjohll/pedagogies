@@ -733,6 +733,7 @@ export const Store = {
       runOfShow: data.runOfShow || null,
       expansions: data.expansions || {},
       reflection: data.reflection || '',
+      kind: data.kind || null,   // e.g. 'cce' — lesson flavour; null = regular lesson
       createdAt: Date.now(),
       updatedAt: Date.now()
     };

@@ -163,7 +163,7 @@ function renderIdeologyMirror() {
     <div style="padding:var(--sp-3);border:1px dashed var(--border);border-radius:var(--radius-md);font-size:0.75rem;color:var(--ink-faint);font-style:italic;">${msg}</div>`;
 
   if (!espoused || !IDEOLOGY_META[espoused]) {
-    return hint('Name your teaching orientation in <a href="#/settings" style="color:var(--accent);">Settings &rarr; Planner</a> and this mirror will compare it against what your plans actually look like.');
+    return hint('Name your teaching orientation in <a href="#/settings" style="color:var(--accent);">Settings &rarr; Enactment</a> and this mirror will compare it against what your plans actually look like.');
   }
 
   // Aggregate keyword signal across recent plans that carry any text

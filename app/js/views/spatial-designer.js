@@ -1054,6 +1054,11 @@ export function render(container) {
             navigate('/lesson-planner');
           });
         }
+      } else {
+        // Weekend / non-teaching week / outside timetabled hours — the banner
+        // still shows, so give it an honest body instead of a blank line.
+        textEl.innerHTML = `<strong>${teacherName}</strong>${dept ? ` &middot; ${dept}` : ''}<br/>
+          <span style="color:var(--ink-muted);">No lesson right now</span>`;
       }
       banner.style.display = '';
     } catch { /* silently fail; TT is optional */ }
@@ -2659,7 +2664,15 @@ export function render(container) {
       });
     });
     el.querySelectorAll('.del-layout').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
+        const layout = layouts.find(l => l.id === btn.dataset.idx);
+        const ok = await confirmDialog({
+          title: 'Delete Layout',
+          message: `Delete "${escapeHtml(layout?.name || 'this layout')}"? Lessons linked to it will lose the layout. This cannot be undone.`,
+          confirmLabel: 'Delete',
+          confirmClass: 'btn btn-danger'
+        });
+        if (!ok) return;
         Store.deleteLayout(btn.dataset.idx);
         showToast('Layout deleted');
         renderSavedLayouts();

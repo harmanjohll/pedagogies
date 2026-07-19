@@ -6,7 +6,8 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion, expandSection, generateDeck, generatePodcastScript, generateSpeech } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech } from '../api.js';
+import { cceContextBlock } from './cce.js';
 import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, openDeckById, downloadBlob } from '../utils/deck.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
@@ -40,6 +41,7 @@ let attachedKBContext = [];   // attached knowledge base resources
 let lessonDateTime = null;    // { date, period, room, classCode } from timetable or manual
 let selectedIdeology = '';    // optional curriculum ideology lens
 let selectedFrameworkIds = []; // optional pedagogy framework lenses (multi-select chips)
+let cceContext = null;        // WS-5: { contentArea, topic, pendingInput } when arriving via "Plan a CCE lesson"
 
 /* ── Reference library picker ──
  * Teacher-curated documents (My References, in My Learning) that can be toggled
@@ -781,6 +783,7 @@ export function renderForLesson(container, { id }) {
   chatMessages = [...(lesson.chatHistory || [])];
   vigilanceNudged = false;
   vigilanceState = null;
+  cceContext = null;  // kind already lives on the saved lesson
   render(container);
 }
 
@@ -794,6 +797,7 @@ export function renderNew(container) {
     chatMessages = [];
     lessonComponents = {};
     planClassContext = null;
+    cceContext = null;
   }
   vigilanceNudged = false;
   vigilanceState = null;
@@ -925,6 +929,26 @@ export function render(container) {
     sessionStorage.removeItem('cocher_plan_class_name');
     sessionStorage.removeItem('cocher_plan_class_subject');
     sessionStorage.removeItem('cocher_plan_class_level');
+  }
+
+  // WS-5: CCE planner prefill — topic + content-area framing handed over by
+  // the CCE view's "Plan a CCE lesson". Removed once consumed (same handoff
+  // semantics as cocher_plan_class_* above); an unsaved draft keeps priority
+  // and the prefill applies on the next fresh conversation instead.
+  const plannerPrefillRaw = sessionStorage.getItem('cocher_planner_prefill');
+  if (plannerPrefillRaw && !currentLessonId && chatMessages.length === 0) {
+    sessionStorage.removeItem('cocher_planner_prefill');
+    try {
+      const prefill = JSON.parse(plannerPrefillRaw);
+      if (prefill?.kind === 'cce') {
+        cceContext = { contentArea: prefill.contentArea || '', topic: prefill.topic || '', pendingInput: true };
+        // GROW is the natural coaching frame for CCE conversations — pre-select
+        // its chip when the builtin exists (the teacher can still toggle it off).
+        if ((Store.getFrameworks?.() || []).some(f => f.id === 'fw_builtin_grow') && !selectedFrameworkIds.includes('fw_builtin_grow')) {
+          selectedFrameworkIds = [...selectedFrameworkIds, 'fw_builtin_grow'];
+        }
+      }
+    } catch { /* malformed prefill — ignore */ }
   }
 
   // Pick up reflection insights from previous lesson
@@ -1073,7 +1097,7 @@ export function render(container) {
                 </button>
                 <div>
                   <h2 style="font-size:1.125rem;font-weight:600;color:var(--ink);">Lesson Canvas</h2>
-                  <p style="font-size:0.8125rem;color:var(--ink-muted);">
+                  <p id="lp-canvas-subtitle" style="font-size:0.8125rem;color:var(--ink-muted);">
                     ${currentLessonId ? `Editing: ${currentLesson?.title || 'Lesson'}` : 'New lesson — save when ready'}
                   </p>
                 </div>
@@ -1177,6 +1201,16 @@ export function render(container) {
   const messagesEl = container.querySelector('#chat-messages');
   const chatInput = container.querySelector('#chat-input');
   const chatSend = container.querySelector('#chat-send');
+
+  // WS-5: prefill the composer with the CCE topic — ready to edit or send.
+  // One-shot: internal re-renders must not resurrect the prefill text.
+  if (cceContext?.pendingInput) {
+    cceContext.pendingInput = false;
+    if (cceContext.topic && !chatInput.value) {
+      chatInput.value = `Plan a CCE lesson on: ${cceContext.topic}`;
+    }
+    chatInput.focus();
+  }
 
   // Teacher's-call choice blocks ([CHOICE: A | B]) — one delegated listener
   // on the persistent container; elements are re-created on every render.
@@ -1294,6 +1328,7 @@ export function render(container) {
     lessonComponents = {};
     vigilanceNudged = false;
     vigilanceState = null;
+    cceContext = null;
     render(container);
   });
 
@@ -1354,6 +1389,11 @@ export function render(container) {
       if (portrait) {
         contextParts.push(`[Class Portrait — design FOR these learners; differentiate by default for the dimensions most students are still developing]:\n${portrait}`);
       }
+    }
+    // WS-5: CCE lesson framing — first message only, mirrors the other lenses.
+    // cceContextBlock returns the bracketed [CCE Lesson — <area>] block.
+    if (cceContext && chatMessages.length === 0) {
+      contextParts.push(cceContextBlock(cceContext.contentArea));
     }
     // Teacher's active practice goal: support it quietly, never lecture about it
     if (chatMessages.length === 0) {
@@ -1549,7 +1589,7 @@ export function render(container) {
   });
 
   // Save lesson
-  container.querySelector('#save-lesson-btn').addEventListener('click', () => showSaveModal(classes));
+  container.querySelector('#save-lesson-btn').addEventListener('click', () => showSaveModal(container, classes));
 
   // Stage lesson — break the plan into a runnable Run of Show (A1)
   container.querySelector('#stage-lesson-btn')?.addEventListener('click', async (e) => {
@@ -2464,10 +2504,35 @@ function renderMessages(el, classes) {
         nudges.push({ icon: '&#9998;', text: 'No assessment checkpoint detected. Consider adding a formative check to monitor understanding.', color: '#3b82f6' });
       }
 
-      // Check for estimated time (if plan mentions minutes)
-      const timeMatches = lastAI.match(/(\d+)\s*min/gi) || [];
-      if (timeMatches.length >= 2) {
-        const totalMin = timeMatches.reduce((sum, m) => sum + parseInt(m), 0);
+      // Check for estimated time (if plan mentions minutes). Still a heuristic,
+      // but no double counting: a stated total ("55-minute lesson", "Total: 55
+      // min") wins outright; otherwise only durations on list items / section
+      // headings are summed — never every "N min" token in the prose.
+      const planTextRaw = chatMessages[chatMessages.length - 1].content;
+      const allTimeTokens = lastAI.match(/(\d+)\s*min/gi) || [];
+      if (allTimeTokens.length >= 2) {
+        const planLines = planTextRaw.split('\n');
+        const isHeadingLine = (line) => /^\s*#{1,6}\s/.test(line) || /^\s*\*\*[^*]+\*\*:?\s*$/.test(line);
+        let totalMin = 0;
+        // 1) Stated total: "NN-minute lesson" in the first line or a heading,
+        //    or an explicit "Total/Duration: NN min" anywhere in the plan.
+        const firstLineIdx = planLines.findIndex(l => l.trim() !== '');
+        for (let i = 0; i < planLines.length; i++) {
+          if (i !== firstLineIdx && !isHeadingLine(planLines[i])) continue;
+          const m = planLines[i].match(/(\d+)\s*[-‑– ]\s*min(?:ute)?s?\s+(?:lesson|period|class|session|plan)/i);
+          if (m) { totalMin = parseInt(m[1], 10); break; }
+        }
+        if (!totalMin) {
+          const m = planTextRaw.match(/\b(?:total|duration)\b[^0-9\n]{0,20}(\d+)\s*min/i);
+          if (m) totalMin = parseInt(m[1], 10);
+        }
+        // 2) No stated total → sum segment durations from list items / headings.
+        if (!totalMin) {
+          planLines.forEach(line => {
+            if (!/^\s*(?:[-*+]|\d+[.)])\s/.test(line) && !isHeadingLine(line)) return;
+            (line.match(/(\d+)\s*min/gi) || []).forEach(t => { totalMin += parseInt(t, 10); });
+          });
+        }
         if (totalMin > 0) {
           nudges.push({ icon: '&#9200;', text: `Estimated lesson time: ~${totalMin} minutes`, color: '#8b5cf6' });
         }
@@ -2587,7 +2652,7 @@ function renderPlanContent(el) {
 }
 
 /* ── Save lesson modal ── */
-function showSaveModal(classes) {
+function showSaveModal(container, classes) {
   if (chatMessages.length === 0) {
     showToast('Chat with Co-Cher first before saving.', 'danger');
     return;
@@ -2657,18 +2722,32 @@ function showSaveModal(classes) {
       chatHistory: [...chatMessages],
       plan: chatMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n\n---\n\n')
     };
+    // WS-5: a lesson planned via "Plan a CCE lesson" is tagged on first save;
+    // updates never touch kind, so existing lessons keep whatever they have.
+    if (!existing && cceContext) data.kind = 'cce';
 
     if (existing) {
       Store.updateLesson(currentLessonId, data);
       showToast('Lesson updated!', 'success');
+      close();
+      // Refresh the cockpit in place — title, run of show, journey, spatial bar
+      const subtitleEl = container.querySelector('#lp-canvas-subtitle');
+      if (subtitleEl) subtitleEl.textContent = `Editing: ${title}`;
+      renderRunOfShow(container);
+      renderJourneyBar(container);
+      renderSpatialContextBar(container);
     } else {
       const lesson = Store.addLesson(data);
       currentLessonId = lesson.id;
       // A spatial layout linked before the lesson was saved can now be attached.
       consumePendingSpatialLayout();
       showToast('Lesson saved!', 'success');
+      close();
+      // P3/P4: land on the lesson's canonical URL. renderForLesson rehydrates
+      // the whole cockpit (stage CTA, journey bar, status badge) and an F5 now
+      // reloads this lesson instead of silently detaching into a fresh draft.
+      navigate(`/lesson-planner/${lesson.id}`);
     }
-    close();
   });
 
   setTimeout(() => backdrop.querySelector('#save-title')?.focus(), 100);

@@ -305,12 +305,6 @@ export function renderList(container) {
   // Term filter
   const termFilter = container.querySelector('#term-filter');
   if (termFilter) {
-    // Auto-select current term
-    const now = new Date();
-    const month = now.getMonth(); // 0-indexed
-    const autoTerm = month <= 2 ? '1' : month <= 4 ? '2' : month <= 7 ? '3' : month <= 10 ? '4' : '1';
-    termFilter.value = 'all';
-
     termFilter.addEventListener('change', () => {
       const term = termFilter.value;
       if (term === 'all') {
@@ -1306,7 +1300,7 @@ export function renderDetail(container, { id }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${lesson.title.replace(/[^a-zA-Z0-9]/g, '_')}.cocher.json`;
+    a.download = `${lesson.title.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'lesson'}.cocher.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('Lesson exported! Share the file with colleagues.', 'success');
