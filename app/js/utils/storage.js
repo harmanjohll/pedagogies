@@ -11,12 +11,14 @@
  */
 
 const DB_NAME = 'cocher';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE = 'kb_content';
 // v2 adds: custom_sims (generated simulation HTML), images (AI-generated
 // visuals keyed by owner id) — all bulky payloads that must stay out of
 // the ~5MB localStorage budget
-const ALL_STORES = ['kb_content', 'custom_sims', 'images'];
+// v3 adds: media (WS-4 materials — compiled deck HTML strings and audio-clip
+// WAV Blobs, keyed by material id; metadata stays in localStorage)
+const ALL_STORES = ['kb_content', 'custom_sims', 'images', 'media'];
 
 let _dbPromise = null;
 

@@ -6,7 +6,8 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion, expandSection } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, generateCCEDiscussion, expandSection, generateDeck, generatePodcastScript, generateSpeech } from '../api.js';
+import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, openDeckById, downloadBlob } from '../utils/deck.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -174,6 +175,9 @@ export const EEE_REGISTRY = {
   discussionPrompts:{ label: 'Discussion Prompts', cat: 'core', type: 'tool', desc: 'Structured questions for classroom discourse', pedagogy: ['inquiry', 'collaborative', 'engagement'] },
   rubric:         { label: 'Rubric',             cat: 'core', type: 'resource', desc: 'Assessment rubrics with criteria & levels', pedagogy: ['assessment'] },
   crossSubject:   { label: 'Cross-Subject Links', cat: 'core', type: 'tool', desc: 'Find connections to other subjects and suggest integration points', pedagogy: ['inquiry', 'e21cc', 'collaborative'] },
+  // WS-4 Materials (core: always available — they attach to the saved lesson)
+  slideDeck:      { label: 'Slide Deck',          cat: 'core', type: 'resource', desc: 'Self-contained HTML slide deck compiled from the plan (present or print to PDF)', subjects: ['all'], pedagogy: ['direct', 'edtech'] },
+  audioClip:      { label: 'Audio Clip',          cat: 'core', type: 'resource', desc: 'Short AI-voiced audio clip (voice only — no music or sound effects)', subjects: ['all'], pedagogy: ['engagement', 'edtech'] },
   resourceRec:    { label: 'Resource Recommender', cat: 'core', type: 'tool', desc: 'Auto-suggest Knowledge Base items, simulations, and resources for the lesson', pedagogy: ['edtech', 'inquiry', 'engagement'] },
   // === ENACTMENT ENHANCEMENTS (teacher chooses) ===
   // type: 'tool' = Teaching Tool (interactive, run in class)
@@ -825,6 +829,9 @@ const AI_TOOLS = [
   { id: 'spatial-layout-btn', label: 'Spatial Layout', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', color: '', cat: 'planning', eee: 'seatPlan' },
   { id: 'ai-cross-subject-btn', label: 'Cross-Subject', icon: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>', color: '#0891b2', cat: 'core', eee: 'crossSubject' },
   { id: 'ai-resource-rec-btn', label: 'Recommend', icon: '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>', color: '#059669', cat: 'core', eee: 'resourceRec' },
+  // WS-4 Materials
+  { id: 'ai-deck-btn', label: 'Slide Deck', icon: '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M7 8h10"/><path d="M7 12h6"/>', color: '#b45309', cat: 'enactment', eee: 'slideDeck' },
+  { id: 'ai-audio-btn', label: 'Audio Clip', icon: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>', color: '#be123c', cat: 'enactment', eee: 'audioClip' },
 ];
 
 function buildToolbarHTML(mode) {
@@ -2175,6 +2182,15 @@ export function render(container) {
     } catch (err) {
       resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${err.message}</div>`;
     }
+  });
+
+  // WS-4 Materials: Slide Deck — generate from the current plan, preview, attach
+  container.querySelector('#ai-deck-btn')?.addEventListener('click', () => generateDeckFlow(container));
+
+  // WS-4 Materials: Audio Clip — script → AI voices (voice only) → attach
+  container.querySelector('#ai-audio-btn')?.addEventListener('click', () => {
+    if (!currentLessonId) { showToast('Save the lesson first — materials attach to a saved lesson.', 'danger'); return; }
+    showAudioClipModal(container);
   });
 
 
@@ -4315,6 +4331,18 @@ function renderSpatialSection(container, forceShow = false) {
 }
 
 /* ══════════ Linked Resources Section ══════════ */
+
+/* Badge + label per attachedResources type. Unknown/legacy types keep the
+ * historical Source styling so old lessons render unchanged. */
+const RESOURCE_META = {
+  stimulus:   { badge: 'badge-blue',   label: 'Stimulus' },
+  source:     { badge: 'badge-amber',  label: 'Source' },
+  simulation: { badge: 'badge-green',  label: 'Simulation' },
+  deck:       { badge: 'badge-violet', label: 'Deck' },
+  audio:      { badge: 'badge-rose',   label: 'Audio' }
+};
+const resourceMeta = (type) => RESOURCE_META[type] || { badge: 'badge-amber', label: 'Source' };
+
 function renderLinkedResourcesSection(container) {
   const el = container.querySelector('#linked-resources-section');
   if (!el) return;
@@ -4323,7 +4351,8 @@ function renderLinkedResourcesSection(container) {
   const attachedResources = currentLesson?.attachedResources || [];
   const stimulusLib = Store.getStimulusLibrary();
   const sourceLib = Store.getSourceLibrary();
-  const hasLibrary = stimulusLib.length > 0 || sourceLib.length > 0;
+  const hasLibrary = stimulusLib.length > 0 || sourceLib.length > 0
+    || listDeckMeta().length > 0 || listAudioMeta().length > 0;
 
   if (attachedResources.length === 0 && !hasLibrary) {
     el.innerHTML = '';
@@ -4343,14 +4372,18 @@ function renderLinkedResourcesSection(container) {
           Link Resources
         </button>` : ''}
       </div>
-      ${!currentLessonId ? `<p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Save the lesson first, then link Stimulus Material or Source Analysis sets.</p>` : ''}
-      ${currentLessonId && attachedResources.length === 0 && hasLibrary ? `<p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-2);">Attach Stimulus Material or Source Analysis sets to this lesson.</p>` : ''}
+      ${!currentLessonId ? `<p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">Save the lesson first, then link Stimulus Material, Source Analysis sets, slide decks or audio clips.</p>` : ''}
+      ${currentLessonId && attachedResources.length === 0 && hasLibrary ? `<p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;margin-bottom:var(--sp-2);">Attach Stimulus Material, Source Analysis sets, slide decks or audio clips to this lesson.</p>` : ''}
       ${attachedResources.length > 0 ? `
         <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
           ${attachedResources.map((r, idx) => `
             <div style="display:flex;align-items:center;gap:var(--sp-1);padding:var(--sp-1) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-lg);font-size:0.8125rem;border:1px solid var(--border-light);">
-              <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : 'badge-amber'}" style="font-size:0.625rem;">${r.type === 'stimulus' ? 'Stimulus' : 'Source'}</span>
-              <span style="color:var(--ink);">${esc(r.title)}</span>
+              <span class="badge ${resourceMeta(r.type).badge}" style="font-size:0.625rem;">${resourceMeta(r.type).label}</span>
+              ${(r.type === 'deck' || r.type === 'audio') && r.id ? `
+                <button class="btn btn-ghost btn-sm open-material-btn" data-type="${r.type}" data-id="${escAttr(r.id)}" data-title="${escAttr(r.title || '')}" title="${r.type === 'deck' ? 'Open deck in a new tab' : 'Play audio clip'}" style="padding:1px 4px;color:var(--ink);">
+                  ${esc(r.title)} <span aria-hidden="true">${r.type === 'deck' ? '&#8599;' : '&#9654;'}</span>
+                </button>`
+              : `<span style="color:var(--ink);">${esc(r.title)}</span>`}
               <button class="btn btn-ghost btn-sm unlink-resource-btn" data-idx="${idx}" title="Remove" style="padding:1px 3px;color:var(--danger);margin-left:2px;">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
@@ -4363,6 +4396,19 @@ function renderLinkedResourcesSection(container) {
   // Wire link resources button
   el.querySelector('#link-resources-btn')?.addEventListener('click', () => {
     showLinkResourcesModal(container);
+  });
+
+  // Wire deck/audio open buttons (WS-4 materials)
+  el.querySelectorAll('.open-material-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (btn.dataset.type === 'deck') {
+        const ok = await openDeckById(btn.dataset.id);
+        if (!ok) showToast('Deck content not found on this device.', 'danger');
+      } else {
+        showAudioPlaybackModal(btn.dataset.id, btn.dataset.title);
+      }
+    });
   });
 
   // Wire unlink buttons
@@ -4390,7 +4436,9 @@ function showLinkResourcesModal(container) {
 
   const allResources = [
     ...stimulusLib.map(s => ({ type: 'stimulus', id: s.id, title: s.title || s.topic || 'Untitled Stimulus' })),
-    ...sourceLib.map(s => ({ type: 'source', id: s.id, title: s.title || s.topic || 'Untitled Source' }))
+    ...sourceLib.map(s => ({ type: 'source', id: s.id, title: s.title || s.topic || 'Untitled Source' })),
+    ...listDeckMeta().map(d => ({ type: 'deck', id: d.id, title: d.title || 'Untitled Deck' })),
+    ...listAudioMeta().map(a => ({ type: 'audio', id: a.id, title: a.title || 'Untitled Clip' }))
   ];
 
   const available = allResources.filter(r => !attachedIds.has(r.id));
@@ -4410,7 +4458,7 @@ function showLinkResourcesModal(container) {
         ${available.map(r => `
           <label style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-light);border-radius:var(--radius-md);cursor:pointer;transition:background 0.15s;" class="resource-option">
             <input type="checkbox" class="resource-check" data-type="${r.type}" data-id="${r.id}" data-title="${escAttr(r.title)}" />
-            <span class="badge ${r.type === 'stimulus' ? 'badge-blue' : 'badge-amber'}" style="font-size:0.625rem;flex-shrink:0;">${r.type === 'stimulus' ? 'Stimulus' : 'Source'}</span>
+            <span class="badge ${resourceMeta(r.type).badge}" style="font-size:0.625rem;flex-shrink:0;">${resourceMeta(r.type).label}</span>
             <span style="font-size:0.8125rem;color:var(--ink);">${esc(r.title)}</span>
           </label>
         `).join('')}
@@ -4440,6 +4488,318 @@ function showLinkResourcesModal(container) {
     close();
     renderLinkedResourcesSection(container);
   });
+}
+
+/* ══════════ WS-4 Materials: Slide Deck + Audio Clip flows ══════════ */
+
+// Honest-copy constant: the TTS pipeline produces voices only. Repeated in
+// every audio modal so the teacher is never surprised by the output.
+const AUDIO_HONESTY = 'AI voices only &mdash; no music or sound effects.';
+const AUDIO_VOICES = { A: 'Kore', B: 'Puck' };  // fixed sensible defaults
+const AUDIO_STYLES = [
+  { id: 'murder mystery clip', label: 'Murder mystery clip', speakers: 2 },
+  { id: 'news soundbite',      label: 'News soundbite',      speakers: 1 },
+  { id: 'dialogue',            label: 'Two-voice dialogue',  speakers: 2 },
+  { id: 'narration',           label: 'Narration',           speakers: 1 }
+];
+
+/** Append one {type,id,title} entry to the current lesson's attachedResources. */
+function attachMaterialToLesson(entry) {
+  if (!currentLessonId) return;
+  const lesson = Store.getLesson(currentLessonId);
+  Store.updateLesson(currentLessonId, {
+    attachedResources: [...(lesson?.attachedResources || []), entry]
+  });
+}
+
+/* ── Slide deck: generate from the current plan → preview modal ── */
+async function generateDeckFlow(container) {
+  if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+  if (!currentLessonId) { showToast('Save the lesson first — materials attach to a saved lesson.', 'danger'); return; }
+  const aiMsgs = chatMessages.filter(m => m.role === 'assistant');
+  if (aiMsgs.length === 0) { showToast('Chat with Co-Cher first to create a plan.', 'danger'); return; }
+  const lesson = Store.getLesson(currentLessonId);
+  const args = {
+    plan: aiMsgs.map(m => m.content).join('\n\n'),
+    lessonTitle: lesson?.title || 'Lesson',
+    className: planClassContext?.name || '',
+    slideTarget: 8
+  };
+  const resultEl = container.querySelector('#ai-result');
+  if (resultEl) {
+    resultEl.innerHTML = '<div class="chat-typing" style="padding:var(--sp-4);">Generating slide deck&hellip;</div>';
+    resultEl.scrollIntoView({ behavior: 'smooth' });
+  }
+  try {
+    const deck = await generateDeck(args);
+    if (resultEl) resultEl.innerHTML = '';
+    showDeckPreviewModal(container, deck, args);
+  } catch (err) {
+    if (resultEl) resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${esc(err.message)}</div>`;
+  }
+}
+
+function showDeckPreviewModal(container, deck, args) {
+  const { backdrop, close } = openModal({
+    title: '&#128444;&#65039; Slide Deck Preview',
+    width: 620,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">
+        <strong>${esc(deck.title)}</strong> &middot; ${deck.slides.length} slides &middot;
+        one self-contained HTML file (works offline) &mdash; present in a browser tab, or print it to PDF.
+      </p>
+      <div style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp-2);">
+        ${deck.slides.map((s, i) => `
+          <div style="border:1px solid var(--border-light);border-radius:var(--radius-md);padding:var(--sp-2) var(--sp-3);">
+            <div style="display:flex;align-items:baseline;gap:var(--sp-2);">
+              <span style="flex-shrink:0;font-size:0.6875rem;font-weight:700;color:var(--accent);">${i + 1}</span>
+              <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">${esc(s.title || `Slide ${i + 1}`)}</span>
+            </div>
+            ${s.bullets.length ? `<ul style="margin:4px 0 0 22px;padding:0;">${s.bullets.map(b => `<li style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;">${esc(b)}</li>`).join('')}</ul>` : ''}
+            ${s.notes ? `<div style="margin:4px 0 0 22px;font-size:0.75rem;color:var(--ink-muted);font-style:italic;">Note: ${esc(s.notes)}</div>` : ''}
+          </div>`).join('')}
+      </div>`,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-ghost" data-action="regen">Regenerate</button>
+      <button class="btn btn-ghost" data-action="download">Download .html</button>
+      <button class="btn btn-primary" data-action="attach">Save &amp; attach</button>`
+  });
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="download"]').addEventListener('click', () => {
+    downloadBlob(new Blob([compileDeckHTML(deck)], { type: 'text/html' }), deckFilename(deck.title));
+  });
+  backdrop.querySelector('[data-action="regen"]').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Regenerating…';
+    try {
+      const fresh = await generateDeck(args);
+      close();
+      showDeckPreviewModal(container, fresh, args);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Regenerate';
+      showToast(`Regenerate failed: ${err.message}`, 'danger');
+    }
+  });
+  backdrop.querySelector('[data-action="attach"]').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const meta = await saveDeckMaterial({
+      lessonId: currentLessonId,
+      title: deck.title,
+      html: compileDeckHTML(deck),
+      slideCount: deck.slides.length
+    });
+    if (!meta) {
+      btn.disabled = false;
+      showToast('Could not store the deck — browser storage unavailable.', 'danger');
+      return;
+    }
+    attachMaterialToLesson({ type: 'deck', id: meta.id, title: meta.title });
+    showToast('Slide deck attached to this lesson!', 'success');
+    close();
+    renderLinkedResourcesSection(container);
+  });
+}
+
+/* ── Audio clip: form → script preview (editable) → voice → attach ── */
+function showAudioClipModal(container) {
+  const lesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
+  const { backdrop, close } = openModal({
+    title: '&#127908; Audio Clip',
+    width: 520,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">
+        Generate a short scripted clip for this lesson, review the script, then voice it.<br>
+        <em>${AUDIO_HONESTY}</em>
+      </p>
+      <div class="input-group" style="margin-bottom:var(--sp-3);">
+        <label class="input-label">Topic</label>
+        <input class="input" id="audio-topic" value="${escAttr(lesson?.title || '')}" placeholder="e.g. The fall of Singapore, 1942" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-3);">
+        <div class="input-group">
+          <label class="input-label">Style</label>
+          <select class="input" id="audio-style">
+            ${AUDIO_STYLES.map(s => `<option value="${escAttr(s.id)}">${esc(s.label)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Length</label>
+          <select class="input" id="audio-minutes">
+            ${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${n === 3 ? ' selected' : ''}>${n} min</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <p style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Voices are fixed sensible defaults (${esc(AUDIO_VOICES.A)} &amp; ${esc(AUDIO_VOICES.B)}).</p>
+      <div id="audio-form-status" style="margin-top:var(--sp-2);font-size:0.8125rem;color:var(--danger);"></div>`,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-primary" data-action="script">Generate script</button>`
+  });
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="script"]').addEventListener('click', async (e) => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    const topic = backdrop.querySelector('#audio-topic').value.trim();
+    if (!topic) { showToast('Please enter a topic.', 'danger'); return; }
+    const styleId = backdrop.querySelector('#audio-style').value;
+    const minutes = Number(backdrop.querySelector('#audio-minutes').value) || 3;
+    const speakers = (AUDIO_STYLES.find(s => s.id === styleId)?.speakers) || 2;
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Writing script…';
+    try {
+      const script = await generatePodcastScript({ topic, style: styleId, minutes, speakers });
+      close();
+      showAudioScriptModal(container, script, { topic, style: styleId, minutes, speakers });
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Generate script';
+      const status = backdrop.querySelector('#audio-form-status');
+      if (status) status.textContent = `Error: ${err.message}`;
+    }
+  });
+}
+
+function showAudioScriptModal(container, script, opts) {
+  const hasKey = !!Store.get('apiKey');
+  const { backdrop, close } = openModal({
+    title: '&#127908; Audio Clip &mdash; Script',
+    width: 560,
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">
+        <strong>${esc(script.title)}</strong> &middot; ${esc(opts.style)} &middot; ~${opts.minutes} min.
+        Edit any turn below, then voice it. <em>${AUDIO_HONESTY}</em>
+      </p>
+      <div style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp-2);">
+        ${script.turns.map(t => `
+          <div class="input-group">
+            <label class="input-label" style="font-size:0.6875rem;">Speaker ${esc(t.speaker)} (${esc(t.speaker === 'B' ? AUDIO_VOICES.B : AUDIO_VOICES.A)})</label>
+            <textarea class="input audio-turn" data-speaker="${escAttr(t.speaker)}" rows="2">${esc(t.text)}</textarea>
+          </div>`).join('')}
+      </div>
+      <div id="audio-voice-status" style="margin-top:var(--sp-3);font-size:0.8125rem;color:var(--danger);line-height:1.5;"></div>`,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+      <button class="btn btn-ghost" data-action="browser-voice" title="Reads the script with your browser's built-in voices — no API key needed">Play with browser voice &mdash; free, robotic</button>
+      <button class="btn btn-primary" data-action="voice"${hasKey ? '' : ' disabled title="Add your Gemini API key in Settings to use AI voices"'}>&#127908; Voice it</button>`
+  });
+  const collectTurns = () => [...backdrop.querySelectorAll('.audio-turn')]
+    .map(t => ({ speaker: t.dataset.speaker, text: t.value.trim() }))
+    .filter(t => t.text);
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="browser-voice"]').addEventListener('click', () => {
+    playWithBrowserVoice(collectTurns());
+  });
+  backdrop.querySelector('[data-action="voice"]').addEventListener('click', async (e) => {
+    const turns = collectTurns();
+    if (turns.length === 0) { showToast('The script is empty.', 'danger'); return; }
+    const btn = e.currentTarget;
+    const status = backdrop.querySelector('#audio-voice-status');
+    btn.disabled = true;
+    btn.textContent = 'Voicing…';
+    if (status) {
+      status.style.color = 'var(--ink-muted)';
+      status.textContent = 'Generating AI voices — this can take a little while…';
+    }
+    try {
+      const result = await generateSpeech({ turns, voices: AUDIO_VOICES, style: opts.style });
+      close();
+      showAudioResultModal(container, result, { ...script, turns }, opts);
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '&#127908; Voice it';
+      if (status) {
+        status.style.color = 'var(--danger)';
+        status.textContent = `AI voicing failed: ${err.message} You can still use "Play with browser voice" — free, robotic.`;
+      }
+    }
+  });
+}
+
+function showAudioResultModal(container, result, script, opts) {
+  const url = URL.createObjectURL(result.blob);
+  const { backdrop, close } = openModal({
+    title: '&#127908; Audio Clip &mdash; Preview',
+    width: 480,
+    onClose: () => setTimeout(() => URL.revokeObjectURL(url), 1000),
+    body: `
+      <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">
+        <strong>${esc(script.title)}</strong> &middot; ${esc(opts.style)}${result.durationHint ? ` &middot; ~${result.durationHint}s` : ''}<br>
+        <em>${AUDIO_HONESTY}</em>
+      </p>
+      <audio controls src="${url}" style="width:100%;"></audio>`,
+    footer: `
+      <button class="btn btn-secondary" data-action="cancel">Discard</button>
+      <button class="btn btn-ghost" data-action="download">Download .wav</button>
+      <button class="btn btn-primary" data-action="attach">Save &amp; attach</button>`
+  });
+  backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="download"]').addEventListener('click', () => {
+    downloadBlob(result.blob, slugify(script.title) + '.wav');
+  });
+  backdrop.querySelector('[data-action="attach"]').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const meta = await saveAudioMaterial({
+      lessonId: currentLessonId,
+      title: script.title,
+      style: opts.style,
+      blob: result.blob
+    });
+    if (!meta) {
+      btn.disabled = false;
+      showToast('Could not store the clip — browser storage unavailable.', 'danger');
+      return;
+    }
+    attachMaterialToLesson({ type: 'audio', id: meta.id, title: meta.title });
+    showToast('Audio clip attached to this lesson!', 'success');
+    close();
+    renderLinkedResourcesSection(container);
+  });
+}
+
+/* Browser speechSynthesis fallback — free and robotic, but works with no
+ * API key and when the TTS tier is unavailable. */
+function playWithBrowserVoice(turns) {
+  const synth = window.speechSynthesis;
+  if (!synth || typeof SpeechSynthesisUtterance === 'undefined') {
+    showToast('This browser has no built-in voices.', 'danger');
+    return;
+  }
+  if (!turns.length) { showToast('The script is empty.', 'danger'); return; }
+  synth.cancel();
+  const voices = synth.getVoices();
+  turns.forEach(t => {
+    const u = new SpeechSynthesisUtterance(t.text);
+    // Two distinct browser voices when available, so A/B stay tellable-apart
+    if (voices.length > 1 && t.speaker === 'B') u.voice = voices[1];
+    else if (voices.length > 0) u.voice = voices[0];
+    synth.speak(u);
+  });
+  showToast("Playing with your browser's built-in voice…", 'success');
+}
+
+/** Small playback modal for an attached audio clip (planner surface). */
+async function showAudioPlaybackModal(id, title) {
+  const blob = await getMediaContent(id);
+  if (!(blob instanceof Blob)) {
+    showToast('Audio content not found on this device.', 'danger');
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const { backdrop, close } = openModal({
+    title: `&#127911; ${esc(title || 'Audio clip')}`,
+    width: 420,
+    onClose: () => setTimeout(() => URL.revokeObjectURL(url), 1000),
+    body: `
+      <audio controls src="${url}" style="width:100%;"></audio>
+      <p style="font-size:0.75rem;color:var(--ink-muted);margin-top:var(--sp-2);">${AUDIO_HONESTY}</p>`,
+    footer: `<button class="btn btn-secondary" data-action="close">Close</button>`
+  });
+  backdrop.querySelector('[data-action="close"]').addEventListener('click', close);
 }
 
 /* ══════════ Resizable Panel Handle ══════════ */

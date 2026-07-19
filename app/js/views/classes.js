@@ -219,6 +219,7 @@ function showAddClassModal() {
     const name = backdrop.querySelector('#modal-class-name').value.trim();
     if (!name) {
       backdrop.querySelector('#modal-class-name').style.borderColor = 'var(--danger)';
+      showToast('Give the class a name first', 'warning');
       return;
     }
     const level = backdrop.querySelector('#modal-class-level').value;
@@ -1234,6 +1235,7 @@ function showAddStudentModal(classId, onUpdate) {
     const name = backdrop.querySelector('#student-name').value.trim();
     if (!name) {
       backdrop.querySelector('#student-name').style.borderColor = 'var(--danger)';
+      showToast('Give the student a name first', 'warning');
       return;
     }
     Store.addStudent(classId, { name });

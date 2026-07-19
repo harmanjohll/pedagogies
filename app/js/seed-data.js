@@ -2385,15 +2385,18 @@ export function seedPortalDemosIfNeeded() {
   }
 
   /* ── Spatial saved layouts ── */
+  // Items carry stable literal iids so lesson seat assignments (segment
+  // grouping itemIds/seatMap) keep pointing at the same furniture across
+  // sessions — session-minted ids here would go stale on every reload.
   if ((Store.getSavedLayouts() || []).length === 0) {
     Store.saveLayout({ name: 'Discussion Pods (32)', preset: 'pods', studentCount: 32, wallState: 'closed', isSample: true,
       items: [
-        { id: 'teacher_desk', x: 340, y: 30, r: 0 },
-        { id: 'group_table', x: 120, y: 160, r: 0 }, { id: 'group_table', x: 360, y: 160, r: 0 }, { id: 'group_table', x: 600, y: 160, r: 0 },
-        { id: 'group_table', x: 120, y: 340, r: 0 }, { id: 'group_table', x: 360, y: 340, r: 0 }, { id: 'group_table', x: 600, y: 340, r: 0 }
+        { id: 'teacher_desk', iid: 'seed_pods_01', x: 340, y: 30, r: 0 },
+        { id: 'group_table', iid: 'seed_pods_02', x: 120, y: 160, r: 0 }, { id: 'group_table', iid: 'seed_pods_03', x: 360, y: 160, r: 0 }, { id: 'group_table', iid: 'seed_pods_04', x: 600, y: 160, r: 0 },
+        { id: 'group_table', iid: 'seed_pods_05', x: 120, y: 340, r: 0 }, { id: 'group_table', iid: 'seed_pods_06', x: 360, y: 340, r: 0 }, { id: 'group_table', iid: 'seed_pods_07', x: 600, y: 340, r: 0 }
       ] });
     Store.saveLayout({ name: 'Exam Rows (single)', preset: 'exam', studentCount: 30, wallState: 'closed', isSample: true,
-      items: Array.from({ length: 30 }, (_, i) => ({ id: 'desk_rect', x: 80 + (i % 6) * 110, y: 120 + Math.floor(i / 6) * 90, r: 0 })) });
+      items: Array.from({ length: 30 }, (_, i) => ({ id: 'desk_rect', iid: `seed_exam_${String(i + 1).padStart(2, '0')}`, x: 80 + (i % 6) * 110, y: 120 + Math.floor(i / 6) * 90, r: 0 })) });
   }
 
   localStorage.setItem(PORTAL_SEED_KEY, '1');

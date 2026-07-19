@@ -1504,6 +1504,222 @@ export async function critiquePlan(planText, ideology) {
   );
 }
 
+/* ══════════ WS-4 Materials: slide decks + audio clips ══════════ */
+
+/* ── Slide deck generation (text model, jsonMode) ──
+ * Produces the normalized deck shape utils/deck.js compiles:
+ * { title, slides: [{ title, bullets: [≤4 short strings], notes }] } */
+export async function generateDeck({ plan, lessonTitle, className, slideTarget = 8 } = {}) {
+  const target = Math.min(12, Math.max(5, Math.round(Number(slideTarget) || 8)));
+  const raw = await sendChat([{
+    role: 'user',
+    content: `Create a classroom slide deck for this lesson.
+Lesson title: ${String(lessonTitle || 'Lesson').slice(0, 200)}
+${className ? `Class: ${String(className).slice(0, 100)}\n` : ''}Target length: about ${target} slides.
+
+Lesson plan:
+${String(plan ?? '').slice(0, 8000)}`
+  }], {
+    trackLabel: 'generateDeck',
+    jsonMode: true,
+    temperature: 0.6,
+    maxTokens: 4096,
+    systemPrompt: `You design projector slide decks for Singapore classrooms. Return ONLY JSON in exactly this shape:
+{"title": "deck title", "slides": [{"title": "slide title", "bullets": ["short point"], "notes": "one-line teacher note"}]}
+
+Rules:
+- 5-12 slides total (aim for the requested target).
+- TLDR discipline: each bullet is ONE short line (max ~12 words), at most 4 bullets per slide. Slides are prompts on a wall, not paragraphs.
+- First slide = title slide: the lesson title, bullets = student-facing learning intention / success criteria.
+- Last slide = exit ticket or reflection prompt.
+- "notes" = one short teacher note per slide (what to say or do), max ~20 words.
+- Student-facing language on slides. No markdown syntax inside strings. No URLs, no image references, no external resources of any kind.`
+  });
+  return normalizeDeck(parseJsonResponse(raw, 'slide deck'), lessonTitle);
+}
+
+/* Defensive normalization: coerce strings, clamp counts, drop empties.
+ * Throws when fewer than 2 usable slides survive. */
+function normalizeDeck(data, fallbackTitle) {
+  const clampStr = (v, n) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const slides = (Array.isArray(data?.slides) ? data.slides : [])
+    .map(s => ({
+      title: clampStr(s?.title, 120),
+      bullets: (Array.isArray(s?.bullets) ? s.bullets : [])
+        .map(b => clampStr(b, 160)).filter(Boolean).slice(0, 4),
+      notes: clampStr(s?.notes, 240)
+    }))
+    .filter(s => s.title || s.bullets.length > 0)
+    .slice(0, 12);
+  if (slides.length < 2) {
+    throw new Error('The model returned too few usable slides — please try again.');
+  }
+  return { title: clampStr(data?.title, 140) || clampStr(fallbackTitle, 140) || 'Slide deck', slides };
+}
+
+/* ── Podcast-style script generation (text model, jsonMode) ──
+ * { title, style, turns: [{ speaker: 'A'|'B', text }] }, capped at roughly
+ * minutes*150 spoken words. Styles are voice-only framings ('murder mystery
+ * clip', 'news soundbite', 'dialogue', ...) — never music or sound effects. */
+export async function generatePodcastScript({ topic, style, minutes = 3, speakers = 2 } = {}) {
+  const mins = Math.min(5, Math.max(1, Math.round(Number(minutes) || 3)));
+  const nSpeakers = Number(speakers) === 1 ? 1 : 2;
+  const wordBudget = mins * 150;
+  const raw = await sendChat([{
+    role: 'user',
+    content: `Write a short classroom audio script.
+Topic: ${String(topic ?? '').slice(0, 300)}
+Style: ${String(style || 'dialogue').slice(0, 60)}
+Length: about ${mins} minute${mins === 1 ? '' : 's'} spoken aloud (~${wordBudget} words total).
+Speakers: ${nSpeakers === 1 ? 'ONE narrator — every turn uses speaker "A"' : 'TWO voices — "A" and "B", alternating naturally'}.`
+  }], {
+    trackLabel: 'podcastScript',
+    jsonMode: true,
+    temperature: 0.8,
+    maxTokens: 3072,
+    systemPrompt: `You write short spoken-word scripts for classroom audio clips. Voice only — no music, no sound effects, no stage directions, ever. Return ONLY JSON in exactly this shape:
+{"title": "clip title", "style": "the style", "turns": [{"speaker": "A", "text": "the exact words spoken"}]}
+
+Rules:
+- "speaker" is "A" or "B" only. Single-narrator scripts use "A" for every turn.
+- Keep total spoken words within the requested budget. Short, punchy turns (1-3 sentences each).
+- Style guide: 'murder mystery clip' = suspenseful investigative scene; 'news soundbite' = crisp news-report tone; 'dialogue' = natural conversation between two voices.
+- "text" is exactly what is spoken aloud: no headings, no markdown, no [bracketed effects], no speaker names inside the text.
+- Age-appropriate for Singapore secondary students and factually accurate on the topic.`
+  });
+  return normalizePodcastScript(parseJsonResponse(raw, 'audio script'), { topic, style, wordBudget, nSpeakers });
+}
+
+function normalizePodcastScript(data, { topic, style, wordBudget, nSpeakers } = {}) {
+  const clampStr = (v, n) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const turns = [];
+  let words = 0;
+  for (const t of (Array.isArray(data?.turns) ? data.turns : [])) {
+    const text = clampStr(t?.text, 600);
+    if (!text) continue;
+    const speaker = (nSpeakers === 2 && String(t?.speaker ?? '').trim().toUpperCase().startsWith('B')) ? 'B' : 'A';
+    turns.push({ speaker, text });
+    words += text.split(/\s+/).length;
+    // Allow a little overshoot, then stop — TTS cost scales with length.
+    if (words >= (wordBudget || 450) * 1.2 || turns.length >= 40) break;
+  }
+  if (turns.length === 0) {
+    throw new Error('The model returned an empty script — please try again.');
+  }
+  return {
+    title: clampStr(data?.title, 140) || clampStr(topic, 140) || 'Audio clip',
+    style: clampStr(data?.style, 60) || clampStr(style, 60),
+    turns
+  };
+}
+
+/* ── Text-to-speech (dedicated TTS model, generateImage pattern) ──
+ * MUST NOT route through sendChat: normalizeModel would silently rewrite the
+ * TTS model id to a text model, and sendChat hardcodes a text-mode
+ * generationConfig. Own model id, own body, key via header — same shape as
+ * generateImage above. The response is raw base64 PCM (audio/L16;rate=24000)
+ * which <audio> cannot play, so it is wrapped in a WAV container client-side.
+ */
+const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
+const TTS_DEFAULT_VOICES = { A: 'Kore', B: 'Puck' };
+
+/**
+ * Wrap raw 16-bit PCM (base64) in a 44-byte RIFF/WAVE header so browsers can
+ * play and download it. Exported for testability.
+ */
+export function pcmToWavBlob(base64, sampleRate = 24000, numChannels = 1, bitsPerSample = 16) {
+  const bin = atob(String(base64 ?? ''));
+  const dataLen = bin.length;
+  const bytes = new Uint8Array(44 + dataLen);
+  const view = new DataView(bytes.buffer);
+  const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) bytes[off + i] = s.charCodeAt(i); };
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataLen, true);   // RIFF chunk size
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);            // fmt chunk size
+  view.setUint16(20, 1, true);             // PCM format
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataLen, true);
+  for (let i = 0; i < dataLen; i++) bytes[44 + i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: 'audio/wav' });
+}
+
+/**
+ * Voice a script with Gemini TTS. turns: [{speaker:'A'|'B', text}];
+ * voices: optional { A: voiceName, B: voiceName } (e.g. 'Kore', 'Puck',
+ * 'Charon', 'Fenrir'). Single-speaker scripts use voiceConfig; two-speaker
+ * scripts use multiSpeakerVoiceConfig with "Speaker A"/"Speaker B" labels
+ * matching the joined text. Returns { blob (WAV), mimeType, durationHint }.
+ */
+export async function generateSpeech({ turns, voices, style } = {}) {
+  trackEvent('ai', 'generate', 'speech', String(style || '').slice(0, 60));
+  const apiKey = Store.get('apiKey');
+  if (!apiKey) {
+    throw new Error('No API key configured. Please add your Gemini API key in Settings.');
+  }
+  const list = (Array.isArray(turns) ? turns : [])
+    .map(t => ({
+      speaker: String(t?.speaker ?? 'A').trim().toUpperCase().startsWith('B') ? 'B' : 'A',
+      text: String(t?.text ?? '').replace(/\s+/g, ' ').trim()
+    }))
+    .filter(t => t.text);
+  if (list.length === 0) throw new Error('Nothing to voice — the script is empty.');
+
+  const voiceFor = (k) => ({ prebuiltVoiceConfig: { voiceName: (voices && voices[k]) || TTS_DEFAULT_VOICES[k] || 'Kore' } });
+  const distinct = [...new Set(list.map(t => t.speaker))];
+  const preamble = `Read this aloud${style ? ` in the style of a ${String(style).slice(0, 60)}` : ''} with natural pacing, classroom-appropriate:`;
+
+  let text, speechConfig;
+  if (distinct.length <= 1) {
+    text = `${preamble}\n\n${list.map(t => t.text).join('\n\n')}`;
+    speechConfig = { voiceConfig: voiceFor(distinct[0] || 'A') };
+  } else {
+    text = `${preamble}\n\n${list.map(t => `Speaker ${t.speaker}: ${t.text}`).join('\n')}`;
+    speechConfig = {
+      multiSpeakerVoiceConfig: {
+        speakerVoiceConfigs: distinct.map(s => ({ speaker: `Speaker ${s}`, voiceConfig: voiceFor(s) }))
+      }
+    };
+  }
+
+  const res = await fetchWithRetry(`${ENDPOINT}/${TTS_MODEL}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text }] }],
+      generationConfig: {
+        responseModalities: ['AUDIO'],
+        speechConfig
+      }
+    })
+  });
+  if (!res.ok) {
+    if (res.status === 404 || res.status === 400) {
+      throw new Error('AI voice generation is not available on this API key or model tier.');
+    }
+    const err = await res.json().catch(() => ({}));
+    throw new Error(friendlyApiError(res.status, err?.error?.message || `API error ${res.status}`));
+  }
+  const data = await res.json();
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const audio = parts.find(p => p.inlineData?.data);
+  if (!audio) throw new Error('No audio returned — the model may have declined this script.');
+  // mimeType is typically 'audio/L16;codec=pcm;rate=24000' — parse the rate.
+  const rateMatch = /rate=(\d+)/.exec(audio.inlineData.mimeType || '');
+  const sampleRate = rateMatch ? Number(rateMatch[1]) : 24000;
+  const blob = pcmToWavBlob(audio.inlineData.data, sampleRate);
+  const durationHint = Math.max(1, Math.round((blob.size - 44) / (sampleRate * 2)));
+  return { blob, mimeType: 'audio/wav', durationHint };
+}
+
 export function validateApiKey(key) {
   return key && key.trim().length >= 20;
 }

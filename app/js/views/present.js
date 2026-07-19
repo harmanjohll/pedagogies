@@ -15,6 +15,7 @@ import { navigate } from '../router.js';
 import { escapeHtml, md } from '../utils/markdown.js';
 import { layoutToSVG } from './spatial-designer.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
+import { openDeckById, getMediaContent } from '../utils/deck.js';
 
 let _timerId = null;
 let _remaining = 0;      // seconds left in the running segment
@@ -127,7 +128,12 @@ export function renderPresent(container, params) {
       /* Scrollable stage with SAFE centering: .present-inner's margin:auto
        * centers when content fits and top-aligns (scrollable) when it
        * overflows — centered flex overflow would clip unreachably. */
+      .present-stagewrap { flex: 1; position: relative; display: flex; flex-direction: column; min-height: 0; }
       .present-stage { flex: 1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow-y:auto; padding: 3vh 6vw; text-align:center; }
+      /* Scroll cue: a low-res projector can push content below the fold with
+       * no visible scrollbar — hint until the presenter nears the bottom. */
+      .present-more-cue { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); padding: 3px 14px; border-radius: 999px; background: var(--surface, #fff); border: 1px solid var(--border, #d1d5db); box-shadow: 0 2px 10px rgba(0,0,0,0.12); color: var(--ink-muted, #64748b); font-size: 0.85rem; font-weight: 700; pointer-events: none; opacity: 0; transition: opacity 0.25s; }
+      .present-more-cue.show { opacity: 1; }
       .present-inner { margin: auto; display:flex; flex-direction:column; align-items:center; gap: 2.5vh; max-width: 100%; }
       .present-inner.dense { gap: 1.2vh; }
       .present-inner.dense .present-clock { font-size: clamp(1.8rem, 5vw, 3.6rem); }
@@ -155,7 +161,18 @@ export function renderPresent(container, params) {
       .present-framework-title { font-weight: 800; color: var(--accent, #4361ee); margin-bottom: 4px; }
       .present-framework-stage strong { color: var(--ink); }
       .present-map svg { max-width: min(88vw, 760px); max-height: 38vh; width: auto; height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
-      @media print { .present-bottom, .present-top .present-ctrl { display: none; } }
+      /* Slim materials row (WS-4): launch attached decks/audio without leaving
+       * the class screen. Student-safe — material titles only. */
+      .present-resources { display:flex; flex-wrap:wrap; gap: 10px; justify-content:center; align-items:center; max-width: 92vw; }
+      .present-res-btn { display:inline-flex; align-items:center; gap: 7px; padding: 7px 16px; border-radius: 999px; border: 1.5px solid var(--border, #d1d5db); background: var(--surface, #fff); color: var(--ink); font-size: clamp(0.85rem, 1.6vw, 1.1rem); font-weight: 600; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+      .present-res-btn:hover:not([disabled]) { border-color: var(--accent, #4361ee); color: var(--accent, #4361ee); }
+      .present-res-btn[disabled] { opacity: 0.55; cursor: default; }
+      .present-res-player:empty { display: none; }
+      .present-res-player audio { width: min(70vw, 480px); }
+      /* Short screens (1366x768 projectors): shrink the seat map so more of
+       * the segment fits above the fold. */
+      @media (max-height: 799px) { .present-map svg { max-height: 34vh; } }
+      @media print { .present-bottom, .present-top .present-ctrl, .present-more-cue { display: none; } }
     </style>
     <div class="present-root">
       <div class="present-top">
@@ -168,7 +185,10 @@ export function renderPresent(container, params) {
           <button class="btn btn-secondary btn-sm" id="present-exit" title="Exit (Esc)">&times; Exit</button>
         </div>
       </div>
-      <div class="present-stage" id="present-stage"></div>
+      <div class="present-stagewrap">
+        <div class="present-stage" id="present-stage"></div>
+        <div class="present-more-cue" id="present-more-cue" aria-hidden="true">&#8964; more</div>
+      </div>
       <div class="present-bottom">
         <div class="present-dots" id="present-dots"></div>
         <div class="present-ctrl">
@@ -182,6 +202,83 @@ export function renderPresent(container, params) {
   const stage = container.querySelector('#present-stage');
   const dots = container.querySelector('#present-dots');
   const timerBtn = container.querySelector('#present-timer');
+  const moreCue = container.querySelector('#present-more-cue');
+
+  /* ── Attached materials (WS-4): decks + audio clips on segment screens.
+   * Student-safe: titles only — no styles, notes, or teacher copy. Toasts
+   * are hidden in present-mode, so failures report inline on the button. */
+  const materials = (lesson.attachedResources || [])
+    .filter(r => r && (r.type === 'deck' || r.type === 'audio') && r.id);
+  const _audioUrls = new Map(); // material id → object URL (revoked on route cleanup)
+
+  function materialsRow() {
+    if (!materials.length) return '';
+    return `<div class="present-resources">
+      ${materials.map((r, i) => `
+        <button class="present-res-btn" data-res-idx="${i}" type="button">
+          <span aria-hidden="true">${r.type === 'deck' ? '&#128444;&#65039;' : '&#127911;'}</span>
+          ${escapeHtml(r.title || (r.type === 'deck' ? 'Slides' : 'Audio clip'))}
+        </button>`).join('')}
+    </div>
+    <div class="present-res-player" id="present-res-player"></div>`;
+  }
+
+  function markUnavailable(btn) {
+    btn.disabled = true;
+    btn.insertAdjacentHTML('beforeend', ' <span style="font-weight:400;">&mdash; not on this device</span>');
+  }
+
+  async function openDeckMaterial(btn, r) {
+    btn.disabled = true;
+    const ok = await openDeckById(r.id);
+    if (ok) { btn.disabled = false; } else { markUnavailable(btn); }
+  }
+
+  async function toggleAudioMaterial(btn, r) {
+    const slot = stage.querySelector('#present-res-player');
+    if (!slot) return;
+    if (slot.dataset.playing === r.id) { // toggle off
+      slot.querySelector('audio')?.pause();
+      slot.innerHTML = '';
+      delete slot.dataset.playing;
+      updateMoreCue();
+      return;
+    }
+    let url = _audioUrls.get(r.id);
+    if (!url) {
+      btn.disabled = true;
+      const blob = await getMediaContent(r.id);
+      if (!(blob instanceof Blob)) { markUnavailable(btn); return; }
+      url = URL.createObjectURL(blob);
+      _audioUrls.set(r.id, url);
+      btn.disabled = false;
+    }
+    slot.dataset.playing = r.id;
+    slot.innerHTML = `<audio controls src="${url}"></audio>`;
+    slot.querySelector('audio').play().catch(() => {}); // autoplay may be blocked — controls remain
+    updateMoreCue();
+  }
+
+  function wireMaterialButtons() {
+    stage.querySelectorAll('.present-res-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const r = materials[Number(btn.dataset.resIdx)];
+        if (!r) return;
+        if (r.type === 'deck') { openDeckMaterial(btn, r); } else { toggleAudioMaterial(btn, r); }
+      });
+    });
+  }
+
+  /* Show the "more" cue while stage content extends below the fold; hide it
+   * once the presenter has scrolled to within ~40px of the bottom. */
+  function updateMoreCue() {
+    if (!moreCue) return;
+    const overflow = stage.scrollHeight - stage.clientHeight;
+    const nearBottom = stage.scrollTop >= overflow - 40;
+    moreCue.classList.toggle('show', overflow > 8 && !nearBottom);
+  }
+  stage.addEventListener('scroll', updateMoreCue, { passive: true });
+  window.addEventListener('resize', updateMoreCue);
 
   /* Screens: index 0 = welcome (LI/SC), 1..n = segments. */
   const screenCount = 1 + segments.length;
@@ -279,9 +376,13 @@ export function renderPresent(container, params) {
         ${frameworkPanel}
         ${groupCards}
         ${mapHtml}
+        ${materialsRow()}
       </div>`;
+      wireMaterialButtons();
     }
     renderDots();
+    stage.scrollTop = 0; // each screen starts at the top
+    requestAnimationFrame(updateMoreCue); // after layout settles
   }
 
   container.querySelector('#present-exit').addEventListener('click', () => navigate(`/lessons/${lesson.id}`));
@@ -305,10 +406,13 @@ export function renderPresent(container, params) {
 
   showScreen(0);
 
-  /* Router cleanup: leave no timer, key handler, or body class behind. */
+  /* Router cleanup: leave no timer, key handler, listener, or body class behind. */
   return () => {
     stopTimer();
+    window.removeEventListener('resize', updateMoreCue);
     if (_keyHandler) { window.removeEventListener('keydown', _keyHandler); _keyHandler = null; }
+    _audioUrls.forEach(url => URL.revokeObjectURL(url));
+    _audioUrls.clear();
     document.body.classList.remove('present-mode');
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   };
