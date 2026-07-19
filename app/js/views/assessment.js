@@ -14,6 +14,7 @@ import { sendChat } from '../api.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { processLatex, renderMd } from '../utils/latex.js';
 import { openModal } from '../components/modals.js';
+import { isNarrow } from '../utils/viewport.js';
 
 /* ── Bloom's Cognitive Process Dimension ── */
 const BLOOMS = [
@@ -156,6 +157,11 @@ const ASSESS_STYLES = `
   .tos-table .tos-dim-desc { font-size: 0.6875rem; font-weight: 400; color: var(--ink-muted); display: block; margin-top: 2px; }
   .tos-table .tos-total { font-weight: 700; background: var(--accent-light, #eef1fd); }
   .tos-table td[title] { cursor: help; }
+
+  /* Mobile (touch + narrow): comfortable tap targets for the in-cell mark inputs. */
+  @media (hover: none) and (max-width: 768px) {
+    .tos-table td input { width: 64px; min-height: 44px; padding: 8px 6px; font-size: 1rem; }
+  }
 
   .tos-2d-obj-cell {
     text-align: left; font-weight: 500; min-width: 120px; max-width: 260px;
@@ -604,6 +610,7 @@ function renderKnowledgeDimRef() {
 function build1DTOSTable(objectives, totalMarks) {
   if (!objectives.length) return '<p style="color:var(--ink-muted);font-size:0.8125rem;">Enter objectives above and click "Build TOS".</p>';
   return `
+    ${isNarrow() ? `<p class="tos-mobile-help" style="font-size:0.75rem;color:var(--ink-muted);margin:8px 0;display:flex;align-items:center;gap:6px;line-height:1.45;"><span aria-hidden="true">&#8596;</span> Scroll sideways to see all columns — best filled on a larger screen.</p>` : ''}
     <div class="tos-table-wrap">
     <table class="tos-table">
       <thead><tr>
@@ -648,6 +655,7 @@ function build2DTOSTable(totalMarks, objectives) {
         ${objectives.map(o => `<div style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:2px;">\u2022 ${escHtml(o)}</div>`).join('')}
         <div style="font-size:0.6875rem;color:var(--ink-faint);margin-top:6px;">Use your professional judgement to decide which knowledge dimension(s) each objective assesses as you allocate marks below.</div>
       </div>` : ''}
+    ${isNarrow() ? `<p class="tos-mobile-help" style="font-size:0.75rem;color:var(--ink-muted);margin:8px 0;display:flex;align-items:center;gap:6px;line-height:1.45;"><span aria-hidden="true">&#8596;</span> Scroll sideways to see all columns — best filled on a larger screen.</p>` : ''}
     <div class="tos-table-wrap">
     <table class="tos-table" style="table-layout:fixed;width:100%;">
       <colgroup>

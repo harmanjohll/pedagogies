@@ -774,7 +774,7 @@ function buildPedagogyShell(iframe, spec) {
     <div style="flex:1;display:flex;min-height:0;">
       <div id="sim-shell-stage" style="position:relative;flex:1;min-width:0;display:flex;"></div>
       ${(questions.length || debrief || hasModel) ? `
-      <div id="sim-shell-side" style="width:280px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;background:#12122a;border-left:1px solid rgba(255,255,255,0.08);">
+      <div id="sim-shell-side" style="width:min(280px,92vw);flex-shrink:0;display:flex;flex-direction:column;min-height:0;background:#12122a;border-left:1px solid rgba(255,255,255,0.08);">
         <button id="sim-shell-side-toggle" aria-expanded="true" style="background:none;border:none;color:#c7cbe8;cursor:pointer;padding:10px 14px;font-size:0.75rem;font-weight:600;text-align:left;letter-spacing:0.03em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.08);">Guiding questions &#9662;</button>
         <div id="sim-shell-side-body" style="flex:1;overflow-y:auto;padding:12px 14px;color:#e8e8f0;font-size:0.8125rem;line-height:1.6;">
           ${questions.length ? `<ol style="margin:0 0 14px;padding-left:18px;display:flex;flex-direction:column;gap:8px;">${questions.map(q => `<li>${escapeHtml(q)}</li>`).join('')}</ol>` : ''}
@@ -832,7 +832,7 @@ function buildPedagogyShell(iframe, spec) {
     toggle.addEventListener('click', () => {
       const collapsed = sideBody.style.display === 'none';
       sideBody.style.display = collapsed ? '' : 'none';
-      side.style.width = collapsed ? '280px' : 'auto';
+      side.style.width = collapsed ? 'min(280px,92vw)' : 'auto';
       toggle.setAttribute('aria-expanded', String(collapsed));
       toggle.innerHTML = collapsed ? 'Guiding questions &#9662;' : 'Guiding questions &#9656;';
     });
@@ -875,6 +875,16 @@ function injectSimLayoutOverrides(doc) {
       flex: 0 0 200px !important;
       min-width: 140px !important;
       max-width: 360px !important;
+    }
+    /* Mobile (touch + narrow): stack the practical columns so nothing overflows a phone */
+    @media (hover: none) and (max-width: 768px) {
+      .practical-layout { flex-wrap: wrap !important; }
+      .guide-panel, .workbench-panel, .data-panel {
+        flex: 1 1 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+      }
+      .cocher-col-handle { display: none !important; }
     }
     .cocher-col-handle {
       flex: 0 0 5px;
