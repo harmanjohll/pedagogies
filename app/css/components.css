@@ -1088,9 +1088,15 @@ select.input {
   .component-tab { padding: 4px 6px !important; font-size: 0.6875rem !important; }
 }
 
-/* Spatial designer touch improvements */
+/* Spatial designer touch improvements (v7)
+   touch-action:none so a finger-drag on the 1440x720 canvas or on any draggable
+   item group doesn't fight the browser's own scroll/pinch-zoom. Applied
+   unconditionally on purpose: touch-action only governs touch/pen gestures — it
+   never affects the mouse and never paints anything — so desktop rendering is
+   byte-identical while touch devices get clean dragging. */
+#spatial-svg,
+#spatial-svg g[data-id] { touch-action: none; }
 @media (max-width: 768px) {
-  #spatial-svg { touch-action: none; }
   #spatial-svg g[data-id] { cursor: grab; }
 }
 
@@ -1505,3 +1511,84 @@ body.journey-minimal .lifecycle-stepper .lifecycle-min-toggle { opacity: 0.7; }
   font-family: var(--font-serif);
 }
 .doc-canvas { line-height: 1.7; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Co-Cher v7 — Mobile touch primitives
+ * ---------------------------------------------------------------------------
+ * Everything below is gated behind touch/coarse media queries. DESKTOP
+ * (hover:hover / pointer:fine) matches NONE of these blocks, so rendering at
+ * >=1024 is byte-identical — these rules only ADD to the existing 768/600/480
+ * width breakpoints, they never restructure them.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* --- Comfortable tap targets (WCAG 2.5.5 Target Size) --- */
+@media (hover: none) and (pointer: coarse) {
+  /* Primary action buttons -> 44px recommended minimum. Desktop is untouched
+     because this query never matches a mouse device. */
+  .btn { min-height: 44px; }
+  /* Dense buttons stay compact but still finger-tappable (>=40px). */
+  .btn-sm { min-height: 40px; }
+
+  /* Form controls sized for fingers. .input has no min-height of its own, and
+     bare input/select pick up the platform's small default without this. */
+  .input,
+  input,
+  select,
+  textarea { min-height: 44px; }
+
+  /* Lesson-planner icon tools are icon-only buttons (.btn.btn-sm). The
+     `button.` prefix (specificity 0,1,1) outranks the width-scoped
+     .btn-sm{min-height:36px} / .lp-tool-icon{min-height:36px} rules, so these
+     land at a comfortable 44px regardless of source order. */
+  button.lp-tool-icon,
+  .lp-tool-icon { min-width: 44px; min-height: 44px; }
+
+  /* Planner component tabs and sidebar mode chips. The chip's runtime-injected
+     <style> sets padding but no min-height, so this floor applies cleanly. */
+  .component-tab { min-height: 44px; }
+  .sidebar-mode-chip { min-height: 44px; }
+}
+
+/* --- Hover-only label safety net ---
+ * On touch there is no hover, so an icon-only .lp-tool-icon whose label lives
+ * ONLY in its :hover tooltip would be unreadable. Reveal the SAME tooltip on
+ * :focus / :active too, so tapping (or keyboard-focusing) still surfaces the
+ * control's name — the tooltip is no longer the only way to read it. Desktop
+ * keeps its identical :hover behaviour because this block is gated on
+ * hover:none, which no mouse device matches. */
+@media (hover: none) {
+  .lp-tool-icon:focus::after,
+  .lp-tool-icon:focus-visible::after,
+  .lp-tool-icon:active::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 3px 8px;
+    background: #1e293b;
+    color: #f8fafc;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    white-space: nowrap;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  /* Make the reachable control obviously focused. */
+  .lp-tool-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* Tabs / period chips only changed appearance on :hover — give touch users
+     the same feedback on tap/focus so state isn't hover-gated into invisibility. */
+  .component-tab:active,
+  .component-tab:focus-visible {
+    background: var(--bg-subtle) !important;
+    color: var(--ink) !important;
+  }
+  .tt-period-chip:active,
+  .tt-period-chip:focus-visible {
+    background: var(--accent) !important;
+    color: #fff !important;
+  }
+}
