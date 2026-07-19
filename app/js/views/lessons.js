@@ -16,6 +16,8 @@ import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { applyJourneyMinimal, toggleJourneyMinimal } from '../components/keyboard-shortcuts.js';
 import { openDeckById, getMediaContent } from '../utils/deck.js';
+import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
+import { isTouch } from '../utils/viewport.js';
 
 const STATUS_MAP = {
   draft: { label: 'Draft', badge: 'badge-gray' },
@@ -97,6 +99,75 @@ function normalizeReflection(ref) {
 function hasReflection(ref) {
   const r = normalizeReflection(ref);
   return !!(r.whatWorked || r.whatToAdjust || r.engagement || r.e21ccObservations || r.freeform);
+}
+
+/* ── WS-G Growth loop: low-friction reflection capture ──
+ * Teacher LEADS. Quick-template chips only DROP a starter sentence into a field
+ * (the teacher then edits or deletes it); mics only SURFACE dictated text into a
+ * field. Neither ever saves, advances, or writes a reflection on its own — the
+ * teacher's "Save Reflection" click remains the only thing that persists. */
+const REFLECTION_QUICK_TEMPLATES = [
+  { label: 'Went well', target: 'ref-what-worked', text: 'The lesson went well overall.' },
+  { label: 'High engagement', target: 'ref-what-worked', text: 'Students were highly engaged and on task.' },
+  { label: 'Ran short on time', target: 'ref-what-adjust', text: 'Ran short on time — adjust the pacing next lesson.' },
+  { label: 'Re-teach next lesson', target: 'ref-what-adjust', text: 'Re-teach this next lesson to consolidate the key idea.' },
+];
+
+const MIC_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`;
+
+/** Mic button markup for a reflection field. Only rendered when voice is
+ * supported — see isVoiceInputSupported() gating in renderDetail. */
+function micButtonHTML(targetId) {
+  return `<button type="button" class="btn btn-ghost btn-sm ref-mic-btn" data-mic-target="${targetId}" aria-pressed="false" title="Dictate — tap to talk, tap again to stop" style="padding:2px 6px;flex-shrink:0;color:var(--ink-muted);">${MIC_SVG}</button>`;
+}
+
+/** Append a sentence into a textarea without saving. Fires an input event so
+ * any listeners see the change; leaves the caret at the end for editing. */
+function appendToField(el, text) {
+  if (!el || !text) return;
+  const cur = el.value.replace(/\s+$/, '');
+  el.value = cur ? `${cur} ${text}` : text;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.focus();
+  try { el.setSelectionRange(el.value.length, el.value.length); } catch (_) { /* non-text field */ }
+}
+
+/** Wire a press-to-talk mic to its reflection field. Tap to start listening,
+ * tap again to stop. Interim text shows live; each final segment lands in the
+ * box and stays editable. NEVER auto-saves or auto-advances. */
+function wireMic(btn, container) {
+  const field = container.querySelector('#' + btn.dataset.micTarget);
+  if (!field) return;
+  let listening = false;
+  let base = '';        // committed text: field value at start, then + each final
+  let dictation = null;
+
+  const setActive = (on) => {
+    listening = on;
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.style.color = on ? 'var(--danger)' : 'var(--ink-muted)';
+    btn.title = on ? 'Listening — tap to stop' : 'Dictate — tap to talk, tap again to stop';
+  };
+
+  btn.addEventListener('click', () => {
+    if (listening) { if (dictation) dictation.stop(); return; }
+    base = field.value.replace(/\s+$/, '');
+    dictation = createDictation({
+      lang: 'en-SG',
+      onInterim: (txt) => { field.value = base ? `${base} ${txt}` : txt; },
+      onResult: (txt) => {
+        const clean = String(txt || '').trim();
+        if (!clean) return;
+        base = base ? `${base} ${clean}` : clean;
+        field.value = base;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      },
+      onError: () => { showToast('Could not capture audio — check mic permissions.', 'danger'); },
+      onEnd: () => { setActive(false); dictation = null; },
+    });
+    if (dictation.start()) setActive(true);
+    else dictation = null;
+  });
 }
 
 /* ── Lesson lifecycle: Design → Ready → Rehearse → Teach → Reflect ──
@@ -472,6 +543,9 @@ function renderCards(grid, lessons, classMap) {
     grid.innerHTML = `<div style="text-align:center;padding:var(--sp-8);color:var(--ink-muted);font-size:0.875rem;">No lessons match this filter.</div>`;
     return;
   }
+  // WS-G mobile: HTML5 drag is unreliable on touch, so touch devices also get
+  // ▲/▼ reorder buttons that write the SAME order via the same update path.
+  const touch = isTouch();
   grid.innerHTML = lessons.map((l, idx) => {
     const s = STATUS_MAP[l.status] || STATUS_MAP.draft;
     const cn = l.classId ? classMap[l.classId] : null;
@@ -481,7 +555,10 @@ function renderCards(grid, lessons, classMap) {
         <div style="display:flex;align-items:flex-start;justify-content:space-between;">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-1);flex-wrap:wrap;">
-              <span style="color:var(--ink-faint);cursor:grab;margin-right:2px;" title="Drag to reorder">&#9776;</span>
+              ${touch ? `<span class="ros-reorder" style="display:inline-flex;gap:2px;margin-right:4px;">
+                <button type="button" class="btn btn-ghost btn-sm ros-move-btn" data-dir="up" data-idx="${idx}" title="Move up" ${idx === 0 ? 'disabled' : ''} style="padding:0 6px;font-size:0.75rem;line-height:1.4;">&#9650;</button>
+                <button type="button" class="btn btn-ghost btn-sm ros-move-btn" data-dir="down" data-idx="${idx}" title="Move down" ${idx === lessons.length - 1 ? 'disabled' : ''} style="padding:0 6px;font-size:0.75rem;line-height:1.4;">&#9660;</button>
+              </span>` : `<span style="color:var(--ink-faint);cursor:grab;margin-right:2px;" title="Drag to reorder">&#9776;</span>`}
               <span class="badge ${s.badge} badge-dot">${s.label}</span>
               ${l.isExemplar ? `<span class="badge badge-violet" title="Sample lesson you can explore or duplicate">&#9733; Exemplar</span>` : ''}
               ${l.sharedBy ? `<span class="badge badge-violet" title="Shared via Department Pack">From ${esc(l.sharedBy)}</span>` : ''}
@@ -603,21 +680,44 @@ function renderCards(grid, lessons, classMap) {
       const allCards = [...grid.querySelectorAll('[draggable="true"]')];
       const fromIdx = allCards.indexOf(dragSrcEl);
       const toIdx = allCards.indexOf(card);
-      if (fromIdx < 0 || toIdx < 0) return;
-      // Reorder the lessons array in Store
-      const allLessons = Store.getLessons();
-      const orderedIds = lessons.map(l => l.id);
-      const [movedId] = orderedIds.splice(fromIdx, 1);
-      orderedIds.splice(toIdx, 0, movedId);
-      // Update timestamps to reflect new order
-      const now = Date.now();
-      orderedIds.forEach((lid, i) => {
-        Store.updateLesson(lid, { updatedAt: now - i });
-      });
-      showToast('Lessons reordered');
-      renderCards(grid, Store.getLessons().sort((a, b) => b.updatedAt - a.updatedAt), classMap);
+      reorderLessonsBy(lessons, fromIdx, toIdx, grid, classMap);
     });
   });
+
+  // WS-G touch reorder — ▲/▼ move a card one slot, persisting via the same
+  // path as drag. stopPropagation keeps the card-tap navigation from firing.
+  grid.querySelectorAll('.ros-move-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.idx, 10);
+      const toIdx = btn.dataset.dir === 'up' ? idx - 1 : idx + 1;
+      if (toIdx < 0 || toIdx >= lessons.length) return;
+      reorderLessonsBy(lessons, idx, toIdx, grid, classMap);
+    });
+  });
+}
+
+/* Shared reorder for the lessons list: moves the item at `fromIdx` to `toIdx`
+ * within the currently displayed order, persisting the new order by writing
+ * descending updatedAt stamps (the field the list sorts on) for the displayed
+ * lessons. Both HTML5 drag and the touch ▲/▼ buttons route through here so they
+ * persist identically.
+ *
+ * NOTE: we assign the stamps with a single Store.set('lessons', ...) rather than
+ * per-lesson Store.updateLesson calls — updateLesson force-stamps updatedAt to
+ * Date.now(), so a tight loop of updates ties within the same millisecond and
+ * the intended order is lost. One write with distinct base-i stamps is stable. */
+function reorderLessonsBy(displayed, fromIdx, toIdx, grid, classMap) {
+  if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+  const orderedIds = displayed.map(l => l.id);
+  const [movedId] = orderedIds.splice(fromIdx, 1);
+  orderedIds.splice(toIdx, 0, movedId);
+  const base = Date.now();
+  const stampById = new Map(orderedIds.map((id, i) => [id, base - i]));
+  const next = Store.getLessons().map(l => stampById.has(l.id) ? { ...l, updatedAt: stampById.get(l.id) } : l);
+  Store.set('lessons', next);
+  showToast('Lessons reordered');
+  renderCards(grid, Store.getLessons().sort((a, b) => b.updatedAt - a.updatedAt), classMap);
 }
 
 /* ══════════ Department Pack Modal ══════════
@@ -845,6 +945,9 @@ export function renderDetail(container, { id }) {
   const cn = lesson.classId ? Store.getClass(lesson.classId)?.name : null;
   const s = STATUS_MAP[lesson.status] || STATUS_MAP.draft;
   const aiMsgs = (lesson.chatHistory || []).filter(m => m.role === 'assistant');
+  // WS-G: show mics only where the browser can actually dictate. Unsupported
+  // browsers (Firefox, Safari) render no mic at all — the fields still work.
+  const voiceOn = isVoiceInputSupported();
 
   container.innerHTML = `
     <div class="main-scroll">
@@ -987,23 +1090,42 @@ export function renderDetail(container, { id }) {
             </div>
           </div>
 
+          <div style="margin-bottom:var(--sp-3);">
+            <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-muted);margin-bottom:var(--sp-1);">Quick add &middot; tap to drop a starter line in, then edit freely</div>
+            <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
+              ${REFLECTION_QUICK_TEMPLATES.map(t => `<button type="button" class="pill quick-tmpl-chip" data-target="${t.target}" data-text="${esc(t.text)}">${esc(t.label)}</button>`).join('')}
+            </div>
+          </div>
+
           <div class="input-group" style="margin-bottom:var(--sp-3);">
-            <label class="input-label" style="font-size:0.8125rem;">What worked well?</label>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);">
+              <label class="input-label" style="font-size:0.8125rem;" for="ref-what-worked">What worked well?</label>
+              ${voiceOn ? micButtonHTML('ref-what-worked') : ''}
+            </div>
             <textarea class="input" id="ref-what-worked" rows="2" placeholder="Activities, strategies, or moments that went well...">${esc(normalizeReflection(lesson.reflection).whatWorked)}</textarea>
           </div>
 
           <div class="input-group" style="margin-bottom:var(--sp-3);">
-            <label class="input-label" style="font-size:0.8125rem;">What would you adjust?</label>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);">
+              <label class="input-label" style="font-size:0.8125rem;" for="ref-what-adjust">What would you adjust?</label>
+              ${voiceOn ? micButtonHTML('ref-what-adjust') : ''}
+            </div>
             <textarea class="input" id="ref-what-adjust" rows="2" placeholder="What you'd change next time...">${esc(normalizeReflection(lesson.reflection).whatToAdjust)}</textarea>
           </div>
 
           <div class="input-group" style="margin-bottom:var(--sp-3);">
-            <label class="input-label" style="font-size:0.8125rem;">E21CC Observations</label>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);">
+              <label class="input-label" style="font-size:0.8125rem;" for="ref-e21cc">E21CC Observations</label>
+              ${voiceOn ? micButtonHTML('ref-e21cc') : ''}
+            </div>
             <textarea class="input" id="ref-e21cc" rows="2" placeholder="How did students demonstrate CAIT, CCI, or CGC?">${esc(normalizeReflection(lesson.reflection).e21ccObservations)}</textarea>
           </div>
 
           <div class="input-group" style="margin-bottom:var(--sp-3);">
-            <label class="input-label" style="font-size:0.8125rem;">Additional Notes</label>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);">
+              <label class="input-label" style="font-size:0.8125rem;" for="ref-freeform">Additional Notes</label>
+              ${voiceOn ? micButtonHTML('ref-freeform') : ''}
+            </div>
             <textarea class="input" id="ref-freeform" rows="2" placeholder="Any other observations or reflections...">${esc(normalizeReflection(lesson.reflection).freeform)}</textarea>
           </div>
 
@@ -1014,6 +1136,9 @@ export function renderDetail(container, { id }) {
             </button>
             <button class="btn btn-secondary btn-sm" id="save-ref">Save Reflection</button>
           </div>
+          <p class="reflection-disclosure" style="font-size:0.6875rem;color:var(--ink-faint);margin-top:var(--sp-2);line-height:1.5;text-align:right;">
+            Saved reflections quietly build your <a href="#/my-growth" style="color:var(--accent);">practice story in My Growth</a>.
+          </p>
         </div>
       </div>
     </div>
@@ -1136,6 +1261,20 @@ export function renderDetail(container, { id }) {
       container.querySelector('#engagement-label').textContent = engLabels[engagementVal] || '';
     });
   });
+
+  // WS-G quick-template chips — drop a starter sentence into a field. This only
+  // fills the textbox; nothing saves until the teacher clicks Save Reflection.
+  container.querySelectorAll('.quick-tmpl-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      appendToField(container.querySelector('#' + chip.dataset.target), chip.dataset.text || '');
+    });
+  });
+
+  // WS-G press-to-talk mics — only when the browser can dictate. Surfaces text
+  // into the field; never submits (see wireMic / voice.js).
+  if (voiceOn) {
+    container.querySelectorAll('.ref-mic-btn').forEach(btn => wireMic(btn, container));
+  }
 
   container.querySelector('#save-ref').addEventListener('click', () => {
     // Snapshot the stage BEFORE saving so we can detect the taught → reflected
