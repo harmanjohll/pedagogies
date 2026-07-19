@@ -124,7 +124,15 @@ export function renderPresent(container, params) {
       .present-top { display:flex; align-items:center; justify-content:space-between; padding: 14px 22px; border-bottom: 1px solid var(--border-light); }
       .present-title { font-size: clamp(1.1rem, 2.2vw, 1.6rem); font-weight: 800; color: var(--ink); }
       .present-meta { font-size: clamp(0.8rem, 1.4vw, 1rem); color: var(--ink-muted); }
-      .present-stage { flex: 1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 4vh 6vw; text-align:center; gap: 2.5vh; }
+      /* Scrollable stage with SAFE centering: .present-inner's margin:auto
+       * centers when content fits and top-aligns (scrollable) when it
+       * overflows — centered flex overflow would clip unreachably. */
+      .present-stage { flex: 1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow-y:auto; padding: 3vh 6vw; text-align:center; }
+      .present-inner { margin: auto; display:flex; flex-direction:column; align-items:center; gap: 2.5vh; max-width: 100%; }
+      .present-inner.dense { gap: 1.2vh; }
+      .present-inner.dense .present-clock { font-size: clamp(1.8rem, 5vw, 3.6rem); }
+      .present-inner.dense .present-seg-name { font-size: clamp(1.5rem, 4vw, 2.8rem); }
+      .present-inner.dense .present-instructions { font-size: clamp(1rem, 2.2vw, 1.5rem); }
       .present-seg-name { font-size: clamp(2rem, 5.5vw, 4.2rem); font-weight: 800; color: var(--ink); line-height: 1.1; }
       .present-instructions { font-size: clamp(1.15rem, 2.8vw, 2rem); color: var(--ink); line-height: 1.5; max-width: 90vw; white-space: pre-wrap; }
       .present-clock { font-variant-numeric: tabular-nums; font-size: clamp(2.4rem, 7vw, 5.5rem); font-weight: 800; letter-spacing: 0.02em; color: var(--accent, #4361ee); }
@@ -146,7 +154,7 @@ export function renderPresent(container, params) {
       .present-framework { text-align: left; font-size: clamp(0.95rem, 1.8vw, 1.25rem); line-height: 1.6; max-width: 80vw; border: 2px solid var(--border); border-radius: 14px; padding: 12px 20px; background: var(--surface, #fff); }
       .present-framework-title { font-weight: 800; color: var(--accent, #4361ee); margin-bottom: 4px; }
       .present-framework-stage strong { color: var(--ink); }
-      .present-map svg { max-width: min(88vw, 760px); height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
+      .present-map svg { max-width: min(88vw, 760px); max-height: 38vh; width: auto; height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
       @media print { .present-bottom, .present-top .present-ctrl { display: none; } }
     </style>
     <div class="present-root">
@@ -216,14 +224,15 @@ export function renderPresent(container, params) {
 
     if (_segIdx === 0) {
       // Welcome screen: title + LI/SC or objectives (both student-facing)
-      stage.innerHTML = `
+      stage.innerHTML = `<div class="present-inner">
         <div class="present-seg-name">Today&rsquo;s Lesson</div>
         ${objectives ? `<div class="present-instructions">${escapeHtml(objectives)}</div>` : ''}
         ${liscContent ? `<div class="present-lisc">${md(liscContent)}</div>` : ''}
         ${!objectives && !liscContent && !segments.length ? `
           <div class="present-instructions" style="color:var(--ink-muted);">This lesson hasn&rsquo;t been staged yet.<br>
           <span style="font-size:0.8em;">(Teacher: open it in the Lesson Planner and use &ldquo;Stage lesson&rdquo;.)</span></div>` : ''}
-        ${segments.length ? `<div class="present-meta" style="font-size:clamp(1rem,2vw,1.4rem);">Ready? &rarr;</div>` : ''}`;
+        ${segments.length ? `<div class="present-meta" style="font-size:clamp(1rem,2vw,1.4rem);">Ready? &rarr;</div>` : ''}
+      </div>`;
       timerBtn.style.visibility = 'hidden';
     } else {
       const seg = segments[_segIdx - 1];
@@ -255,7 +264,12 @@ export function renderPresent(container, params) {
             <div class="present-framework-stage"><strong>${escapeHtml(s.label || '')}</strong>${s.studentPrompt ? ` &mdash; ${escapeHtml(s.studentPrompt)}` : ''}</div>`).join('')}
         </div>` : '';
 
-      stage.innerHTML = `
+      const mapHtml = segmentMap(seg);
+      // Content-heavy screens compact their type/spacing so everything stays
+      // reachable; the stage itself scrolls as the final safety net.
+      const layers = [groupCards, frameworkPanel, mapHtml, seg.studentInstructions, growthLabel]
+        .filter(Boolean).length;
+      stage.innerHTML = `<div class="present-inner${layers >= 3 ? ' dense' : ''}">
         <div class="present-meta" style="font-weight:700;">Part ${_segIdx} of ${segments.length}</div>
         <div class="present-seg-name">${escapeHtml(seg.name || 'Activity')}</div>
         <div class="present-clock">${fmtClock(_remaining)}</div>
@@ -264,7 +278,8 @@ export function renderPresent(container, params) {
         ${seg.studentInstructions ? `<div class="present-instructions">${escapeHtml(seg.studentInstructions)}</div>` : ''}
         ${frameworkPanel}
         ${groupCards}
-        ${segmentMap(seg)}`;
+        ${mapHtml}
+      </div>`;
     }
     renderDots();
   }
