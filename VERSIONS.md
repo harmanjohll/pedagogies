@@ -13,7 +13,8 @@ The canonical URL always serves the **latest** version:
 | v5.1 | `archive/v5.1/` (frozen snapshot as of Jul 2026 — inviting/engaging generation: living lesson journey, workflow modes, visual teacher identity, configurable tracking schemas, bulk student upload, remarks, My References; incl. Sem 2 timetable refresh, as originally shipped) | `/pedagogies/archive/v5.1/cocher.html` | `cocher_v5_1_*` (renamed at freeze time) | Archived |
 | v6 | `archive/v6/` (frozen snapshot as of Jul 2026 — "Showtime": run-of-show staging, first-class scenes, students on the canvas, Class Screen projector view, simulation one-stop, as originally shipped) | `/pedagogies/archive/v6/cocher.html` | `cocher_v6_*` (renamed at freeze time) | Archived |
 | v6.1 | `archive/v6.1/` (frozen snapshot as of Jul 2026 — "Wieldable": cockpit + journey bar, named seats, TLDR+expand plans, pedagogy frameworks, sim depth, as originally shipped) | `/pedagogies/archive/v6.1/cocher.html` | `cocher_v6_1_*` (renamed at freeze time) | Archived |
-| v6.2 | `app/` (active development — "Effortless": one-click auto-staging, materials generation (HTML decks + TTS audio), CCE through the planner, flow-audit repairs, Present-mode fit fixes) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
+| v6.2 | `archive/v6.2/` (frozen snapshot as of Jul 2026 — "Effortless": auto-staging, materials (HTML decks + TTS audio), CCE through the planner, flow-audit repairs, Present-mode fit, as originally shipped) | `/pedagogies/archive/v6.2/cocher.html` | `cocher_v6_2_*` (renamed at freeze time) | Archived |
+| v7 | `app/` (active development — "Anywhere": mobile daily loop, offline/PWA service worker, anticipatory next-lesson home, growth loop + practice story, voice input, milestone moments) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
 
 ## Notes
 
@@ -38,3 +39,11 @@ The canonical URL always serves the **latest** version:
 3. Add the archived banner to `archive/vN/cocher.html` (copy from the previous archive's banner).
 4. Update the table above, and in `app/js/version.js` bump `APP_VERSION` and prepend the newly
    archived version to `PREVIOUS_VERSIONS`.
+5. **Service worker (since v7):** the live app registers `app/sw.js` (scope `app/`) with a
+   version-keyed cache (`cocher-<APP_VERSION>`) and network-first HTML, so a fresh deploy never
+   serves stale. When freezing, the archived copy under `archive/vN/` is OUTSIDE the `app/` scope,
+   so it is never controlled by the live SW. If a frozen snapshot itself contains the SW
+   registration + `sw.js`, that's harmless (it would register a separate, isolated scope under
+   `archive/vN/`) — but prefer to delete `archive/vN/sw.js` and the registration block from the
+   archived `cocher.html` so archives stay purely static. Bump the `VERSION` constant in
+   `app/sw.js` to match `APP_VERSION` on every release so the cache busts.

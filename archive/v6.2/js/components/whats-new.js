@@ -8,19 +8,19 @@
 import { APP_VERSION } from '../version.js';
 import { openModal } from './modals.js';
 
-const SEEN_KEY = 'cocher_whatsnew_seen';
+const SEEN_KEY = 'cocher_v6_2_whatsnew_seen';
 
 const CHANGES = [
-  { icon: '&#128241;', title: 'Co-Cher on your phone',
-    text: 'The daily loop — dashboard, lessons, planner chat, Present, quick capture — now works on a phone: bigger touch targets, ▲/▼ reorder where drag used to be, and the heavy design surfaces adapt honestly (best edited on a larger screen).' },
-  { icon: '&#128246;', title: 'Works offline',
-    text: 'Install Co-Cher and it keeps working without wifi — your dashboard, lessons and everything you\'ve made load straight from the device. Only AI generation needs a connection, and it now says so kindly instead of spinning.' },
-  { icon: '&#128198;', title: 'Your day, waiting for you',
-    text: 'The home screen reads your timetable and points to your next class and its lesson — Open plan, Present, or Plan it, one tap away. It only ever suggests; you\'re always the one who acts.' },
-  { icon: '&#127793;', title: 'Your practice, growing',
-    text: 'Reflect in seconds with one-tap starters or your voice, and watch a term-long Practice Story quietly take shape in My Growth. Little milestones get a warm nod — never a nag.' },
-  { icon: '&#127908;', title: 'Just say it',
-    text: 'A mic now sits in the lesson-planner composer and your capture fields — press, talk, and it fills the box for you to edit and send. (Needs a supported browser and a connection.)' },
+  { icon: '&#9889;', title: 'Auto-stage: one click, whole lesson ready',
+    text: 'Confirm your class, room and duration — Co-Cher stages the plan into segments, forms the groups, links the room, and seats everyone on the actual furniture. Nothing is random unless you tick "let Co-Cher choose." The step-by-step way still works too.' },
+  { icon: '&#127908;', title: 'Decks and audio, made in the planner',
+    text: 'Ask for a slide deck and get a clean, self-contained one you can present or print to PDF. Ask for a podcast clip or sound bite and Co-Cher writes the script, then voices it with AI voices (your API key; voice only — no music or effects). Both attach to the lesson and launch from the Class Screen.' },
+  { icon: '&#10084;&#65039;', title: 'CCE lessons, full power',
+    text: 'Plan a CCE lesson from the CCE hub and it flows through the full planner — staging, grouping, named seats, Present, GROW built in — with CCE2021 framing for your chosen content area.' },
+  { icon: '&#128269;', title: 'Two deep flow audits, fixed',
+    text: 'Named seats now survive reloads on the bundled layouts (the big one), saving a lesson keeps you on it, weekend dashboards explain themselves instead of going blank, frameworks are editable, layout deletion asks first — plus a dozen smaller smoothings.' },
+  { icon: '&#128250;', title: 'Everything fits on the projector',
+    text: 'The Class Screen now scrolls safely, compacts busy segments, caps the seat map, and shows a "more" cue when something\'s below the fold — even at 1366×768.' },
 ];
 
 export function maybeShowWhatsNew() {
