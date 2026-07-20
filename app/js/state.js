@@ -205,6 +205,10 @@ const DEFAULT_STATE = {
   trackingSchemas: [],
   frameworks: [],
   references: [],
+  // Lifetime aggregates that can't be derived from other state — the only
+  // one today is presentations (present.js never counted them). Feeds the
+  // teacher-led milestone OFFERS in the dashboard; never auto-acts.
+  lifetimeStats: { lessonsPresented: 0 },
   onboardingComplete: false
 };
 
@@ -367,6 +371,7 @@ export const Store = {
       schoolProfile: _state.schoolProfile || { name: '', values: '' },
       onboardingComplete: _state.onboardingComplete || false,
       apiKeyDeferred: _state.apiKeyDeferred || false,
+      lifetimeStats: _state.lifetimeStats || { lessonsPresented: 0 },
       recentActivity: _state.recentActivity
     });
     // Also keep legacy keys in sync
@@ -374,6 +379,37 @@ export const Store = {
     localStorage.setItem('cocher_model', _state.model || 'gemini-2.5-flash');
     localStorage.setItem('cocher_dark_mode', _state.darkMode ? 'true' : 'false');
     localStorage.setItem('cocher_palette', _state.palette || '');
+  },
+
+  /* ══════════ Lifetime stats (milestone OFFERS — teacher-led) ══════════ */
+
+  /** Count a lesson being presented on the Class Screen. Returns the new total.
+   * Idempotent within a single Present session is the caller's concern. */
+  recordPresentation(lessonId) {
+    if (!_state.lifetimeStats) _state.lifetimeStats = { lessonsPresented: 0 };
+    _state.lifetimeStats.lessonsPresented = (_state.lifetimeStats.lessonsPresented || 0) + 1;
+    this._persist();
+    this._notify();
+    return _state.lifetimeStats.lessonsPresented;
+  },
+
+  /** Aggregates for milestone offers: presented (counter), plus derived
+   * created / reflected / classes counts. Read-only; nothing here mutates. */
+  getLifetimeStats() {
+    const lessons = _state.lessons || [];
+    const reflectionsCount = lessons.filter(l => {
+      const r = l.reflection;
+      if (!r) return false;
+      if (typeof r === 'string') return r.trim().length > 0;
+      return ['whatWorked', 'whatToAdjust', 'e21ccObservations', 'freeform']
+        .some(k => String(r[k] || '').trim());
+    }).length;
+    return {
+      lessonsPresented: _state.lifetimeStats?.lessonsPresented || 0,
+      lessonsCreated: lessons.length,
+      reflectionsCount,
+      classesCount: (_state.classes || []).length,
+    };
   },
 
   /* ══════════ School Profile ══════════ */

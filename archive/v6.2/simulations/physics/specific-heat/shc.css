@@ -1,0 +1,390 @@
+/* ============================================================
+   Specific Heat Capacity Practical — Styles
+   ============================================================ */
+
+body {
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Layout --- */
+.shc-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr 300px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.shc-guide-panel {
+  padding: var(--sp-4);
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.shc-workbench-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.shc-data-panel {
+  padding: var(--sp-4);
+  overflow-y: auto;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+
+/* --- Config --- */
+.config-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.config-row label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.config-select {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+.config-select:focus {
+  border-color: var(--phys-color);
+  box-shadow: 0 0 0 3px rgba(247, 127, 0, 0.15);
+}
+
+
+/* --- Metal info --- */
+.metal-info {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+
+/* --- Power status --- */
+.power-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+.status-dot.off {
+  background: var(--color-text-muted);
+}
+.status-dot.on {
+  background: var(--color-success);
+  box-shadow: 0 0 6px rgba(6, 214, 160, 0.5);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+
+/* --- Procedure list --- */
+.procedure-list {
+  list-style: none;
+  counter-reset: procedure;
+  padding: 0;
+}
+.procedure-step {
+  counter-increment: procedure;
+  position: relative;
+  padding: var(--sp-2) 0 var(--sp-2) var(--sp-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  border-left: 2px solid var(--color-border);
+  margin-left: var(--sp-3);
+}
+.procedure-step::before {
+  content: counter(procedure);
+  position: absolute;
+  left: calc(-1 * var(--sp-3) - 10px);
+  top: var(--sp-2);
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.procedure-step.active {
+  color: var(--color-text);
+  border-left-color: var(--phys-color);
+}
+.procedure-step.active::before {
+  background: var(--phys-color);
+  color: #fff;
+}
+.procedure-step.done {
+  color: var(--color-text-secondary);
+}
+.procedure-step.done::before {
+  background: var(--color-success);
+  color: #fff;
+}
+
+
+/* --- Workbench --- */
+.shc-workbench {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bench-bg);
+  position: relative;
+  padding: var(--sp-4);
+  min-height: 400px;
+}
+.shc-workbench canvas {
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #1e1f2b 0%, #252638 60%, #2d2e42 100%);
+}
+
+
+/* --- Meter readings below canvas --- */
+.meter-readings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+  flex-wrap: wrap;
+}
+.meter-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-md);
+  min-width: 100px;
+}
+.meter-card.voltmeter {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.meter-card.ammeter {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.meter-card.timer-card {
+  background: rgba(247, 127, 0, 0.1);
+  border: 1px solid rgba(247, 127, 0, 0.3);
+}
+.meter-card.temp-card {
+  background: rgba(6, 214, 160, 0.1);
+  border: 1px solid rgba(6, 214, 160, 0.3);
+}
+.meter-label {
+  font-size: var(--text-xs);
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.meter-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: #fff;
+}
+
+
+/* --- Graph --- */
+.graph-container {
+  display: flex;
+  justify-content: center;
+}
+.graph-container canvas {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+[data-theme="dark"] .graph-container canvas {
+  background: var(--color-surface);
+}
+
+
+/* --- Calculation panel --- */
+.calc-formulae {
+  margin-bottom: var(--sp-3);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--color-border);
+}
+.calc-formula-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--sp-2);
+}
+.calc-formula-row:last-child {
+  margin-bottom: 0;
+}
+.calc-formula-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.calc-formula {
+  font-size: var(--text-sm);
+  color: var(--phys-color);
+  font-weight: 600;
+}
+
+.calc-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.calc-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.calc-input-row label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.calc-input {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  width: 100%;
+}
+.calc-input:focus {
+  outline: none;
+  border-color: var(--phys-color);
+  box-shadow: 0 0 0 3px rgba(247, 127, 0, 0.15);
+}
+
+.calc-result-box {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+.calc-result-box.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #34d399;
+}
+.calc-result-box.warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+.calc-result-box.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #f87171;
+}
+
+.calc-result-box .result-line {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  margin-top: var(--sp-1);
+}
+
+
+/* --- Toast --- */
+.toast-container {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s var(--ease-out);
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.toast.visible { opacity: 1; transform: translateY(0); }
+.toast-info { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); }
+.toast-warn { background: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
+.toast-success { background: #d1fae5; color: #065f46; border: 1px solid #34d399; }
+
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+  .shc-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+  .shc-guide-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    gap: var(--sp-4);
+    overflow-y: visible;
+    padding: var(--sp-3);
+  }
+  .shc-guide-panel .panel { flex: 1; }
+  .shc-guide-panel .mt-4 { margin-top: 0; }
+  .shc-data-panel {
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+  .meter-readings {
+    gap: var(--sp-2);
+  }
+  .meter-card {
+    min-width: 80px;
+  }
+}
+
+@media (max-width: 640px) {
+  .shc-guide-panel {
+    flex-direction: column;
+  }
+  .meter-readings {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .meter-card {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}

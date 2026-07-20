@@ -19,6 +19,7 @@ import { navigate } from '../router.js';
 import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
 import { getCurrentUser } from '../components/login.js';
 import { escapeHtml } from '../utils/markdown.js';
+import { isTouch, isNarrow } from '../utils/viewport.js';
 
 /* ═══════════ Timetable (TT) Awareness ═══════════ */
 let _ttData = null;
@@ -654,6 +655,24 @@ export function render(container) {
   const wallToggle = container.querySelector('#wall-toggle');
   const studentCountInput = container.querySelector('#student-count');
 
+  /* ══════ Mobile view-only gating (v7) ══════
+   * On a genuine touch phone (narrow + coarse pointer), finger placement of
+   * furniture is impractical, so we keep the canvas VIEWABLE + scene switching +
+   * preset apply usable, but disable the two fine-drag affordances (palette
+   * click-to-add and per-item drag) and surface an honest banner. Desktop
+   * (non-touch / ≥768px) is untouched: mobileView is false, so none of this runs. */
+  const mobileView = isTouch() && isNarrow();
+  if (mobileView) {
+    const canvasCol = container.querySelector('#spatial-canvas-col');
+    if (canvasCol) {
+      canvasCol.insertAdjacentHTML('afterbegin',
+        '<div class="sd-mobile-banner" style="flex:0 0 auto;display:flex;align-items:flex-start;gap:8px;padding:8px 14px;background:var(--accent-light,#eef2ff);border-bottom:1px solid var(--border-light,#e5e7eb);font-size:0.75rem;line-height:1.45;color:var(--ink-secondary,#475569);">'
+        + '<span aria-hidden="true" style="flex-shrink:0;">📱</span>'
+        + '<span>Best edited on a larger screen — here you can view and switch scenes, but fine placement needs a tablet or laptop.</span>'
+        + '</div>');
+    }
+  }
+
   let selected = new Set();
   let marquee = null;
   let currentPreset = null;
@@ -953,6 +972,12 @@ export function render(container) {
     });
     paletteEl.appendChild(btn);
   });
+  // Mobile view-only: click-to-add is disabled (a placed item can't be
+  // finger-dragged into position). Presets remain the mobile placement path.
+  if (mobileView) {
+    paletteEl.style.opacity = '0.55';
+    paletteEl.style.pointerEvents = 'none';
+  }
 
   /* ══════ Presets ══════ */
   const presetsEl = container.querySelector('#presets');
@@ -1589,6 +1614,9 @@ export function render(container) {
   function clamp(v, min, max) { return Math.max(min, Math.min(v, max)); }
 
   function makeDraggable(g) {
+    // Mobile view-only: finger-drag placement is disabled; the canvas stays
+    // viewable and scenes/presets still work. Desktop keeps full dragging.
+    if (mobileView) { g.style.cursor = 'default'; return; }
     let offset = { x: 0, y: 0 }, isDragging = false, groupStart = null, undoPushed = false;
 
     g.addEventListener('pointerdown', e => {

@@ -6,7 +6,9 @@
   <title>Co-Cher — Lesson Design Assistant</title>
   <meta name="description" content="AI-powered lesson planning, spatial classroom design, and E21CC framework integration for Singapore educators." />
 
-  <!-- Installable on school laptops (no service worker — avoids stale caches on Pages) -->
+  <!-- Installable on school laptops. Service worker (sw.js) is network-first for
+       HTML, so a fresh Pages deploy always wins online; it only serves a cached
+       shell offline. See the registration block at the end of <body>. -->
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#000C53" />
 
@@ -24,8 +26,9 @@
     } catch (e) { /* ignore */ }
   </script>
 
-  <!-- Chart.js for Spatial Effectiveness Radar -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chart.js for Spatial Effectiveness Radar (pinned; chart.umd.js is the
+       minified production UMD build shipped in the npm package) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.js"></script>
 
   <!-- KaTeX for LaTeX rendering -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
@@ -59,6 +62,42 @@
 
   <!-- App Entry (ES Module) -->
   <script type="module" src="js/app.js"></script>
+
+  <!-- Service worker: offline shell + network-first HTML (fresh on Pages).
+       Registered after load so it never blocks boot; fails silently where the
+       Service Worker API is unsupported or blocked. -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      // Capture control state now: a first install has no controller yet, an
+      // update does — we only auto-reload for updates, and only once per tab
+      // session (sessionStorage flag guards against reload loops).
+      var hadController = !!navigator.serviceWorker.controller;
+      var swReloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (swReloading || !hadController) return;
+        try {
+          if (sessionStorage.getItem('cocher_sw_reloaded')) return;
+          sessionStorage.setItem('cocher_sw_reloaded', '1');
+        } catch (e) { /* ignore */ }
+        swReloading = true;
+        window.location.reload();
+      });
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('./sw.js').then(function (reg) {
+          reg.addEventListener('updatefound', function () {
+            var nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', function () {
+              // New version installed behind the current controller → promote it.
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                nw.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          });
+        }).catch(function () { /* SW optional — app runs fine without it */ });
+      });
+    }
+  </script>
 
   <!--
     Co-Cher — Lesson Design Assistant

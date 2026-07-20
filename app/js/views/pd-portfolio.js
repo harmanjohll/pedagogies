@@ -218,6 +218,167 @@ function renderIdeologyMirror() {
     </div>`;
 }
 
+/* ══════════ My Practice Story (WS-G Growth loop) ══════════
+ * A REVIEW surface the teacher opens. It COMPOSES existing data — practice-log
+ * entries, saved reflections, engagement, loop-close cadence, current goal and
+ * the espoused-vs-enacted mirror — into a warm, scannable term narrative. Pure
+ * composition: no AI call, no writes, no auto-generated teacher content. Old
+ * (string) reflections and empty logs are handled gracefully. */
+
+const STORY_E21CC_LABELS = {
+  cait: 'CAIT', cci: 'CCI', cgc: 'CGC',
+  criticalThinking: 'Critical Thinking', creativeThinking: 'Creative Thinking',
+  communication: 'Communication', collaboration: 'Collaboration',
+  socialConnectedness: 'Social Connectedness', selfRegulation: 'Self-Regulation'
+};
+
+/** Engagement 1–5 from a reflection object, or 0 (legacy string reflections
+ * and missing/out-of-range values count as no reading). */
+function reflectionEngagement(l) {
+  const r = l.reflection;
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return 0;
+  const n = Number(r.engagement) || 0;
+  return n >= 1 && n <= 5 ? n : 0;
+}
+
+/** Whether a lesson carries a real reflection (object fields or a non-empty
+ * legacy string) — mirrors getReflectionsFromLessons' filter. */
+function lessonIsReflected(l) {
+  const r = l.reflection;
+  if (!r) return false;
+  if (typeof r === 'string') return r.trim().length > 0;
+  return !!(r.whatWorked || r.whatToAdjust || r.engagement || r.e21ccObservations || r.freeform);
+}
+
+function monthGroup(ts) {
+  const d = new Date(ts);
+  return { key: `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`, label: d.toLocaleDateString('en-SG', { month: 'long', year: 'numeric' }) };
+}
+
+/** Compact espoused-vs-enacted read for the story. Returns null unless the
+ * teacher named an orientation AND there are ≥3 readable plans to compare.
+ * Same heuristic as renderIdeologyMirror, condensed to a snapshot. */
+function computeIdeologySnapshot() {
+  let espoused = '';
+  try { espoused = localStorage.getItem('cocher_espoused_ideology') || ''; } catch { /* ignore */ }
+  if (!espoused || !IDEOLOGY_META[espoused]) return null;
+  const lessons = Store.getLessons()
+    .filter(l => !l.isExemplar)
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+    .slice(0, 12);
+  const totals = { 'learner-centred': 0, 'scholar-academic': 0, 'social-efficiency': 0, 'social-reconstructivist': 0 };
+  let plansWithSignal = 0;
+  for (const l of lessons) {
+    const scores = classifyPlanText(lessonPlanText(l));
+    if (Object.values(scores).reduce((a, b) => a + b, 0) === 0) continue;
+    plansWithSignal++;
+    for (const id of Object.keys(totals)) totals[id] += scores[id];
+  }
+  if (plansWithSignal < 3) return null;
+  const enacted = Object.keys(totals).sort((a, b) => totals[b] - totals[a])[0];
+  return {
+    aligned: enacted === espoused,
+    espousedLabel: IDEOLOGY_META[espoused].label,
+    enactedLabel: IDEOLOGY_META[enacted].label
+  };
+}
+
+function renderPracticeStorySection() {
+  const log = Store.getPracticeLog();
+  const lessons = Store.getLessons().filter(l => !l.isExemplar);
+  const reflected = lessons.filter(lessonIsReflected).sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
+  const goal = Store.getPracticeGoal();
+
+  // Warm empty state — nothing to compose yet, and never a crash.
+  if (log.length === 0 && reflected.length === 0) {
+    return `
+      <div class="card practice-story-card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #FFE200);">
+        <h3 style="font-family:var(--font-serif, Georgia, serif);font-size:1.125rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-2);">My Practice Story</h3>
+        <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">Your practice story starts with your first reflection. Teach a lesson, jot a line on what worked over in <a href="#/lessons" style="color:var(--accent);">Lessons</a>, and it will gather here into a term-long narrative — assembled from your own words, nothing auto-written.</p>
+      </div>`;
+  }
+
+  // Engagement trend across reflected lessons in chronological order.
+  const engs = reflected.map(reflectionEngagement).filter(v => v > 0);
+  const avgEng = engs.length ? engs.reduce((a, b) => a + b, 0) / engs.length : 0;
+  let trendPhrase = '';
+  if (engs.length >= 2) {
+    const half = Math.floor(engs.length / 2);
+    const mean = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const diff = mean(engs.slice(engs.length - half)) - mean(engs.slice(0, half));
+    trendPhrase = diff > 0.3 ? 'engagement trending up'
+      : diff < -0.3 ? 'engagement dipping a little lately'
+      : 'engagement holding steady';
+  } else if (engs.length === 1) {
+    trendPhrase = 'engagement getting its first read';
+  }
+
+  // Growing focus: the most-named E21CC dimension across reflected (else all)
+  // lessons.
+  const focusPool = reflected.length ? reflected : lessons;
+  const focusTally = {};
+  focusPool.forEach(l => (l.e21ccFocus || []).forEach(f => { focusTally[f] = (focusTally[f] || 0) + 1; }));
+  const topFocus = Object.keys(focusTally).sort((a, b) => focusTally[b] - focusTally[a])[0];
+  const focusPhrase = topFocus ? `focus growing on ${STORY_E21CC_LABELS[topFocus] || topFocus}` : '';
+
+  const carried = reflected.length;
+  const totalLessons = lessons.length;
+
+  const bits = [`${carried} lesson${carried === 1 ? '' : 's'} carried to reflection${totalLessons ? ` of ${totalLessons}` : ''}`];
+  if (trendPhrase) bits.push(trendPhrase);
+  if (focusPhrase) bits.push(focusPhrase);
+  const headline = `This term so far: ${bits.join(', ')}.`;
+
+  const statChips = [
+    `${log.length} practice entr${log.length === 1 ? 'y' : 'ies'}`,
+    `${carried} reflection${carried === 1 ? '' : 's'}`,
+    avgEng ? `avg engagement ${avgEng.toFixed(1)}/5` : ''
+  ].filter(Boolean);
+
+  const ideo = computeIdeologySnapshot();
+  const ideoLine = !ideo ? '' : (ideo.aligned
+    ? `<p style="font-size:0.75rem;color:var(--growth,#2c7a4b);line-height:1.6;margin-top:var(--sp-2);">Your plans are walking your talk — they lean ${esc(ideo.espousedLabel)}, just as you aspire.</p>`
+    : `<p style="font-size:0.75rem;color:var(--ink-muted);line-height:1.6;margin-top:var(--sp-2);">You aspire to ${esc(ideo.espousedLabel)}; your recent plans read closer to ${esc(ideo.enactedLabel)}. A mirror, not a verdict.</p>`);
+
+  // Raw practice-log entries, grouped by month, newest month first, expandable.
+  const groups = new Map();
+  log.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)).forEach(e => {
+    const { key, label } = monthGroup(e.createdAt);
+    if (!groups.has(key)) groups.set(key, { label, entries: [] });
+    groups.get(key).entries.push(e);
+  });
+  const groupBlocks = [...groups.values()].reverse().map(g => `
+    <div style="margin-bottom:var(--sp-3);">
+      <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-muted);margin-bottom:var(--sp-1);">${esc(g.label)} &middot; ${g.entries.length} entr${g.entries.length === 1 ? 'y' : 'ies'}</div>
+      <div style="display:flex;flex-direction:column;">
+        ${g.entries.slice().reverse().map(e => `
+          <div style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;padding:var(--sp-2) 0;border-bottom:1px solid var(--border-light);">
+            <div style="color:var(--ink-faint);font-size:0.6875rem;margin-bottom:2px;">${fmtDate(e.createdAt)}${e.lessonTitle ? ` &middot; ${esc(e.lessonTitle)}` : ''}${e.source ? ` &middot; ${esc(e.source)}` : ''}</div>
+            ${String(e.text || '').trim() ? esc(String(e.text).slice(0, 300)) : '<span style="color:var(--ink-faint);font-style:italic;">(no note)</span>'}
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="card practice-story-card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #FFE200);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-2);">
+        <h3 style="font-family:var(--font-serif, Georgia, serif);font-size:1.125rem;font-weight:600;color:var(--ink);">My Practice Story</h3>
+        <span class="badge badge-gray">review</span>
+      </div>
+      <p style="font-family:var(--font-serif, Georgia, serif);font-size:1rem;color:var(--ink);line-height:1.6;margin-bottom:var(--sp-3);">${esc(headline)}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-bottom:var(--sp-2);">
+        ${statChips.map(c => `<span class="badge badge-blue">${esc(c)}</span>`).join('')}
+      </div>
+      ${goal ? `<p style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.6;margin-bottom:var(--sp-1);">Current focus: <strong style="font-family:var(--font-serif, Georgia, serif);">${esc(goal.text)}</strong></p>` : ''}
+      ${ideoLine}
+      ${log.length ? `
+        <details style="margin-top:var(--sp-3);">
+          <summary style="cursor:pointer;font-size:0.8125rem;color:var(--ink-muted);padding:var(--sp-2) 0;">The entries behind this story (${log.length})</summary>
+          <div style="margin-top:var(--sp-2);">${groupBlocks}</div>
+        </details>` : ''}
+    </div>`;
+}
+
 function bindSetGoalBtn(container) {
   container.querySelector('#practice-set-goal-btn')?.addEventListener('click', () => {
     Store.setPracticeGoal({ text: practiceGoalSuggestion, focus: '', createdAt: Date.now() });
@@ -522,6 +683,8 @@ export function render(container) {
         </div>
 
         ${renderPracticeSection()}
+
+        ${renderPracticeStorySection()}
 
         ${renderReferencesSection()}
 

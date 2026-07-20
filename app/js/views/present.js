@@ -23,6 +23,13 @@ let _running = false;
 let _segIdx = 0;
 let _keyHandler = null;
 
+/* WS-D: lessons whose Present session has already been counted this page
+ * session. Guards Store.recordPresentation against double-counting when the
+ * router re-invokes renderPresent for the same lesson (e.g. a re-navigation
+ * that re-renders the view). A page reload clears the module, so a genuinely
+ * new session counts again. */
+const _presentCounted = new Set();
+
 function fmtClock(totalSec) {
   const m = Math.floor(Math.abs(totalSec) / 60);
   const s = Math.abs(totalSec) % 60;
@@ -58,6 +65,15 @@ export function renderPresent(container, params) {
       <h2>Lesson not found</h2>
       <a href="#/lessons" class="btn btn-primary" style="text-decoration:none;">Back to Lessons</a></div>`;
     return null;
+  }
+
+  /* WS-D: count this lesson being presented ONCE per Present session. The
+   * milestone OFFERS on the dashboard read this lifetime counter; it must
+   * never inflate on a re-render, so we guard with a module-scoped seen-set
+   * keyed by lesson id. Purely a side-effect — Present behaviour is unchanged. */
+  if (!_presentCounted.has(lesson.id)) {
+    _presentCounted.add(lesson.id);
+    try { Store.recordPresentation(lesson.id); } catch { /* stats are best-effort */ }
   }
 
   const cls = (Store.get('classes') || []).find(c => c.id === lesson.classId) || null;

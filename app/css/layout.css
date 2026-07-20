@@ -357,6 +357,10 @@
   position: relative;
   z-index: 10;
   transition: background 0.15s;
+  /* v7: finger-drag on the divider must not fight page scroll/zoom.
+     touch-action affects only touch/pen input — never mouse, never paint —
+     so desktop rendering stays byte-identical. */
+  touch-action: none;
 }
 
 .resize-handle:hover,

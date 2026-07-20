@@ -690,7 +690,7 @@ export function render(container) {
         .ap-refl-hint { font-size: 0.75rem; color: var(--ink-secondary); }
 
         /* Deep-dive panel */
-        .ap-dive-panel { position: fixed; right: 0; top: 0; width: 380px; height: 100vh; background: var(--bg-card); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg, -4px 0 24px rgba(0,0,0,0.08)); z-index: 1000; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.25s ease; }
+        .ap-dive-panel { position: fixed; right: 0; top: 0; width: min(380px, 92vw); height: 100vh; background: var(--bg-card); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg, -4px 0 24px rgba(0,0,0,0.08)); z-index: 1000; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.25s ease; }
         .ap-dive-panel.visible { transform: translateX(0); }
         .ap-dive-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
         .ap-dive-head h3 { font-size: 0.875rem; margin: 0; color: var(--ink); }
