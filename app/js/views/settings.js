@@ -1574,12 +1574,11 @@ export function render(container) {
       const LABELS = {
         classes: 'classes', lessons: 'lessons', savedLayouts: 'layouts',
         knowledgeUploads: 'uploads', pdFolders: 'PD folders', stimulusLibrary: 'stimulus items',
-        sourceLibrary: 'source sets', assessmentRoutines: 'routines', savedTOS: 'TOS',
-        assessmentChecklists: 'checklists', assessmentBlueprints: 'blueprints',
+        sourceLibrary: 'source sets', assessmentBlueprints: 'blueprints',
         adminEvents: 'admin events', departmentSchemes: 'schemes',
         customSimulations: 'custom simulations', references: 'references',
         trackingSchemas: 'tracking schemas', frameworks: 'pedagogy frameworks',
-        assessmentArtifacts: 'saved AaL outputs'
+        assessmentArtifacts: 'saved AaL outputs', savedReportComments: 'report comments'
       };
       const summary = Object.entries(preview.counts)
         .filter(([k, n]) => n > 0 && LABELS[k])
