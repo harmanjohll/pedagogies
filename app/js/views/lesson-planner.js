@@ -4119,7 +4119,19 @@ function renderSpatialContextBar(container) {
   });
   drawMap();
 
-  barEl.querySelector('#spatial-context-open')?.addEventListener('click', () => navigate('/spatial'));
+  barEl.querySelector('#spatial-context-open')?.addEventListener('click', () => {
+    // Carry the linked layout + the shown segment's seating into the Spatial
+    // Designer so "Open" continues the real arrangement (furniture + seated
+    // students), not an empty canvas. The designer reads this one-shot key.
+    try {
+      sessionStorage.setItem('cocher_open_layout', JSON.stringify({
+        layoutId: layout.id,
+        lessonId: currentLesson?.id || currentLessonId || null,
+        segmentId: selSegId,
+      }));
+    } catch { /* sessionStorage unavailable — designer still opens (empty) */ }
+    navigate('/spatial');
+  });
 }
 
 /* ══════════ Cockpit (WS-A): persistent Run of Show panel + journey bar ══════════ */

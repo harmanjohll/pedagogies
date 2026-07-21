@@ -278,7 +278,7 @@ export function mountSeatMap(mountEl, ctx) {
 
 const STYLE = `<style>
   .psm-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
-  .psm-svg { width: 100%; max-width: min(96vw, 1400px); max-height: 70vh; height: auto;
+  .psm-svg { width: min(88vw, 1400px); max-width: min(88vw, 1400px); max-height: 70vh; height: auto;
     border: 1px solid var(--border-light, #e2e8f0); border-radius: 12px; background: #fff; touch-action: none; }
   @media (max-height: 799px) { .psm-svg { max-height: 58vh; } }
   .psm-item, .psm-pill { cursor: grab; }
