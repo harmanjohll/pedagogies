@@ -210,7 +210,12 @@ export function renderPresent(container, params) {
       .present-framework { text-align: left; font-size: clamp(0.95rem, 1.8vw, 1.25rem); line-height: 1.6; max-width: 80vw; border: 2px solid var(--border); border-radius: 14px; padding: 12px 20px; background: var(--surface, #fff); }
       .present-framework-title { font-weight: 800; color: var(--accent, #4361ee); margin-bottom: 4px; }
       .present-framework-stage strong { color: var(--ink); }
-      .present-map svg { max-width: min(96vw, 1400px); max-height: 70vh; width: auto; height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
+      /* Fill the stage. A viewport-relative DEFINITE width is required: the
+       * interactive .psm-svg carries no width attribute, and the ancestors
+       * (.present-stage / .present-inner) are align-items:center, so width:auto
+       * or width:100% both collapse to a tiny shrink-to-fit size. 88vw (not
+       * 96) leaves room for .present-stage's 6vw side padding. */
+      .present-map svg { max-width: min(88vw, 1400px); max-height: 70vh; width: min(88vw, 1400px); height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
       /* Slim materials row (WS-4): launch attached decks/audio without leaving
        * the class screen. Student-safe — material titles only. */
       .present-resources { display:flex; flex-wrap:wrap; gap: 10px; justify-content:center; align-items:center; max-width: 92vw; }
@@ -418,7 +423,10 @@ export function renderPresent(container, params) {
       announceClock(true); // announce the starting time when a segment opens
 
       const groups = seg.grouping?.groups || [];
-      const groupCards = groups.length ? `
+      // When the segment has an interactive seat map, that map already shows
+      // every student by name in their seat — the group-roster cards would just
+      // duplicate it and eat the vertical space the map needs. Suppress them.
+      const groupCards = (groups.length && !segHasSeats(seg)) ? `
         <div class="present-groups">
           ${groups.map(g => `
             <div class="present-group-card">

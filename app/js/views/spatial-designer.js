@@ -3029,10 +3029,112 @@ export function render(container) {
     paintBadges();
   })();
 
+  /* ══════ Open layout mode (continue-in-designer from Lesson Planner) ══════ */
+  // Consumes 'cocher_open_layout' written by the planner's "Open" button:
+  // { layoutId, lessonId, segmentId }. Ports the linked furniture layout onto
+  // the canvas (editable — arranging the room is the designer's job) AND paints
+  // that segment's seated students as read-only name pills, so the arrangement
+  // continues visually. Re-seating individual students stays a Present-mode
+  // action (the teacher leads that loop), so the pills here are display-only.
+  let openLayoutCleanup = null;
+  (function initOpenLayoutMode() {
+    const raw = sessionStorage.getItem('cocher_open_layout');
+    if (!raw) return;
+    sessionStorage.removeItem('cocher_open_layout'); // one-shot handoff
+    let payload = null;
+    try { payload = JSON.parse(raw); } catch { payload = null; }
+    if (!payload?.layoutId) return;
+    const layout = Store.getSavedLayouts().find(l => l.id === payload.layoutId);
+    if (!layout) { showToast('That linked layout could not be found.', 'danger'); return; }
+
+    // 1) Port the furniture — but never stomp a layout already on the canvas.
+    if (layoutRoot.querySelectorAll('g[data-id]').length === 0) loadSavedLayout(layout);
+
+    // 2) Resolve the segment's seating → iid : [studentName]
+    const lesson = payload.lessonId ? Store.getLesson(payload.lessonId) : null;
+    const segment = lesson?.runOfShow?.segments?.find(s => s.id === payload.segmentId) || null;
+    const roster = lesson?.classId ? (Store.getClass(lesson.classId)?.students || []) : [];
+    const idToName = new Map(roster.map(st => [st.id, st.name]));
+    const seatNames = new Map(); // iid → [name]
+    (segment?.grouping?.groups || []).forEach(g => {
+      const sm = (g.seatMap && typeof g.seatMap === 'object') ? g.seatMap : {};
+      Object.entries(sm).forEach(([iid, sids]) => {
+        const names = (Array.isArray(sids) ? sids : []).map(sid => idToName.get(sid)).filter(Boolean);
+        if (names.length) seatNames.set(String(iid), (seatNames.get(String(iid)) || []).concat(names));
+      });
+    });
+    if (seatNames.size === 0) return; // layout ported; no seated students to overlay
+
+    // 3) Read-only student overlay — outside #layout-root so it never serializes.
+    const seatLayer = document.createElementNS(SVG_NS, 'g');
+    seatLayer.id = 'seat-overlay';
+    seatLayer.style.pointerEvents = 'none';
+    svg.appendChild(seatLayer);
+
+    const MAX_SEATS = 12;
+    function paintSeats() {
+      seatLayer.innerHTML = '';
+      const nodes = new Map();
+      layoutRoot.querySelectorAll('g[data-id]').forEach(n => {
+        const ii = n.getAttribute('data-iid');
+        if (ii) nodes.set(ii, n);
+      });
+      seatNames.forEach((names, iid) => {
+        const node = nodes.get(iid);
+        if (!node) return; // table not on this canvas — nothing to anchor to
+        const def = PALETTE.find(p => p.id === node.getAttribute('data-id'));
+        if (!def) return;
+        const [tx, ty] = getTranslate(node);
+        // Same overflow rule as layoutToSVG's multi-name badges.
+        const shown = names.length > MAX_SEATS
+          ? [...names.slice(0, MAX_SEATS - 1), `+${names.length - (MAX_SEATS - 1)} more`]
+          : names;
+        seatRingLayout(def, shown).forEach(p => {
+          const g = document.createElementNS(SVG_NS, 'g');
+          g.setAttribute('transform', `translate(${Math.round(tx + p.dx)},${Math.round(ty + p.dy)})`);
+          const rect = document.createElementNS(SVG_NS, 'rect');
+          setAttrs(rect, { x: -p.w / 2, y: -10, width: p.w, height: 20, rx: 10, fill: '#1e293b', opacity: 0.92 });
+          g.appendChild(rect);
+          const t = svgText(0, 4, p.text, 12, '#fff');
+          t.setAttribute('font-weight', '700');
+          g.appendChild(t);
+          seatLayer.appendChild(g);
+        });
+      });
+    }
+
+    // Repaint so pills follow furniture when the teacher drags/nudges a table.
+    const repaint = () => paintSeats();
+    svg.addEventListener('pointerup', repaint);
+    document.addEventListener('keyup', repaint);
+
+    // 4) Dismissible chip — teacher stays in control of what's on screen.
+    const canvasCol = container.querySelector('#spatial-canvas-col');
+    const chip = document.createElement('div');
+    chip.style.cssText = 'display:flex;align-items:center;gap:var(--sp-2);margin:var(--sp-2);padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-full);background:var(--bg-card);font-size:0.75rem;color:var(--ink);width:fit-content;max-width:calc(100% - 2*var(--sp-2));';
+    chip.innerHTML = `<span>Seating from <strong>${escapeHtml(lesson?.title || 'lesson')}</strong>${segment?.name ? ' · ' + escapeHtml(segment.name) : ''}</span>` +
+      `<button type="button" id="seat-overlay-hide" class="btn btn-ghost btn-sm" style="font-size:0.6875rem;padding:2px 8px;">Hide names</button>`;
+    if (canvasCol) canvasCol.insertBefore(chip, canvasCol.firstChild);
+
+    function dismiss() {
+      svg.removeEventListener('pointerup', repaint);
+      document.removeEventListener('keyup', repaint);
+      seatLayer.remove();
+      chip.remove();
+      openLayoutCleanup = null;
+    }
+    openLayoutCleanup = dismiss;
+    chip.querySelector('#seat-overlay-hide')?.addEventListener('click', dismiss);
+
+    paintSeats();
+    showToast(`Loaded "${layout.name}" — ${seatNames.size} seated table${seatNames.size === 1 ? '' : 's'} shown.`, 'success');
+  })();
+
   // Cleanup on route change
   return () => {
     document.removeEventListener('keydown', onKey);
     placeGroupsCleanup?.();
+    openLayoutCleanup?.();
     if (radarChart) { radarChart.destroy(); radarChart = null; }
     if (tooltipEl) tooltipEl.style.display = 'none';
   };
