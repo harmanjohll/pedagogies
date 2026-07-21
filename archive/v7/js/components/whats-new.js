@@ -8,19 +8,19 @@
 import { APP_VERSION } from '../version.js';
 import { openModal } from './modals.js';
 
-const SEEN_KEY = 'cocher_whatsnew_seen';
+const SEEN_KEY = 'cocher_v7_whatsnew_seen';
 
 const CHANGES = [
-  { icon: '&#127919;', title: 'Find your tools faster',
-    text: 'The lesson-planner tool bar now shows labels by default (tap the chevron for compact icons), the Labs tools say what they do ("Auto-Lesson", "Math Sandbox"), and the workflow modes now show what they change — with a one-tap way to clear them.' },
-  { icon: '&#128190;', title: 'Your work stays put',
-    text: 'Report comments and assessment exit-tickets/LISC now save as you go, so they survive leaving the page. And when a school network blocks a library, Co-Cher says so plainly instead of quietly coming up empty.' },
-  { icon: '&#128101;', title: 'Find a Teacher, in Admin',
-    text: 'In Admin One-Stop, pick a department then a teacher to see — from the timetable — whether they\'re free to meet right now, which periods are still open today, and how heavy their day has been, so you can offer a short break before meeting.' },
-  { icon: '&#128736;', title: 'Relief & admin, fixed',
-    text: 'The Relief Kit now finds your real timetable periods (no more retyping), deleting an event asks first so a mis-tap can\'t wipe it, and the admin timetable/org-chart tools keep working offline.' },
-  { icon: '&#9855;', title: 'Smoother & more reachable',
-    text: 'The classroom canvas and reflection ratings now work with a keyboard and screen reader, the Present timer announces the time politely, and the calm dashboard\'s customise button is finally where the tip says it is.' },
+  { icon: '&#128241;', title: 'Co-Cher on your phone',
+    text: 'The daily loop — dashboard, lessons, planner chat, Present, quick capture — now works on a phone: bigger touch targets, ▲/▼ reorder where drag used to be, and the heavy design surfaces adapt honestly (best edited on a larger screen).' },
+  { icon: '&#128246;', title: 'Works offline',
+    text: 'Install Co-Cher and it keeps working without wifi — your dashboard, lessons and everything you\'ve made load straight from the device. Only AI generation needs a connection, and it now says so kindly instead of spinning.' },
+  { icon: '&#128198;', title: 'Your day, waiting for you',
+    text: 'The home screen reads your timetable and points to your next class and its lesson — Open plan, Present, or Plan it, one tap away. It only ever suggests; you\'re always the one who acts.' },
+  { icon: '&#127793;', title: 'Your practice, growing',
+    text: 'Reflect in seconds with one-tap starters or your voice, and watch a term-long Practice Story quietly take shape in My Growth. Little milestones get a warm nod — never a nag.' },
+  { icon: '&#127908;', title: 'Just say it',
+    text: 'A mic now sits in the lesson-planner composer and your capture fields — press, talk, and it fills the box for you to edit and send. (Needs a supported browser and a connection.)' },
 ];
 
 export function maybeShowWhatsNew() {
