@@ -116,10 +116,12 @@ export function renderPresent(container, params) {
         savedSeats[iid] = (Array.isArray(sids) ? sids : []).slice();
       });
     });
+    const savedPos = (seg.grouping && seg.grouping.seatPos && typeof seg.grouping.seatPos === 'object')
+      ? seg.grouping.seatPos : {};
     return {
       sessionKey: `${lesson.id}::${segIndex}`,
       lessonId: lesson.id, layoutId: layout.id, sceneId: scene?.id || null, segIndex,
-      savedItems: items.map(i => ({ ...i })), savedSeats, seatableIids,
+      savedItems: items.map(i => ({ ...i })), savedSeats, savedPos, seatableIids,
       resolveName: seatName,
     };
   }
@@ -208,7 +210,7 @@ export function renderPresent(container, params) {
       .present-framework { text-align: left; font-size: clamp(0.95rem, 1.8vw, 1.25rem); line-height: 1.6; max-width: 80vw; border: 2px solid var(--border); border-radius: 14px; padding: 12px 20px; background: var(--surface, #fff); }
       .present-framework-title { font-weight: 800; color: var(--accent, #4361ee); margin-bottom: 4px; }
       .present-framework-stage strong { color: var(--ink); }
-      .present-map svg { max-width: min(94vw, 1180px); max-height: 56vh; width: auto; height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
+      .present-map svg { max-width: min(96vw, 1400px); max-height: 70vh; width: auto; height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
       /* Slim materials row (WS-4): launch attached decks/audio without leaving
        * the class screen. Student-safe — material titles only. */
       .present-resources { display:flex; flex-wrap:wrap; gap: 10px; justify-content:center; align-items:center; max-width: 92vw; }
@@ -219,7 +221,7 @@ export function renderPresent(container, params) {
       .present-res-player audio { width: min(70vw, 480px); }
       /* Short screens (1366x768 projectors): shrink the seat map so more of
        * the segment fits above the fold. */
-      @media (max-height: 799px) { .present-map svg { max-height: 46vh; } }
+      @media (max-height: 799px) { .present-map svg { max-height: 58vh; } }
       @media print { .present-bottom, .present-top .present-ctrl, .present-more-cue { display: none; } }
     </style>
     <div class="present-root">
