@@ -15,7 +15,7 @@ The canonical URL always serves the **latest** version:
 | v6.1 | `archive/v6.1/` (frozen snapshot as of Jul 2026 — "Wieldable": cockpit + journey bar, named seats, TLDR+expand plans, pedagogy frameworks, sim depth, as originally shipped) | `/pedagogies/archive/v6.1/cocher.html` | `cocher_v6_1_*` (renamed at freeze time) | Archived |
 | v6.2 | `archive/v6.2/` (frozen snapshot as of Jul 2026 — "Effortless": auto-staging, materials (HTML decks + TTS audio), CCE through the planner, flow-audit repairs, Present-mode fit, as originally shipped) | `/pedagogies/archive/v6.2/cocher.html` | `cocher_v6_2_*` (renamed at freeze time) | Archived |
 | v7 | `archive/v7/` (frozen snapshot as of Jul 2026 — "Anywhere": mobile daily loop, offline/PWA service worker, anticipatory next-lesson home, growth loop + practice story, voice input, milestone moments, as originally shipped) | `/pedagogies/archive/v7/cocher.html` | `cocher_v7_*` (renamed at freeze time) | Archived |
-| v7.1 | `app/` (active development — "Refine": findable tools (labelled toolbar, clearer Labs, legible modes), work that saves (report comments + AfL scaffolds persist), unified assessment generators, relief/admin fixes, accessibility, plus a Find-a-Teacher availability checker in Admin) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
+| v7.2 | `app/` (active development — "Refine + Rearrange": v7.1's findable tools / work-that-saves / relief-admin fixes / accessibility / Find-a-Teacher, PLUS an interactive live seating chart in Present — drag students & furniture, Save/Reset) | `/pedagogies/` (via `index.html`) | `cocher_*` (incl. `cocher_app_data`) | **Current** |
 
 ## Notes
 

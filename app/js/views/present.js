@@ -14,6 +14,7 @@ import { Store } from '../state.js';
 import { navigate } from '../router.js';
 import { escapeHtml, md } from '../utils/markdown.js';
 import { layoutToSVG } from './spatial-designer.js';
+import { mountSeatMap, clearSeatMapSessions, isSeatDragActive } from './present-seatmap.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
 import { openDeckById, getMediaContent } from '../utils/deck.js';
 
@@ -91,29 +92,60 @@ export function renderPresent(container, params) {
   /* Room map for a segment: its linked scene's arrangement, else the layout
    * itself — but only shown when there's something meaningful (an explicit
    * scene, or seat assignments to display). */
-  function segmentMap(seg) {
+  const segScene = seg => seg.layoutSceneId
+    ? (layout.scenes || []).find(s => s.id === seg.layoutSceneId) || null : null;
+  const segItems = (seg, scene) => (scene?.items?.length ? scene.items : layout.items) || [];
+  const segHasSeats = seg => (seg.grouping?.groups || []).some(g =>
+    g.seatMap && typeof g.seatMap === 'object'
+    && Object.values(g.seatMap).some(a => Array.isArray(a) && a.length));
+
+  /* Context for the interactive seat map — savedItems + a flattened
+   * iid→[studentId] seat map + the tables that can hold students. */
+  function seatCtxFor(seg, segIndex) {
+    if (!layout) return null;
+    const scene = segScene(seg);
+    const items = segItems(seg, scene);
+    if (!items.length) return null;
+    const savedSeats = {};
+    const seatableIids = new Set();
+    (seg.grouping?.groups || []).forEach(g => {
+      (g.itemIds || []).forEach(iid => seatableIids.add(iid));
+      const sm = (g.seatMap && typeof g.seatMap === 'object') ? g.seatMap : {};
+      Object.entries(sm).forEach(([iid, sids]) => {
+        seatableIids.add(iid);
+        savedSeats[iid] = (Array.isArray(sids) ? sids : []).slice();
+      });
+    });
+    return {
+      sessionKey: `${lesson.id}::${segIndex}`,
+      lessonId: lesson.id, layoutId: layout.id, sceneId: scene?.id || null, segIndex,
+      savedItems: items.map(i => ({ ...i })), savedSeats, seatableIids,
+      resolveName: seatName,
+    };
+  }
+
+  /* Room map for a segment. When the segment has students seated, emit a mount
+   * point for the INTERACTIVE seat map (mounted in showScreen after injection);
+   * otherwise render the read-only room SVG (group-name pills or plain scene). */
+  function segmentMap(seg, segIndex) {
     if (!layout) return '';
-    const scene = seg.layoutSceneId
-      ? (layout.scenes || []).find(s => s.id === seg.layoutSceneId) : null;
-    const items = (scene?.items?.length ? scene.items : layout.items) || [];
+    const scene = segScene(seg);
+    const items = segItems(seg, scene);
+    if (!items.length) return '';
+
+    if (segHasSeats(seg)) {
+      return `<div class="present-map">
+        <div class="present-meta" style="font-weight:700;margin-bottom:6px;">Find your seat${scene ? ' &middot; ' + escapeHtml(scene.name) : ''}</div>
+        <div class="present-seatmap-mount" data-seat-idx="${segIndex}"></div>
+      </div>`;
+    }
+
     const seatLabels = {};
     (seg.grouping?.groups || []).forEach(g => {
       const groupLabel = g.name || 'Group';
-      const sm = (g.seatMap && typeof g.seatMap === 'object') ? g.seatMap : null;
-      if (sm && Object.keys(sm).length > 0) {
-        // Named seats: the badge lists the students sitting at each item
-        Object.entries(sm).forEach(([iid, ids]) => {
-          const names = (Array.isArray(ids) ? ids : []).map(seatName).filter(Boolean);
-          seatLabels[iid] = names.length ? names : groupLabel;
-        });
-        // Assigned items missing from the seatMap keep the group-name pill
-        (g.itemIds || []).forEach(iid => { if (!(iid in seatLabels)) seatLabels[iid] = groupLabel; });
-      } else {
-        (g.itemIds || []).forEach(iid => { seatLabels[iid] = groupLabel; });
-      }
+      (g.itemIds || []).forEach(iid => { seatLabels[iid] = groupLabel; });
     });
     if (!scene && !Object.keys(seatLabels).length) return '';
-    if (!items.length) return '';
     let svg = '';
     try { svg = layoutToSVG(items, { width: 640, seatLabels, title: scene?.name || 'Room setup' }); }
     catch { return ''; }
@@ -176,7 +208,7 @@ export function renderPresent(container, params) {
       .present-framework { text-align: left; font-size: clamp(0.95rem, 1.8vw, 1.25rem); line-height: 1.6; max-width: 80vw; border: 2px solid var(--border); border-radius: 14px; padding: 12px 20px; background: var(--surface, #fff); }
       .present-framework-title { font-weight: 800; color: var(--accent, #4361ee); margin-bottom: 4px; }
       .present-framework-stage strong { color: var(--ink); }
-      .present-map svg { max-width: min(88vw, 760px); max-height: 38vh; width: auto; height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
+      .present-map svg { max-width: min(94vw, 1180px); max-height: 56vh; width: auto; height: auto; border: 1px solid var(--border-light); border-radius: 12px; background: #fff; }
       /* Slim materials row (WS-4): launch attached decks/audio without leaving
        * the class screen. Student-safe — material titles only. */
       .present-resources { display:flex; flex-wrap:wrap; gap: 10px; justify-content:center; align-items:center; max-width: 92vw; }
@@ -187,7 +219,7 @@ export function renderPresent(container, params) {
       .present-res-player audio { width: min(70vw, 480px); }
       /* Short screens (1366x768 projectors): shrink the seat map so more of
        * the segment fits above the fold. */
-      @media (max-height: 799px) { .present-map svg { max-height: 34vh; } }
+      @media (max-height: 799px) { .present-map svg { max-height: 46vh; } }
       @media print { .present-bottom, .present-top .present-ctrl, .present-more-cue { display: none; } }
     </style>
     <div class="present-root">
@@ -408,7 +440,7 @@ export function renderPresent(container, params) {
             <div class="present-framework-stage"><strong>${escapeHtml(s.label || '')}</strong>${s.studentPrompt ? ` &mdash; ${escapeHtml(s.studentPrompt)}` : ''}</div>`).join('')}
         </div>` : '';
 
-      const mapHtml = segmentMap(seg);
+      const mapHtml = segmentMap(seg, _segIdx - 1);
       // Content-heavy screens compact their type/spacing so everything stays
       // reachable; the stage itself scrolls as the final safety net.
       const layers = [groupCards, frameworkPanel, mapHtml, seg.studentInstructions, growthLabel]
@@ -426,6 +458,12 @@ export function renderPresent(container, params) {
         ${materialsRow()}
       </div>`;
       wireMaterialButtons();
+      // Mount the interactive seat map (if this segment has seated students).
+      const seatMountEl = stage.querySelector('.present-seatmap-mount');
+      if (seatMountEl) {
+        const sc = seatCtxFor(seg, _segIdx - 1);
+        if (sc) mountSeatMap(seatMountEl, sc);
+      }
     }
     renderDots();
     stage.scrollTop = 0; // each screen starts at the top
@@ -443,6 +481,7 @@ export function renderPresent(container, params) {
 
   _keyHandler = (e) => {
     if (e.target.matches('input, textarea, select')) return;
+    if (isSeatDragActive()) return; // don't navigate/toggle the timer mid seat-drag
     if (e.key === 'ArrowRight') showScreen(_segIdx + 1);
     else if (e.key === 'ArrowLeft') showScreen(_segIdx - 1);
     else if (e.key === ' ') { e.preventDefault(); _running ? stopTimer() : startTimer(); }
@@ -456,6 +495,7 @@ export function renderPresent(container, params) {
   /* Router cleanup: leave no timer, key handler, listener, or body class behind. */
   return () => {
     stopTimer();
+    clearSeatMapSessions(); // drop un-saved live rearrangements when leaving Present
     window.removeEventListener('resize', updateMoreCue);
     if (_keyHandler) { window.removeEventListener('keydown', _keyHandler); _keyHandler = null; }
     _audioUrls.forEach(url => URL.revokeObjectURL(url));
