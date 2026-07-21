@@ -9,6 +9,7 @@ import { navigate, getCurrentRoute } from '../router.js';
 import { APP_VERSION } from '../version.js';
 import { EEE_REGISTRY, getEEESidebarSelections, getCustomLinks } from '../views/lesson-planner.js';
 import { getModes, getActiveMode, applyMode, getModeSidebarGroups } from './workflow-modes.js';
+import { showToast } from './toast.js';
 
 /* ── SVG Icons (Feather-style) ── */
 const ICONS = {
@@ -137,8 +138,8 @@ function buildNavItems() {
     { id: '/assessment/aol', icon: 'aol', label: 'AoL' },
     { id: '/knowledge', icon: 'knowledge', label: 'Knowledge Bases', section: 'Growth' },
     { id: '/my-growth', icon: 'myGrowth', label: 'My Learning' },
-    { id: '/autopilot', icon: 'autopilot', label: 'Co-Cher+ (beta)', section: SANDBOX_SECTION_KEY, sectionDisplay: SANDBOX_LABEL },
-    { id: '/math-sandbox', icon: 'mathSandbox', label: 'Formula Lab (beta)' },
+    { id: '/autopilot', icon: 'autopilot', label: 'Auto-Lesson (Co-Cher+, beta)', section: SANDBOX_SECTION_KEY, sectionDisplay: SANDBOX_LABEL },
+    { id: '/math-sandbox', icon: 'mathSandbox', label: 'Math Sandbox (beta)' },
     { id: '/report-comments', icon: 'modelResponse', label: 'Report Comments (beta)' },
     { id: '/question-bank', icon: 'aol', label: 'Question Bank (beta)' },
     { id: '/relief-kit', icon: 'lessons', label: 'Relief Kit (beta)' },
@@ -173,6 +174,11 @@ function injectModeStyles() {
     .sidebar-mode-chip .sidebar-mode-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sidebar-mode-chip.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
     .sidebar-mode-chip.active svg { opacity: 1; }
+    .sidebar-modes-caption { margin-top: 6px; font-size: 0.625rem; line-height: 1.4; color: var(--ink-muted); }
+    .sidebar-modes-caption .cap-mode { font-weight: 700; color: var(--ink); }
+    .sidebar-modes-caption .cap-hint { display: block; margin-top: 1px; font-weight: 500; opacity: 0.9; }
+    .sidebar-modes-caption.is-active { color: var(--accent-dark); background: var(--accent-light); border: 1px solid var(--accent); border-radius: var(--radius-md, 8px); padding: 5px 7px; margin-top: 8px; }
+    .sidebar-modes-caption.is-active .cap-mode { color: var(--accent-dark); }
     .sidebar-section-label.mode-foreground .hl-word { color: var(--accent); }
     .sidebar-section-label.mode-foreground .sidebar-section-tri { border-left-color: var(--accent) !important; }
   `;
@@ -183,12 +189,27 @@ function injectModeStyles() {
 function buildModeSwitcherHTML() {
   const modes = getModes();
   const active = getActiveMode();
+  const activeMode = modes.find(m => m.id === active) || null;
   const chips = modes.map(m => `
     <button class="sidebar-mode-chip${m.id === active ? ' active' : ''}" data-mode="${m.id}"
-      title="${m.label} — ${m.hint}" aria-pressed="${m.id === active}">
+      data-mode-label="${m.label}" data-mode-hint="${m.hint}"
+      title="${m.label} — ${m.hint}" aria-pressed="${m.id === active}"
+      aria-label="${m.label} mode — ${m.hint}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${m.icon}</svg>
       <span class="sidebar-mode-chip-label">${m.label}</span>
     </button>`).join('');
+  // Caption strip: when a mode is on it names the mode unmistakably, shows the
+  // mode's hint, and spells out the clear affordance; when off it explains what
+  // modes do. Chip hover/focus (wired in renderSidebar) previews any mode's
+  // hint here too, so teachers know what a mode does BEFORE clicking.
+  const caption = activeMode
+    ? `<div class="sidebar-modes-caption is-active" id="sidebar-mode-caption" role="status">
+        <span class="cap-mode">${activeMode.label} mode</span> · tap to clear
+        <span class="cap-hint">${activeMode.hint}</span>
+      </div>`
+    : `<div class="sidebar-modes-caption" id="sidebar-mode-caption">
+        Tap a mode to reshape your dashboard &amp; sidebar — reversible anytime.
+      </div>`;
   return `
     <div class="sidebar-modes">
       <div class="sidebar-modes-label">
@@ -196,6 +217,7 @@ function buildModeSwitcherHTML() {
         ${active ? `<button class="sidebar-modes-clear" id="sidebar-mode-clear">Clear</button>` : ''}
       </div>
       <div class="sidebar-modes-chips">${chips}</div>
+      ${caption}
     </div>`;
 }
 
@@ -315,16 +337,59 @@ export function renderSidebar(container) {
     const route = getCurrentRoute() || '/';
     navigate(route);
   }
+
+  // Caption helpers — FEEDBACK ONLY. Hovering/focusing a chip previews that
+  // mode's hint in the caption; leaving restores the caption to whatever mode
+  // is actually active. These never apply a mode (the teacher still leads).
+  const modeCaption = container.querySelector('#sidebar-mode-caption');
+  function fillCaption(label, hint, { active = false, clearHint = false } = {}) {
+    if (!modeCaption) return;
+    modeCaption.classList.toggle('is-active', active);
+    modeCaption.textContent = '';
+    const strong = document.createElement('span');
+    strong.className = 'cap-mode';
+    strong.textContent = active ? `${label} mode` : label;
+    modeCaption.appendChild(strong);
+    if (clearHint) modeCaption.appendChild(document.createTextNode(' · tap to clear'));
+    const hintEl = document.createElement('span');
+    hintEl.className = 'cap-hint';
+    hintEl.textContent = hint;
+    modeCaption.appendChild(hintEl);
+  }
+  function resetCaption() {
+    if (!modeCaption) return;
+    const am = getModes().find(m => m.id === getActiveMode());
+    if (am) {
+      fillCaption(am.label, am.hint, { active: true, clearHint: true });
+    } else {
+      modeCaption.classList.remove('is-active');
+      modeCaption.textContent = 'Tap a mode to reshape your dashboard & sidebar — reversible anytime.';
+    }
+  }
+
   container.querySelectorAll('.sidebar-mode-chip[data-mode]').forEach(chip => {
+    const preview = () => fillCaption(chip.dataset.modeLabel || '', chip.dataset.modeHint || '', { active: false });
+    chip.addEventListener('mouseenter', preview);
+    chip.addEventListener('focus', preview);
+    chip.addEventListener('mouseleave', resetCaption);
+    chip.addEventListener('blur', resetCaption);
     chip.addEventListener('click', () => {
       const id = chip.dataset.mode;
       // Clicking the active mode toggles it off (restores the teacher's prefs).
-      applyMode(id === getActiveMode() ? null : id);
+      const turningOff = id === getActiveMode();
+      applyMode(turningOff ? null : id);
+      if (turningOff) {
+        showToast('Mode cleared — your layout is back.', 'success');
+      } else {
+        const name = getModes().find(m => m.id === id)?.label || 'Mode';
+        showToast(`${name} mode on — dashboard & tools reshaped for ${name.toLowerCase()}.`, 'success');
+      }
       refreshAfterMode();
     });
   });
   container.querySelector('#sidebar-mode-clear')?.addEventListener('click', () => {
     applyMode(null);
+    showToast('Mode cleared — your layout is back.', 'success');
     refreshAfterMode();
   });
 

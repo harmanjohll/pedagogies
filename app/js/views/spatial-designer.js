@@ -440,7 +440,9 @@ export function layoutToSVG(items, { width = 720, seatLabels = {}, title = '' } 
     }
   });
 
-  return `<svg viewBox="0 0 ${VB_W} ${VB_H}" width="${Number(width) || 720}" preserveAspectRatio="xMidYMid meet" xmlns="${SVG_NS}" role="img">` +
+  const _itemCount = shapes.length; // one shape per valid placed item
+  const _svgAria = `${title ? escapeHtml(title) + ' — ' : ''}Classroom layout, ${_itemCount} item${_itemCount === 1 ? '' : 's'}`;
+  return `<svg viewBox="0 0 ${VB_W} ${VB_H}" width="${Number(width) || 720}" preserveAspectRatio="xMidYMid meet" xmlns="${SVG_NS}" role="img" aria-label="${_svgAria}">` +
     (title ? `<title>${escapeHtml(title)}</title>` : '') +
     `<rect x="0" y="0" width="${VB_W}" height="${VB_H}" fill="#ffffff" stroke="#94a3b8" stroke-width="4" rx="2"/>` +
     shapes.join('') + badges.join('') +
@@ -577,7 +579,7 @@ export function render(container) {
       <!-- Center: Canvas -->
       <div id="spatial-canvas-col" style="display:flex;flex-direction:column;overflow:hidden;border-radius:var(--radius-xl);background:var(--surface);box-shadow:var(--shadow-card);">
         <div id="preset-purpose-banner" style="display:none;align-items:center;padding:6px 14px;background:var(--accent-light,#eef2ff);border-bottom:1px solid var(--border-light,#e5e7eb);font-size:0.8125rem;flex-shrink:0;"></div>
-        <svg id="spatial-svg" viewBox="0 0 ${VB_W} ${VB_H}" style="flex:1;cursor:crosshair;display:block;background:#fff;border-radius:var(--radius-xl);" xmlns="${SVG_NS}">
+        <svg id="spatial-svg" viewBox="0 0 ${VB_W} ${VB_H}" tabindex="0" role="application" aria-label="Classroom layout editor" style="flex:1;cursor:crosshair;display:block;background:#fff;border-radius:var(--radius-xl);outline-offset:-3px;" xmlns="${SVG_NS}">
           <defs>
             <pattern id="grid" width="${UNIT}" height="${UNIT}" patternUnits="userSpaceOnUse">
               <rect width="${UNIT}" height="${UNIT}" fill="none"/>
@@ -611,6 +613,8 @@ export function render(container) {
           <g id="layout-root"></g>
           <g id="selection-box" style="pointer-events:none;"></g>
         </svg>
+        <!-- SR-only status: announces keyboard selection on the canvas -->
+        <div id="sd-a11y-status" aria-live="polite" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;"></div>
         <!-- Scene Timeline -->
         <div id="scene-timeline" style="flex:0 0 auto;border-top:1px solid var(--border-light);padding:var(--sp-2) var(--sp-3);background:var(--surface);display:flex;align-items:center;gap:var(--sp-2);overflow-x:auto;">
           <span style="font-size:0.6875rem;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;flex-shrink:0;">Scenes</span>
@@ -651,6 +655,7 @@ export function render(container) {
   const layoutRoot = svg.querySelector('#layout-root');
   const selBox = svg.querySelector('#selection-box');
   const owLayer = svg.querySelector('#operable-walls');
+  const a11yStatus = container.querySelector('#sd-a11y-status');
   const snapToggle = container.querySelector('#snap-toggle');
   const wallToggle = container.querySelector('#wall-toggle');
   const studentCountInput = container.querySelector('#student-count');
@@ -684,6 +689,7 @@ export function render(container) {
   /* ══════ Venue Rendering ══════ */
   function applyVenue(venueId) {
     currentVenue = venueId;
+    updateCanvasAria();
     const venue = VENUE_TYPES.find(v => v.id === venueId) || VENUE_TYPES[0];
     const svg = container.querySelector('#spatial-svg');
     const roomA = svg.querySelector('#roomA');
@@ -1728,6 +1734,53 @@ export function render(container) {
     svg.addEventListener('pointerup', onUp);
   });
 
+  /* ── Keyboard selection (accessibility) ──
+   * The canvas is focusable (tabindex on #spatial-svg, role="application").
+   * With focus on the surface, Enter/Space cycles the selection through placed
+   * items (Shift reverses); pressing an arrow when nothing is selected picks
+   * the first item so the existing document-level nudge/rotate/delete
+   * shortcuts take over. Mouse drag + marquee selection are untouched, and Tab
+   * is never trapped — focus can always leave the canvas. */
+  function venueLabel() {
+    return (VENUE_TYPES.find(v => v.id === currentVenue) || VENUE_TYPES[0]).label;
+  }
+  function updateCanvasAria() {
+    if (!svg) return;
+    const n = layoutRoot.querySelectorAll('g[data-id]').length;
+    const base = `${venueLabel()} layout: ${n} item${n === 1 ? '' : 's'}`;
+    svg.setAttribute('aria-label', n === 0
+      ? `${base}. Empty. Press Enter or an arrow key to select a placed item, then arrow keys to move it.`
+      : `${base}. Press Enter to cycle selection; arrow keys move the selected item, R rotates, Delete removes.`);
+  }
+  function announceSelection(g, idx, total) {
+    if (!a11yStatus || !g) return;
+    const def = PALETTE.find(p => p.id === g.getAttribute('data-id'));
+    a11yStatus.textContent = `Selected ${def ? def.label : 'item'}, ${idx + 1} of ${total}. Arrow keys move it, R rotates, Delete removes.`;
+  }
+  function cycleSelect(dir) {
+    const items = [...layoutRoot.querySelectorAll('g[data-id]')];
+    if (!items.length) return;
+    const cur = [...selected][selected.size - 1];
+    let idx = items.indexOf(cur);
+    idx = idx === -1 ? (dir < 0 ? items.length - 1 : 0) : (idx + dir + items.length) % items.length;
+    clearSelection();
+    selectItem(items[idx]);
+    announceSelection(items[idx], idx, items.length);
+  }
+  svg.addEventListener('keydown', e => {
+    if (mobileView) return;              // touch phones are view-only
+    if (e.target !== svg) return;        // only when the canvas surface itself is focused
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      cycleSelect(e.shiftKey ? -1 : 1);
+    } else if (selected.size === 0 && e.key.startsWith('Arrow')) {
+      // Wake selection: pick the first item so the nudge handler engages next press.
+      e.preventDefault();
+      e.stopPropagation();
+      cycleSelect(1);
+    }
+  });
+
   /* ── Keyboard ── */
   function onKey(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -2306,6 +2359,7 @@ export function render(container) {
 
   /* ══════ Metrics calculation ══════ */
   function updateMetrics() {
+    updateCanvasAria();
     const items = [...layoutRoot.querySelectorAll('g[data-id]')];
 
     // Empty room; collapse chart to origin

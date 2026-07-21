@@ -870,7 +870,23 @@ function buildToolbarHTML(mode) {
       </div>`;
     }).join('');
   }
-  // Icon mode — grouped by subject relevance with visual labels
+  // Two presentations share the same id / title / aria-label, so every click
+  // handler and the touch-focus label CSS keep working unchanged:
+  //   mode === 'icons'  → compact icon-only squares (the power-user toggle target)
+  //   otherwise (default) → labelled chips: icon + visible text that wraps, so a
+  //                         first-time teacher can read what each tool does.
+  const compact = mode === 'icons';
+  const renderTool = (t) => compact
+    ? `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" aria-label="${esc(t.label)}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
+      </button>`
+    : `<button class="btn btn-ghost btn-sm lp-tool-chip" id="${t.id}" title="${t.label}" aria-label="${esc(t.label)}" style="padding:5px 9px;gap:6px;justify-content:flex-start;${t.color ? 'color:' + t.color + ';' : ''}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">${t.icon}</svg>
+        <span style="font-size:0.75rem;font-weight:600;white-space:nowrap;">${esc(t.label)}</span>
+      </button>`;
+
+  // Grouped by subject relevance (recommended tools first) — applies to both
+  // the labelled and compact presentations.
   if (currentSubject) {
     const subjectNorm = currentSubject.toLowerCase();
     const recommended = visibleTools.filter(t => {
@@ -885,31 +901,19 @@ function buildToolbarHTML(mode) {
         <span style="font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--accent);white-space:nowrap;">For ${currentSubject.replace(/</g,'&lt;')}</span>
         <div style="flex:1;height:1px;background:var(--border-light);"></div>
       </div>`;
-      html += recommended.map(t =>
-        `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" aria-label="${esc(t.label)}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
-        </button>`
-      ).join('');
+      html += recommended.map(renderTool).join('');
       if (others.length > 0) {
         html += `<div style="display:flex;align-items:center;gap:4px;width:100%;margin-top:4px;margin-bottom:2px;">
           <span style="font-size:0.5625rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);white-space:nowrap;">Other Tools</span>
           <div style="flex:1;height:1px;background:var(--border-light);"></div>
         </div>`;
-        html += others.map(t =>
-          `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" aria-label="${esc(t.label)}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
-          </button>`
-        ).join('');
+        html += others.map(renderTool).join('');
       }
       return html;
     }
   }
   // No subject context — flat list
-  return visibleTools.map(t =>
-    `<button class="btn btn-ghost btn-sm lp-tool-icon" id="${t.id}" title="${t.label}" aria-label="${esc(t.label)}" style="padding:6px;${t.color ? 'color:' + t.color + ';' : ''}">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${t.icon}</svg>
-    </button>`
-  ).join('');
+  return visibleTools.map(renderTool).join('');
 }
 
 /* ══════════ Voice dictation mic (WS-V) ══════════
@@ -1242,16 +1246,16 @@ export function render(container) {
               <div id="lesson-tt-hint" style="font-size:0.75rem;color:var(--ink-muted);flex:1;min-width:120px;"></div>
             </div>
 
-            <!-- AI Tools Bar (compact icons with tooltips, toggleable to dropdown) -->
+            <!-- AI Tools Bar (labelled chips by default; toggle to compact icons) -->
             <div id="ai-tools-bar" style="margin-bottom:var(--sp-4);">
               <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-2);">
                 <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);">AI Tools</span>
-                <button class="btn btn-ghost btn-sm" id="toggle-toolbar-mode" title="Switch between icon bar and dropdown" style="padding:2px 6px;font-size:0.625rem;color:var(--ink-faint);">
+                <button class="btn btn-ghost btn-sm" id="toggle-toolbar-mode" title="Switch between labelled tools and compact icons" style="padding:2px 6px;font-size:0.625rem;color:var(--ink-faint);">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
               </div>
               <div id="ai-tools-icons" style="display:flex;flex-wrap:wrap;gap:4px;">
-                ${buildToolbarHTML(getLPPrefs().toolbarMode || 'icons')}
+                ${buildToolbarHTML(getLPPrefs().toolbarMode || 'labels')}
               </div>
             </div>
 
@@ -2465,10 +2469,12 @@ Maximum 3-5 recommendations. If nothing genuinely fits, say so — don't pad wit
     renderSpatialSection(container, true);
   });
 
-  // Toolbar mode toggle (icons ↔ dropdown) — full re-render to re-wire handlers
+  // Toolbar mode toggle (labelled chips ↔ compact icons) — full re-render to re-wire handlers
   container.querySelector('#toggle-toolbar-mode')?.addEventListener('click', () => {
     const prefs = getLPPrefs();
-    const newMode = (prefs.toolbarMode || 'icons') === 'icons' ? 'dropdown' : 'icons';
+    // Default view is labelled chips; the toggle flips power users to the
+    // compact icon-only bar and back. The choice persists via saveLPPrefs.
+    const newMode = (prefs.toolbarMode || 'labels') === 'icons' ? 'labels' : 'icons';
     prefs.toolbarMode = newMode;
     saveLPPrefs(prefs);
     render(container);

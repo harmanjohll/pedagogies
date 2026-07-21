@@ -382,11 +382,14 @@ export function renderList(container) {
         renderCards(grid, lessons, classMap);
         return;
       }
+      // Non-overlapping SG school-year terms. Both bounds inclusive (0-indexed
+      // months), and the four ranges partition Jan–Dec with no shared month, so
+      // a lesson matches exactly one term.
       const termRanges = {
-        '1': [0, 2],   // Jan-Mar
-        '2': [2, 4],   // Mar-May
-        '3': [5, 8],   // Jun-Sep
-        '4': [8, 10]   // Sep-Nov
+        '1': [0, 2],   // Term 1: Jan-Mar
+        '2': [3, 5],   // Term 2: Apr-Jun
+        '3': [6, 8],   // Term 3: Jul-Sep
+        '4': [9, 11]   // Term 4: Oct-Dec
       };
       const [startMonth, endMonth] = termRanges[term];
       const filtered = lessons.filter(l => {
@@ -1082,8 +1085,8 @@ export function renderDetail(container, { id }) {
 
           <div style="margin-bottom:var(--sp-4);">
             <label class="input-label" style="font-size:0.8125rem;font-weight:600;margin-bottom:var(--sp-1);display:block;">Student Engagement</label>
-            <div id="engagement-rating" style="display:flex;gap:var(--sp-1);">
-              ${[1,2,3,4,5].map(n => `<button class="btn btn-ghost btn-sm star-btn" data-val="${n}" style="font-size:1.25rem;padding:2px 6px;color:${n <= (normalizeReflection(lesson.reflection).engagement || 0) ? 'var(--warning)' : 'var(--ink-faint)'};">${n <= (normalizeReflection(lesson.reflection).engagement || 0) ? '\u2605' : '\u2606'}</button>`).join('')}
+            <div id="engagement-rating" role="group" aria-label="Student engagement rating, 1 to 5" style="display:flex;gap:var(--sp-1);">
+              ${[1,2,3,4,5].map(n => `<button class="btn btn-ghost btn-sm star-btn" data-val="${n}" aria-label="Rate ${n} of 5" aria-pressed="${n <= (normalizeReflection(lesson.reflection).engagement || 0) ? 'true' : 'false'}" style="font-size:1.25rem;padding:2px 6px;color:${n <= (normalizeReflection(lesson.reflection).engagement || 0) ? 'var(--warning)' : 'var(--ink-faint)'};">${n <= (normalizeReflection(lesson.reflection).engagement || 0) ? '\u2605' : '\u2606'}</button>`).join('')}
               <span style="font-size:0.75rem;color:var(--ink-muted);align-self:center;margin-left:var(--sp-2);" id="engagement-label">
                 ${['', 'Low', 'Below Average', 'Average', 'Good', 'Excellent'][normalizeReflection(lesson.reflection).engagement] || 'Rate engagement'}
               </span>
@@ -1255,8 +1258,10 @@ export function renderDetail(container, { id }) {
       engagementVal = parseInt(btn.dataset.val);
       container.querySelectorAll('.star-btn').forEach(b => {
         const v = parseInt(b.dataset.val);
-        b.textContent = v <= engagementVal ? '\u2605' : '\u2606';
-        b.style.color = v <= engagementVal ? 'var(--warning)' : 'var(--ink-faint)';
+        const on = v <= engagementVal;
+        b.textContent = on ? '\u2605' : '\u2606';
+        b.style.color = on ? 'var(--warning)' : 'var(--ink-faint)';
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
       container.querySelector('#engagement-label').textContent = engLabels[engagementVal] || '';
     });

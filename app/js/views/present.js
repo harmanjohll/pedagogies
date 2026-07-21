@@ -207,6 +207,7 @@ export function renderPresent(container, params) {
       </div>
       <div class="present-bottom">
         <div class="present-dots" id="present-dots"></div>
+        <div id="present-clock-sr" aria-live="polite" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;"></div>
         <div class="present-ctrl">
           <button class="btn btn-secondary" id="present-prev" title="Previous (&larr;)">&larr; Back</button>
           <button class="btn btn-primary" id="present-timer" title="Start/pause timer (Space)">&#9654; Start timer</button>
@@ -219,6 +220,32 @@ export function renderPresent(container, params) {
   const dots = container.querySelector('#present-dots');
   const timerBtn = container.querySelector('#present-timer');
   const moreCue = container.querySelector('#present-more-cue');
+  const clockSR = container.querySelector('#present-clock-sr');
+  let _lastClockAnnounce = null; // dedup key so we only speak on coarse (per-minute) change
+
+  /* Screen-reader time cue. The visual .present-clock ticks every second, but
+   * announcing each second would be a barrage — so this polite live region
+   * updates only when the whole-minute bucket (or the "time's up" / overrun
+   * state) changes, i.e. roughly once a minute. force=true announces on
+   * segment entry regardless. */
+  function announceClock(force) {
+    if (!clockSR) return;
+    let key, msg;
+    if (_remaining > 0) {
+      const mins = Math.ceil(_remaining / 60);
+      key = 'r' + mins;
+      msg = `About ${mins} minute${mins === 1 ? '' : 's'} remaining for this part.`;
+    } else {
+      const over = Math.floor(-_remaining / 60); // 0 during the first minute past time
+      key = 'o' + over;
+      msg = over >= 1
+        ? `Running ${over} minute${over === 1 ? '' : 's'} over for this part.`
+        : `Time is up for this part.`;
+    }
+    if (!force && key === _lastClockAnnounce) return;
+    _lastClockAnnounce = key;
+    clockSR.textContent = msg;
+  }
 
   /* ── Attached materials (WS-4): decks + audio clips on segment screens.
    * Student-safe: titles only — no styles, notes, or teacher copy. Toasts
@@ -312,6 +339,7 @@ export function renderPresent(container, params) {
       clock.textContent = fmtClock(_remaining);
       clock.classList.toggle('overrun', _remaining < 0);
     }
+    announceClock(); // coarse SR cue; self-throttles to ~once a minute
   }
 
   function startTimer() {
@@ -337,6 +365,7 @@ export function renderPresent(container, params) {
 
     if (_segIdx === 0) {
       // Welcome screen: title + LI/SC or objectives (both student-facing)
+      if (clockSR) { clockSR.textContent = ''; _lastClockAnnounce = null; } // no timer here
       stage.innerHTML = `<div class="present-inner">
         <div class="present-seg-name">Today&rsquo;s Lesson</div>
         ${objectives ? `<div class="present-instructions">${escapeHtml(objectives)}</div>` : ''}
@@ -351,6 +380,8 @@ export function renderPresent(container, params) {
       const seg = segments[_segIdx - 1];
       _remaining = (Number(seg.duration) || 5) * 60;
       timerBtn.style.visibility = 'visible';
+      _lastClockAnnounce = null;
+      announceClock(true); // announce the starting time when a segment opens
 
       const groups = seg.grouping?.groups || [];
       const groupCards = groups.length ? `
