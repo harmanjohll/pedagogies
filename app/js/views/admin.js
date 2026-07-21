@@ -862,7 +862,12 @@ function showEventDetail(pageContainer, ev, opts = {}) {
   });
 
   // Delete button
-  pageContainer.querySelector('#delete-event-btn').addEventListener('click', () => {
+  pageContainer.querySelector('#delete-event-btn').addEventListener('click', async () => {
+    const ok = await confirmDialog({
+      title: 'Delete Event',
+      message: `Delete "${ev.name}" and all its tasks? This cannot be undone.`
+    });
+    if (!ok) return;
     const updated = events.filter(e => e.id !== ev.id);
     Store.set('adminEvents', updated);
     showToast('Event deleted.', 'success');

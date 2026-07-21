@@ -37,8 +37,8 @@ function buildSlots(row) {
   const slots = [];
   WEEK_TYPES.forEach(wt => {
     DAYS.forEach(day => {
-      for (let p = 1; p <= 11; p++) {
-        const val = row[`${wt}${day}${p}`];
+      for (let p = 1; p <= 14; p++) {
+        const val = row[`${wt}${day}P${String(p).padStart(2, '0')}`];
         if (val && val !== '0') {
           const parts = val.split(' / ');
           const classCode = parts[0]?.trim() || '';

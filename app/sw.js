@@ -45,7 +45,9 @@ const CDN_HOSTS = new Set([
   'cdn.jsdelivr.net',
   'cdn.sheetjs.com',
   'fonts.googleapis.com',
-  'fonts.gstatic.com'
+  'fonts.gstatic.com',
+  'cdn.tailwindcss.com',
+  'unpkg.com'
 ]);
 
 /* Live-only hosts: the Gemini API and the analytics webhook. Requests to
