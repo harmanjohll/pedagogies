@@ -14,7 +14,7 @@ import { createStudentUploadZone } from '../components/student-upload.js';
 import { openStaffPicker, loadStaffDirectory, renderRecipientChips, ALL_STAFF_EMAIL } from '../components/staff-picker.js';
 import { openRamsEditor } from '../components/rams-editor.js';
 import { renderAdminWorkflow, bindAdminWorkflowClicks } from '../components/admin-workflow.js';
-import { loadTT, ensureCalendar, getTTPeriodKey, periodCol, periodsForDay, periodStartMin, periodEndMin, fmtClockShort, PERIOD_LEN_MIN } from './dashboard.js';
+import { loadTT, ensureCalendar, getTTPeriodKey, getWeekTypeForDate, periodCol, periodsForDay, periodStartMin, periodEndMin, fmtClockShort, PERIOD_LEN_MIN } from './dashboard.js';
 
 /**
  * FormSG Pre-fill Configuration
@@ -330,7 +330,7 @@ export function render(container) {
             <p style="font-size:0.8125rem;color:var(--ink-muted);margin:0 0 var(--sp-3);line-height:1.5;">
               See if a colleague is free to meet — pick a department, then a teacher. Availability is read live from the school timetable.
             </p>
-            <div id="ft-selectors" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);">
+            <div id="ft-selectors" style="display:grid;grid-template-columns:1fr 1fr 0.9fr;gap:var(--sp-3);">
               <div>
                 <label class="ft-label" for="ft-dept">Department</label>
                 <select id="ft-dept" class="input" style="width:100%;box-sizing:border-box;"><option value="">Loading&hellip;</option></select>
@@ -338,6 +338,10 @@ export function render(container) {
               <div>
                 <label class="ft-label" for="ft-teacher">Teacher</label>
                 <select id="ft-teacher" class="input" style="width:100%;box-sizing:border-box;" disabled><option value="">Select a department first</option></select>
+              </div>
+              <div>
+                <label class="ft-label" for="ft-date">Date</label>
+                <input type="date" id="ft-date" class="input" value="${new Date().toLocaleDateString('en-CA')}" style="width:100%;box-sizing:border-box;">
               </div>
             </div>
             <div id="ft-result"></div>
@@ -417,63 +421,114 @@ function ftFmtDuration(mins) {
   return `${m} min`;
 }
 
-/** Compute a teacher's live availability from their timetable row. */
-function ftAvailability(row) {
+/** Day-of-week + Odd/Even week for a chosen date, or a reason it's "off". */
+function ftDayInfo(dateObj) {
+  const day = dateObj.getDay();                        // 0 Sun .. 6 Sat
+  if (day < 1 || day > 5) return { off: 'weekend' };
+  const dayStr = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'][day];
+  let weekType = getWeekTypeForDate(dateObj);           // 'Odd' | 'Even' | 'N.A.' | null
+  if (weekType === 'N.A.') return { off: 'nonteaching' };
+  if (!weekType) {                                      // out of calendar range → math fallback
+    const start = new Date(dateObj.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((dateObj - start) / 86400000 + start.getDay() + 1) / 7);
+    weekType = weekNum % 2 === 1 ? 'Odd' : 'Even';
+  }
+  return { dayStr, weekType };
+}
+
+/** A teacher's availability on a given date. The live "now" verdict + "free
+ *  periods LEFT today" only apply when the chosen date is today; other dates
+ *  show the whole day's free periods. */
+function ftAvailability(row, dateObj) {
   const name = ftTeacherName(row) || 'This teacher';
-  const pk = getTTPeriodKey();               // { dayStr, weekType, mins } or null
-  if (!pk) return { offDay: true, name };
-  const { dayStr, weekType, mins } = pk;
+  const now = new Date();
+  const isToday = dateObj.getFullYear() === now.getFullYear()
+    && dateObj.getMonth() === now.getMonth() && dateObj.getDate() === now.getDate();
+  const info = ftDayInfo(dateObj);
+  if (info.off) return { off: info.off, name, isToday };
+  const { dayStr, weekType } = info;
   const periods = periodsForDay(row, weekType, dayStr);
-  if (!periods.length) return { offDay: true, name };
+  if (!periods.length) return { off: 'noperiods', name, isToday };
 
   const isTaught = p => { const v = row[periodCol(weekType, dayStr, p)]; return !!v && v !== '0'; };
   const taughtPeriods = periods.filter(isTaught);
   const taughtMin = taughtPeriods.length * PERIOD_LEN_MIN;
-  const firstStart = Math.min(...periods.map(periodStartMin));
-  const lastEnd = Math.max(...periods.map(periodEndMin));
-  const active = periods.find(p => isTaught(p) && mins >= periodStartMin(p) && mins < periodEndMin(p));
+  const freeAll = periods.filter(p => !isTaught(p));
+  const nowMins = now.getHours() * 60 + now.getMinutes();
 
-  let nowState;
-  if (mins < firstStart) nowState = { busy: false, note: `The school day hasn't started yet (first lesson at ${fmtClockShort(firstStart)}).` };
-  else if (mins >= lastEnd) nowState = { busy: false, note: `${name}'s teaching day is over.` };
-  else if (active) nowState = { busy: true, note: `In a lesson now (P${active}) until ${fmtClockShort(periodEndMin(active))}.` };
-  else nowState = { busy: false, note: `Between lessons right now.` };
-
-  const freeSlots = periods
-    .filter(p => !isTaught(p) && periodEndMin(p) > mins)
+  const freeSlots = (isToday ? freeAll.filter(p => periodEndMin(p) > nowMins) : freeAll)
     .map(p => ({ label: `P${p}`, time: `${fmtClockShort(periodStartMin(p))}–${fmtClockShort(periodEndMin(p))}` }));
 
-  return { offDay: false, name, nowState, freeSlots, taughtMin, taughtCount: taughtPeriods.length };
+  let nowState = null;
+  if (isToday) {
+    const firstStart = Math.min(...periods.map(periodStartMin));
+    const lastEnd = Math.max(...periods.map(periodEndMin));
+    const active = periods.find(p => isTaught(p) && nowMins >= periodStartMin(p) && nowMins < periodEndMin(p));
+    if (nowMins < firstStart) nowState = { busy: false, note: `The school day hasn't started yet (first lesson at ${fmtClockShort(firstStart)}).` };
+    else if (nowMins >= lastEnd) nowState = { busy: false, note: `${name}'s teaching day is over.` };
+    else if (active) nowState = { busy: true, note: `In a lesson now (P${active}) until ${fmtClockShort(periodEndMin(active))}.` };
+    else nowState = { busy: false, note: `Between lessons right now.` };
+  }
+
+  return { off: null, name, isToday, dayStr, weekType, nowState, freeSlots, taughtMin, taughtCount: taughtPeriods.length };
 }
 
-function ftRenderResult(el, row) {
-  const a = ftAvailability(row);
+/** "Tue, 24 Jul" for a chosen date. */
+function ftDateLabel(dateObj) {
+  try { return dateObj.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  catch { return dateObj.toDateString(); }
+}
+
+function ftRenderResult(el, row, dateObj) {
+  const a = ftAvailability(row, dateObj);
   const name = esc(a.name);
-  if (a.offDay) {
+  const dateLbl = esc(ftDateLabel(dateObj));
+  if (a.off) {
+    const why = a.off === 'weekend' ? 'a weekend' : (a.off === 'nonteaching' ? 'a non-teaching week' : 'a day with no scheduled periods');
     el.innerHTML = `<div class="ft-panel">
-      <div class="ft-now ft-free">&#128994; No lessons scheduled right now</div>
-      <p class="ft-line">It's outside the teaching timetable (weekend or a non-teaching week), so ${name} has no classes — any time works to meet.</p>
+      <div class="ft-now ft-free">&#128994; No lessons on ${dateLbl}</div>
+      <p class="ft-line">${dateLbl} is ${why}, so ${name} has no classes — any time works to meet.</p>
     </div>`;
     return;
   }
-  const busy = a.nowState.busy;
-  const nowBadge = busy
-    ? `<div class="ft-now ft-busy">&#128308; Teaching now</div>`
-    : `<div class="ft-now ft-free">&#128994; Free right now — a good time to meet ${name}</div>`;
-  const nowNote = `<p class="ft-line">${esc(a.nowState.note)}</p>`;
+
+  let header;
+  if (a.isToday && a.nowState) {
+    header = (a.nowState.busy
+      ? `<div class="ft-now ft-busy">&#128308; Teaching now</div>`
+      : `<div class="ft-now ft-free">&#128994; Free right now — a good time to meet ${name}</div>`)
+      + `<p class="ft-line">${esc(a.nowState.note)}</p>`;
+  } else {
+    header = `<div class="ft-now" style="color:var(--ink);">&#128197; ${dateLbl} &middot; ${esc(a.weekType)} week</div>`;
+  }
+
+  const slotLabel = a.isToday ? 'Free periods left today' : `Free periods on ${dateLbl}`;
   const slots = a.freeSlots.length
-    ? `<div class="ft-sub">Free periods left today</div><div class="ft-slots">${a.freeSlots.map(s => `<span class="ft-slot">${s.label} &middot; ${esc(s.time)}</span>`).join('')}</div>`
-    : `<p class="ft-line ft-muted">No free periods left in the school day.</p>`;
-  const heavy = a.taughtCount >= 5 || busy;
-  const workload = `<p class="ft-line ft-workload">${name} has ${a.taughtCount} lesson${a.taughtCount !== 1 ? 's' : ''} today (about ${ftFmtDuration(a.taughtMin)}).${heavy ? ` That's a full stretch — perhaps offer ${name} a short break before meeting.` : ''}</p>`;
-  el.innerHTML = `<div class="ft-panel">${nowBadge}${nowNote}${slots}${workload}</div>`;
+    ? `<div class="ft-sub">${slotLabel}</div><div class="ft-slots">${a.freeSlots.map(s => `<span class="ft-slot">${s.label} &middot; ${esc(s.time)}</span>`).join('')}</div>`
+    : `<p class="ft-line ft-muted">${a.isToday ? 'No free periods left in the school day.' : 'Fully booked that day — no free periods.'}</p>`;
+
+  const dayWord = a.isToday ? 'today' : `on ${dateLbl}`;
+  const heavy = a.taughtCount >= 5 || (a.nowState && a.nowState.busy);
+  const workload = `<p class="ft-line ft-workload">${name} has ${a.taughtCount} lesson${a.taughtCount !== 1 ? 's' : ''} ${dayWord} (about ${ftFmtDuration(a.taughtMin)}).${heavy ? ` That's a full stretch — perhaps offer ${name} a short break before meeting.` : ''}</p>`;
+
+  el.innerHTML = `<div class="ft-panel">${header}${slots}${workload}</div>`;
 }
 
 async function renderFindTeacher(container) {
   const deptSel = container.querySelector('#ft-dept');
   const teacherSel = container.querySelector('#ft-teacher');
+  const dateSel = container.querySelector('#ft-date');
   const result = container.querySelector('#ft-result');
   if (!deptSel || !teacherSel || !result) return;
+  const getSelectedDate = () => {
+    const v = dateSel && dateSel.value;
+    return v ? new Date(v + 'T00:00:00') : new Date();
+  };
+  const renderSelected = () => {
+    if (teacherSel.value === '') { result.innerHTML = ''; return; }
+    const row = tt[Number(teacherSel.value)];
+    if (row) ftRenderResult(result, row, getSelectedDate());
+  };
 
   let tt = [];
   try { [tt] = await Promise.all([loadTT(), ensureCalendar()]); } catch { tt = []; }
@@ -503,12 +558,8 @@ async function renderFindTeacher(container) {
       inDept.map(x => `<option value="${x.i}">${esc(ftTeacherName(x.r))}</option>`).join('');
   });
 
-  teacherSel.addEventListener('change', () => {
-    result.innerHTML = '';
-    if (teacherSel.value === '') return;
-    const row = tt[Number(teacherSel.value)];
-    if (row) ftRenderResult(result, row);
-  });
+  teacherSel.addEventListener('change', renderSelected);
+  dateSel?.addEventListener('change', renderSelected);
 }
 
 /* ── Events list ── */
