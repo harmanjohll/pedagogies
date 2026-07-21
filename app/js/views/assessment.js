@@ -10,9 +10,10 @@
 import { Store } from '../state.js';
 import { trackEvent } from '../utils/analytics.js';
 import { showToast } from '../components/toast.js';
-import { sendChat } from '../api.js';
+import { sendChat, generateLISC, generateExitTicket } from '../api.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { processLatex, renderMd } from '../utils/latex.js';
+import { stripExpandMarkers } from '../utils/markdown.js';
 import { openModal } from '../components/modals.js';
 import { isNarrow } from '../utils/viewport.js';
 
@@ -2261,14 +2262,13 @@ function wireAfLEvents(container) {
 
     if (!topicStr) { showToast('Enter a topic or select one from a class.', 'warning'); return; }
 
-    let context = '';
-    if (classId) {
-      const cls = Store.getClass(classId);
-      if (cls) context += `Class: ${cls.name}${cls.subject ? ` (${cls.subject})` : ''}. `;
-    }
+    const cls = classId ? Store.getClass(classId) : null;
+
+    // Build a plan-text description for the shared LISC generator (api.js)
+    let planText = topicStr;
     if (topicId) {
       const lesson = Store.getLesson(topicId);
-      if (lesson && lesson.objectives) context += `Objectives: ${lesson.objectives}`;
+      if (lesson && lesson.objectives) planText += `\n\nObjectives: ${lesson.objectives}`;
     }
 
     const output = container.querySelector('#afl-lisc-output');
@@ -2277,18 +2277,20 @@ function wireAfLEvents(container) {
     btn.textContent = 'Generating\u2026';
 
     try {
-      const text = await sendChat([{
-        role: 'user',
-        content: `Generate Learning Intentions and Success Criteria for: ${topicStr}\n${context ? `\nContext: ${context}` : ''}\n\nFormat:\n**Learning Intention:** We are learning to...\n\n**Success Criteria:**\n- I can...\n- I can...\n- I can...\n\nAlso suggest 2 formative check questions a teacher could ask during the lesson.`
-      }], {
-        trackLabel: 'generateLISC_inline',
-        trackDetail: topicStr.slice(0, 40),
-        systemPrompt: 'You are a Visible Learning specialist for Singapore secondary schools. Generate clear, student-friendly LISC aligned to Singapore MOE curriculum.',
-        temperature: 0.5, maxTokens: 2048
-      });
-
-      output.innerHTML = renderAIOutput(text);
+      const text = await generateLISC(planText, cls?.subject || '', cls?.level || '');
+      // AfL view has no [EXPAND:] chip wiring; strip markers so they don't
+      // render as literal text / dead chips (mirrors lesson-planner mdStatic).
+      const clean = stripExpandMarkers(text);
+      output.innerHTML = renderAIOutput(clean);
       processLatex(output);
+
+      // Persist so the output survives navigation and appears in Saved outputs.
+      Store.addAssessmentArtifact({
+        frameworkId: null,
+        title: `LISC \u2014 ${topicStr}`,
+        content: clean
+      });
+      showToast('Saved to your library.', 'success');
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {
@@ -2334,11 +2336,7 @@ function wireAfLEvents(container) {
     }
     if (!topic) { showToast('Enter a topic or select a lesson.', 'warning'); return; }
 
-    let context = '';
-    if (etClassSel?.value) {
-      const cls = Store.getClass(etClassSel.value);
-      if (cls) context += `Class: ${cls.name}${cls.subject ? ` (${cls.subject})` : ''}${cls.level ? `, ${cls.level}` : ''}. `;
-    }
+    const cls = etClassSel?.value ? Store.getClass(etClassSel.value) : null;
 
     const output = container.querySelector('#exit-ticket-output');
     const btn = container.querySelector('#exit-ticket-gen-btn');
@@ -2346,18 +2344,20 @@ function wireAfLEvents(container) {
     btn.textContent = 'Generating\u2026';
 
     try {
-      const text = await sendChat([{
-        role: 'user',
-        content: `Generate a short exit ticket (2-3 questions) for this lesson topic: ${topic}\n${context ? `\nContext: ${context}` : ''}\n\nRequirements:\n- 2-3 quick questions that take students ~3 minutes total\n- Mix of recall and application\n- Include a brief self-reflection prompt (e.g. "Rate your confidence 1-5")\n- Format clearly with question numbers\n- Include suggested answers for the teacher`
-      }], {
-        trackLabel: 'generateExitTicket_inline',
-        trackDetail: topic.slice(0, 40),
-        systemPrompt: 'You are a formative assessment specialist for Singapore secondary schools. Generate concise, effective exit ticket questions that give teachers immediate insight into student understanding.',
-        temperature: 0.5, maxTokens: 2048
-      });
-
-      output.innerHTML = renderAIOutput(text);
+      const text = await generateExitTicket(topic, cls?.subject || '', cls?.level || '');
+      // AfL view has no [EXPAND:] chip wiring; strip markers so they don't
+      // render as literal text / dead chips (mirrors lesson-planner mdStatic).
+      const clean = stripExpandMarkers(text);
+      output.innerHTML = renderAIOutput(clean);
       processLatex(output);
+
+      // Persist so the output survives navigation and appears in Saved outputs.
+      Store.addAssessmentArtifact({
+        frameworkId: null,
+        title: `Exit Ticket \u2014 ${topic}`,
+        content: clean
+      });
+      showToast('Saved to your library.', 'success');
     } catch (err) {
       output.innerHTML = `<p style="color:var(--danger);font-size:0.8125rem;">Error: ${escHtml(err.message)}</p>`;
     } finally {

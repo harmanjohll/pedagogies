@@ -76,7 +76,9 @@ export function render(container) {
   let length = 'short';
   let frameworkId = '';   // optional feedback-purpose pedagogy framework
   let isGenerating = false;
-  let results = [];       // [{ id, name, text }]
+  // Restore any previously drafted comments for this class so they survive
+  // navigation (and don't re-cost Gemini tokens). Saves stay teacher-led.
+  let results = Store.getReportComments(selectedClassId) || [];   // [{ id, name, text }]
   let rawFallback = '';   // shown when JSON parsing fails
 
   function renderView() {
@@ -101,7 +103,7 @@ export function render(container) {
           <div class="page-header">
             <div>
               <h1 class="page-title">Report Comment Drafter <span class="labs-beta-badge">Labs &middot; beta</span></h1>
-              <p class="page-subtitle">Draft holistic report comments from E21CC levels, observations, and lesson reflections. Nothing is saved — review, edit, and copy out.</p>
+              <p class="page-subtitle">Draft holistic report comments from E21CC levels, observations, and lesson reflections. Saved to this class as you draft — review, edit, and copy out.</p>
             </div>
           </div>
 
@@ -188,7 +190,8 @@ export function render(container) {
     container.querySelector('#rc-class')?.addEventListener('change', (e) => {
       selectedClassId = e.target.value;
       selectedIds = new Set((Store.getClass(selectedClassId)?.students || []).map(s => s.id));
-      results = []; rawFallback = '';
+      // Reload the newly selected class's saved comments so prior drafts reappear.
+      results = Store.getReportComments(selectedClassId) || []; rawFallback = '';
       renderView();
     });
     container.querySelector('#rc-tone')?.addEventListener('change', (e) => { tone = e.target.value; });
@@ -215,6 +218,11 @@ export function render(container) {
       ta.addEventListener('input', () => {
         const i = parseInt(ta.dataset.idx, 10);
         if (results[i]) results[i].text = ta.value;
+      });
+      // Persist the teacher's edit on blur so the tweak isn't lost on navigation.
+      ta.addEventListener('change', () => {
+        const cls = Store.getClass(selectedClassId);
+        if (cls && results.length) Store.saveReportComments(cls.id, cls.name, results);
       });
     });
 
@@ -316,6 +324,10 @@ Return ONLY a JSON array with exactly ${students.length} items, in the same orde
           results = [];
           rawFallback = raw;
           showToast('Response did not match the expected format — showing raw text.', 'warning');
+        } else {
+          // Teacher-led save: persist the drafted comments so they survive
+          // navigation and don't need re-generating (re-costing Gemini tokens).
+          Store.saveReportComments(cls.id, cls.name, results);
         }
       } else {
         rawFallback = raw;

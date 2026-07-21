@@ -127,6 +127,19 @@ export function createStudentUploadZone(options = {}) {
 
     try {
       if (ext === 'xlsx' || ext === 'xls') {
+        // SheetJS loads from a CDN that locked-down SG school networks often
+        // block. Be honest that the library is unavailable (rather than a
+        // silent empty "no students found") and point to the CSV fallback.
+        if (!window.XLSX) {
+          wrapper.innerHTML = `
+            <div style="padding:var(--sp-4);background:var(--danger-light,#fef2f2);border-radius:var(--radius-lg);text-align:center;">
+              <p style="font-size:0.8125rem;color:var(--danger);">Spreadsheet support couldn't load — your school network may be blocking it. Save this file as CSV and upload that instead.</p>
+              <button class="btn btn-ghost btn-sm" style="margin-top:var(--sp-2);">Try Again</button>
+            </div>
+          `;
+          wrapper.querySelector('button').addEventListener('click', () => { students = []; renderUploadState(); });
+          return;
+        }
         const buf = await file.arrayBuffer();
         students = parseXLSX(buf);
       } else {

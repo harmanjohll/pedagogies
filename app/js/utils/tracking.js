@@ -22,9 +22,10 @@
 
 /* ── Level sets (colour is centralised here) ── */
 
-// Mirrors state.js E21CC_LEVEL_KEYS + the level colours used by views/classes.js
-// and views/report-comments.js (E21CC_LEVELS). Keep in sync with those.
-const E21CC_LEVELS = [
+// Canonical E21CC level definitions (key + label + colour + value). Exported as
+// the single source of truth so views import this instead of keeping their own
+// copy (views/classes.js). Mirrors state.js E21CC_LEVEL_KEYS.
+export const E21CC_LEVELS = [
   { key: 'developing', label: 'Developing', color: '#f59e0b', value: 1 },
   { key: 'applying',   label: 'Applying',   color: '#3b82f6', value: 2 },
   { key: 'extending',  label: 'Extending',  color: '#10b981', value: 3 },

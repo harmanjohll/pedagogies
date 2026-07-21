@@ -14,7 +14,7 @@ import { escapeHtml } from '../utils/markdown.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
 import {
   SCHEMA_PRESETS, getSchemaForClass, getFieldValue, applyFieldUpdate,
-  levelMeta as fieldLevelMeta
+  levelMeta as fieldLevelMeta, E21CC_LEVELS
 } from '../utils/tracking.js';
 import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 
@@ -27,12 +27,10 @@ const E21CC_DIMS = [
   { key: 'selfRegulation',     label: 'Self-Regulation',       short: 'SR',  color: '#f59e0b' },
 ];
 
-const E21CC_LEVELS = [
-  { key: 'developing', label: 'Developing', short: 'Dev', color: '#f59e0b', value: 1 },
-  { key: 'applying', label: 'Applying', short: 'App', color: '#3b82f6', value: 2 },
-  { key: 'extending', label: 'Extending', short: 'Ext', color: '#10b981', value: 3 },
-  { key: 'leading', label: 'Leading', short: 'Lead', color: '#8b5cf6', value: 4 },
-];
+// E21CC_LEVELS is imported from ../utils/tracking.js (single source of truth).
+// The canonical set is key/label/color/value; the compact column abbreviations
+// (Dev/App/Ext/Lead) are a view-only concern kept here.
+const E21CC_LEVEL_SHORT = { developing: 'Dev', applying: 'App', extending: 'Ext', leading: 'Lead' };
 
 function levelToValue(level) { return E21CC_LEVELS.find(l => l.key === level)?.value || 1; }
 function levelMeta(level) { return E21CC_LEVELS.find(l => l.key === level) || E21CC_LEVELS[0]; }
@@ -150,7 +148,7 @@ function valueMeta(schema, field, value) {
   const m = fieldLevelMeta(field, value); // { label, color, value }
   let short;
   if (schema.id === 'e21cc') {
-    short = E21CC_LEVELS.find(l => l.key === value)?.short || m.label;
+    short = E21CC_LEVEL_SHORT[value] || m.label;
   } else {
     const first = String(m.label).split(/[\s—–\-]+/).filter(Boolean)[0] || m.label;
     short = first.length > 5 ? first.slice(0, 4) : first;
@@ -649,7 +647,14 @@ export function renderDetail(container, { id }) {
         function buildStudentRadar() {
           const canvas = container.querySelector('#e21cc-radar-canvas');
           const select = container.querySelector('#radar-student-select');
-          if (!canvas || !select || typeof Chart === 'undefined' || students.length === 0) return;
+          if (!canvas || !select || students.length === 0) return;
+          // Offline / blocked CDN: Chart.js never loaded — say so instead of
+          // leaving a silent blank hole where the radar should be.
+          if (typeof Chart === 'undefined') {
+            const holder = canvas.parentElement || canvas;
+            holder.innerHTML = '<p style="font-size:0.75rem;color:var(--ink-faint);text-align:center;line-height:1.5;padding:var(--sp-3) 0;">The E21CC radar needs an internet connection for its chart library.</p>';
+            return;
+          }
           const idx = parseInt(select.value) || 0;
           const student = students[idx];
           if (!student) return;

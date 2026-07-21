@@ -89,7 +89,7 @@ const DASH_PREFS_KEY = 'cocher_dashboard_prefs';
 const DEFAULT_WIDGET_ORDER = [
   'schedule', 'activityFeed', 'notifications', 'weeklyOverview', 'suggestions',
   'quickActions', 'stats', 'studentSpotlight', 'prepChecklist', 'insights',
-  'reflections', 'recentGrid', 'timetable', 'classes', 'studentData'
+  'reflections', 'recentGrid', 'timetable', 'classes'
 ];
 
 const WIDGET_LABELS = {
@@ -105,7 +105,6 @@ const WIDGET_LABELS = {
   reflections:   'Reflection Analytics',
   recentGrid:    'Recent Lessons / Events / Activity',
   studentSpotlight: 'Student Spotlight',
-  studentData:   'Student Learning Data',
   timetable:     'My Timetable',
   classes:       'Your Classes'
 };
@@ -281,7 +280,7 @@ const PERIOD_START_MIN = {
   1: 475, 2: 510, 3: 545, 4: 580, 5: 615, 6: 650, 7: 685,
   8: 720, 9: 755, 10: 790, 11: 825, 13: 895, 14: 930,
 };
-const PERIOD_LEN_MIN = 35;
+export const PERIOD_LEN_MIN = 35;
 const DAY_START_MIN = 450; // 07:30 — first bell (P0 form/assembly)
 
 /** Timetable CSV column key, e.g. periodCol('Odd','Mon',1) → 'OddMonP01'. */
@@ -289,13 +288,13 @@ export function periodCol(weekType, dayStr, p) {
   return `${weekType}${dayStr}P${String(p).padStart(2, '0')}`;
 }
 /** Periods that actually exist for this day/week, read from the row's own columns. */
-function periodsForDay(teacherRow, weekType, dayStr) {
+export function periodsForDay(teacherRow, weekType, dayStr) {
   return TEACHING_PERIODS.filter(p => periodCol(weekType, dayStr, p) in teacherRow);
 }
-function periodStartMin(p) { return PERIOD_START_MIN[p] ?? null; }
-function periodEndMin(p) { const s = PERIOD_START_MIN[p]; return s == null ? null : s + PERIOD_LEN_MIN; }
+export function periodStartMin(p) { return PERIOD_START_MIN[p] ?? null; }
+export function periodEndMin(p) { const s = PERIOD_START_MIN[p]; return s == null ? null : s + PERIOD_LEN_MIN; }
 /** minutes-from-midnight → "7:55" (12-hour clock, no meridian). */
-function fmtClockShort(mins) {
+export function fmtClockShort(mins) {
   if (mins == null) return '';
   const h = Math.floor(mins / 60), m = mins % 60;
   return `${h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')}`;
@@ -1779,12 +1778,18 @@ function calmHeadline(firstName) {
   if (!pk) return `${getGreeting()}, ${firstName}.`;
   const dayFull = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday' }[pk.dayStr] || pk.dayStr;
   if (pk.mins < periodStartMin(1)) return `${dayFull}, before Period 1.`;
-  if (pk.mins >= 910) return `${dayFull}, after school.`;
+  // "After school" = past the end of the last teaching period. Sourced from the
+  // canonical PERIOD_START_MIN table (via periodEndMin) rather than a magic cutoff.
+  const lastPeriod = TEACHING_PERIODS[TEACHING_PERIODS.length - 1];
+  if (pk.mins >= periodEndMin(lastPeriod)) return `${dayFull}, after school.`;
   if (pk.period) {
-    // Within 10 minutes of the next period's start, phrase it as "before Pn"
-    const starts = [0, 450, 490, 530, 570, 620, 660, 700, 740, 790, 830, 870];
-    const nextP = pk.period < 11 ? pk.period + 1 : null;
-    if (nextP && starts[nextP] - pk.mins > 0 && starts[nextP] - pk.mins <= 10) {
+    // Within 10 minutes of the next period's start, phrase it as "before Pn".
+    // Both the next period and its start time come from the canonical table/order
+    // so the boundary matches every other period calc in the file.
+    const idx = TEACHING_PERIODS.indexOf(pk.period);
+    const nextP = (idx >= 0 && idx < TEACHING_PERIODS.length - 1) ? TEACHING_PERIODS[idx + 1] : null;
+    const nextStart = nextP != null ? periodStartMin(nextP) : null;
+    if (nextStart != null && nextStart - pk.mins > 0 && nextStart - pk.mins <= 10) {
       return `${dayFull}, before Period ${nextP}.`;
     }
     return `${dayFull}, Period ${pk.period}.`;
@@ -2212,17 +2217,6 @@ export function render(container) {
         </div>
       </div>`;
 
-  // ── Student Platform Data Placeholder Widget ──
-  const studentDataHTML = `
-    <div class="card" style="border:1px dashed var(--border);background:transparent;padding:var(--sp-6);text-align:center;opacity:0.7;position:relative;">
-      <span class="badge badge-gray" style="position:absolute;top:var(--sp-3);right:var(--sp-3);font-size:0.625rem;letter-spacing:0.05em;text-transform:uppercase;">Coming Soon</span>
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" style="margin:0 auto var(--sp-2);display:block;">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-      </svg>
-      <p style="font-size:0.875rem;font-weight:600;color:var(--ink-muted);margin-bottom:var(--sp-1);">Student Learning Data</p>
-      <p style="font-size:0.75rem;color:var(--ink-faint);line-height:1.5;max-width:440px;margin:0 auto;">Connect to SLS, Google Classroom, or your school's LMS to surface student progress, quiz results, and assignment completion here.</p>
-    </div>`;
-
   // Widget content map: content for each widget that can be rendered synchronously
   const widgetContent = {
     schedule: '',       // populated async
@@ -2238,8 +2232,7 @@ export function render(container) {
     reflections: renderReflectionAnalytics(lessons),
     recentGrid: recentGridHTML,
     timetable: '',      // populated async
-    classes: classesHTML,
-    studentData: studentDataHTML
+    classes: classesHTML
   };
 
   // Build ordered widgets HTML; insights/reflections already have their own wrapper
@@ -2326,6 +2319,9 @@ export function render(container) {
               <div id="calm-orient" style="margin-top:var(--sp-2);font-size:0.875rem;color:var(--ink-muted);">Checking today&rsquo;s timetable &mdash; ${escapeHtml(calmLessonAttentionText(lessons))}.</div>
               ${fortnightLine}
             </div>
+            <button class="btn btn-ghost btn-sm" id="customise-dashboard-btn" title="Customise your dashboard" style="flex-shrink:0;padding:6px;opacity:0.6;transition:opacity 0.15s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.6'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
           </div>
 
           <!-- WS-D: milestone offer (teacher-led delight; shown only at thresholds) -->

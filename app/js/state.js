@@ -190,9 +190,6 @@ const DEFAULT_STATE = {
   lessons: [],
   chatHistory: [],
   recentActivity: [],
-  assessmentRoutines: [],
-  savedTOS: [],
-  assessmentChecklists: [],
   knowledgeUploads: [],
   pdFolders: [],
   stimulusLibrary: [],
@@ -200,6 +197,7 @@ const DEFAULT_STATE = {
   departmentSchemes: [],
   assessmentBlueprints: [],
   assessmentArtifacts: [],
+  savedReportComments: [],
   practiceLog: [],
   practiceGoal: null,
   trackingSchemas: [],
@@ -349,14 +347,12 @@ export const Store = {
         return meta;
       }),
       pdFolders: _state.pdFolders || [],
-      assessmentRoutines: _state.assessmentRoutines || [],
-      savedTOS: _state.savedTOS || [],
-      assessmentChecklists: _state.assessmentChecklists || [],
       stimulusLibrary: _state.stimulusLibrary || [],
       sourceLibrary: _state.sourceLibrary || [],
       departmentSchemes: _state.departmentSchemes || [],
       assessmentBlueprints: _state.assessmentBlueprints || [],
       assessmentArtifacts: _state.assessmentArtifacts || [],
+      savedReportComments: _state.savedReportComments || [],
       practiceLog: _state.practiceLog || [],
       practiceGoal: _state.practiceGoal || null,
       trackingSchemas: _state.trackingSchemas || [],
@@ -859,109 +855,18 @@ export const Store = {
     this._notify();
   },
 
-  /* ══════════ Assessment Routines CRUD ══════════ */
+  /* ══════════ Saved Report Comments (Report Comment Drafter) ══════════ */
 
-  getRoutines() {
-    return _state.assessmentRoutines || [];
+  getReportComments(classId) {
+    return (_state.savedReportComments || []).find(r => r.classId === classId)?.comments || [];
   },
 
-  getRoutine(id) {
-    return (_state.assessmentRoutines || []).find(r => r.id === id) || null;
-  },
-
-  addRoutine(data) {
-    const routine = {
-      id: generateId(),
-      name: data.name || 'Untitled Routine',
-      description: data.description || '',
-      isBuiltIn: data.isBuiltIn || false,
-      steps: data.steps || [],
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-    _state.assessmentRoutines = [...(_state.assessmentRoutines || []), routine];
-    this._addActivity('routine_created', `Created routine "${routine.name}"`);
-    this._persist();
-    this._notify();
-    return routine;
-  },
-
-  updateRoutine(id, data) {
-    _state.assessmentRoutines = (_state.assessmentRoutines || []).map(r =>
-      r.id === id ? { ...r, ...data, updatedAt: Date.now() } : r
-    );
-    this._persist();
-    this._notify();
-  },
-
-  deleteRoutine(id) {
-    _state.assessmentRoutines = (_state.assessmentRoutines || []).filter(r => r.id !== id);
-    this._persist();
-    this._notify();
-  },
-
-  /* ══════════ Saved TOS CRUD ══════════ */
-
-  getSavedTOS() {
-    return _state.savedTOS || [];
-  },
-
-  addSavedTOS(data) {
-    const tos = {
-      id: generateId(),
-      name: data.name || 'Untitled TOS',
-      mode: data.mode || '1d',
-      objectives: data.objectives || [],
-      totalMarks: data.totalMarks || 50,
-      cells: data.cells || {},
-      createdAt: Date.now()
-    };
-    _state.savedTOS = [...(_state.savedTOS || []), tos];
-    this._addActivity('tos_saved', `Saved TOS "${tos.name}"`);
-    this._persist();
-    this._notify();
-    return tos;
-  },
-
-  deleteSavedTOS(id) {
-    _state.savedTOS = (_state.savedTOS || []).filter(t => t.id !== id);
-    this._persist();
-    this._notify();
-  },
-
-  /* ══════════ Assessment Checklists CRUD ══════════ */
-
-  getChecklists() {
-    return _state.assessmentChecklists || [];
-  },
-
-  addChecklist(data) {
-    const cl = {
-      id: generateId(),
-      name: data.name || 'Untitled Checklist',
-      type: data.type || 'observation',
-      subject: data.subject || '',
-      criteria: data.criteria || [],
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-    _state.assessmentChecklists = [...(_state.assessmentChecklists || []), cl];
-    this._addActivity('checklist_created', `Created checklist "${cl.name}"`);
-    this._persist();
-    this._notify();
-    return cl;
-  },
-
-  updateChecklist(id, data) {
-    _state.assessmentChecklists = (_state.assessmentChecklists || []).map(c =>
-      c.id === id ? { ...c, ...data, updatedAt: Date.now() } : c
-    );
-    this._persist();
-    this._notify();
-  },
-
-  deleteChecklist(id) {
-    _state.assessmentChecklists = (_state.assessmentChecklists || []).filter(c => c.id !== id);
+  saveReportComments(classId, className, comments) {
+    const rest = (_state.savedReportComments || []).filter(r => r.classId !== classId);
+    _state.savedReportComments = [
+      ...rest,
+      { classId, className: className || '', comments: comments || [], updatedAt: Date.now() }
+    ];
     this._persist();
     this._notify();
   },
@@ -1319,14 +1224,12 @@ export const Store = {
       adminEvents: _state.adminEvents || [],
       knowledgeUploads: _state.knowledgeUploads || [],
       pdFolders: _state.pdFolders || [],
-      assessmentRoutines: _state.assessmentRoutines || [],
-      savedTOS: _state.savedTOS || [],
-      assessmentChecklists: _state.assessmentChecklists || [],
       stimulusLibrary: stimLib,
       sourceLibrary: srcLib,
       departmentSchemes: _state.departmentSchemes || [],
       assessmentBlueprints: _state.assessmentBlueprints || [],
       assessmentArtifacts: _state.assessmentArtifacts || [],
+      savedReportComments: _state.savedReportComments || [],
       practiceLog: _state.practiceLog || [],
       practiceGoal: _state.practiceGoal || null,
       trackingSchemas: _state.trackingSchemas || [],
@@ -1344,8 +1247,9 @@ export const Store = {
    */
   previewImportData(jsonStr) {
     const ARRAY_KEYS = ['classes', 'lessons', 'savedLayouts', 'adminEvents', 'knowledgeUploads',
-      'pdFolders', 'assessmentRoutines', 'savedTOS', 'assessmentChecklists', 'stimulusLibrary',
+      'pdFolders', 'stimulusLibrary',
       'sourceLibrary', 'departmentSchemes', 'assessmentBlueprints', 'assessmentArtifacts',
+      'savedReportComments',
       'practiceLog', 'trackingSchemas', 'frameworks', 'references', 'customSimulations',
       'recentActivity'];
     let data;
@@ -1381,14 +1285,12 @@ export const Store = {
         syncKbContentToIdb([], data.knowledgeUploads);
       }
       if (Array.isArray(data.pdFolders)) _state.pdFolders = data.pdFolders;
-      if (Array.isArray(data.assessmentRoutines)) _state.assessmentRoutines = data.assessmentRoutines;
-      if (Array.isArray(data.savedTOS)) _state.savedTOS = data.savedTOS;
-      if (Array.isArray(data.assessmentChecklists)) _state.assessmentChecklists = data.assessmentChecklists;
       if (Array.isArray(data.stimulusLibrary)) _state.stimulusLibrary = data.stimulusLibrary;
       if (Array.isArray(data.sourceLibrary)) _state.sourceLibrary = data.sourceLibrary;
       if (Array.isArray(data.departmentSchemes)) _state.departmentSchemes = data.departmentSchemes;
       if (Array.isArray(data.assessmentBlueprints)) _state.assessmentBlueprints = data.assessmentBlueprints;
       if (Array.isArray(data.assessmentArtifacts)) _state.assessmentArtifacts = data.assessmentArtifacts;
+      if (Array.isArray(data.savedReportComments)) _state.savedReportComments = data.savedReportComments;
       if (Array.isArray(data.practiceLog)) _state.practiceLog = data.practiceLog;
       if (data.practiceGoal && typeof data.practiceGoal === 'object' && !Array.isArray(data.practiceGoal)) _state.practiceGoal = data.practiceGoal;
       if (Array.isArray(data.trackingSchemas)) _state.trackingSchemas = data.trackingSchemas;
@@ -1438,14 +1340,12 @@ export const Store = {
     _state.adminEvents = [];
     _state.knowledgeUploads = [];
     _state.pdFolders = [];
-    _state.assessmentRoutines = [];
-    _state.savedTOS = [];
-    _state.assessmentChecklists = [];
     _state.stimulusLibrary = [];
     _state.sourceLibrary = [];
     _state.departmentSchemes = [];
     _state.assessmentBlueprints = [];
     _state.assessmentArtifacts = [];
+    _state.savedReportComments = [];
     _state.practiceLog = [];
     _state.practiceGoal = null;
     _state.trackingSchemas = [];

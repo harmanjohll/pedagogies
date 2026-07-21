@@ -8,7 +8,7 @@ import { registerRoute, initRouter } from './router.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
 import { renderLogin, isLoggedIn } from './components/login.js';
-import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedAssessmentIfNeeded, seedCCAIfNeeded, seedExemplarsIfNeeded, seedPortalDemosIfNeeded } from './seed-data.js';
+import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedCCAIfNeeded, seedExemplarsIfNeeded, seedPortalDemosIfNeeded } from './seed-data.js';
 
 /* ── Views ── */
 import { render as renderDashboard } from './views/dashboard.js';
@@ -53,7 +53,6 @@ function init() {
   seedIfNeeded();
   seedPdIfNeeded();
   seedLessonsIfNeeded();
-  seedAssessmentIfNeeded();
   seedCCAIfNeeded();
   seedExemplarsIfNeeded();
   seedPortalDemosIfNeeded();
