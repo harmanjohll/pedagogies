@@ -14,6 +14,7 @@ import { createStudentUploadZone } from '../components/student-upload.js';
 import { openStaffPicker, loadStaffDirectory, renderRecipientChips, ALL_STAFF_EMAIL } from '../components/staff-picker.js';
 import { openRamsEditor } from '../components/rams-editor.js';
 import { renderAdminWorkflow, bindAdminWorkflowClicks } from '../components/admin-workflow.js';
+import { loadTT, ensureCalendar, getTTPeriodKey, periodCol, periodsForDay, periodStartMin, periodEndMin, fmtClockShort, PERIOD_LEN_MIN } from './dashboard.js';
 
 /**
  * FormSG Pre-fill Configuration
@@ -305,6 +306,44 @@ export function render(container) {
           <div class="grid-3 stagger" id="admin-tools"></div>
         </div>
 
+        <!-- Find a Teacher (timetable-driven availability) -->
+        <div style="margin-bottom:var(--sp-8);">
+          <style>
+            .ft-label { display:block; font-size:0.6875rem; font-weight:600; color:var(--ink-secondary); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.03em; }
+            @media (max-width:600px){ #ft-selectors { grid-template-columns:1fr !important; } }
+            .ft-panel { border:1px solid var(--border); border-radius:10px; background:var(--bg-card); padding:var(--sp-3) var(--sp-4); margin-top:var(--sp-3); }
+            .ft-now { font-weight:700; font-size:0.9375rem; margin-bottom:6px; line-height:1.4; }
+            .ft-free { color:var(--success, #16a34a); }
+            .ft-busy { color:var(--danger, #dc2626); }
+            .ft-line { font-size:0.8125rem; color:var(--ink); line-height:1.5; margin:0 0 6px; }
+            .ft-muted { color:var(--ink-muted); }
+            .ft-workload { color:var(--ink-secondary); font-style:italic; }
+            .ft-sub { font-size:0.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; color:var(--ink-faint); margin:8px 0 4px; }
+            .ft-slots { margin:4px 0 6px; display:flex; flex-wrap:wrap; gap:6px; }
+            .ft-slot { display:inline-block; padding:3px 10px; border-radius:999px; background:var(--accent-light, rgba(67,97,238,0.08)); color:var(--accent-dark, var(--accent)); font-size:0.75rem; font-weight:600; }
+          </style>
+          <div class="section-header">
+            <span class="section-title">Find a Teacher</span>
+            <span class="badge badge-gray">Timetable</span>
+          </div>
+          <div class="card" style="padding:var(--sp-4);">
+            <p style="font-size:0.8125rem;color:var(--ink-muted);margin:0 0 var(--sp-3);line-height:1.5;">
+              See if a colleague is free to meet — pick a department, then a teacher. Availability is read live from the school timetable.
+            </p>
+            <div id="ft-selectors" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3);">
+              <div>
+                <label class="ft-label" for="ft-dept">Department</label>
+                <select id="ft-dept" class="input" style="width:100%;box-sizing:border-box;"><option value="">Loading&hellip;</option></select>
+              </div>
+              <div>
+                <label class="ft-label" for="ft-teacher">Teacher</label>
+                <select id="ft-teacher" class="input" style="width:100%;box-sizing:border-box;" disabled><option value="">Select a department first</option></select>
+              </div>
+            </div>
+            <div id="ft-result"></div>
+          </div>
+        </div>
+
         <!-- MOE Circulars & Directives (Placeholder) -->
         <div style="margin-bottom:var(--sp-8);">
           <div class="section-header">
@@ -333,6 +372,7 @@ export function render(container) {
   `;
 
   renderQuickTools(container.querySelector('#admin-tools'));
+  renderFindTeacher(container);
   renderEventsList(container.querySelector('#events-list'), events);
 
   container.querySelector('#new-event-btn').addEventListener('click', () => showNewEventModal(container));
@@ -357,6 +397,117 @@ function renderQuickTools(el) {
     } else {
       showToast(`${card.querySelector('.action-card-title').textContent} — coming in the next update!`, 'success');
     }
+  });
+}
+
+/* ── Find a Teacher: timetable-driven availability ──────────────────
+ * Reads the school timetable (reused from dashboard.js) to tell an admin/
+ * colleague whether a teacher is free to meet right now, what periods are
+ * still free today, and how heavy their teaching load is — so a meeting can
+ * be offered considerately. Read-only: it never messages or books anyone.
+ * Uses the teacher's name (never a guessed pronoun) in all copy. */
+function ftDeptOf(row) { return (row['DEPARTMENT'] || '').trim() || 'Unassigned'; }
+function ftTeacherName(row) { return (row['NAME'] || '').trim(); }
+
+function ftFmtDuration(mins) {
+  if (!mins) return 'no teaching time';
+  const h = Math.floor(mins / 60), m = mins % 60;
+  if (h && m) return `${h} h ${m} min`;
+  if (h) return `${h} hour${h > 1 ? 's' : ''}`;
+  return `${m} min`;
+}
+
+/** Compute a teacher's live availability from their timetable row. */
+function ftAvailability(row) {
+  const name = ftTeacherName(row) || 'This teacher';
+  const pk = getTTPeriodKey();               // { dayStr, weekType, mins } or null
+  if (!pk) return { offDay: true, name };
+  const { dayStr, weekType, mins } = pk;
+  const periods = periodsForDay(row, weekType, dayStr);
+  if (!periods.length) return { offDay: true, name };
+
+  const isTaught = p => { const v = row[periodCol(weekType, dayStr, p)]; return !!v && v !== '0'; };
+  const taughtPeriods = periods.filter(isTaught);
+  const taughtMin = taughtPeriods.length * PERIOD_LEN_MIN;
+  const firstStart = Math.min(...periods.map(periodStartMin));
+  const lastEnd = Math.max(...periods.map(periodEndMin));
+  const active = periods.find(p => isTaught(p) && mins >= periodStartMin(p) && mins < periodEndMin(p));
+
+  let nowState;
+  if (mins < firstStart) nowState = { busy: false, note: `The school day hasn't started yet (first lesson at ${fmtClockShort(firstStart)}).` };
+  else if (mins >= lastEnd) nowState = { busy: false, note: `${name}'s teaching day is over.` };
+  else if (active) nowState = { busy: true, note: `In a lesson now (P${active}) until ${fmtClockShort(periodEndMin(active))}.` };
+  else nowState = { busy: false, note: `Between lessons right now.` };
+
+  const freeSlots = periods
+    .filter(p => !isTaught(p) && periodEndMin(p) > mins)
+    .map(p => ({ label: `P${p}`, time: `${fmtClockShort(periodStartMin(p))}–${fmtClockShort(periodEndMin(p))}` }));
+
+  return { offDay: false, name, nowState, freeSlots, taughtMin, taughtCount: taughtPeriods.length };
+}
+
+function ftRenderResult(el, row) {
+  const a = ftAvailability(row);
+  const name = esc(a.name);
+  if (a.offDay) {
+    el.innerHTML = `<div class="ft-panel">
+      <div class="ft-now ft-free">&#128994; No lessons scheduled right now</div>
+      <p class="ft-line">It's outside the teaching timetable (weekend or a non-teaching week), so ${name} has no classes — any time works to meet.</p>
+    </div>`;
+    return;
+  }
+  const busy = a.nowState.busy;
+  const nowBadge = busy
+    ? `<div class="ft-now ft-busy">&#128308; Teaching now</div>`
+    : `<div class="ft-now ft-free">&#128994; Free right now — a good time to meet ${name}</div>`;
+  const nowNote = `<p class="ft-line">${esc(a.nowState.note)}</p>`;
+  const slots = a.freeSlots.length
+    ? `<div class="ft-sub">Free periods left today</div><div class="ft-slots">${a.freeSlots.map(s => `<span class="ft-slot">${s.label} &middot; ${esc(s.time)}</span>`).join('')}</div>`
+    : `<p class="ft-line ft-muted">No free periods left in the school day.</p>`;
+  const heavy = a.taughtCount >= 5 || busy;
+  const workload = `<p class="ft-line ft-workload">${name} has ${a.taughtCount} lesson${a.taughtCount !== 1 ? 's' : ''} today (about ${ftFmtDuration(a.taughtMin)}).${heavy ? ` That's a full stretch — perhaps offer ${name} a short break before meeting.` : ''}</p>`;
+  el.innerHTML = `<div class="ft-panel">${nowBadge}${nowNote}${slots}${workload}</div>`;
+}
+
+async function renderFindTeacher(container) {
+  const deptSel = container.querySelector('#ft-dept');
+  const teacherSel = container.querySelector('#ft-teacher');
+  const result = container.querySelector('#ft-result');
+  if (!deptSel || !teacherSel || !result) return;
+
+  let tt = [];
+  try { [tt] = await Promise.all([loadTT(), ensureCalendar()]); } catch { tt = []; }
+  if (!tt || !tt.length) {
+    deptSel.innerHTML = '<option value="">Timetable unavailable</option>';
+    result.innerHTML = `<p class="ft-line ft-muted">The school timetable couldn't be loaded${navigator.onLine ? '' : ' — you appear to be offline'}.</p>`;
+    return;
+  }
+
+  const depts = [...new Set(tt.map(ftDeptOf))].sort((x, y) => x.localeCompare(y));
+  deptSel.innerHTML = `<option value="">Select a department&hellip;</option>` +
+    depts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+
+  deptSel.addEventListener('change', () => {
+    result.innerHTML = '';
+    const d = deptSel.value;
+    if (!d) {
+      teacherSel.disabled = true;
+      teacherSel.innerHTML = '<option value="">Select a department first</option>';
+      return;
+    }
+    const inDept = tt.map((r, i) => ({ r, i }))
+      .filter(x => ftDeptOf(x.r) === d && ftTeacherName(x.r))
+      .sort((x, y) => ftTeacherName(x.r).localeCompare(ftTeacherName(y.r)));
+    teacherSel.disabled = false;
+    teacherSel.innerHTML = `<option value="">Select a teacher&hellip;</option>` +
+      inDept.map(x => `<option value="${x.i}">${esc(ftTeacherName(x.r))}</option>`).join('');
+  });
+
+  teacherSel.addEventListener('change', () => {
+    result.innerHTML = '';
+    if (teacherSel.value === '') return;
+    const row = tt[Number(teacherSel.value)];
+    if (row) ftRenderResult(result, row);
   });
 }
 

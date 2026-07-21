@@ -280,7 +280,7 @@ const PERIOD_START_MIN = {
   1: 475, 2: 510, 3: 545, 4: 580, 5: 615, 6: 650, 7: 685,
   8: 720, 9: 755, 10: 790, 11: 825, 13: 895, 14: 930,
 };
-const PERIOD_LEN_MIN = 35;
+export const PERIOD_LEN_MIN = 35;
 const DAY_START_MIN = 450; // 07:30 — first bell (P0 form/assembly)
 
 /** Timetable CSV column key, e.g. periodCol('Odd','Mon',1) → 'OddMonP01'. */
@@ -288,13 +288,13 @@ export function periodCol(weekType, dayStr, p) {
   return `${weekType}${dayStr}P${String(p).padStart(2, '0')}`;
 }
 /** Periods that actually exist for this day/week, read from the row's own columns. */
-function periodsForDay(teacherRow, weekType, dayStr) {
+export function periodsForDay(teacherRow, weekType, dayStr) {
   return TEACHING_PERIODS.filter(p => periodCol(weekType, dayStr, p) in teacherRow);
 }
-function periodStartMin(p) { return PERIOD_START_MIN[p] ?? null; }
-function periodEndMin(p) { const s = PERIOD_START_MIN[p]; return s == null ? null : s + PERIOD_LEN_MIN; }
+export function periodStartMin(p) { return PERIOD_START_MIN[p] ?? null; }
+export function periodEndMin(p) { const s = PERIOD_START_MIN[p]; return s == null ? null : s + PERIOD_LEN_MIN; }
 /** minutes-from-midnight → "7:55" (12-hour clock, no meridian). */
-function fmtClockShort(mins) {
+export function fmtClockShort(mins) {
   if (mins == null) return '';
   const h = Math.floor(mins / 60), m = mins % 60;
   return `${h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')}`;
