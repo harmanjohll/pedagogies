@@ -419,24 +419,37 @@ export function layoutToSVG(items, { width = 720, seatLabels = {}, title = '' } 
         `</g>`
       );
     } else if (lines.length > 1) {
-      const MAX_LINES = 5;
-      const shown = lines.length > MAX_LINES
-        ? [...lines.slice(0, MAX_LINES - 1), `+${lines.length - (MAX_LINES - 1)} more`]
+      // One name per seat: each student's name gets its own pill, spaced evenly
+      // AROUND the table (the ring is sized so the pills never overlap each
+      // other) instead of stacked in one cramped central badge — a real "find
+      // your seat" chart that stays legible when projected.
+      const MAX_SEATS = 12;
+      const shown = lines.length > MAX_SEATS
+        ? [...lines.slice(0, MAX_SEATS - 1), `+${lines.length - (MAX_SEATS - 1)} more`]
         : lines;
-      const fs = shown.length <= 2 ? 10 : (shown.length <= 3 ? 9 : 8);
-      const lineH = fs + 3;
-      const longest = shown.reduce((n, ln) => Math.max(n, ln.length), 0);
-      const bw = Math.max(26, Math.round(longest * fs * 0.62) + 14);
-      const bh = shown.length * lineH + 8;
-      const texts = shown.map((ln, k) =>
-        textEl(0, Math.round((k - (shown.length - 1) / 2) * lineH + fs * 0.36), ln, fs, '#fff', 700)
-      ).join('');
-      badges.push(
-        `<g transform="translate(${x},${y})">` +
-        `<rect x="${-bw / 2}" y="${-bh / 2}" width="${bw}" height="${bh}" rx="8" fill="#1e293b" opacity="0.92"/>` +
-        texts +
-        `</g>`
-      );
+      const fs = 12;
+      const pillW = s => Math.max(24, Math.round(s.length * fs * 0.6) + 14);
+      const widths = shown.map(pillW);
+      const gap = 10;
+      const circ = widths.reduce((a, b) => a + b + gap, 0);
+      const tableR = Math.max(w, h) / 2;
+      // Ring must be at least large enough to seat every pill without overlap.
+      const ringR = Math.max(tableR + 16, circ / (2 * Math.PI) + 4);
+      let acc = 0;
+      shown.forEach((nm, k) => {
+        const mid = acc + (widths[k] + gap) / 2;
+        acc += widths[k] + gap;
+        const ang = -Math.PI / 2 + (2 * Math.PI * mid) / circ;   // start at top, clockwise
+        const bx = x + ringR * Math.cos(ang);
+        const by = y + ringR * Math.sin(ang);
+        const bw = widths[k];
+        badges.push(
+          `<g transform="translate(${Math.round(bx)},${Math.round(by)})">` +
+          `<rect x="${-bw / 2}" y="-10" width="${bw}" height="20" rx="10" fill="#1e293b" opacity="0.92"/>` +
+          textEl(0, 4, nm, fs, '#fff', 700) +
+          `</g>`
+        );
+      });
     }
   });
 
