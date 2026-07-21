@@ -120,9 +120,9 @@ function getCurrentSlot(teacherRow) {
 
 /* ═══════════ Constants ═══════════ */
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const VB_W = 1440, VB_H = 720;
-const UNIT = 60;
-const GRID_SNAP = UNIT;
+export const VB_W = 1440, VB_H = 720;
+export const UNIT = 60;
+export const GRID_SNAP = UNIT;
 const WALL_A_X = 720, WALL_B_X = 1080;
 const PANEL_COUNT = 8, PANEL_THICKNESS = 10;
 const TRI_S = UNIT * 0.98;
@@ -354,6 +354,70 @@ const hasFrontEdge = id => id.startsWith('desk') || id === 'teacher_desk' || id 
 /* Accent colours for group seat placement (chips, outlines, badges) */
 const GROUP_ACCENTS = ['#4361ee', '#0d9488', '#d97706', '#dc2626', '#7c3aed', '#0284c7', '#65a30d', '#db2777'];
 
+/* ── Shared geometry — used by the read-only renderer (layoutToSVG) AND the
+ *    interactive Present seat map (present-seatmap.js), so both stay identical. ── */
+
+/** Palette definition for an item id (or null). */
+export function getItemDef(id) {
+  return PALETTE.find(p => p.id === id) || null;
+}
+
+/** Inner shape markup for an item, centred at (0,0) and unrotated — the
+ *  rect/round/trap/tri/zone body + front-edge marker + centred glyph. Excludes
+ *  the translate/rotate wrapper so callers place it however they like. */
+export function itemBodySVG(def) {
+  const t = (x, y, str, size, fill, weight) =>
+    `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" fill="${fill}"` +
+    (weight ? ` font-weight="${weight}"` : '') +
+    ` font-family="system-ui, -apple-system, sans-serif">${escapeHtml(str)}</text>`;
+  const w = def.w, h = def.h || def.w;
+  let body = '';
+  if (def.zone) {
+    body += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="${def.color}" stroke="${def.border}" stroke-width="1.5" rx="8"/>`;
+    body += t(0, 4, def.label.replace('Zone: ', ''), 11, def.border, 600);
+  } else if (def.text) {
+    body += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="rgba(0,0,0,0.03)" stroke="#cbd5e1" stroke-width="0.5" rx="4"/>`;
+    body += t(0, 4, 'Label', 12, '#64748b');
+  } else if (def.tri) {
+    body += `<path d="M${-TRI_S / 2},${TRI_H / 2} L0,${-TRI_H / 2} L${TRI_S / 2},${TRI_H / 2} Z" fill="${def.color}" stroke="#0f172a" stroke-width="1"/>`;
+    body += `<line x1="${-TRI_S * 0.4}" y1="${TRI_H / 2 - 0.1}" x2="${TRI_S * 0.4}" y2="${TRI_H / 2 - 0.1}" stroke="#0f172a" stroke-width="3"/>`;
+  } else if (def.round) {
+    body += `<ellipse cx="0" cy="0" rx="${w / 2}" ry="${h / 2}" fill="${def.color}" stroke="#0f172a" stroke-width="1"/>`;
+  } else if (def.trap) {
+    const inset = w * 0.2;
+    body += `<path d="M${-w / 2},${-h / 2} L${w / 2},${-h / 2} L${w / 2 - inset},${h / 2} L${-w / 2 + inset},${h / 2} Z" fill="${def.color}" stroke="#0f172a" stroke-width="1"/>`;
+    body += `<line x1="${-w / 2 + 2}" y1="${-h / 2 + 2}" x2="${w / 2 - 2}" y2="${-h / 2 + 2}" stroke="#0f172a" stroke-width="3"/>`;
+  } else {
+    body += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="${def.color}" stroke="#0f172a" stroke-width="1" rx="3"/>`;
+    if (hasFrontEdge(def.id)) {
+      body += `<line x1="${-w / 2 + 2}" y1="${-h / 2 + 2}" x2="${w / 2 - 2}" y2="${-h / 2 + 2}" stroke="#0f172a" stroke-width="3"/>`;
+    }
+  }
+  const glyph = ITEM_GLYPHS[def.id];
+  if (glyph) body += t(0, glyph[2], glyph[0], glyph[1], glyph[3] || '#64748b');
+  return body;
+}
+
+/** One-name-per-seat ring placement around an item. Returns
+ *  [{ dx, dy, w, text }] where (dx,dy) is each pill's centre RELATIVE to the
+ *  item centre (absolute = item.x + dx). Shared so the static badge renderer and
+ *  the interactive seat map lay pills out identically. */
+export function seatRingLayout(def, names, { fs = 12, gap = 10 } = {}) {
+  const w = def.w, h = def.h || def.w;
+  const pillW = s => Math.max(24, Math.round(String(s).length * fs * 0.6) + 14);
+  const widths = names.map(pillW);
+  const circ = widths.reduce((a, b) => a + b + gap, 0) || 1;
+  const tableR = Math.max(w, h) / 2;
+  const ringR = Math.max(tableR + 16, circ / (2 * Math.PI) + 4);
+  let acc = 0;
+  return names.map((nm, k) => {
+    const mid = acc + (widths[k] + gap) / 2;
+    acc += widths[k] + gap;
+    const ang = -Math.PI / 2 + (2 * Math.PI * mid) / circ;   // start at top, clockwise
+    return { dx: ringR * Math.cos(ang), dy: ringR * Math.sin(ang), w: widths[k], text: String(nm) };
+  });
+}
+
 /* ═══════════ Pure layout renderer ═══════════ */
 /**
  * Render serialized layout items ({ id, iid?, x, y, r }) as a read-only SVG
@@ -373,33 +437,8 @@ export function layoutToSVG(items, { width = 720, seatLabels = {}, title = '' } 
   (Array.isArray(items) ? items : []).forEach(item => {
     const def = PALETTE.find(p => p.id === item?.id);
     if (!def) return;
-    const w = def.w, h = def.h || def.w;
     const x = Number(item.x) || 0, y = Number(item.y) || 0, r = Number(item.r) || 0;
-    let body = '';
-    if (def.zone) {
-      body += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="${def.color}" stroke="${def.border}" stroke-width="1.5" rx="8"/>`;
-      body += textEl(0, 4, def.label.replace('Zone: ', ''), 11, def.border, 600);
-    } else if (def.text) {
-      body += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="rgba(0,0,0,0.03)" stroke="#cbd5e1" stroke-width="0.5" rx="4"/>`;
-      body += textEl(0, 4, 'Label', 12);
-    } else if (def.tri) {
-      body += `<path d="M${-TRI_S / 2},${TRI_H / 2} L0,${-TRI_H / 2} L${TRI_S / 2},${TRI_H / 2} Z" fill="${def.color}" stroke="#0f172a" stroke-width="1"/>`;
-      body += `<line x1="${-TRI_S * 0.4}" y1="${TRI_H / 2 - 0.1}" x2="${TRI_S * 0.4}" y2="${TRI_H / 2 - 0.1}" stroke="#0f172a" stroke-width="3"/>`;
-    } else if (def.round) {
-      body += `<ellipse cx="0" cy="0" rx="${w / 2}" ry="${h / 2}" fill="${def.color}" stroke="#0f172a" stroke-width="1"/>`;
-    } else if (def.trap) {
-      const inset = w * 0.2;
-      body += `<path d="M${-w / 2},${-h / 2} L${w / 2},${-h / 2} L${w / 2 - inset},${h / 2} L${-w / 2 + inset},${h / 2} Z" fill="${def.color}" stroke="#0f172a" stroke-width="1"/>`;
-      body += `<line x1="${-w / 2 + 2}" y1="${-h / 2 + 2}" x2="${w / 2 - 2}" y2="${-h / 2 + 2}" stroke="#0f172a" stroke-width="3"/>`;
-    } else {
-      body += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" fill="${def.color}" stroke="#0f172a" stroke-width="1" rx="3"/>`;
-      if (hasFrontEdge(def.id)) {
-        body += `<line x1="${-w / 2 + 2}" y1="${-h / 2 + 2}" x2="${w / 2 - 2}" y2="${-h / 2 + 2}" stroke="#0f172a" stroke-width="3"/>`;
-      }
-    }
-    const glyph = ITEM_GLYPHS[def.id];
-    if (glyph) body += textEl(0, glyph[2], glyph[0], glyph[1], glyph[3] || '#64748b');
-    shapes.push(`<g transform="translate(${x},${y}) rotate(${r})">${body}</g>`);
+    shapes.push(`<g transform="translate(${x},${y}) rotate(${r})">${itemBodySVG(def)}</g>`);
 
     // Seat label badge (unrotated, on top of the item). A string value renders
     // as a single pill; an array renders as stacked lines (e.g. the student
@@ -419,34 +458,16 @@ export function layoutToSVG(items, { width = 720, seatLabels = {}, title = '' } 
         `</g>`
       );
     } else if (lines.length > 1) {
-      // One name per seat: each student's name gets its own pill, spaced evenly
-      // AROUND the table (the ring is sized so the pills never overlap each
-      // other) instead of stacked in one cramped central badge — a real "find
-      // your seat" chart that stays legible when projected.
+      // One pill per name, laid out around the item (shared seatRingLayout).
       const MAX_SEATS = 12;
       const shown = lines.length > MAX_SEATS
         ? [...lines.slice(0, MAX_SEATS - 1), `+${lines.length - (MAX_SEATS - 1)} more`]
         : lines;
-      const fs = 12;
-      const pillW = s => Math.max(24, Math.round(s.length * fs * 0.6) + 14);
-      const widths = shown.map(pillW);
-      const gap = 10;
-      const circ = widths.reduce((a, b) => a + b + gap, 0);
-      const tableR = Math.max(w, h) / 2;
-      // Ring must be at least large enough to seat every pill without overlap.
-      const ringR = Math.max(tableR + 16, circ / (2 * Math.PI) + 4);
-      let acc = 0;
-      shown.forEach((nm, k) => {
-        const mid = acc + (widths[k] + gap) / 2;
-        acc += widths[k] + gap;
-        const ang = -Math.PI / 2 + (2 * Math.PI * mid) / circ;   // start at top, clockwise
-        const bx = x + ringR * Math.cos(ang);
-        const by = y + ringR * Math.sin(ang);
-        const bw = widths[k];
+      seatRingLayout(def, shown).forEach(p => {
         badges.push(
-          `<g transform="translate(${Math.round(bx)},${Math.round(by)})">` +
-          `<rect x="${-bw / 2}" y="-10" width="${bw}" height="20" rx="10" fill="#1e293b" opacity="0.92"/>` +
-          textEl(0, 4, nm, fs, '#fff', 700) +
+          `<g transform="translate(${Math.round(x + p.dx)},${Math.round(y + p.dy)})">` +
+          `<rect x="${-p.w / 2}" y="-10" width="${p.w}" height="20" rx="10" fill="#1e293b" opacity="0.92"/>` +
+          textEl(0, 4, p.text, 12, '#fff', 700) +
           `</g>`
         );
       });

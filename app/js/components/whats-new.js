@@ -11,6 +11,8 @@ import { openModal } from './modals.js';
 const SEEN_KEY = 'cocher_whatsnew_seen';
 
 const CHANGES = [
+  { icon: '&#129001;', title: 'Rearrange the room, live',
+    text: 'The "Find your seat" chart in Present is now interactive — drag students between tables and move the furniture itself while you teach. Nothing changes your saved seating until you tap "Save arrangement" (or Reset to snap back). It reads the timetable-free room straight from your staged lesson.' },
   { icon: '&#127919;', title: 'Find your tools faster',
     text: 'The lesson-planner tool bar now shows labels by default (tap the chevron for compact icons), the Labs tools say what they do ("Auto-Lesson", "Math Sandbox"), and the workflow modes now show what they change — with a one-tap way to clear them.' },
   { icon: '&#128190;', title: 'Your work stays put',

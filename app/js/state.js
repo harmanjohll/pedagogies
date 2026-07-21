@@ -855,6 +855,15 @@ export const Store = {
     this._notify();
   },
 
+  /* In-place update of a saved layout (shallow-merge patch by id). Unlike
+   * saveLayout — which always mints a new record — this edits the existing
+   * layout; used by the interactive Present seat map to persist furniture moves. */
+  updateLayout(id, patch) {
+    _state.savedLayouts = (_state.savedLayouts || []).map(l => l.id === id ? { ...l, ...patch } : l);
+    this._persist();
+    this._notify();
+  },
+
   /* ══════════ Saved Report Comments (Report Comment Drafter) ══════════ */
 
   getReportComments(classId) {
