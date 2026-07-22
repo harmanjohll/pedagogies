@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, mapSegmentsToSTP, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech } from '../api.js';
 import { cceContextBlock } from './cce.js';
 import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, openDeckById, downloadBlob } from '../utils/deck.js';
 import { showToast } from '../components/toast.js';
@@ -2956,6 +2956,7 @@ function showRunOfShowEditor(container, runOfShow) {
       <div id="ros-rows" style="display:flex;flex-direction:column;gap:var(--sp-3);max-height:52vh;overflow-y:auto;padding-right:4px;"></div>
       <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-3);align-items:center;">
         <button class="btn btn-ghost btn-sm" id="ros-add">+ Add segment</button>
+        <button class="btn btn-ghost btn-sm" id="ros-map-stp" title="Suggest a Singapore Teaching Practice area + action for each segment — non-destructive; you review before saving">&#129517; Map to STP</button>
         <button class="btn btn-ghost btn-sm" id="ros-regenerate" style="margin-left:auto;" title="Replace these segments with a fresh AI staging of the current plan">
           &#127916; Regenerate with AI
         </button>
@@ -3140,6 +3141,35 @@ function showRunOfShowEditor(container, runOfShow) {
     } finally {
       regenBtn.disabled = false;
       regenBtn.innerHTML = originalHTML;
+    }
+  });
+
+  // "Map to STP" — non-destructive: AI suggests a Teaching Area + Action per
+  // existing segment; we prefill the pickers and re-render for the teacher to
+  // review and save. Only teachingArea/teachingAction/other are touched.
+  const mapBtn = backdrop.querySelector('#ros-map-stp');
+  mapBtn?.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    syncFromDOM();
+    const originalHTML = mapBtn.innerHTML;
+    mapBtn.disabled = true;
+    mapBtn.textContent = 'Mapping…';
+    try {
+      const byIndex = await mapSegmentsToSTP(segs);
+      let n = 0;
+      segs.forEach((s, i) => {
+        const t = byIndex.get(i);
+        if (t) { s.teachingArea = t.teachingArea; s.teachingAction = t.teachingAction; s.teachingActionOther = ''; n++; }
+      });
+      renderRows();
+      showToast(n
+        ? `Mapped ${n} segment${n === 1 ? '' : 's'} to STP — review and save.`
+        : 'No confident STP matches — pick Teaching Areas manually.', n ? 'success' : 'info');
+    } catch (err) {
+      showToast(`Map to STP failed: ${err.message}`, 'danger');
+    } finally {
+      mapBtn.disabled = false;
+      mapBtn.innerHTML = originalHTML;
     }
   });
 

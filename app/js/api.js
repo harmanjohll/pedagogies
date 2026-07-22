@@ -844,6 +844,57 @@ Return STRICT JSON only (no markdown, no commentary) in exactly this shape:
   return normalizeRunOfShow(raw);
 }
 
+/* Non-destructive STP tagging of EXISTING segments. Given the current segments,
+ * returns a Map<index, { teachingArea, teachingAction }> of suggestions —
+ * WITHOUT rewriting names / activities / instructions. Powers the "Map to STP"
+ * retrofit so lessons authored before STP tags existed can adopt them; the
+ * teacher reviews the suggestions in the editor before saving. */
+export async function mapSegmentsToSTP(segments = []) {
+  const list = (Array.isArray(segments) ? segments : []).filter(s => s && typeof s === 'object');
+  if (list.length === 0) throw new Error('No segments to map.');
+  const brief = list.map((s, i) =>
+    `${i}. ${String(s.name || `Segment ${i + 1}`)} — ${String(s.activity || s.studentInstructions || '').slice(0, 200)}`
+  ).join('\n');
+  const stpAreasRef = TEACHING_AREAS
+    .map(a => `  ${a.key} (${a.label}): ${actionsForArea(a.key).map(x => x.id).join(', ')}`)
+    .join('\n');
+
+  const raw = await sendChat([{
+    role: 'user',
+    content: `Classify each existing lesson segment onto the Singapore Teaching Practice.\n\nSegments:\n${brief}`
+  }], {
+    trackLabel: 'mapToSTP',
+    jsonMode: true,
+    systemPrompt: `You map existing lesson segments onto the Singapore Teaching Practice (Lesson Enactment). For EACH segment index, choose the best-fitting "teachingArea" (exactly one key) and, when a clear move fits, a "teachingAction" id from that area (omit if unsure). Do NOT rewrite the segments — only classify.
+
+Areas and their action ids:
+${stpAreasRef}
+
+Guidance: opening segments lean activate_prior or arouse_interest; the main body encourage_engage, deepen_questions or collaborative; the closure conclude.
+
+Return STRICT JSON only (no markdown, no commentary), one entry per segment in order, in exactly this shape:
+{"tags":[{"index":0,"teachingArea":"arouse_interest","teachingAction":"real_world"}]}`,
+    temperature: 0.3,
+    maxTokens: 2048
+  });
+
+  const data = (typeof raw === 'string') ? parseJsonResponse(raw, 'STP tags') : raw;
+  const tags = Array.isArray(data?.tags) ? data.tags : (Array.isArray(data) ? data : []);
+  const byIndex = new Map();
+  tags.forEach(t => {
+    if (!t || typeof t !== 'object') return;
+    const idx = Number(t.index);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= list.length) return;
+    const area = TEACHING_AREA_KEYS.includes(t.teachingArea) ? t.teachingArea : null;
+    if (!area) return;
+    const validIds = actionsForArea(area).map(a => a.id);
+    const action = (typeof t.teachingAction === 'string'
+      && (validIds.includes(t.teachingAction) || t.teachingAction === TEACHING_ACTION_OTHER)) ? t.teachingAction : null;
+    byIndex.set(idx, { teachingArea: area, teachingAction: action });
+  });
+  return byIndex;
+}
+
 /* ── YouTube Recommendations ── */
 export async function suggestYouTubeVideos(planText, subject, level) {
   const messages = [{
