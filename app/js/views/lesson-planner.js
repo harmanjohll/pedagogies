@@ -21,7 +21,7 @@ import { md, escapeHtml, mountExpansion, stripExpandMarkers } from '../utils/mar
 import { critiquePlan } from '../api.js';
 import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
-import { TEACHING_AREAS, actionsForArea, TEACHING_ACTION_OTHER } from '../utils/stp.js';
+import { TEACHING_AREAS, TEACHING_AREA_ICONS, TEACHING_AREA_LABELS, actionsForArea, resolveTeachingAction, TEACHING_ACTION_OTHER } from '../utils/stp.js';
 import { layoutToSVG } from './spatial-designer.js';
 import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 
@@ -4217,15 +4217,33 @@ function renderRunOfShow(container) {
         <span class="badge badge-blue" style="font-size:0.6875rem;">${total} min &middot; ${segments.length} segment${segments.length === 1 ? '' : 's'}</span>
         <button class="btn btn-primary btn-sm" id="ros-panel-present" style="margin-left:auto;" title="Open the student-facing class screen">&#9654; Present</button>
       </div>
-      <div id="ros-panel-strip" role="button" tabindex="0" title="Edit run of show" style="display:flex;flex-direction:column;gap:var(--sp-1);padding:var(--sp-3) var(--sp-4);cursor:pointer;">
-        ${segments.map((s, i) => `
-          <div style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;flex-wrap:wrap;line-height:1.5;">
-            <span style="color:var(--ink);font-weight:500;">${i + 1}. ${esc(s.name || `Segment ${i + 1}`)}</span>
-            <span style="color:var(--ink-faint);">&middot; ${Number(s.duration) || 0}min</span>
-            ${s.grouping?.mode ? `<span class="badge badge-gray" style="font-size:0.625rem;">${esc(modeLabel(s.grouping.mode))}</span>` : ''}
-            ${s.layoutSceneId ? `<span class="badge badge-blue" style="font-size:0.625rem;">&#128208; ${esc(sceneName(s.layoutSceneId))}</span>` : ''}
-            ${s.e21ccFocus && E21CC_SEGMENT_LABELS[s.e21ccFocus] ? `<span style="display:inline-block;padding:1px 8px;border-radius:var(--radius-full);background:var(--growth-light,#e2f2e8);color:var(--growth,#2c7a4b);font-size:0.625rem;font-weight:600;">${esc(E21CC_SEGMENT_LABELS[s.e21ccFocus])}</span>` : ''}
-          </div>`).join('')}
+      <div style="padding:var(--sp-2) var(--sp-4) 0;font-size:0.625rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);">&#127916; Lesson Enactment <span style="font-weight:600;">&middot; Singapore Teaching Practice</span></div>
+      <div id="ros-panel-strip" role="button" tabindex="0" title="Edit run of show" style="display:flex;flex-direction:column;gap:var(--sp-2);padding:var(--sp-2) var(--sp-4) var(--sp-3);cursor:pointer;">
+        ${segments.map((s, i) => {
+          const act = resolveTeachingAction(s);
+          const areaIcon = s.teachingArea ? (TEACHING_AREA_ICONS[s.teachingArea] || '') : '';
+          const areaLabel = s.teachingArea ? (TEACHING_AREA_LABELS[s.teachingArea] || '') : '';
+          const hasDetail = !!(areaLabel || act);
+          return `
+          <div class="ros-seg" style="display:flex;flex-direction:column;gap:2px;">
+            <div style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;flex-wrap:wrap;line-height:1.5;">
+              <span aria-hidden="true" title="${esc(areaLabel)}">${areaIcon || '&#8226;'}</span>
+              <span style="color:var(--ink);font-weight:500;">${i + 1}. ${esc(s.name || `Segment ${i + 1}`)}</span>
+              <span style="color:var(--ink-faint);">&middot; ${Number(s.duration) || 0}min</span>
+              ${act ? `<span class="badge badge-blue" style="font-size:0.625rem;">${esc(act.label)}</span>` : ''}
+              ${s.grouping?.mode ? `<span class="badge badge-gray" style="font-size:0.625rem;">${esc(modeLabel(s.grouping.mode))}</span>` : ''}
+              ${s.layoutSceneId ? `<span class="badge badge-blue" style="font-size:0.625rem;">&#128208; ${esc(sceneName(s.layoutSceneId))}</span>` : ''}
+              ${s.e21ccFocus && E21CC_SEGMENT_LABELS[s.e21ccFocus] ? `<span style="display:inline-block;padding:1px 8px;border-radius:var(--radius-full);background:var(--growth-light,#e2f2e8);color:var(--growth,#2c7a4b);font-size:0.625rem;font-weight:600;">${esc(E21CC_SEGMENT_LABELS[s.e21ccFocus])}</span>` : ''}
+              ${hasDetail ? `<button type="button" class="btn btn-ghost btn-sm ros-details-btn" data-seg="${i}" style="margin-left:auto;padding:1px 8px;font-size:0.6875rem;">Details</button>` : ''}
+            </div>
+            ${hasDetail ? `
+            <div class="ros-details" data-seg="${i}" style="display:none;margin-left:22px;padding:6px 10px;border-left:2px solid var(--border);font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">
+              ${areaLabel ? `<div style="font-weight:700;color:var(--ink);">STP &middot; ${esc(areaLabel)}</div>` : ''}
+              ${act ? `<div><b>Action:</b> ${esc(act.label)}${act.teacherHint ? ` &mdash; ${esc(act.teacherHint)}` : ''}</div>` : ''}
+              ${act && act.studentFraming ? `<div style="margin-top:2px;color:var(--accent,#4361ee);">&#128065; Students see: &ldquo;${esc(act.studentFraming)}&rdquo;</div>` : ''}
+            </div>` : ''}
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
 
@@ -4239,6 +4257,18 @@ function renderRunOfShow(container) {
   strip?.addEventListener('click', openEditor);
   strip?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditor(); }
+  });
+  // "Details" reveals the segment's STP action + teacher hint + student framing
+  // without opening the editor (stop the click from bubbling to the strip).
+  strip?.querySelectorAll('.ros-details-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const panel = strip.querySelector(`.ros-details[data-seg="${btn.dataset.seg}"]`);
+      if (!panel) return;
+      const open = panel.style.display !== 'none';
+      panel.style.display = open ? 'none' : 'block';
+      btn.textContent = open ? 'Details' : 'Hide';
+    });
   });
 }
 
