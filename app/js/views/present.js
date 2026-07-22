@@ -17,6 +17,7 @@ import { layoutToSVG } from './spatial-designer.js';
 import { mountSeatMap, clearSeatMapSessions, isSeatDragActive } from './present-seatmap.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
 import { openDeckById, getMediaContent } from '../utils/deck.js';
+import { resolveTeachingAction, TEACHING_AREA_ICONS } from '../utils/stp.js';
 
 let _timerId = null;
 let _remaining = 0;      // seconds left in the running segment
@@ -191,6 +192,11 @@ export function renderPresent(container, params) {
       .present-inner.dense .present-instructions { font-size: clamp(1rem, 2.2vw, 1.5rem); }
       .present-seg-name { font-size: clamp(2rem, 5.5vw, 4.2rem); font-weight: 800; color: var(--ink); line-height: 1.1; }
       .present-instructions { font-size: clamp(1.15rem, 2.8vw, 2rem); color: var(--ink); line-height: 1.5; max-width: 90vw; white-space: pre-wrap; }
+      /* The chosen STP Teaching Action's student-facing framing — a signposted
+       * "what we're doing" prompt, distinct from the plain instructions. */
+      .present-action { display: inline-flex; align-items: flex-start; gap: 10px; text-align: left; max-width: 85vw; font-size: clamp(1.05rem, 2.4vw, 1.7rem); line-height: 1.45; color: var(--ink); background: var(--accent-light, #eef); border-left: 4px solid var(--accent, #4361ee); border-radius: 12px; padding: 12px 18px; }
+      .present-action .ic { font-size: 1.3em; line-height: 1; flex-shrink: 0; }
+      .present-inner.dense .present-action { font-size: clamp(0.95rem, 2vw, 1.4rem); padding: 9px 14px; }
       .present-clock { font-variant-numeric: tabular-nums; font-size: clamp(2.4rem, 7vw, 5.5rem); font-weight: 800; letter-spacing: 0.02em; color: var(--accent, #4361ee); }
       .present-clock.overrun { color: var(--danger, #dc2626); }
       .present-groupmode { display:inline-block; padding: 6px 18px; border-radius: 999px; background: var(--accent-light, #eef); color: var(--accent, #4361ee); font-weight: 700; font-size: clamp(0.9rem, 1.8vw, 1.25rem); }
@@ -451,9 +457,17 @@ export function renderPresent(container, params) {
         </div>` : '';
 
       const mapHtml = segmentMap(seg, _segIdx - 1);
+      // The chosen STP Teaching Action's student-facing framing (the seam:
+      // teacher picks the action in the planner, students see its framing).
+      // Student-safe — only the studentFraming string, never the teacher hint.
+      const stpAction = resolveTeachingAction(seg);
+      const stpActionIcon = seg.teachingArea ? (TEACHING_AREA_ICONS[seg.teachingArea] || '') : '';
+      const actionHtml = (stpAction && stpAction.studentFraming)
+        ? `<div class="present-action"><span class="ic" aria-hidden="true">${stpActionIcon || '&#128204;'}</span><span>${escapeHtml(stpAction.studentFraming)}</span></div>`
+        : '';
       // Content-heavy screens compact their type/spacing so everything stays
       // reachable; the stage itself scrolls as the final safety net.
-      const layers = [groupCards, frameworkPanel, mapHtml, seg.studentInstructions, growthLabel]
+      const layers = [groupCards, frameworkPanel, mapHtml, seg.studentInstructions, growthLabel, actionHtml]
         .filter(Boolean).length;
       stage.innerHTML = `<div class="present-inner${layers >= 3 ? ' dense' : ''}">
         <div class="present-meta" style="font-weight:700;">Part ${_segIdx} of ${segments.length}</div>
@@ -461,6 +475,7 @@ export function renderPresent(container, params) {
         <div class="present-clock">${fmtClock(_remaining)}</div>
         ${modeLabel ? `<span class="present-groupmode">${escapeHtml(modeLabel)}</span>` : ''}
         ${growthLabel ? `<span class="present-groupmode present-growth">This activity grows: ${escapeHtml(growthLabel)}</span>` : ''}
+        ${actionHtml}
         ${seg.studentInstructions ? `<div class="present-instructions">${escapeHtml(seg.studentInstructions)}</div>` : ''}
         ${frameworkPanel}
         ${groupCards}
