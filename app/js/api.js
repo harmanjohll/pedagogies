@@ -775,7 +775,10 @@ export function normalizeRunOfShow(raw) {
       layoutSceneId: (typeof s.layoutSceneId === 'string' && s.layoutSceneId) ? s.layoutSceneId : null,
       grouping: mode ? { mode, groups: existingGroups } : null,
       resources: Array.isArray(s.resources) ? s.resources : [],
-      e21ccFocus: E21CC_FOCUS_KEYS.includes(s.e21ccFocus) ? s.e21ccFocus : null
+      e21ccFocus: E21CC_FOCUS_KEYS.includes(s.e21ccFocus) ? s.e21ccFocus : null,
+      teachingArea: (typeof s.teachingArea === 'string' && s.teachingArea) ? s.teachingArea : null,
+      teachingAction: (typeof s.teachingAction === 'string' && s.teachingAction) ? s.teachingAction : null,
+      teachingActionOther: String(s.teachingActionOther ?? '').trim()
     };
   });
   if (segments.length === 0) {

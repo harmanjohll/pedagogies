@@ -21,6 +21,7 @@ import { md, escapeHtml, mountExpansion, stripExpandMarkers } from '../utils/mar
 import { critiquePlan } from '../api.js';
 import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
+import { TEACHING_AREAS, actionsForArea, TEACHING_ACTION_OTHER } from '../utils/stp.js';
 import { layoutToSVG } from './spatial-designer.js';
 import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 
@@ -2881,7 +2882,10 @@ function rosBlankSegment(n) {
     grouping: null,
     resources: [],
     e21ccFocus: null,
-    frameworkId: null
+    frameworkId: null,
+    teachingArea: null,
+    teachingAction: null,
+    teachingActionOther: ''
   };
 }
 
@@ -2924,7 +2928,10 @@ function showRunOfShowEditor(container, runOfShow) {
       : null,
     resources: Array.isArray(s.resources) ? s.resources : [],
     e21ccFocus: E21CC_SEGMENT_KEYS.includes(s.e21ccFocus) ? s.e21ccFocus : null,
-    frameworkId: (typeof s.frameworkId === 'string' && s.frameworkId) ? s.frameworkId : null
+    frameworkId: (typeof s.frameworkId === 'string' && s.frameworkId) ? s.frameworkId : null,
+    teachingArea: TEACHING_AREAS.some(a => a.key === s.teachingArea) ? s.teachingArea : null,
+    teachingAction: (typeof s.teachingAction === 'string' && s.teachingAction) ? s.teachingAction : null,
+    teachingActionOther: String(s.teachingActionOther ?? '').trim()
   }));
   if (segs.length === 0) segs = [rosBlankSegment(1)];
 
@@ -2978,6 +2985,15 @@ function showRunOfShowEditor(container, runOfShow) {
       s.duration = Number.isFinite(d) ? Math.min(240, Math.max(1, d)) : 5;
       s.activity = row.querySelector('.ros-activity').value.trim();
       s.studentInstructions = row.querySelector('.ros-instructions').value.trim();
+      const areaSel = row.querySelector('.ros-area');
+      if (areaSel) {
+        s.teachingArea = areaSel.value || null;
+        if (!s.teachingArea) { s.teachingAction = null; s.teachingActionOther = ''; }
+      }
+      const actionSel = row.querySelector('.ros-action');
+      if (actionSel) s.teachingAction = actionSel.value || null;
+      const actionOther = row.querySelector('.ros-action-other');
+      if (actionOther) s.teachingActionOther = actionOther.value.trim();
       const mode = row.querySelector('.ros-mode').value;
       s.grouping = mode ? { mode, groups: s.grouping?.groups || [] } : null;
       // Scene select only exists when the lesson has a linked layout with
@@ -3006,6 +3022,24 @@ function showRunOfShowEditor(container, runOfShow) {
         <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
           <input class="input ros-activity" value="${esc(s.activity)}" placeholder="Teacher summary — what happens in this segment" style="padding:4px 8px;font-size:0.8125rem;" />
           <textarea class="input ros-instructions" rows="2" placeholder="Student-facing instructions" style="font-size:0.8125rem;resize:vertical;">${esc(s.studentInstructions)}</textarea>
+          <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
+            <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">STP &middot; Teaching Area
+              <select class="input ros-area" title="Singapore Teaching Practice — the Lesson Enactment area this segment enacts" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+                <option value="">(none)</option>
+                ${TEACHING_AREAS.map(a => `<option value="${esc(a.key)}" ${s.teachingArea === a.key ? 'selected' : ''}>${a.icon} ${esc(a.label)}</option>`).join('')}
+              </select>
+            </label>
+            ${s.teachingArea ? `
+            <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">Teaching Action
+              <select class="input ros-action" title="The enactable teaching action — its student-facing framing shows in Present mode" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+                <option value="">(choose)</option>
+                ${actionsForArea(s.teachingArea).map(act => `<option value="${esc(act.id)}" ${s.teachingAction === act.id ? 'selected' : ''}>${esc(act.label)}</option>`).join('')}
+                <option value="${TEACHING_ACTION_OTHER}" ${s.teachingAction === TEACHING_ACTION_OTHER ? 'selected' : ''}>Other&hellip;</option>
+              </select>
+            </label>` : ''}
+            ${(s.teachingArea && s.teachingAction === TEACHING_ACTION_OTHER) ? `
+            <input class="input ros-action-other" value="${esc(s.teachingActionOther || '')}" placeholder="Name your teaching action" style="flex:1;min-width:140px;padding:4px 8px;font-size:0.8125rem;" />` : ''}
+          </div>
           <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
             <select class="input ros-mode" title="Grouping mode" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
               ${ROS_MODE_OPTIONS.map(m => `<option value="${m.value}" ${(s.grouping?.mode || '') === m.value ? 'selected' : ''}>${m.label}</option>`).join('')}
@@ -3071,7 +3105,10 @@ function showRunOfShowEditor(container, runOfShow) {
   // Grouping-mode changes re-render the rows so "Place in room" appears or
   // disappears with the chosen mode (groups/pairs only).
   rowsEl.addEventListener('change', (e) => {
-    if (e.target.classList?.contains('ros-mode')) {
+    const t = e.target;
+    // ros-area repopulates the Action options; ros-action reveals/hides the
+    // "Other" free-text; ros-mode toggles "Place in room". All re-render.
+    if (t.classList?.contains('ros-mode') || t.classList?.contains('ros-area') || t.classList?.contains('ros-action')) {
       syncFromDOM();
       renderRows();
     }
