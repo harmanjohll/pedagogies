@@ -98,7 +98,7 @@ function renderLifecycleBreadcrumb({ stages, currentKey }) {
         ${connector}
       </div>`;
   }).join('');
-  return `<div class="workflow-breadcrumb lifecycle-breadcrumb" role="img" aria-label="Lesson progress: ${esc((stages[idx] || {}).label || '')}" style="display:flex;align-items:center;flex-wrap:wrap;row-gap:10px;">${dots}</div>`;
+  return `<div class="workflow-breadcrumb lifecycle-breadcrumb" role="img" aria-label="Lesson progress: ${esc((stages[idx] || {}).label || '')}" style="display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;">${dots}</div>`;
 }
 
 /**
