@@ -11,6 +11,8 @@ import { openModal } from './modals.js';
 const SEEN_KEY = 'cocher_whatsnew_seen';
 
 const CHANGES = [
+  { icon: '&#127891;', title: 'Three ready-made showcase lessons',
+    text: 'Open the Lessons page to find three fully-staged demos — Chemistry (Acids, Bases & Salts), Geography (Volcanoes & Earthquakes) and a CCE Cyber Wellness lesson. Each is built end-to-end: an STP-tagged run of show, a class seated in discussion pods you can rearrange, and a polished slide deck already attached. A quick tour of everything the planner can now do.' },
   { icon: '&#128202;', title: 'Sharper decks & movable students',
     text: 'Two big lifts. The slide deck is reborn — professional, varied layouts (big-idea statements, quotes, compare columns, an exit-ticket slide) with inline charts, concept diagrams and signpost icons, smooth transitions and a progress bar; it still works offline, and where a picture or diagram helps, Co-Cher draws one in. And in the Spatial Designer you can now drag every student pill to arrange seating exactly how you want, then tap Save — the same seating flows into Present.' },
   { icon: '&#129517;', title: 'Lesson plans, the STP way',
