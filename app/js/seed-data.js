@@ -6,6 +6,7 @@
  */
 
 import { Store, generateId } from './state.js';
+import { compileDeckHTML, saveDeckMaterial } from './utils/deck.js';
 
 const SEED_KEY = 'cocher_seeded';
 
@@ -2025,6 +2026,237 @@ export function seedExemplarsIfNeeded() {
     });
   });
   localStorage.setItem(EXEMPLAR_SEED_KEY, '1');
+}
+
+/* ══════════════════════════════════════════════════════
+   Showcase lessons (v7.6) — fully-staged demos of the whole
+   pipeline: an STP-tagged run of show, students seated in a
+   linked spatial layout, and a pre-built professional deck.
+   Self-contained + idempotent (own gate, title-deduped), so
+   it also appears for existing installs on this version.
+   ══════════════════════════════════════════════════════ */
+
+const SHOWCASE_SEED_KEY = 'cocher_showcase_seeded_v1';
+
+/* A six-pod discussion layout (+ teacher desk) sized to the 1440×720 canvas,
+ * with one saved scene the seated segments point at. */
+function makeShowcaseLayout(name) {
+  const items = [{ id: 'teacher_desk', iid: 'shw_td', x: 660, y: 46, r: 0 }];
+  [[240, 210], [660, 210], [1080, 210], [240, 470], [660, 470], [1080, 470]]
+    .forEach(([x, y], i) => items.push({ id: 'group_table', iid: `shw_pod_${i + 1}`, x, y, r: 0 }));
+  const scene = { id: 'shw_scene', name: 'Discussion Pods', items: items.map(it => ({ ...it })) };
+  return Store.saveLayout({ name, preset: 'pods', studentCount: 32, wallState: 'closed', isSample: true, items, scenes: [scene] });
+}
+
+/* Round-robin the roster across the pods → grouping.groups with a seatMap. */
+function seatIntoPods(students, podIids) {
+  const groups = podIids.map((iid, i) => ({ name: `Group ${i + 1}`, itemIds: [iid], studentIds: [], studentNames: [], seatMap: { [iid]: [] } }));
+  students.forEach((st, i) => {
+    const g = groups[i % groups.length];
+    g.studentIds.push(st.id); g.studentNames.push(st.name); g.seatMap[g.itemIds[0]].push(st.id);
+  });
+  return groups.filter(g => g.studentIds.length);
+}
+
+/* Find a class by subject substring, else create a fresh 32-student class. */
+function ensureShowcaseClass(subjectIncludes, def) {
+  const found = Store.getClasses().find(c => (c.subject || '').toLowerCase().includes(subjectIncludes.toLowerCase()));
+  if (found) return Store.getClass(found.id);
+  const cls = Store.addClass({ name: def.name, level: def.level, subject: def.subject });
+  for (let i = 0; i < 32; i++) Store.addStudent(cls.id, { name: NAMES[i % NAMES.length], e21cc: randomE21CC() });
+  return Store.getClass(cls.id);
+}
+
+/* Compact segment spec → full run-of-show segment; grouped ones get seated. */
+function buildShowcaseSegments(specSegs, students, podIids, sceneId) {
+  return specSegs.map((s, i) => ({
+    id: `seg_shw_${i + 1}_${Math.random().toString(36).slice(2, 8)}`,
+    name: s.name,
+    duration: s.duration || 10,
+    activity: s.activity || '',
+    studentInstructions: s.studentInstructions || '',
+    layoutSceneId: s.grouped ? sceneId : null,
+    grouping: s.grouped ? { mode: 'groups', groups: seatIntoPods(students, podIids) }
+      : (s.mode ? { mode: s.mode, groups: [] } : null),
+    resources: [],
+    e21ccFocus: s.e21ccFocus || null,
+    frameworkId: s.frameworkId || null,
+    teachingArea: s.teachingArea || null,
+    teachingAction: s.teachingAction || null,
+    teachingActionOther: ''
+  }));
+}
+
+const SHOWCASE_LESSONS = [
+  {
+    title: 'Acids, Bases & Salts — The Universal Indicator Lab',
+    subjectIncludes: 'Chemistry',
+    classDef: { name: '3E Chemistry', level: 'Secondary 3 / G3', subject: 'Chemistry' },
+    status: 'ready',
+    e21ccFocus: ['criticalThinking', 'collaboration'],
+    objectives: 'Students identify acids and bases using indicators, place everyday substances on the pH scale, and explain neutralisation as acid + base → salt + water.',
+    lessonHook: 'Fizzy drinks (acids) eat away at your teeth — so why does toothpaste (a base) fix the damage?',
+    chat: {
+      user: 'Plan a Sec 3 Chemistry lesson on acids, bases and salts with a hands-on practical and a strong hook.',
+      assistant: `## Acids, Bases & Salts — The Universal Indicator Lab (Sec 3 Chemistry)\n\n**Big idea:** acids release H⁺ ions and bases release OH⁻ ions; the pH scale ranks them, and neutralisation combines them into a salt and water.\n\n**Arc (Singapore Teaching Practice):**\n1. *Arouse interest* — the toothpaste-vs-fizzy-drink mystery.\n2. *Activate prior knowledge* — See-Think-Wonder on a universal-indicator "rainbow tube".\n3. *Engage* — groups Predict-Observe-Explain, testing household substances.\n4. *Deepen with questions* — build the neutralisation word equation.\n5. *Conclude* — a GROW self-check.`
+    },
+    components: {
+      lisc: `**Learning Intentions**\n- We are learning to identify acids and bases using indicators.\n- We are learning to place substances on the pH scale.\n- We are learning to explain neutralisation.\n\n**Success Criteria**\n- I can classify a substance as acidic, neutral or basic from its pH.\n- I can name the salt formed by a given acid and base.\n- I can write the word equation: acid + base → salt + water.`,
+      exitTicket: `### Exit Ticket — Acids, Bases & Salts\n1. Milk has a pH of 6 — is it acidic, neutral or basic?\n2. Name the salt made when hydrochloric acid reacts with potassium hydroxide.\n3. One thing you now understand that you didn't at the start.`
+    },
+    segments: [
+      { name: 'The toothpaste mystery', duration: 8, teachingArea: 'arouse_interest', teachingAction: 'real_world', mode: 'whole-class', e21ccFocus: 'criticalThinking',
+        activity: 'Hook: fizzy drinks (acid) harm teeth, toothpaste (base) protects them — why?', studentInstructions: 'Watch the demo. Write one question you want answered today.' },
+      { name: 'See-Think-Wonder: the rainbow tube', duration: 10, teachingArea: 'activate_prior', teachingAction: 'stw', mode: 'pairs',
+        activity: 'Universal indicator added to lemon juice, water and soap solution.', studentInstructions: 'With your partner: what do you SEE? What do you THINK is happening? What do you WONDER?' },
+      { name: 'Test the everyday', duration: 15, teachingArea: 'encourage_engage', teachingAction: 'poe', grouped: true, e21ccFocus: 'collaboration',
+        activity: 'Groups predict, then test household substances with universal indicator, and classify each as acid / neutral / base.', studentInstructions: 'Predict first. Test each substance. Record the pH, then sort it: acid, neutral or base.' },
+      { name: 'Neutralisation: where does the acid go?', duration: 12, teachingArea: 'deepen_questions', teachingAction: 'funnel', mode: 'whole-class', e21ccFocus: 'criticalThinking',
+        activity: 'Build the word equation acid + base → salt + water through funnelling questions.', studentInstructions: 'Answer each question. Be ready to explain what happens to the H⁺ and OH⁻ ions.' },
+      { name: 'GROW: what do you now understand?', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_grow',
+        activity: 'Close with the GROW reflection routine.', studentInstructions: 'Gift yourself one thing you understand. Rise: one gap. Own: a real-life example.' }
+    ],
+    deck: { title: 'Acids, Bases & Salts', slides: [
+      { layout: 'title', title: 'Acids, Bases & Salts', subtitle: 'The Universal Indicator Lab', bullets: ['Identify acids & bases', 'Read the pH scale', 'Explain neutralisation'], icon: 'experiment' },
+      { layout: 'statement', statement: 'Acids release H⁺ ions. Bases release OH⁻ ions.', icon: 'idea' },
+      { layout: 'visual', title: 'The pH scale', chart: { type: 'bar', title: 'pH of everyday substances', data: [{ label: 'Lemon', value: 2 }, { label: 'Coffee', value: 5 }, { label: 'Water', value: 7 }, { label: 'Soap', value: 9 }, { label: 'Bleach', value: 13 }] } },
+      { layout: 'columns', title: 'Tell them apart', icon: 'target', columns: [{ heading: 'Acids', items: ['pH below 7', 'Taste sour', 'Turn blue litmus red', 'React with metals'] }, { heading: 'Bases', items: ['pH above 7', 'Feel soapy', 'Turn red litmus blue', 'Neutralise acids'] }] },
+      { layout: 'bullets', title: 'Neutralisation', icon: 'experiment', bullets: ['Acid + Base → Salt + Water', 'HCl + NaOH → NaCl + H₂O', 'H⁺ and OH⁻ join to make water', 'Antacids calm an acidic stomach'] },
+      { layout: 'quote', quote: 'Where does the acid go when it is neutralised?', attribution: "Today's driving question" },
+      { layout: 'exit', title: 'Exit ticket', icon: 'check', bullets: ['Place milk (pH 6) on the scale', 'Name the salt from HCl + KOH', 'One thing you now understand'] }
+    ] }
+  },
+  {
+    title: 'Volcanoes & Earthquakes — Living on the Ring of Fire',
+    subjectIncludes: 'Geography',
+    classDef: { name: '3E Geography', level: 'Secondary 3 / G3', subject: 'Geography' },
+    status: 'ready',
+    e21ccFocus: ['criticalThinking', 'collaboration'],
+    objectives: 'Students explain how plate boundaries produce volcanoes and earthquakes, compare boundary types, and evaluate why people continue to live near them.',
+    lessonHook: 'Over 500 million people live within reach of an active volcano. Why would anyone stay?',
+    chat: {
+      user: 'Plan a Sec 3 Geography lesson on volcanoes and earthquakes using an inquiry / jigsaw approach.',
+      assistant: `## Volcanoes & Earthquakes — Living on the Ring of Fire (Sec 3 Geography)\n\n**Enduring understanding:** most volcanoes and earthquakes occur along plate boundaries, and people weigh real benefits against the hazards of living there.\n\n**Arc (Singapore Teaching Practice):**\n1. *Arouse interest* — a news clip + the Ring of Fire map.\n2. *Activate prior knowledge* — See-Think-Wonder on a volcano cross-section.\n3. *Collaborate* — a jigsaw of the three plate-boundary types.\n4. *Deepen with questions* — Socratic "why do earthquakes cluster?".\n5. *Conclude* — a 3-2-1 exit on living with risk.`
+    },
+    components: {
+      lisc: `**Learning Intentions**\n- We are learning how plate boundaries create volcanoes and earthquakes.\n- We are learning to compare constructive and destructive boundaries.\n- We are learning to judge why people live in hazard zones.\n\n**Success Criteria**\n- I can match a hazard to a boundary type.\n- I can give two reasons people live near volcanoes.\n- I can locate the Ring of Fire on a world map.`,
+      exitTicket: `### Exit Ticket — 3-2-1\n- **3** facts about plate boundaries\n- **2** hazards of the Ring of Fire\n- **1** reason people choose to stay`
+    },
+    segments: [
+      { name: 'Breaking news: the Ring of Fire', duration: 8, teachingArea: 'arouse_interest', teachingAction: 'real_world', mode: 'whole-class', e21ccFocus: 'criticalThinking',
+        activity: 'A news clip of a recent eruption alongside the Ring of Fire map.', studentInstructions: 'Watch the clip. Where on Earth do these events cluster?' },
+      { name: 'See-Think-Wonder: inside a volcano', duration: 10, teachingArea: 'activate_prior', teachingAction: 'stw', mode: 'pairs',
+        activity: 'A labelled volcano cross-section.', studentInstructions: 'With your partner: what do you SEE? What do you THINK causes an eruption? What do you WONDER?' },
+      { name: 'Jigsaw: three plate boundaries', duration: 15, teachingArea: 'collaborative', teachingAction: 'jigsaw', grouped: true, e21ccFocus: 'collaboration',
+        activity: 'Each group becomes the expert on one boundary type, then teaches the others.', studentInstructions: 'Learn your boundary as a group. Be ready to teach it in 60 seconds.' },
+      { name: 'Why do earthquakes cluster?', duration: 12, teachingArea: 'deepen_questions', teachingAction: 'socratic', mode: 'whole-class', e21ccFocus: 'criticalThinking',
+        activity: 'Socratic questioning links boundaries to the distribution of hazards.', studentInstructions: 'Explain your reasoning. What is your evidence?' },
+      { name: '3-2-1: living with risk', duration: 10, teachingArea: 'conclude', teachingAction: 'three_two_one', mode: 'individual',
+        activity: 'Consolidate with a 3-2-1 exit.', studentInstructions: '3 facts · 2 hazards · 1 reason people stay.' }
+    ],
+    deck: { title: 'Volcanoes & Earthquakes', slides: [
+      { layout: 'title', title: 'Volcanoes & Earthquakes', subtitle: 'Living on the Ring of Fire', bullets: ['Link boundaries to hazards', 'Compare boundary types', 'Judge why people stay'], icon: 'globe' },
+      { layout: 'statement', statement: 'About 90% of earthquakes strike along plate boundaries.', icon: 'warning' },
+      { layout: 'visual', title: 'Where the Earth shakes hardest', chart: { type: 'bar', title: 'Largest recorded earthquakes (magnitude)', data: [{ label: 'Chile 1960', value: 9.5 }, { label: 'Alaska 1964', value: 9.2 }, { label: 'Sumatra 2004', value: 9.1 }, { label: 'Japan 2011', value: 9.0 }] } },
+      { layout: 'columns', title: 'Two kinds of boundary', icon: 'target', columns: [{ heading: 'Destructive', items: ['Plates collide', 'Subduction', 'Explosive volcanoes', 'Strong quakes'] }, { heading: 'Constructive', items: ['Plates separate', 'New crust forms', 'Gentle volcanoes', 'Weaker quakes'] }] },
+      { layout: 'bullets', title: 'Why live here?', icon: 'idea', bullets: ['Fertile volcanic soil', 'Geothermal energy', 'Tourism and jobs', 'Home and heritage'] },
+      { layout: 'quote', quote: 'Would you live next to a volcano? Why?', attribution: 'Decision point' },
+      { layout: 'exit', title: '3-2-1 exit', icon: 'check', bullets: ['3 facts about plate boundaries', '2 hazards of the Ring of Fire', '1 reason people stay'] }
+    ] }
+  },
+  {
+    title: 'Cyber Wellness — Think Before You Share',
+    subjectIncludes: 'Combined Science',
+    classDef: { name: '3E CCE', level: 'Secondary 3 / G3', subject: 'Character & Citizenship Education' },
+    status: 'ready',
+    kind: 'cce',
+    contentArea: 'CW',
+    e21ccFocus: ['communication', 'socialConnectedness'],
+    objectives: 'Students weigh the consequences of what they share online, consider whose responsibility digital harm is, and commit to a responsible digital choice.',
+    lessonHook: 'A post takes three seconds to send — and can outlast the friendship you sent it about.',
+    chat: {
+      user: 'Plan a CCE lesson on Cyber Wellness — responsible sharing — using deliberation (Four Corners / SAC).',
+      assistant: `## Cyber Wellness — Think Before You Share (CCE)\n\n**Big idea:** Choices. **Value:** Responsibility.\n\n**Arc (Singapore Teaching Practice), built for deliberation:**\n1. *Arouse interest* — a "would you post this?" dilemma.\n2. *Activate prior knowledge* — See-Think-Wonder on a group-chat screenshot.\n3. *Collaborate* — Four Corners: how far is too far?\n4. *Deepen with questions* — whose responsibility is it?\n5. *Conclude* — write a personal digital promise (ACT on feedback).`
+    },
+    components: {
+      lisc: `**Learning Intentions**\n- We are learning to weigh the consequences of what we share online.\n- We are learning to consider others' feelings before we post.\n\n**Success Criteria**\n- I can name three questions to ask before I share.\n- I can explain one way a post can ripple beyond its target.\n- I can state one responsible habit I will keep.`,
+      exitTicket: `### My Digital Promise\n- One habit I will **keep**.\n- One habit I will **change**.\n- One person I will **look out for** online.`
+    },
+    segments: [
+      { name: 'Would you post this?', duration: 8, teachingArea: 'arouse_interest', teachingAction: 'provocation', mode: 'whole-class', e21ccFocus: 'criticalThinking',
+        activity: 'A relatable sharing dilemma to react to.', studentInstructions: 'Thumbs up or down — would you share it? Hold on to your reason.' },
+      { name: 'See-Think-Wonder: the screenshot', duration: 10, teachingArea: 'activate_prior', teachingAction: 'stw', mode: 'pairs',
+        activity: 'A group-chat screenshot that could easily be misread.', studentInstructions: 'What do you SEE? What do you THINK is happening? What do you WONDER?' },
+      { name: 'Four Corners: how far is too far?', duration: 15, teachingArea: 'collaborative', teachingAction: 'four_corners', grouped: true, e21ccFocus: 'communication',
+        activity: 'Students take a stance in a corner, debate, and refine their view.', studentInstructions: 'Pick your corner. Defend your choice with a reason. Be ready to move if convinced.' },
+      { name: 'Whose responsibility?', duration: 12, teachingArea: 'deepen_questions', teachingAction: 'socratic', mode: 'whole-class', e21ccFocus: 'socialConnectedness',
+        activity: 'Probe where responsibility lies — the poster, the platform, the bystander.', studentInstructions: 'What makes you say that? Whose choice matters most here?' },
+      { name: 'My digital promise', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_act',
+        activity: 'Commit to one responsible change, ACT-on-feedback style.', studentInstructions: 'Write one habit to keep, one to change, and one person to look out for.' }
+    ],
+    deck: { title: 'Think Before You Share', slides: [
+      { layout: 'title', title: 'Think Before You Share', subtitle: 'Cyber Wellness · Choices', bullets: ['Weigh online consequences', 'Respect yourself and others', 'Make a digital promise'], icon: 'globe' },
+      { layout: 'quote', quote: 'Would you say it to their face?', attribution: 'Before you post' },
+      { layout: 'statement', statement: 'What you share online can last forever.', icon: 'warning' },
+      { layout: 'columns', title: 'Pause and think', icon: 'question', columns: [{ heading: 'Before I share', items: ['Is it true?', 'Is it kind?', 'Is it mine to share?'] }, { heading: 'The ripple', items: ['Who else sees it?', 'How might they feel?', 'Can I undo it?'] }] },
+      { layout: 'visual', title: 'A typical evening online', chart: { type: 'donut', title: 'Where the hours go', data: [{ label: 'Chat', value: 35 }, { label: 'Video', value: 30 }, { label: 'Games', value: 20 }, { label: 'Study', value: 15 }] } },
+      { layout: 'exit', title: 'My digital promise', icon: 'check', bullets: ['One habit I will keep', 'One habit I will change', 'One person I will look out for'] }
+    ] }
+  }
+];
+
+export function seedShowcaseLessonsIfNeeded() {
+  if (localStorage.getItem(SHOWCASE_SEED_KEY)) return;
+  if (Store.getClasses().length === 0) return; // classes must exist first
+  const now = Date.now();
+  SHOWCASE_LESSONS.forEach((spec, idx) => {
+    if ((Store.get('lessons') || []).some(l => l.title === spec.title)) return;
+    const cls = ensureShowcaseClass(spec.subjectIncludes, spec.classDef);
+    const students = (cls.students || []).slice();
+    const layout = makeShowcaseLayout(`${spec.classDef.subject} — Discussion Pods`);
+    const podIids = layout.items.filter(it => it.id === 'group_table').map(it => it.iid);
+    const sceneId = (layout.scenes && layout.scenes[0]) ? layout.scenes[0].id : null;
+    const segments = buildShowcaseSegments(spec.segments, students, podIids, sceneId);
+    const components = {};
+    Object.entries(spec.components || {}).forEach(([k, content]) => { components[k] = { content, meta: '', updatedAt: now }; });
+
+    const created = Store.addLesson({ title: spec.title, classId: cls.id, kind: spec.kind || null });
+    Store.updateLesson(created.id, {
+      status: spec.status || 'ready',
+      classId: cls.id,
+      objectives: spec.objectives || '',
+      lessonHook: spec.lessonHook || '',
+      e21ccFocus: spec.e21ccFocus || [],
+      kind: spec.kind || null,
+      contentArea: spec.contentArea || undefined,
+      chatHistory: spec.chat ? [{ role: 'user', content: spec.chat.user }, { role: 'assistant', content: spec.chat.assistant }] : [],
+      plan: spec.chat ? spec.chat.assistant : '',
+      components,
+      spatialLayout: layout.id,
+      runOfShow: { generatedAt: now, segments },
+      isExemplar: true,
+      createdAt: now - (idx + 2) * DAY,
+      updatedAt: now - (idx + 1) * DAY
+    });
+
+    // Attach a pre-built professional deck (async IDB write, non-blocking and
+    // graceful) so the deck demo works with no API key. compileDeckHTML is sync.
+    if (spec.deck) {
+      try {
+        const html = compileDeckHTML({ title: spec.deck.title || spec.title, slides: spec.deck.slides });
+        saveDeckMaterial({ lessonId: created.id, title: spec.deck.title || spec.title, html, slideCount: spec.deck.slides.length })
+          .then(meta => {
+            if (!meta) return;
+            const l = Store.getLesson(created.id); if (!l) return;
+            const ars = Array.isArray(l.attachedResources) ? l.attachedResources.slice() : [];
+            ars.push({ type: 'deck', id: meta.id, title: meta.title || spec.deck.title || spec.title });
+            Store.updateLesson(created.id, { attachedResources: ars });
+          })
+          .catch(() => { /* deck is optional — lesson still works without it */ });
+      } catch { /* deck is optional */ }
+    }
+  });
+  localStorage.setItem(SHOWCASE_SEED_KEY, '1');
 }
 
 /* ══════════════════════════════════════════════════════
