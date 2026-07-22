@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, mapSegmentsToSTP, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, mapSegmentsToSTP, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech, generateSVGDiagram, generateImage } from '../api.js';
 import { cceContextBlock } from './cce.js';
 import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, openDeckById, downloadBlob } from '../utils/deck.js';
 import { showToast } from '../components/toast.js';
@@ -4813,11 +4813,47 @@ async function generateDeckFlow(container) {
   }
   try {
     const deck = await generateDeck(args);
+    await resolveDeckMedia(deck, resultEl); // fill svgPrompt/imagePrompt slides with real visuals
     if (resultEl) resultEl.innerHTML = '';
     showDeckPreviewModal(container, deck, args);
   } catch (err) {
     if (resultEl) resultEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Error: ${esc(err.message)}</div>`;
   }
+}
+
+/* Turn each slide's svgPrompt/imagePrompt into a real, self-contained visual:
+ * svgPrompt -> an inline SVG concept diagram; imagePrompt -> an embedded data:
+ * image. Runs after generation, capped for cost, and degrades gracefully — a
+ * slide that fails to get its visual simply renders without one. */
+async function resolveDeckMedia(deck, resultEl) {
+  const slides = (deck && deck.slides) || [];
+  const jobs = [];
+  slides.forEach((s, i) => {
+    if (jobs.length >= 8) return;                 // cap AI visuals per deck
+    if (s.svgPrompt && !s.svg) jobs.push({ i, kind: 'svg', prompt: s.svgPrompt });
+    else if (s.imagePrompt && !s.image) jobs.push({ i, kind: 'img', prompt: s.imagePrompt });
+  });
+  if (!jobs.length) return deck;
+  let done = 0;
+  const setMsg = () => { if (resultEl) resultEl.innerHTML = `<div class="chat-typing" style="padding:var(--sp-4);">Creating deck visuals&hellip; ${done}/${jobs.length}</div>`; };
+  setMsg();
+  const run = async (job) => {
+    try {
+      if (job.kind === 'svg') {
+        const svg = await generateSVGDiagram(job.prompt);
+        if (typeof svg === 'string' && svg.includes('<svg')) slides[job.i].svg = svg;
+      } else {
+        const img = await generateImage(job.prompt);
+        if (typeof img === 'string' && img.startsWith('data:image/')) slides[job.i].image = img;
+      }
+    } catch { /* graceful — the slide renders without the visual */ }
+    done++; setMsg();
+  };
+  const CONC = 3;
+  for (let k = 0; k < jobs.length; k += CONC) {
+    await Promise.all(jobs.slice(k, k + CONC).map(run));
+  }
+  return deck;
 }
 
 function showDeckPreviewModal(container, deck, args) {
@@ -4830,15 +4866,21 @@ function showDeckPreviewModal(container, deck, args) {
         one self-contained HTML file (works offline) &mdash; present in a browser tab, or print it to PDF.
       </p>
       <div style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp-2);">
-        ${deck.slides.map((s, i) => `
+        ${deck.slides.map((s, i) => {
+          const vis = s.image ? '&#128444;&#65039; image' : s.svg ? '&#9998; diagram' : s.chart ? '&#128202; chart' : (s.columns ? '&#9868; columns' : '');
+          return `
           <div style="border:1px solid var(--border-light);border-radius:var(--radius-md);padding:var(--sp-2) var(--sp-3);">
-            <div style="display:flex;align-items:baseline;gap:var(--sp-2);">
+            <div style="display:flex;align-items:baseline;gap:var(--sp-2);flex-wrap:wrap;">
               <span style="flex-shrink:0;font-size:0.6875rem;font-weight:700;color:var(--accent);">${i + 1}</span>
-              <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">${esc(s.title || `Slide ${i + 1}`)}</span>
+              <span style="font-size:0.875rem;font-weight:600;color:var(--ink);">${esc(s.title || s.statement || s.quote || `Slide ${i + 1}`)}</span>
+              ${s.layout ? `<span style="font-size:0.5625rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);border:1px solid var(--border-light);border-radius:var(--radius-full);padding:1px 6px;">${esc(s.layout)}</span>` : ''}
+              ${vis ? `<span style="font-size:0.625rem;font-weight:600;color:var(--accent);">${vis}</span>` : ''}
             </div>
-            ${s.bullets.length ? `<ul style="margin:4px 0 0 22px;padding:0;">${s.bullets.map(b => `<li style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;">${esc(b)}</li>`).join('')}</ul>` : ''}
+            ${(s.bullets && s.bullets.length) ? `<ul style="margin:4px 0 0 22px;padding:0;">${s.bullets.map(b => `<li style="font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;">${esc(b)}</li>`).join('')}</ul>` : ''}
+            ${s.columns ? `<div style="margin:4px 0 0 22px;font-size:0.75rem;color:var(--ink-muted);">${s.columns.map(c => esc(c.heading)).filter(Boolean).join(' &middot; ')}</div>` : ''}
             ${s.notes ? `<div style="margin:4px 0 0 22px;font-size:0.75rem;color:var(--ink-muted);font-style:italic;">Note: ${esc(s.notes)}</div>` : ''}
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>`,
     footer: `
       <button class="btn btn-secondary" data-action="cancel">Cancel</button>

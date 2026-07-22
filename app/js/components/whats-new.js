@@ -11,6 +11,8 @@ import { openModal } from './modals.js';
 const SEEN_KEY = 'cocher_whatsnew_seen';
 
 const CHANGES = [
+  { icon: '&#128202;', title: 'Sharper decks & movable students',
+    text: 'Two big lifts. The slide deck is reborn — professional, varied layouts (big-idea statements, quotes, compare columns, an exit-ticket slide) with inline charts, concept diagrams and signpost icons, smooth transitions and a progress bar; it still works offline, and where a picture or diagram helps, Co-Cher draws one in. And in the Spatial Designer you can now drag every student pill to arrange seating exactly how you want, then tap Save — the same seating flows into Present.' },
   { icon: '&#129517;', title: 'Lesson plans, the STP way',
     text: 'Your Run of Show now speaks the Singapore Teaching Practice: tag each segment with a Teaching Area and pick a Teaching Action — See-Think-Wonder, Predict-Observe-Explain, Hot Seat and more, with an "Other" for your own. The plan reads as STP with a "Details" button, and each action\'s student-facing framing now shows on the Present screen, so teacher-facing flows straight to student-facing. Older lessons? Tap "Map to STP" and Co-Cher suggests an area for each segment for you to review before saving. Every AI tool stays exactly where it was.' },
   { icon: '&#129001;', title: 'Rearrange the room, live',

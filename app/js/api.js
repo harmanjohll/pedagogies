@@ -1545,34 +1545,72 @@ ${String(plan ?? '').slice(0, 8000)}`
     trackLabel: 'generateDeck',
     jsonMode: true,
     temperature: 0.6,
-    maxTokens: 4096,
-    systemPrompt: `You design projector slide decks for Singapore classrooms. Return ONLY JSON in exactly this shape:
-{"title": "deck title", "slides": [{"title": "slide title", "bullets": ["short point"], "notes": "one-line teacher note"}]}
+    maxTokens: 6144,
+    systemPrompt: `You are a senior instructional designer creating a POLISHED, engaging projector slide deck for a Singapore classroom. Return ONLY JSON:
+{"title":"deck title","slides":[{"layout":"...","title":"...","subtitle":"...","bullets":["..."],"icon":"...","columns":[{"heading":"...","items":["..."]}],"statement":"...","quote":"...","attribution":"...","chart":{"type":"bar|line|donut","title":"...","data":[{"label":"...","value":12}]},"svgPrompt":"...","imagePrompt":"...","notes":"..."}]}
 
-Rules:
-- 5-12 slides total (aim for the requested target).
-- TLDR discipline: each bullet is ONE short line (max ~12 words), at most 4 bullets per slide. Slides are prompts on a wall, not paragraphs.
-- First slide = title slide: the lesson title, bullets = student-facing learning intention / success criteria.
-- Last slide = exit ticket or reflection prompt.
-- "notes" = one short teacher note per slide (what to say or do), max ~20 words.
-- Student-facing language on slides. No markdown syntax inside strings. No URLs, no image references, no external resources of any kind.`
+Design rules:
+- 6-12 slides. VARY "layout" so the deck never reads as a wall of bullets. Layouts:
+  · "title" — opening slide (lesson title + learning intentions as bullets). Use for slide 1.
+  · "section" — a short divider announcing a new phase of the lesson.
+  · "bullets" — a heading + up to 4 short points (the default).
+  · "columns" — 2-3 labelled columns for compare/contrast, for/against, then/now (use the "columns" array).
+  · "statement" — ONE big idea, key definition or takeaway, no bullets (use "statement").
+  · "quote" — a quotation or a provocative question ("quote" + optional "attribution").
+  · "visual" — the slide is carried by a chart/diagram/image (see below), minimal text.
+  · "exit" — closing check-for-understanding / exit ticket. Use for the last slide.
+- TLDR discipline: each bullet is ONE short line (≤12 words), ≤4 per slide. Slides are prompts, not paragraphs.
+- ENGAGE with ONE visual on a slide ONLY where it genuinely aids understanding (not every slide):
+  · "chart" — for data, quantities, proportions or trends. type bar/line/donut, 2-8 {label,value} points, short title.
+  · "svgPrompt" — a one-line description of a simple concept DIAGRAM to draw (e.g. "particle diffusion from high to low concentration with arrows"). Best for processes, cycles, structures, relationships.
+  · "imagePrompt" — a one-line description of a real-world IMAGE when a photo helps (e.g. "close-up of a rusting iron nail"). Use sparingly.
+  · "icon" — one signpost icon from: idea, target, question, check, warning, group, experiment, book, clock, globe, chart, spark, rocket, compass.
+- "notes" = one short teacher note (what to say/do), ≤20 words.
+- Student-facing language on slides. No markdown syntax. Describe visuals in the *Prompt/chart fields ONLY — never paste URLs or external resources into any string.`
   });
   return normalizeDeck(parseJsonResponse(raw, 'slide deck'), lessonTitle);
 }
 
-/* Defensive normalization: coerce strings, clamp counts, drop empties.
- * Throws when fewer than 2 usable slides survive. */
+/* Defensive normalization: coerce strings, clamp counts, whitelist layouts and
+ * media fields, drop empties. Throws when fewer than 2 usable slides survive. */
+const DECK_LAYOUTS = new Set(['title', 'section', 'bullets', 'columns', 'statement', 'quote', 'visual', 'exit']);
+const DECK_CHART_TYPES = new Set(['bar', 'line', 'donut']);
 function normalizeDeck(data, fallbackTitle) {
   const clampStr = (v, n) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const normChart = (c) => {
+    if (!c || typeof c !== 'object') return undefined;
+    const rows = (Array.isArray(c.data) ? c.data : [])
+      .map(d => ({ label: clampStr(d?.label, 28), value: Number(d?.value) }))
+      .filter(d => d.label && Number.isFinite(d.value)).slice(0, 8);
+    if (rows.length < 2) return undefined;
+    return { type: DECK_CHART_TYPES.has(c.type) ? c.type : 'bar', title: clampStr(c.title, 80), data: rows };
+  };
+  const normCols = (cols) => (Array.isArray(cols) ? cols : [])
+    .map(c => ({ heading: clampStr(c?.heading, 60), items: (Array.isArray(c?.items) ? c.items : []).map(x => clampStr(x, 120)).filter(Boolean).slice(0, 5) }))
+    .filter(c => c.heading || c.items.length).slice(0, 3);
+
   const slides = (Array.isArray(data?.slides) ? data.slides : [])
-    .map(s => ({
-      title: clampStr(s?.title, 120),
-      bullets: (Array.isArray(s?.bullets) ? s.bullets : [])
-        .map(b => clampStr(b, 160)).filter(Boolean).slice(0, 4),
-      notes: clampStr(s?.notes, 240)
-    }))
-    .filter(s => s.title || s.bullets.length > 0)
-    .slice(0, 12);
+    .map(s => {
+      const out = {
+        layout: DECK_LAYOUTS.has(s?.layout) ? s.layout : undefined,
+        title: clampStr(s?.title, 120),
+        subtitle: clampStr(s?.subtitle, 160) || undefined,
+        bullets: (Array.isArray(s?.bullets) ? s.bullets : []).map(b => clampStr(b, 160)).filter(Boolean).slice(0, 5),
+        notes: clampStr(s?.notes, 240) || undefined,
+        icon: clampStr(s?.icon, 20) || undefined,
+        statement: clampStr(s?.statement, 200) || undefined,
+        quote: clampStr(s?.quote, 240) || undefined,
+        attribution: clampStr(s?.attribution, 80) || undefined,
+        chart: normChart(s?.chart),
+        imagePrompt: clampStr(s?.imagePrompt, 240) || undefined,
+        svgPrompt: clampStr(s?.svgPrompt, 240) || undefined,
+      };
+      const cols = normCols(s?.columns);
+      if (cols.length) out.columns = cols;
+      return out;
+    })
+    .filter(s => s.title || s.bullets.length || s.statement || s.quote || s.chart || s.columns)
+    .slice(0, 14);
   if (slides.length < 2) {
     throw new Error('The model returned too few usable slides — please try again.');
   }
