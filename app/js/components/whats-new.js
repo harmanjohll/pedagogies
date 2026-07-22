@@ -11,6 +11,12 @@ import { openModal } from './modals.js';
 const SEEN_KEY = 'cocher_whatsnew_seen';
 
 const CHANGES = [
+  { icon: '&#128206;', title: 'Attach images & PDFs to your planning chat',
+    text: 'In the Lesson Planner, tap "Add file" (or just drag a file onto the chat) to attach an image or PDF — a worksheet, a textbook page, a diagram, a marking rubric, even a photo of student work. Co-Cher reads it directly and designs around it. Images are shrunk automatically to stay fast, and large PDFs fall back to their text so a scheme of work still comes through. Attach up to six files per message.' },
+  { icon: '&#127919;', title: 'Focus areas that actually upskill you',
+    text: 'The teaching focus areas you pick at sign-up now have a home in Settings — toggle any on or off, or add your own. They feed into every lesson Co-Cher helps you plan: where it genuinely fits, Co-Cher designs for those areas and names the move it\'s making, so you build the habit over the year — not just tick a box.' },
+  { icon: '&#129517;', title: 'A cleaner lesson journey',
+    text: 'The lesson lifecycle strip — Design, Prepare, Rehearse, Teach, Reflect — now sits on a single tidy row with its next-step button below, and reads as one clear arc (Design stays front and centre, as it should).' },
   { icon: '&#127891;', title: 'Three ready-made showcase lessons',
     text: 'Open the Lessons page to find three fully-staged demos — Chemistry (Acids, Bases & Salts), Geography (Volcanoes & Earthquakes) and a CCE Cyber Wellness lesson. Each is built end-to-end: an STP-tagged run of show, a class seated in discussion pods you can rearrange, and a polished slide deck already attached. A quick tour of everything the planner can now do.' },
   { icon: '&#128202;', title: 'Sharper decks & movable students',

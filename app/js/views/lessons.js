@@ -170,12 +170,15 @@ function wireMic(btn, container) {
   });
 }
 
-/* ── Lesson lifecycle: Design → Ready → Rehearse → Teach → Reflect ──
- * The lesson object carries the flow; each stage surfaces ONE next step
- * so the interface guides the teacher through the cycle. */
+/* ── Lesson lifecycle: Design → Prepare → Rehearse → Teach → Reflect ──
+ * Five parallel teacher actions, echoing the Singapore Teaching Practice
+ * (Design + Prepare ≈ Lesson Preparation, Teach ≈ Lesson Enactment,
+ * Reflect ≈ Assessment & Feedback). The lesson object carries the flow;
+ * each stage surfaces ONE next step so the interface guides the teacher
+ * through the cycle. Design leads — it's the critical craft of the plan. */
 export const LIFECYCLE_STAGES = [
   { key: 'draft', label: 'Design' },
-  { key: 'ready', label: 'Ready' },
+  { key: 'ready', label: 'Prepare' },
   { key: 'rehearsed', label: 'Rehearse' },
   { key: 'taught', label: 'Teach' },
   { key: 'reflected', label: 'Reflect' },
@@ -213,13 +216,14 @@ function lifecycleStepperHTML(lesson) {
     : '';
   return `
     <div class="card lifecycle-stepper" style="margin-bottom:var(--sp-5);padding:var(--sp-4) var(--sp-5);">
-      <div style="display:flex;align-items:center;flex-wrap:wrap;row-gap:10px;gap:var(--sp-2);">
-        <div class="lifecycle-stages" style="flex:1;min-width:0;">${strip}</div>
+      <div class="lifecycle-stages" style="width:100%;overflow-x:auto;">${strip}</div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border-light);">
         <button class="btn btn-ghost btn-sm lifecycle-min-toggle" id="journey-minimal-toggle" title="Collapse the journey to just the next action" aria-pressed="false" style="padding:4px 8px;font-size:0.6875rem;color:var(--ink-muted);white-space:nowrap;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
           <span class="journey-min-label">Next action only</span>
         </button>
         ${studioLink}
+        <span style="flex:1;"></span>
         <button class="btn btn-primary btn-sm" id="lifecycle-cta" data-action="${next.action}">${next.label}</button>
       </div>
     </div>`;

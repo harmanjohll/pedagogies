@@ -16,6 +16,7 @@ import { trackEvent, analyticsEnabled, setAnalyticsEnabled } from '../utils/anal
 import { APP_VERSION, PREVIOUS_VERSIONS } from '../version.js';
 import { getIdentity, setIdentity, applyIdentity } from '../utils/identity.js';
 import { escapeHtml } from '../utils/markdown.js';
+import { PEDAGOGICAL_PRIORITIES, getPriorities, isPresetPriority } from '../utils/priorities.js';
 import { isTouch } from '../utils/viewport.js';
 
 /* ── Dashboard Layout Prefs ── */
@@ -977,6 +978,49 @@ export function render(container) {
           </div>
         </div>
 
+        <!-- Teaching focus areas (feeds every lesson-design conversation) -->
+        <div class="card" style="margin-bottom: var(--sp-6);">
+          <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Teaching Focus Areas</h3>
+          <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
+            The areas you're growing in this year. Co-Cher weaves deliberate practice in these into the
+            lessons it helps you design &mdash; and names the moves it makes, so you build the habit over time.
+            Toggle any on or off, or add your own.
+          </p>
+          ${(() => {
+            const current = getPriorities(Store);
+            const customFocus = current.filter(x => !isPresetPriority(x));
+            return `
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:14px;">
+                ${PEDAGOGICAL_PRIORITIES.map(p => {
+                  const on = current.includes(p.id);
+                  return `<button class="focus-toggle" data-focus="${p.id}" aria-pressed="${on}" style="
+                    text-align:left;padding:9px 12px;border-radius:10px;cursor:pointer;
+                    border:2px solid ${on ? 'var(--accent)' : 'var(--border-light)'};
+                    background:${on ? 'var(--accent-light)' : 'var(--bg-card)'};
+                    font-size:0.8125rem;color:var(--ink);display:flex;align-items:center;gap:8px;">
+                    <span aria-hidden="true">${p.icon}</span>
+                    <span style="flex:1;">${p.label}</span>
+                    ${on ? '<span style="color:var(--accent);font-weight:700;">&#10003;</span>' : ''}
+                  </button>`;
+                }).join('')}
+              </div>
+              ${customFocus.length ? `
+                <div style="margin-bottom:12px;">
+                  <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);margin-bottom:6px;">Your own</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                    ${customFocus.map(c => `<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--accent);background:var(--accent-light);border-radius:999px;font-size:0.8125rem;color:var(--ink);">
+                      ${escapeHtml(c)}
+                      <button class="focus-remove" data-focus-text="${escapeHtml(c)}" title="Remove" aria-label="Remove ${escapeHtml(c)}" style="border:none;background:none;cursor:pointer;color:var(--ink-faint);padding:0;line-height:1;font-size:1.05rem;">&times;</button>
+                    </span>`).join('')}
+                  </div>
+                </div>` : ''}
+              <div style="display:flex;gap:8px;">
+                <input id="focus-custom-input" class="input" type="text" placeholder="Add your own focus area&hellip;" maxlength="60" style="flex:1;box-sizing:border-box;" />
+                <button class="btn btn-secondary btn-sm" id="focus-custom-add">Add</button>
+              </div>`;
+          })()}
+        </div>
+
         <!-- Pedagogy Frameworks registry -->
         <div class="card" style="margin-bottom: var(--sp-6);">
           <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: var(--sp-1); color: var(--ink);">Pedagogy Frameworks</h3>
@@ -1255,7 +1299,7 @@ export function render(container) {
           <div style="padding:var(--sp-4);border:1px solid var(--border-light,#e5e7eb);border-radius:var(--radius,8px);background:var(--bg-card,#fff);">
             <h3 style="font-size:1rem;font-weight:600;margin-bottom:var(--sp-1);color:var(--ink);">How Preferences Work</h3>
             <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;margin-bottom:var(--sp-2);">
-              Your <strong>pedagogical priorities</strong> (set during onboarding or in General settings) directly influence how Co-Cher generates lesson content:
+              Your <strong>teaching focus areas</strong> (set during onboarding, and editable under the Planner tab &rarr; "Teaching Focus Areas") directly influence how Co-Cher generates lesson content:
             </p>
             <ul style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.7;padding-left:20px;margin:0;">
               <li><strong>Differentiated Instruction</strong>: AI generates tiered activities and scaffolded content for diverse learners</li>
@@ -1266,7 +1310,7 @@ export function render(container) {
               <li><strong>ICT Integration</strong>: Digital tools and simulations are recommended where appropriate</li>
             </ul>
             <p style="font-size:0.75rem;color:var(--ink-faint);margin-top:var(--sp-2);margin-bottom:0;">
-              These priorities are injected into AI prompts as context. You can update them anytime in the General tab above.
+              These focus areas are injected into AI prompts as context. You can add, edit or remove them anytime under the Planner tab &rarr; "Teaching Focus Areas".
             </p>
           </div>
 
@@ -1543,6 +1587,42 @@ export function render(container) {
       render(container);
     });
   });
+
+  // ── Teaching focus areas: toggle presets, add/remove custom ──
+  // Re-render to reflect state, but keep the teacher on the Planner tab (the
+  // deep-link handoff restores it) so frequent toggling doesn't bounce them
+  // back to General.
+  const saveFocus = (list) => {
+    Store.set('pedagogicalPriorities', list);
+    try { sessionStorage.setItem('cocher_settings_tab', 'planner'); } catch { /* ignore */ }
+    render(container);
+  };
+  container.querySelectorAll('.focus-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.focus;
+      const current = getPriorities(Store);
+      saveFocus(current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
+    });
+  });
+  container.querySelectorAll('.focus-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const text = btn.dataset.focusText;
+      saveFocus(getPriorities(Store).filter(x => x !== text));
+    });
+  });
+  const focusInput = container.querySelector('#focus-custom-input');
+  const addCustomFocus = () => {
+    const val = (focusInput?.value || '').trim();
+    if (!val) return;
+    const current = getPriorities(Store);
+    if (current.some(x => x.toLowerCase() === val.toLowerCase()) || isPresetPriority(val)) {
+      showToast('That focus area is already on your list.');
+      return;
+    }
+    saveFocus([...current, val]);
+  };
+  container.querySelector('#focus-custom-add')?.addEventListener('click', addCustomFocus);
+  focusInput?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addCustomFocus(); } });
 
   // Export
   container.querySelector('#export-btn').addEventListener('click', async () => {
