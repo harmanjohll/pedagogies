@@ -11,6 +11,8 @@ import { openModal } from './modals.js';
 const SEEN_KEY = 'cocher_whatsnew_seen';
 
 const CHANGES = [
+  { icon: '&#129517;', title: 'Lesson plans, the STP way',
+    text: 'Your Run of Show now speaks the Singapore Teaching Practice: tag each segment with a Teaching Area and pick a Teaching Action — See-Think-Wonder, Predict-Observe-Explain, Hot Seat and more, with an "Other" for your own. The plan reads as STP with a "Details" button, and each action\'s student-facing framing now shows on the Present screen, so teacher-facing flows straight to student-facing. Older lessons? Tap "Map to STP" and Co-Cher suggests an area for each segment for you to review before saving. Every AI tool stays exactly where it was.' },
   { icon: '&#129001;', title: 'Rearrange the room, live',
     text: 'The "Find your seat" chart in Present is now a big, interactive board that fills the screen — drag any student pill anywhere (it stays exactly where you drop it) and move the furniture too. Nothing changes your saved seating until you tap "Save arrangement" (or Reset). "Open" on a linked layout now carries your room and seated students straight into the designer. Also new: Find a Teacher takes a date, so you can check a colleague\'s availability on any school day.' },
   { icon: '&#127919;', title: 'Find your tools faster',

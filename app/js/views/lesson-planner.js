@@ -6,7 +6,7 @@
  */
 
 import { Store } from '../state.js';
-import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech } from '../api.js';
+import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, mapSegmentsToSTP, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech } from '../api.js';
 import { cceContextBlock } from './cce.js';
 import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, openDeckById, downloadBlob } from '../utils/deck.js';
 import { showToast } from '../components/toast.js';
@@ -21,6 +21,7 @@ import { md, escapeHtml, mountExpansion, stripExpandMarkers } from '../utils/mar
 import { critiquePlan } from '../api.js';
 import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
+import { TEACHING_AREAS, TEACHING_AREA_ICONS, TEACHING_AREA_LABELS, actionsForArea, resolveTeachingAction, TEACHING_ACTION_OTHER } from '../utils/stp.js';
 import { layoutToSVG } from './spatial-designer.js';
 import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 
@@ -2881,7 +2882,10 @@ function rosBlankSegment(n) {
     grouping: null,
     resources: [],
     e21ccFocus: null,
-    frameworkId: null
+    frameworkId: null,
+    teachingArea: null,
+    teachingAction: null,
+    teachingActionOther: ''
   };
 }
 
@@ -2924,7 +2928,10 @@ function showRunOfShowEditor(container, runOfShow) {
       : null,
     resources: Array.isArray(s.resources) ? s.resources : [],
     e21ccFocus: E21CC_SEGMENT_KEYS.includes(s.e21ccFocus) ? s.e21ccFocus : null,
-    frameworkId: (typeof s.frameworkId === 'string' && s.frameworkId) ? s.frameworkId : null
+    frameworkId: (typeof s.frameworkId === 'string' && s.frameworkId) ? s.frameworkId : null,
+    teachingArea: TEACHING_AREAS.some(a => a.key === s.teachingArea) ? s.teachingArea : null,
+    teachingAction: (typeof s.teachingAction === 'string' && s.teachingAction) ? s.teachingAction : null,
+    teachingActionOther: String(s.teachingActionOther ?? '').trim()
   }));
   if (segs.length === 0) segs = [rosBlankSegment(1)];
 
@@ -2949,6 +2956,7 @@ function showRunOfShowEditor(container, runOfShow) {
       <div id="ros-rows" style="display:flex;flex-direction:column;gap:var(--sp-3);max-height:52vh;overflow-y:auto;padding-right:4px;"></div>
       <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-3);align-items:center;">
         <button class="btn btn-ghost btn-sm" id="ros-add">+ Add segment</button>
+        <button class="btn btn-ghost btn-sm" id="ros-map-stp" title="Suggest a Singapore Teaching Practice area + action for each segment — non-destructive; you review before saving">&#129517; Map to STP</button>
         <button class="btn btn-ghost btn-sm" id="ros-regenerate" style="margin-left:auto;" title="Replace these segments with a fresh AI staging of the current plan">
           &#127916; Regenerate with AI
         </button>
@@ -2978,6 +2986,15 @@ function showRunOfShowEditor(container, runOfShow) {
       s.duration = Number.isFinite(d) ? Math.min(240, Math.max(1, d)) : 5;
       s.activity = row.querySelector('.ros-activity').value.trim();
       s.studentInstructions = row.querySelector('.ros-instructions').value.trim();
+      const areaSel = row.querySelector('.ros-area');
+      if (areaSel) {
+        s.teachingArea = areaSel.value || null;
+        if (!s.teachingArea) { s.teachingAction = null; s.teachingActionOther = ''; }
+      }
+      const actionSel = row.querySelector('.ros-action');
+      if (actionSel) s.teachingAction = actionSel.value || null;
+      const actionOther = row.querySelector('.ros-action-other');
+      if (actionOther) s.teachingActionOther = actionOther.value.trim();
       const mode = row.querySelector('.ros-mode').value;
       s.grouping = mode ? { mode, groups: s.grouping?.groups || [] } : null;
       // Scene select only exists when the lesson has a linked layout with
@@ -3006,6 +3023,24 @@ function showRunOfShowEditor(container, runOfShow) {
         <div style="display:flex;flex-direction:column;gap:var(--sp-2);">
           <input class="input ros-activity" value="${esc(s.activity)}" placeholder="Teacher summary — what happens in this segment" style="padding:4px 8px;font-size:0.8125rem;" />
           <textarea class="input ros-instructions" rows="2" placeholder="Student-facing instructions" style="font-size:0.8125rem;resize:vertical;">${esc(s.studentInstructions)}</textarea>
+          <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
+            <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">STP &middot; Teaching Area
+              <select class="input ros-area" title="Singapore Teaching Practice — the Lesson Enactment area this segment enacts" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+                <option value="">(none)</option>
+                ${TEACHING_AREAS.map(a => `<option value="${esc(a.key)}" ${s.teachingArea === a.key ? 'selected' : ''}>${a.icon} ${esc(a.label)}</option>`).join('')}
+              </select>
+            </label>
+            ${s.teachingArea ? `
+            <label style="display:inline-flex;align-items:center;gap:var(--sp-1);font-size:0.6875rem;color:var(--ink-faint);">Teaching Action
+              <select class="input ros-action" title="The enactable teaching action — its student-facing framing shows in Present mode" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
+                <option value="">(choose)</option>
+                ${actionsForArea(s.teachingArea).map(act => `<option value="${esc(act.id)}" ${s.teachingAction === act.id ? 'selected' : ''}>${esc(act.label)}</option>`).join('')}
+                <option value="${TEACHING_ACTION_OTHER}" ${s.teachingAction === TEACHING_ACTION_OTHER ? 'selected' : ''}>Other&hellip;</option>
+              </select>
+            </label>` : ''}
+            ${(s.teachingArea && s.teachingAction === TEACHING_ACTION_OTHER) ? `
+            <input class="input ros-action-other" value="${esc(s.teachingActionOther || '')}" placeholder="Name your teaching action" style="flex:1;min-width:140px;padding:4px 8px;font-size:0.8125rem;" />` : ''}
+          </div>
           <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
             <select class="input ros-mode" title="Grouping mode" style="width:auto;padding:4px 8px;font-size:0.8125rem;">
               ${ROS_MODE_OPTIONS.map(m => `<option value="${m.value}" ${(s.grouping?.mode || '') === m.value ? 'selected' : ''}>${m.label}</option>`).join('')}
@@ -3071,7 +3106,10 @@ function showRunOfShowEditor(container, runOfShow) {
   // Grouping-mode changes re-render the rows so "Place in room" appears or
   // disappears with the chosen mode (groups/pairs only).
   rowsEl.addEventListener('change', (e) => {
-    if (e.target.classList?.contains('ros-mode')) {
+    const t = e.target;
+    // ros-area repopulates the Action options; ros-action reveals/hides the
+    // "Other" free-text; ros-mode toggles "Place in room". All re-render.
+    if (t.classList?.contains('ros-mode') || t.classList?.contains('ros-area') || t.classList?.contains('ros-action')) {
       syncFromDOM();
       renderRows();
     }
@@ -3103,6 +3141,35 @@ function showRunOfShowEditor(container, runOfShow) {
     } finally {
       regenBtn.disabled = false;
       regenBtn.innerHTML = originalHTML;
+    }
+  });
+
+  // "Map to STP" — non-destructive: AI suggests a Teaching Area + Action per
+  // existing segment; we prefill the pickers and re-render for the teacher to
+  // review and save. Only teachingArea/teachingAction/other are touched.
+  const mapBtn = backdrop.querySelector('#ros-map-stp');
+  mapBtn?.addEventListener('click', async () => {
+    if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
+    syncFromDOM();
+    const originalHTML = mapBtn.innerHTML;
+    mapBtn.disabled = true;
+    mapBtn.textContent = 'Mapping…';
+    try {
+      const byIndex = await mapSegmentsToSTP(segs);
+      let n = 0;
+      segs.forEach((s, i) => {
+        const t = byIndex.get(i);
+        if (t) { s.teachingArea = t.teachingArea; s.teachingAction = t.teachingAction; s.teachingActionOther = ''; n++; }
+      });
+      renderRows();
+      showToast(n
+        ? `Mapped ${n} segment${n === 1 ? '' : 's'} to STP — review and save.`
+        : 'No confident STP matches — pick Teaching Areas manually.', n ? 'success' : 'info');
+    } catch (err) {
+      showToast(`Map to STP failed: ${err.message}`, 'danger');
+    } finally {
+      mapBtn.disabled = false;
+      mapBtn.innerHTML = originalHTML;
     }
   });
 
@@ -4180,15 +4247,33 @@ function renderRunOfShow(container) {
         <span class="badge badge-blue" style="font-size:0.6875rem;">${total} min &middot; ${segments.length} segment${segments.length === 1 ? '' : 's'}</span>
         <button class="btn btn-primary btn-sm" id="ros-panel-present" style="margin-left:auto;" title="Open the student-facing class screen">&#9654; Present</button>
       </div>
-      <div id="ros-panel-strip" role="button" tabindex="0" title="Edit run of show" style="display:flex;flex-direction:column;gap:var(--sp-1);padding:var(--sp-3) var(--sp-4);cursor:pointer;">
-        ${segments.map((s, i) => `
-          <div style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;flex-wrap:wrap;line-height:1.5;">
-            <span style="color:var(--ink);font-weight:500;">${i + 1}. ${esc(s.name || `Segment ${i + 1}`)}</span>
-            <span style="color:var(--ink-faint);">&middot; ${Number(s.duration) || 0}min</span>
-            ${s.grouping?.mode ? `<span class="badge badge-gray" style="font-size:0.625rem;">${esc(modeLabel(s.grouping.mode))}</span>` : ''}
-            ${s.layoutSceneId ? `<span class="badge badge-blue" style="font-size:0.625rem;">&#128208; ${esc(sceneName(s.layoutSceneId))}</span>` : ''}
-            ${s.e21ccFocus && E21CC_SEGMENT_LABELS[s.e21ccFocus] ? `<span style="display:inline-block;padding:1px 8px;border-radius:var(--radius-full);background:var(--growth-light,#e2f2e8);color:var(--growth,#2c7a4b);font-size:0.625rem;font-weight:600;">${esc(E21CC_SEGMENT_LABELS[s.e21ccFocus])}</span>` : ''}
-          </div>`).join('')}
+      <div style="padding:var(--sp-2) var(--sp-4) 0;font-size:0.625rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);">&#127916; Lesson Enactment <span style="font-weight:600;">&middot; Singapore Teaching Practice</span></div>
+      <div id="ros-panel-strip" role="button" tabindex="0" title="Edit run of show" style="display:flex;flex-direction:column;gap:var(--sp-2);padding:var(--sp-2) var(--sp-4) var(--sp-3);cursor:pointer;">
+        ${segments.map((s, i) => {
+          const act = resolveTeachingAction(s);
+          const areaIcon = s.teachingArea ? (TEACHING_AREA_ICONS[s.teachingArea] || '') : '';
+          const areaLabel = s.teachingArea ? (TEACHING_AREA_LABELS[s.teachingArea] || '') : '';
+          const hasDetail = !!(areaLabel || act);
+          return `
+          <div class="ros-seg" style="display:flex;flex-direction:column;gap:2px;">
+            <div style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.8125rem;flex-wrap:wrap;line-height:1.5;">
+              <span aria-hidden="true" title="${esc(areaLabel)}">${areaIcon || '&#8226;'}</span>
+              <span style="color:var(--ink);font-weight:500;">${i + 1}. ${esc(s.name || `Segment ${i + 1}`)}</span>
+              <span style="color:var(--ink-faint);">&middot; ${Number(s.duration) || 0}min</span>
+              ${act ? `<span class="badge badge-blue" style="font-size:0.625rem;">${esc(act.label)}</span>` : ''}
+              ${s.grouping?.mode ? `<span class="badge badge-gray" style="font-size:0.625rem;">${esc(modeLabel(s.grouping.mode))}</span>` : ''}
+              ${s.layoutSceneId ? `<span class="badge badge-blue" style="font-size:0.625rem;">&#128208; ${esc(sceneName(s.layoutSceneId))}</span>` : ''}
+              ${s.e21ccFocus && E21CC_SEGMENT_LABELS[s.e21ccFocus] ? `<span style="display:inline-block;padding:1px 8px;border-radius:var(--radius-full);background:var(--growth-light,#e2f2e8);color:var(--growth,#2c7a4b);font-size:0.625rem;font-weight:600;">${esc(E21CC_SEGMENT_LABELS[s.e21ccFocus])}</span>` : ''}
+              ${hasDetail ? `<button type="button" class="btn btn-ghost btn-sm ros-details-btn" data-seg="${i}" style="margin-left:auto;padding:1px 8px;font-size:0.6875rem;">Details</button>` : ''}
+            </div>
+            ${hasDetail ? `
+            <div class="ros-details" data-seg="${i}" style="display:none;margin-left:22px;padding:6px 10px;border-left:2px solid var(--border);font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">
+              ${areaLabel ? `<div style="font-weight:700;color:var(--ink);">STP &middot; ${esc(areaLabel)}</div>` : ''}
+              ${act ? `<div><b>Action:</b> ${esc(act.label)}${act.teacherHint ? ` &mdash; ${esc(act.teacherHint)}` : ''}</div>` : ''}
+              ${act && act.studentFraming ? `<div style="margin-top:2px;color:var(--accent,#4361ee);">&#128065; Students see: &ldquo;${esc(act.studentFraming)}&rdquo;</div>` : ''}
+            </div>` : ''}
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
 
@@ -4202,6 +4287,18 @@ function renderRunOfShow(container) {
   strip?.addEventListener('click', openEditor);
   strip?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditor(); }
+  });
+  // "Details" reveals the segment's STP action + teacher hint + student framing
+  // without opening the editor (stop the click from bubbling to the strip).
+  strip?.querySelectorAll('.ros-details-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const panel = strip.querySelector(`.ros-details[data-seg="${btn.dataset.seg}"]`);
+      if (!panel) return;
+      const open = panel.style.display !== 'none';
+      panel.style.display = open ? 'none' : 'block';
+      btn.textContent = open ? 'Details' : 'Hide';
+    });
   });
 }
 
