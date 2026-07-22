@@ -2036,7 +2036,7 @@ export function seedExemplarsIfNeeded() {
    it also appears for existing installs on this version.
    ══════════════════════════════════════════════════════ */
 
-const SHOWCASE_SEED_KEY = 'cocher_showcase_seeded_v1';
+const SHOWCASE_SEED_KEY = 'cocher_showcase_seeded_v2';
 
 /* A six-pod discussion layout (+ teacher desk) sized to the 1440×720 canvas,
  * with one saved scene the seated segments point at. */
@@ -2087,6 +2087,76 @@ function buildShowcaseSegments(specSegs, students, podIids, sceneId) {
   }));
 }
 
+/* ── Animated inline SVGs for the showcase decks (self-contained SMIL,
+ * offline, motion loops). They demonstrate "animations within a slide"
+ * alongside the deck's build-in transitions. ── */
+const ANIM_NEUTRALISATION = `<svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Animation: a hydrogen ion and a hydroxide ion move together and combine to form water">
+  <text x="450" y="44" text-anchor="middle" font-size="30" font-weight="800" fill="#0f172a">H&#8314; + OH&#8315; &#8594; H&#8322;O</text>
+  <line x1="150" y1="200" x2="750" y2="200" stroke="#e2e8f0" stroke-width="3"/>
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0 0; 250 0; 250 0; 0 0" keyTimes="0;0.4;0.85;1" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;0.4;0.5;0.85;1" dur="4s" repeatCount="indefinite"/>
+    <circle cx="200" cy="200" r="42" fill="#ef4444"/>
+    <text x="200" y="209" text-anchor="middle" font-size="26" font-weight="800" fill="#fff">H&#8314;</text>
+  </g>
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0 0; -250 0; -250 0; 0 0" keyTimes="0;0.4;0.85;1" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="1;1;0;0;1" keyTimes="0;0.4;0.5;0.85;1" dur="4s" repeatCount="indefinite"/>
+    <circle cx="700" cy="200" r="42" fill="#3b82f6"/>
+    <text x="700" y="209" text-anchor="middle" font-size="23" font-weight="800" fill="#fff">OH&#8315;</text>
+  </g>
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.42;0.52;0.82;0.95" dur="4s" repeatCount="indefinite"/>
+    <circle cx="450" cy="200" r="50" fill="#14b8a6"/>
+    <text x="450" y="209" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">H&#8322;O</text>
+  </g>
+  <text x="450" y="300" text-anchor="middle" font-size="20" fill="#64748b">Acid + base &#8594; salt + water</text>
+</svg>`;
+
+const ANIM_SEISMIC = `<svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Animation: seismic waves radiating outward from an earthquake epicentre">
+  <text x="450" y="44" text-anchor="middle" font-size="30" font-weight="800" fill="#0f172a">Waves radiate from the epicentre</text>
+  <g transform="translate(450,195)">
+    <circle r="12" fill="#ef4444"/>
+    <circle r="12" fill="none" stroke="#ef4444" stroke-width="5">
+      <animate attributeName="r" values="12;150" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.95;0" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="12" fill="none" stroke="#f59e0b" stroke-width="5">
+      <animate attributeName="r" values="12;150" dur="3s" begin="1s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.95;0" dur="3s" begin="1s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="12" fill="none" stroke="#4361ee" stroke-width="5">
+      <animate attributeName="r" values="12;150" dur="3s" begin="2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.95;0" dur="3s" begin="2s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  <text x="450" y="312" text-anchor="middle" font-size="20" fill="#64748b">Energy released at a plate boundary spreads as seismic waves</text>
+</svg>`;
+
+const ANIM_RIPPLE = `<svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Animation: a single post ripples outward to many people">
+  <text x="450" y="44" text-anchor="middle" font-size="30" font-weight="800" fill="#0f172a">One tap &mdash; and it spreads</text>
+  <g transform="translate(450,190)">
+    <circle r="150" fill="none" stroke="#7c3aed" stroke-width="4">
+      <animate attributeName="r" values="34;150" dur="3.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.85;0" dur="3.2s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="150" fill="none" stroke="#ec4899" stroke-width="4">
+      <animate attributeName="r" values="34;150" dur="3.2s" begin="1.6s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.85;0" dur="3.2s" begin="1.6s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="34" fill="#7c3aed"/>
+    <path d="M-15 -6 h30 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-18 l-10 8 v-8 a4 4 0 0 1 -2 -24 z" fill="#fff" transform="translate(0,-2) scale(0.9)"/>
+    <g fill="#c4b5fd">
+      <circle cx="0" cy="-120" r="12"><animate attributeName="fill" values="#c4b5fd;#7c3aed;#c4b5fd" dur="3.2s" repeatCount="indefinite"/></circle>
+      <circle cx="114" cy="-38" r="12"><animate attributeName="fill" values="#c4b5fd;#7c3aed;#c4b5fd" dur="3.2s" begin="0.4s" repeatCount="indefinite"/></circle>
+      <circle cx="70" cy="100" r="12"><animate attributeName="fill" values="#c4b5fd;#7c3aed;#c4b5fd" dur="3.2s" begin="0.8s" repeatCount="indefinite"/></circle>
+      <circle cx="-70" cy="100" r="12"><animate attributeName="fill" values="#c4b5fd;#7c3aed;#c4b5fd" dur="3.2s" begin="1.2s" repeatCount="indefinite"/></circle>
+      <circle cx="-114" cy="-38" r="12"><animate attributeName="fill" values="#c4b5fd;#7c3aed;#c4b5fd" dur="3.2s" begin="1.6s" repeatCount="indefinite"/></circle>
+    </g>
+  </g>
+  <text x="450" y="322" text-anchor="middle" font-size="20" fill="#64748b">A post can reach far beyond the person you sent it to</text>
+</svg>`;
+
 const SHOWCASE_LESSONS = [
   {
     title: 'Acids, Bases & Salts — The Universal Indicator Lab',
@@ -2119,9 +2189,11 @@ const SHOWCASE_LESSONS = [
     deck: { title: 'Acids, Bases & Salts', slides: [
       { layout: 'title', title: 'Acids, Bases & Salts', subtitle: 'The Universal Indicator Lab', bullets: ['Identify acids & bases', 'Read the pH scale', 'Explain neutralisation'], icon: 'experiment' },
       { layout: 'statement', statement: 'Acids release H⁺ ions. Bases release OH⁻ ions.', icon: 'idea' },
+      { layout: 'visual', title: 'Watch: what is the pH scale?', youtube: 'ckbsHM2igT0', notes: 'FuseSchool — What Is The pH Scale (~3 min). Pause on the universal-indicator colours and ask students to predict where an everyday liquid sits.' },
       { layout: 'visual', title: 'The pH scale', chart: { type: 'bar', title: 'pH of everyday substances', data: [{ label: 'Lemon', value: 2 }, { label: 'Coffee', value: 5 }, { label: 'Water', value: 7 }, { label: 'Soap', value: 9 }, { label: 'Bleach', value: 13 }] } },
       { layout: 'columns', title: 'Tell them apart', icon: 'target', columns: [{ heading: 'Acids', items: ['pH below 7', 'Taste sour', 'Turn blue litmus red', 'React with metals'] }, { heading: 'Bases', items: ['pH above 7', 'Feel soapy', 'Turn red litmus blue', 'Neutralise acids'] }] },
       { layout: 'bullets', title: 'Neutralisation', icon: 'experiment', bullets: ['Acid + Base → Salt + Water', 'HCl + NaOH → NaCl + H₂O', 'H⁺ and OH⁻ join to make water', 'Antacids calm an acidic stomach'] },
+      { layout: 'visual', title: 'Neutralisation in action', svg: ANIM_NEUTRALISATION, notes: 'The H⁺ and OH⁻ ions move together and vanish as a water molecule forms — that is why the acid “disappears”.' },
       { layout: 'quote', quote: 'Where does the acid go when it is neutralised?', attribution: "Today's driving question" },
       { layout: 'exit', title: 'Exit ticket', icon: 'check', bullets: ['Place milk (pH 6) on the scale', 'Name the salt from HCl + KOH', 'One thing you now understand'] }
     ] }
@@ -2156,7 +2228,9 @@ const SHOWCASE_LESSONS = [
     ],
     deck: { title: 'Volcanoes & Earthquakes', slides: [
       { layout: 'title', title: 'Volcanoes & Earthquakes', subtitle: 'Living on the Ring of Fire', bullets: ['Link boundaries to hazards', 'Compare boundary types', 'Judge why people stay'], icon: 'globe' },
+      { layout: 'visual', title: 'Watch: the Ring of Fire', youtube: 'Vu6t3e4oqrE', notes: 'A short clip on the Ring of Fire. As they watch, students note WHERE volcanoes and earthquakes cluster — the hook for the whole lesson.' },
       { layout: 'statement', statement: 'About 90% of earthquakes strike along plate boundaries.', icon: 'warning' },
+      { layout: 'visual', title: 'How an earthquake travels', svg: ANIM_SEISMIC, notes: 'Waves radiate outward from the epicentre. Link this back to WHY the strongest shaking clusters along boundaries.' },
       { layout: 'visual', title: 'Where the Earth shakes hardest', chart: { type: 'bar', title: 'Largest recorded earthquakes (magnitude)', data: [{ label: 'Chile 1960', value: 9.5 }, { label: 'Alaska 1964', value: 9.2 }, { label: 'Sumatra 2004', value: 9.1 }, { label: 'Japan 2011', value: 9.0 }] } },
       { layout: 'columns', title: 'Two kinds of boundary', icon: 'target', columns: [{ heading: 'Destructive', items: ['Plates collide', 'Subduction', 'Explosive volcanoes', 'Strong quakes'] }, { heading: 'Constructive', items: ['Plates separate', 'New crust forms', 'Gentle volcanoes', 'Weaker quakes'] }] },
       { layout: 'bullets', title: 'Why live here?', icon: 'idea', bullets: ['Fertile volcanic soil', 'Geothermal energy', 'Tourism and jobs', 'Home and heritage'] },
@@ -2197,7 +2271,9 @@ const SHOWCASE_LESSONS = [
     deck: { title: 'Think Before You Share', slides: [
       { layout: 'title', title: 'Think Before You Share', subtitle: 'Cyber Wellness · Choices', bullets: ['Weigh online consequences', 'Respect yourself and others', 'Make a digital promise'], icon: 'globe' },
       { layout: 'quote', quote: 'Would you say it to their face?', attribution: 'Before you post' },
+      { layout: 'visual', title: 'Watch: think before you post', youtube: 'wyjd73tUXig', notes: 'Common Sense Education — Oversharing: Think Before You Post. Ask students to spot one moment the poster could have paused.' },
       { layout: 'statement', statement: 'What you share online can last forever.', icon: 'warning' },
+      { layout: 'visual', title: 'The ripple of a single post', svg: ANIM_RIPPLE, notes: 'One share reaches far beyond its target. Connect to “who else sees it?” and “can I undo it?”.' },
       { layout: 'columns', title: 'Pause and think', icon: 'question', columns: [{ heading: 'Before I share', items: ['Is it true?', 'Is it kind?', 'Is it mine to share?'] }, { heading: 'The ripple', items: ['Who else sees it?', 'How might they feel?', 'Can I undo it?'] }] },
       { layout: 'visual', title: 'A typical evening online', chart: { type: 'donut', title: 'Where the hours go', data: [{ label: 'Chat', value: 35 }, { label: 'Video', value: 30 }, { label: 'Games', value: 20 }, { label: 'Study', value: 15 }] } },
       { layout: 'exit', title: 'My digital promise', icon: 'check', bullets: ['One habit I will keep', 'One habit I will change', 'One person I will look out for'] }
@@ -2205,12 +2281,43 @@ const SHOWCASE_LESSONS = [
   }
 ];
 
+/**
+ * (Re)compile a showcase spec's deck and attach it to a lesson, replacing any
+ * prior auto-seeded deck of the same title. Used both when creating a new
+ * showcase lesson and when refreshing an already-seeded one (so returning
+ * teachers pick up the animated + embedded-video slides added in v7.8).
+ */
+function attachShowcaseDeck(lessonId, spec) {
+  if (!spec.deck) return;
+  const deckTitle = spec.deck.title || spec.title;
+  try {
+    const html = compileDeckHTML({ title: deckTitle, slides: spec.deck.slides });
+    saveDeckMaterial({ lessonId, title: deckTitle, html, slideCount: spec.deck.slides.length })
+      .then(meta => {
+        if (!meta) return;
+        const l = Store.getLesson(lessonId); if (!l) return;
+        // Drop any earlier auto-seeded deck of the same title; keep the rest.
+        const ars = (Array.isArray(l.attachedResources) ? l.attachedResources : [])
+          .filter(r => !(r && r.type === 'deck' && r.title === deckTitle));
+        ars.push({ type: 'deck', id: meta.id, title: meta.title || deckTitle });
+        Store.updateLesson(lessonId, { attachedResources: ars });
+      })
+      .catch(() => { /* deck is optional — lesson still works without it */ });
+  } catch { /* deck is optional */ }
+}
+
 export function seedShowcaseLessonsIfNeeded() {
   if (localStorage.getItem(SHOWCASE_SEED_KEY)) return;
   if (Store.getClasses().length === 0) return; // classes must exist first
   const now = Date.now();
   SHOWCASE_LESSONS.forEach((spec, idx) => {
-    if ((Store.get('lessons') || []).some(l => l.title === spec.title)) return;
+    const existing = (Store.get('lessons') || []).find(l => l.title === spec.title);
+    if (existing) {
+      // Seeded by an earlier version — just refresh the showcase deck in place
+      // (adds the animations + embedded video) without duplicating the lesson.
+      if (existing.isExemplar) attachShowcaseDeck(existing.id, spec);
+      return;
+    }
     const cls = ensureShowcaseClass(spec.subjectIncludes, spec.classDef);
     const students = (cls.students || []).slice();
     const layout = makeShowcaseLayout(`${spec.classDef.subject} — Discussion Pods`);
@@ -2241,20 +2348,7 @@ export function seedShowcaseLessonsIfNeeded() {
 
     // Attach a pre-built professional deck (async IDB write, non-blocking and
     // graceful) so the deck demo works with no API key. compileDeckHTML is sync.
-    if (spec.deck) {
-      try {
-        const html = compileDeckHTML({ title: spec.deck.title || spec.title, slides: spec.deck.slides });
-        saveDeckMaterial({ lessonId: created.id, title: spec.deck.title || spec.title, html, slideCount: spec.deck.slides.length })
-          .then(meta => {
-            if (!meta) return;
-            const l = Store.getLesson(created.id); if (!l) return;
-            const ars = Array.isArray(l.attachedResources) ? l.attachedResources.slice() : [];
-            ars.push({ type: 'deck', id: meta.id, title: meta.title || spec.deck.title || spec.title });
-            Store.updateLesson(created.id, { attachedResources: ars });
-          })
-          .catch(() => { /* deck is optional — lesson still works without it */ });
-      } catch { /* deck is optional */ }
-    }
+    attachShowcaseDeck(created.id, spec);
   });
   localStorage.setItem(SHOWCASE_SEED_KEY, '1');
 }

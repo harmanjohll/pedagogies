@@ -1,7 +1,11 @@
 /*
- * Co-Cher "What's New" — one-time changelog
- * =========================================
- * Shows once per version bump so returning teachers see what changed.
+ * Co-Cher "What's New" — version-aware changelog
+ * ==============================================
+ * Shows once per version bump so returning teachers see what changed —
+ * SUMMARISED across the versions they actually missed, not an ever-growing
+ * list. If a teacher last saw v7.3 and opens v7.8, they get the highlights of
+ * v7.4–v7.8 (newest first), each release trimmed to a few concise lines.
+ *
  * Keyed to APP_VERSION; dismissing records the seen version.
  */
 
@@ -10,58 +14,80 @@ import { openModal } from './modals.js';
 
 const SEEN_KEY = 'cocher_whatsnew_seen';
 
-const CHANGES = [
-  { icon: '&#128206;', title: 'Attach images & PDFs to your planning chat',
-    text: 'In the Lesson Planner, tap "Add file" (or just drag a file onto the chat) to attach an image or PDF — a worksheet, a textbook page, a diagram, a marking rubric, even a photo of student work. Co-Cher reads it directly and designs around it. Images are shrunk automatically to stay fast, and large PDFs fall back to their text so a scheme of work still comes through. Attach up to six files per message.' },
-  { icon: '&#127919;', title: 'Focus areas that actually upskill you',
-    text: 'The teaching focus areas you pick at sign-up now have a home in Settings — toggle any on or off, or add your own. They feed into every lesson Co-Cher helps you plan: where it genuinely fits, Co-Cher designs for those areas and names the move it\'s making, so you build the habit over the year — not just tick a box.' },
-  { icon: '&#129517;', title: 'A cleaner lesson journey',
-    text: 'The lesson lifecycle strip — Design, Prepare, Rehearse, Teach, Reflect — now sits on a single tidy row with its next-step button below, and reads as one clear arc (Design stays front and centre, as it should).' },
-  { icon: '&#127891;', title: 'Three ready-made showcase lessons',
-    text: 'Open the Lessons page to find three fully-staged demos — Chemistry (Acids, Bases & Salts), Geography (Volcanoes & Earthquakes) and a CCE Cyber Wellness lesson. Each is built end-to-end: an STP-tagged run of show, a class seated in discussion pods you can rearrange, and a polished slide deck already attached. A quick tour of everything the planner can now do.' },
-  { icon: '&#128202;', title: 'Sharper decks & movable students',
-    text: 'Two big lifts. The slide deck is reborn — professional, varied layouts (big-idea statements, quotes, compare columns, an exit-ticket slide) with inline charts, concept diagrams and signpost icons, smooth transitions and a progress bar; it still works offline, and where a picture or diagram helps, Co-Cher draws one in. And in the Spatial Designer you can now drag every student pill to arrange seating exactly how you want, then tap Save — the same seating flows into Present.' },
-  { icon: '&#129517;', title: 'Lesson plans, the STP way',
-    text: 'Your Run of Show now speaks the Singapore Teaching Practice: tag each segment with a Teaching Area and pick a Teaching Action — See-Think-Wonder, Predict-Observe-Explain, Hot Seat and more, with an "Other" for your own. The plan reads as STP with a "Details" button, and each action\'s student-facing framing now shows on the Present screen, so teacher-facing flows straight to student-facing. Older lessons? Tap "Map to STP" and Co-Cher suggests an area for each segment for you to review before saving. Every AI tool stays exactly where it was.' },
-  { icon: '&#129001;', title: 'Rearrange the room, live',
-    text: 'The "Find your seat" chart in Present is now a big, interactive board that fills the screen — drag any student pill anywhere (it stays exactly where you drop it) and move the furniture too. Nothing changes your saved seating until you tap "Save arrangement" (or Reset). "Open" on a linked layout now carries your room and seated students straight into the designer. Also new: Find a Teacher takes a date, so you can check a colleague\'s availability on any school day.' },
-  { icon: '&#127919;', title: 'Find your tools faster',
-    text: 'The lesson-planner tool bar now shows labels by default (tap the chevron for compact icons), the Labs tools say what they do ("Auto-Lesson", "Math Sandbox"), and the workflow modes now show what they change — with a one-tap way to clear them.' },
-  { icon: '&#128190;', title: 'Your work stays put',
-    text: 'Report comments and assessment exit-tickets/LISC now save as you go, so they survive leaving the page. And when a school network blocks a library, Co-Cher says so plainly instead of quietly coming up empty.' },
-  { icon: '&#128101;', title: 'Find a Teacher, in Admin',
-    text: 'In Admin One-Stop, pick a department then a teacher to see — from the timetable — whether they\'re free to meet right now, which periods are still open today, and how heavy their day has been, so you can offer a short break before meeting.' },
-  { icon: '&#128736;', title: 'Relief & admin, fixed',
-    text: 'The Relief Kit now finds your real timetable periods (no more retyping), deleting an event asks first so a mis-tap can\'t wipe it, and the admin timetable/org-chart tools keep working offline.' },
-  { icon: '&#9855;', title: 'Smoother & more reachable',
-    text: 'The classroom canvas and reflection ratings now work with a keyboard and screen reader, the Present timer announces the time politely, and the calm dashboard\'s customise button is finally where the tip says it is.' },
+// Newest first. Each release: a few concise highlights (not paragraphs).
+// Keep entries SHORT — this is a "since you were away" digest, not release notes.
+const RELEASES = [
+  { version: 'v7.8', items: [
+    { icon: '&#128206;', title: 'Attach images & PDFs', text: 'Drop a worksheet, textbook page, diagram or photo into the planning chat — Co-Cher reads it directly.' },
+    { icon: '&#127919;', title: 'Focus areas that upskill you', text: 'Manage your teaching focus areas in Settings; they now actively shape each lesson Co-Cher designs.' },
+    { icon: '&#127909;', title: 'Richer decks', text: 'Slides can embed YouTube videos and animated diagrams, and you can exit a presentation cleanly. Your work autosaves as you go.' },
+  ] },
+  { version: 'v7.7', items: [
+    { icon: '&#127891;', title: 'Three showcase lessons', text: 'Ready-made, fully-staged demos (Chemistry, Geography, CCE) — each with a seated class and a polished deck.' },
+  ] },
+  { version: 'v7.6', items: [
+    { icon: '&#128202;', title: 'Professional decks + movable students', text: 'Multi-layout slides with charts, diagrams and icons; drag any student to arrange seating in the Spatial Designer.' },
+  ] },
+  { version: 'v7.5', items: [
+    { icon: '&#129517;', title: 'Lesson plans, the STP way', text: 'Tag each segment with a Teaching Area and Action (Singapore Teaching Practice); the student framing flows into Present. Every AI tool stayed.' },
+  ] },
+  { version: 'v7.4', items: [
+    { icon: '&#129001;', title: 'Live seating + Find a Teacher', text: 'A big interactive seating chart in Present (drag students, move furniture, Save/Reset), and Find a Teacher now checks availability by date.' },
+  ] },
 ];
+
+/* ── version compare: 'v7.10' > 'v7.8', 'v7' treated as 'v7.0' ── */
+function parseVer(v) { return String(v || '').replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0); }
+function cmpVer(a, b) {
+  const A = parseVer(a), B = parseVer(b), n = Math.max(A.length, B.length);
+  for (let i = 0; i < n; i++) { const d = (A[i] || 0) - (B[i] || 0); if (d) return d; }
+  return 0;
+}
+
+// Cap how many missed versions we spell out, so a long absence still reads as a
+// tidy digest rather than a wall.
+const MAX_RELEASES_SHOWN = 5;
 
 export function maybeShowWhatsNew() {
   let seen = '';
   try { seen = localStorage.getItem(SEEN_KEY) || ''; } catch { /* ignore */ }
   if (seen === APP_VERSION) return;
-  // First-ever run (no version recorded): onboarding covers new users —
-  // record the current version silently so what's-new only ever surfaces
-  // for RETURNING users after a real version bump.
+  // First-ever run (no version recorded): onboarding covers new users — record
+  // the current version silently so what's-new only surfaces for RETURNING
+  // users after a real version bump.
   if (!seen) {
     try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch {}
     return;
   }
 
+  // Only the releases newer than what the teacher last saw, newest first.
+  const missed = RELEASES.filter(r => cmpVer(r.version, seen) > 0);
+  const releases = missed.length ? missed : RELEASES.slice(0, 1); // fallback: at least the latest
+  const shown = releases.slice(0, MAX_RELEASES_SHOWN);
+  const trimmed = releases.length - shown.length;
+
+  const intro = shown.length > 1
+    ? `A quick digest of what changed since you were last here (you were on ${seenLabel(seen)}):`
+    : `Here's what's new in Co-Cher ${APP_VERSION}:`;
+
   const body = `
-    <p style="font-size:0.8125rem;color:var(--ink-muted);margin:0 0 var(--sp-4);line-height:1.5;">
-      Here's what's new in Co-Cher ${APP_VERSION}:
-    </p>
-    <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
-      ${CHANGES.map(c => `
-        <div style="display:flex;gap:var(--sp-3);align-items:flex-start;">
-          <span style="font-size:1.25rem;line-height:1.2;flex-shrink:0;">${c.icon}</span>
-          <div>
-            <div style="font-weight:600;font-size:0.875rem;color:var(--ink);">${c.title}</div>
-            <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">${c.text}</div>
+    <p style="font-size:0.8125rem;color:var(--ink-muted);margin:0 0 var(--sp-4);line-height:1.5;">${intro}</p>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-4);">
+      ${shown.map(rel => `
+        <div>
+          <div style="display:inline-block;font-size:0.6875rem;font-weight:700;letter-spacing:0.04em;color:var(--accent);background:var(--accent-light,rgba(67,97,238,0.1));border-radius:999px;padding:2px 10px;margin-bottom:var(--sp-2);">${rel.version}</div>
+          <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+            ${rel.items.map(c => `
+              <div style="display:flex;gap:var(--sp-3);align-items:flex-start;">
+                <span style="font-size:1.15rem;line-height:1.2;flex-shrink:0;">${c.icon}</span>
+                <div>
+                  <div style="font-weight:600;font-size:0.875rem;color:var(--ink);">${c.title}</div>
+                  <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">${c.text}</div>
+                </div>
+              </div>`).join('')}
           </div>
         </div>`).join('')}
+      ${trimmed > 0 ? `<p style="font-size:0.75rem;color:var(--ink-faint);margin:0;">…and ${trimmed} earlier update${trimmed > 1 ? 's' : ''}.</p>` : ''}
     </div>`;
 
   const { backdrop, close } = openModal({
@@ -72,4 +98,9 @@ export function maybeShowWhatsNew() {
   });
   const dismiss = () => { try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch {} close(); };
   backdrop.querySelector('[data-action="got-it"]').addEventListener('click', dismiss);
+}
+
+/* A tidy label for the last-seen version (falls back to the raw value). */
+function seenLabel(seen) {
+  return /^v/i.test(seen) ? seen : `v${seen}`;
 }

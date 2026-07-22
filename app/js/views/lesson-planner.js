@@ -298,9 +298,69 @@ function removeComponent(key) {
 }
 
 function autoSaveComponents() {
+  scheduleAutosave();
+}
+
+/* ── Autosave ──────────────────────────────────────────────────────────────
+ * Keeps work safe as the teacher goes. A brand-new draft used to persist
+ * NOTHING until an explicit Save; now, once there's real content (an AI reply
+ * or a generated component), autosave creates the lesson and thereafter keeps
+ * it up to date — debounced, with a quiet "Saved" indicator. The explicit Save
+ * dialog still exists for naming, class and status. */
+let autosaveTimer = null;
+
+/** A clean title for an autosaved draft (teacher's words, minus context tags). */
+function deriveLessonTitle() {
+  if (currentLessonId) { const l = Store.getLesson(currentLessonId); if (l?.title) return l.title; }
+  const firstUser = chatMessages.find(m => m.role === 'user');
+  let t = firstUser ? String(firstUser.content || '') : '';
+  t = t.replace(/\[[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim();          // drop bracketed context/attachment notes
+  if (!t && planClassContext) t = `${planClassContext.subject || 'Lesson'} — ${planClassContext.name || ''}`.trim();
+  t = t.slice(0, 60).trim();
+  return t || 'Untitled lesson';
+}
+
+function markAutosave(state) {
+  const el = document.getElementById('lp-autosave');
+  if (!el) return;
+  clearTimeout(el._t);
+  if (state === 'saving') { el.textContent = 'Saving…'; el.style.opacity = '0.75'; return; }
+  el.innerHTML = '&#10003; Saved';
+  el.style.opacity = '1';
+  el._t = setTimeout(() => { el.textContent = 'Saved'; el.style.opacity = '0.5'; }, 1800);
+}
+
+function scheduleAutosave() {
+  // Nothing worth saving yet → don't create empty drafts.
+  const hasContent = chatMessages.some(m => m.role === 'assistant') || Object.keys(lessonComponents).length > 0;
+  if (!hasContent) return;
+  markAutosave('saving');
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => { autosaveTimer = null; autosaveNow(); }, 800);
+}
+
+function autosaveNow() {
+  const hasContent = chatMessages.some(m => m.role === 'assistant') || Object.keys(lessonComponents).length > 0;
+  if (!hasContent) return;
+  const data = {
+    components: { ...lessonComponents },
+    chatHistory: stripAttachmentData(chatMessages),
+    plan: chatMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n\n---\n\n')
+  };
   if (currentLessonId) {
-    Store.updateLesson(currentLessonId, { components: { ...lessonComponents } });
+    Store.updateLesson(currentLessonId, data);
+  } else {
+    const title = deriveLessonTitle();
+    const created = Store.addLesson({ title, classId: planClassContext?.id || null, status: 'draft', ...data });
+    if (!created) return;
+    currentLessonId = created.id;
+    // Point the URL at the new draft WITHOUT a re-render (replaceState doesn't
+    // fire hashchange), so a reload reopens it.
+    try { history.replaceState(null, '', '#/lesson-planner/' + created.id); } catch { /* ignore */ }
+    const sub = document.getElementById('lp-canvas-subtitle');
+    if (sub) sub.textContent = `Editing: ${title}`;
   }
+  markAutosave('saved');
 }
 
 /* ── WS-C: on-demand [EXPAND:] expansion chips ──
@@ -1193,9 +1253,12 @@ export function render(container) {
                   Chat
                 </button>
                 <div>
-                  <h2 style="font-size:1.125rem;font-weight:600;color:var(--ink);">Lesson Canvas</h2>
+                  <div style="display:flex;align-items:center;gap:var(--sp-2);">
+                    <h2 style="font-size:1.125rem;font-weight:600;color:var(--ink);">Lesson Canvas</h2>
+                    <span id="lp-autosave" title="Your work is saved automatically" style="font-size:0.6875rem;font-weight:600;color:var(--growth,#2c7a4b);opacity:0;transition:opacity .3s;"></span>
+                  </div>
                   <p id="lp-canvas-subtitle" style="font-size:0.8125rem;color:var(--ink-muted);">
-                    ${currentLessonId ? `Editing: ${currentLesson?.title || 'Lesson'}` : 'New lesson — save when ready'}
+                    ${currentLessonId ? `Editing: ${currentLesson?.title || 'Lesson'}` : 'New lesson — autosaves as you go'}
                   </p>
                 </div>
               </div>
@@ -1623,11 +1686,9 @@ export function render(container) {
         isGenerating = false;
         renderMessages(messagesEl, classes);
         renderPlanContent(container.querySelector('#plan-content'));
-        // Auto-save if editing existing lesson — strip heavy base64 first so a
-        // few screenshots can never blow the localStorage quota.
-        if (currentLessonId) {
-          Store.updateLesson(currentLessonId, { chatHistory: stripAttachmentData(chatMessages) });
-        }
+        // Autosave: creates the draft on first real content, then keeps it up to
+        // date (base64 attachments are stripped before persistence).
+        scheduleAutosave();
       }
     }
   }
