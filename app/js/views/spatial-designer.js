@@ -3055,47 +3055,73 @@ export function render(container) {
     const segment = lesson?.runOfShow?.segments?.find(s => s.id === payload.segmentId) || null;
     const roster = lesson?.classId ? (Store.getClass(lesson.classId)?.students || []) : [];
     const idToName = new Map(roster.map(st => [st.id, st.name]));
-    const seatNames = new Map(); // iid → [name]
+    // Flat seat map for THIS canvas: iid -> [studentId] (only resolvable students).
+    const seats = {};
     (segment?.grouping?.groups || []).forEach(g => {
       const sm = (g.seatMap && typeof g.seatMap === 'object') ? g.seatMap : {};
       Object.entries(sm).forEach(([iid, sids]) => {
-        const names = (Array.isArray(sids) ? sids : []).map(sid => idToName.get(sid)).filter(Boolean);
-        if (names.length) seatNames.set(String(iid), (seatNames.get(String(iid)) || []).concat(names));
+        (Array.isArray(sids) ? sids : []).forEach(sid => {
+          if (!idToName.has(sid)) return;
+          (seats[String(iid)] = seats[String(iid)] || []).push(sid);
+        });
       });
     });
-    if (seatNames.size === 0) return; // layout ported; no seated students to overlay
+    const seatableIids = new Set(Object.keys(seats));
+    const totalSeated = Object.values(seats).reduce((n, a) => n + a.length, 0);
+    if (totalSeated === 0) return; // layout ported; no seated students to place
 
-    // 3) Read-only student overlay — outside #layout-root so it never serializes.
+    // Free pixel positions: saved seatPos wins; else a tidy ring around the table.
+    const savedPos = (segment?.grouping?.seatPos && typeof segment.grouping.seatPos === 'object')
+      ? segment.grouping.seatPos : {};
+    const pos = {}; // sid -> {x,y}
+    let dirty = false;
+
+    const tableNodes = () => {
+      const m = new Map();
+      layoutRoot.querySelectorAll('g[data-id]').forEach(n => {
+        const ii = n.getAttribute('data-iid'); if (ii) m.set(ii, n);
+      });
+      return m;
+    };
+    const seedPositions = () => {
+      const nodes = tableNodes();
+      Object.entries(seats).forEach(([iid, sids]) => {
+        const node = nodes.get(iid); if (!node) return;
+        const def = PALETTE.find(p => p.id === node.getAttribute('data-id')); if (!def) return;
+        const [tx, ty] = getTranslate(node);
+        const ring = seatRingLayout(def, sids.map(sid => idToName.get(sid) || sid), { gap: 16 });
+        sids.forEach((sid, k) => {
+          if (savedPos[sid]) { pos[sid] = { x: savedPos[sid].x, y: savedPos[sid].y }; return; }
+          const p = ring[k] || { dx: 0, dy: 0 };
+          pos[sid] = { x: Math.round(tx + p.dx), y: Math.round(ty + p.dy) };
+        });
+      });
+    };
+    seedPositions();
+
+    // 3) Interactive student overlay — outside #layout-root so it never serializes.
     const seatLayer = document.createElementNS(SVG_NS, 'g');
     seatLayer.id = 'seat-overlay';
-    seatLayer.style.pointerEvents = 'none';
+    seatLayer.style.pointerEvents = 'none'; // only the pills capture (set per-pill)
     svg.appendChild(seatLayer);
 
-    const MAX_SEATS = 12;
+    const pillW = t => Math.max(26, Math.round(String(t).length * 12 * 0.6) + 16);
     function paintSeats() {
       seatLayer.innerHTML = '';
-      const nodes = new Map();
-      layoutRoot.querySelectorAll('g[data-id]').forEach(n => {
-        const ii = n.getAttribute('data-iid');
-        if (ii) nodes.set(ii, n);
-      });
-      seatNames.forEach((names, iid) => {
-        const node = nodes.get(iid);
-        if (!node) return; // table not on this canvas — nothing to anchor to
-        const def = PALETTE.find(p => p.id === node.getAttribute('data-id'));
-        if (!def) return;
-        const [tx, ty] = getTranslate(node);
-        // Same overflow rule as layoutToSVG's multi-name badges.
-        const shown = names.length > MAX_SEATS
-          ? [...names.slice(0, MAX_SEATS - 1), `+${names.length - (MAX_SEATS - 1)} more`]
-          : names;
-        seatRingLayout(def, shown).forEach(p => {
+      Object.entries(seats).forEach(([iid, sids]) => {
+        sids.forEach(sid => {
+          const name = idToName.get(sid) || sid;
+          const p = pos[sid] || { x: VB_W / 2, y: VB_H / 2 };
+          const w = pillW(name);
           const g = document.createElementNS(SVG_NS, 'g');
-          g.setAttribute('transform', `translate(${Math.round(tx + p.dx)},${Math.round(ty + p.dy)})`);
+          setAttrs(g, { class: 'seatpill', 'data-sid': sid, 'data-iid': iid,
+            transform: `translate(${Math.round(p.x)},${Math.round(p.y)})` });
+          g.style.pointerEvents = 'auto';
+          g.style.cursor = 'grab';
           const rect = document.createElementNS(SVG_NS, 'rect');
-          setAttrs(rect, { x: -p.w / 2, y: -10, width: p.w, height: 20, rx: 10, fill: '#1e293b', opacity: 0.92 });
+          setAttrs(rect, { x: -w / 2, y: -11, width: w, height: 22, rx: 11, fill: '#1e293b', opacity: 0.95 });
           g.appendChild(rect);
-          const t = svgText(0, 4, p.text, 12, '#fff');
+          const t = svgText(0, 4, name, 12, '#fff');
           t.setAttribute('font-weight', '700');
           g.appendChild(t);
           seatLayer.appendChild(g);
@@ -3103,31 +3129,110 @@ export function render(container) {
       });
     }
 
-    // Repaint so pills follow furniture when the teacher drags/nudges a table.
-    const repaint = () => paintSeats();
-    svg.addEventListener('pointerup', repaint);
-    document.addEventListener('keyup', repaint);
+    // Drag a student pill freely; dropping over a table re-homes the student.
+    const toSVG = (e) => {
+      const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    };
+    const hitTestTable = (x, y) => {
+      let best = null, bestD = Infinity;
+      tableNodes().forEach((node, iid) => {
+        if (!seatableIids.has(iid)) return;
+        const def = PALETTE.find(p => p.id === node.getAttribute('data-id')); if (!def) return;
+        const [tx, ty] = getTranslate(node);
+        const rr = Math.max(def.w, def.h || def.w) / 2 + 44;
+        const dd = Math.hypot(x - tx, y - ty);
+        if (dd < rr && dd < bestD) { bestD = dd; best = iid; }
+      });
+      return best;
+    };
+    const moveStudent = (sid, fromIid, toIid) => {
+      if (seats[fromIid]) seats[fromIid] = seats[fromIid].filter(s => s !== sid);
+      (seats[toIid] = seats[toIid] || []).push(sid);
+    };
+    let drag = null;
+    const onDown = (e) => {
+      const el = e.target.closest('.seatpill'); if (!el) return;
+      e.stopPropagation(); e.preventDefault(); // never trigger the furniture editor
+      const p = toSVG(e); const sid = el.getAttribute('data-sid');
+      drag = { el, sid, iid: el.getAttribute('data-iid'), grabX: p.x, grabY: p.y,
+        baseX: pos[sid].x, baseY: pos[sid].y, lastX: pos[sid].x, lastY: pos[sid].y, moved: false };
+      try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      seatLayer.appendChild(el); el.style.cursor = 'grabbing';
+    };
+    const onMove = (e) => {
+      if (!drag) return;
+      const p = toSVG(e);
+      let nx = drag.baseX + (p.x - drag.grabX), ny = drag.baseY + (p.y - drag.grabY);
+      if (Math.abs(p.x - drag.grabX) + Math.abs(p.y - drag.grabY) > 4) drag.moved = true;
+      nx = Math.max(24, Math.min(VB_W - 24, nx)); ny = Math.max(16, Math.min(VB_H - 16, ny));
+      drag.el.setAttribute('transform', `translate(${Math.round(nx)},${Math.round(ny)})`);
+      drag.lastX = nx; drag.lastY = ny;
+    };
+    const onUp = (e) => {
+      if (!drag) return;
+      try { drag.el.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+      const d = drag; drag = null; d.el.style.cursor = 'grab';
+      if (!d.moved) return; // a tap is not a drag
+      pos[d.sid] = { x: Math.round(d.lastX), y: Math.round(d.lastY) };
+      const target = hitTestTable(d.lastX, d.lastY);
+      if (target && target !== d.iid) moveStudent(d.sid, d.iid, target);
+      dirty = true; updateChip(); paintSeats();
+    };
+    svg.addEventListener('pointerdown', onDown, true);
+    svg.addEventListener('pointermove', onMove);
+    svg.addEventListener('pointerup', onUp);
+    svg.addEventListener('pointercancel', onUp);
 
-    // 4) Dismissible chip — teacher stays in control of what's on screen.
+    // 4) Chip: Save seating (persists to the lesson) · Hide.
     const canvasCol = container.querySelector('#spatial-canvas-col');
     const chip = document.createElement('div');
     chip.style.cssText = 'display:flex;align-items:center;gap:var(--sp-2);margin:var(--sp-2);padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-full);background:var(--bg-card);font-size:0.75rem;color:var(--ink);width:fit-content;max-width:calc(100% - 2*var(--sp-2));';
-    chip.innerHTML = `<span>Seating from <strong>${escapeHtml(lesson?.title || 'lesson')}</strong>${segment?.name ? ' · ' + escapeHtml(segment.name) : ''}</span>` +
-      `<button type="button" id="seat-overlay-hide" class="btn btn-ghost btn-sm" style="font-size:0.6875rem;padding:2px 8px;">Hide names</button>`;
+    chip.innerHTML = `<span>Seating from <strong>${escapeHtml(lesson?.title || 'lesson')}</strong>${segment?.name ? ' · ' + escapeHtml(segment.name) : ''} &middot; <em>drag students to rearrange</em></span>` +
+      `<button type="button" id="seat-save" class="btn btn-primary btn-sm" style="font-size:0.6875rem;padding:2px 10px;" disabled>Save seating</button>` +
+      `<button type="button" id="seat-overlay-hide" class="btn btn-ghost btn-sm" style="font-size:0.6875rem;padding:2px 8px;">Hide</button>`;
     if (canvasCol) canvasCol.insertBefore(chip, canvasCol.firstChild);
+    const updateChip = () => { const b = chip.querySelector('#seat-save'); if (b) b.disabled = !dirty; };
+
+    function saveSeating() {
+      // Furniture positions live in the layout (the editor autosaves them); here
+      // we persist the student seating + free positions back onto the lesson, the
+      // same contract the Present seat map writes (grouping.seatMap + seatPos).
+      const les = payload.lessonId ? Store.getLesson(payload.lessonId) : null;
+      const ros = les && les.runOfShow;
+      if (ros && Array.isArray(ros.segments)) {
+        const seatPos = {}; Object.keys(pos).forEach(sid => { seatPos[sid] = { x: pos[sid].x, y: pos[sid].y }; });
+        const segments = ros.segments.map(sg => {
+          if (sg.id !== payload.segmentId) return sg;
+          const groups = ((sg.grouping && sg.grouping.groups) || []).map(g => {
+            const itemIds = (g.itemIds && g.itemIds.length) ? g.itemIds : Object.keys(g.seatMap || {});
+            const seatMap = {}; const studentIds = [];
+            itemIds.forEach(iid => { const sids = seats[iid] || []; seatMap[iid] = [...sids]; studentIds.push(...sids); });
+            return { ...g, itemIds, seatMap, studentIds };
+          });
+          return { ...sg, grouping: { ...(sg.grouping || {}), groups, seatPos } };
+        });
+        Store.updateLesson(payload.lessonId, { runOfShow: { ...ros, generatedAt: Date.now(), segments } });
+      }
+      dirty = false; updateChip();
+      showToast('Seating saved.', 'success');
+    }
 
     function dismiss() {
-      svg.removeEventListener('pointerup', repaint);
-      document.removeEventListener('keyup', repaint);
+      svg.removeEventListener('pointerdown', onDown, true);
+      svg.removeEventListener('pointermove', onMove);
+      svg.removeEventListener('pointerup', onUp);
+      svg.removeEventListener('pointercancel', onUp);
       seatLayer.remove();
       chip.remove();
       openLayoutCleanup = null;
     }
     openLayoutCleanup = dismiss;
+    chip.querySelector('#seat-save')?.addEventListener('click', saveSeating);
     chip.querySelector('#seat-overlay-hide')?.addEventListener('click', dismiss);
 
     paintSeats();
-    showToast(`Loaded "${layout.name}" — ${seatNames.size} seated table${seatNames.size === 1 ? '' : 's'} shown.`, 'success');
+    showToast(`Loaded "${layout.name}" — ${totalSeated} student${totalSeated === 1 ? '' : 's'}; drag to rearrange, then Save.`, 'success');
   })();
 
   // Cleanup on route change
