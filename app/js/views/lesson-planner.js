@@ -24,6 +24,8 @@ import { SCHEMA_PRESETS } from '../utils/tracking.js';
 import { TEACHING_AREAS, TEACHING_AREA_ICONS, TEACHING_AREA_LABELS, actionsForArea, resolveTeachingAction, TEACHING_ACTION_OTHER } from '../utils/stp.js';
 import { layoutToSVG } from './spatial-designer.js';
 import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
+import { ATTACH_ACCEPT, isAcceptedAttachment, buildAttachment, toMultimodalMessage, attachmentContextNote, stripAttachmentData } from '../utils/attachments.js';
+import { priorityLabel, getPriorities } from '../utils/priorities.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
@@ -40,6 +42,7 @@ let planClassContext = null;  // class context from "Plan from Class"
 let vigilanceNudged = false;  // at most one nudge per conversation
 let vigilanceState = null;    // { prompt } while the nudge card is showing
 let attachedKBContext = [];   // attached knowledge base resources
+let pendingAttachments = [];  // images / PDFs staged in the composer for the next message
 let lessonDateTime = null;    // { date, period, room, classCode } from timetable or manual
 let selectedIdeology = '';    // optional curriculum ideology lens
 let selectedFrameworkIds = []; // optional pedagogy framework lenses (multi-select chips)
@@ -1145,6 +1148,11 @@ export function render(container) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 Attach Context
               </button>
+              <button class="btn btn-ghost btn-sm" id="attach-file-btn" title="Attach an image or PDF for Co-Cher to read (worksheet, diagram, textbook page, student work…)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Add file
+              </button>
+              <input type="file" id="attach-file-input" accept="${ATTACH_ACCEPT}" multiple style="display:none;" />
               ${micButtonHTML({ id: 'composer-mic-btn', statusId: 'composer-mic-status', label: 'Dictate' })}
               <select id="ideology-lens" class="input" title="Optional: frame lesson through a curriculum ideology" style="width:auto;padding:2px 8px;font-size:0.6875rem;color:var(--ink-muted);border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-card);height:28px;">
                 <option value="">Ideology lens (optional)</option>
@@ -1160,6 +1168,7 @@ export function render(container) {
                 }).join('')}
               </div>
             </div>
+            <div id="composer-attachments" style="display:none;flex-wrap:wrap;gap:var(--sp-2);padding:var(--sp-2) 0;"></div>
             <textarea class="chat-input" id="chat-input" placeholder="${planClassContext ? `Plan a lesson for ${planClassContext.name}...` : 'Describe your lesson idea, ask about spatial design, or explore frameworks...'}" rows="3"></textarea>
             <div class="chat-composer-footer">
               <span style="font-size:0.6875rem;color:var(--ink-faint);">Shift+Enter for new line</span>
@@ -1445,21 +1454,27 @@ export function render(container) {
         chatMessages.pop();
       }
       if (currentLessonId) {
-        Store.updateLesson(currentLessonId, { chatHistory: [...chatMessages] });
+        Store.updateLesson(currentLessonId, { chatHistory: stripAttachmentData(chatMessages) });
       }
       render(container);
       showToast('Last exchange removed.', 'success');
     });
   }
 
+  // Reset the composer's staged attachments — reassigned once the attach UI is
+  // wired below (declared here so the hoisted sendMessage can call it).
+  let clearComposerAttachments = () => { pendingAttachments = []; };
+
   // Send message
   async function sendMessage() {
     const text = chatInput.value.trim();
-    if (!text || isGenerating) return;
+    // Attachments alone (no text) are still worth sending — the model reads them.
+    if ((!text && pendingAttachments.length === 0) || isGenerating) return;
     if (!Store.get('apiKey')) { showToast('Please set your API key in Settings first.', 'danger'); return; }
 
-    // Cognitive vigilance: one playful checkpoint for context-free prompts
-    if (vigilanceCheck(text)) {
+    // Cognitive vigilance: one playful checkpoint for context-free prompts.
+    // Skipped when files are attached — the attachment IS the context.
+    if (!pendingAttachments.length && vigilanceCheck(text)) {
       vigilanceNudged = true;
       vigilanceState = { prompt: text };
       renderMessages(messagesEl, classes);
@@ -1537,16 +1552,12 @@ export function render(container) {
       if (reflectionInsights) {
         contextParts.push(`[Post-Lesson Reflection from "${reflectionInsights.fromLesson}"]:\n${reflectionInsights.insights}\n\nPlease use these insights to inform the lesson plan — build on what worked and address what needs adjustment.`);
       }
-      // Inject pedagogical priorities
-      const pedPriorities = Store.get('pedagogicalPriorities');
-      if (pedPriorities && pedPriorities.length > 0) {
-        const priorityLabels = {
-          differentiation: 'Differentiation', assessment: 'Assessment Literacy',
-          engagement: 'Student Engagement', e21cc: 'E21CC Development',
-          edtech: 'EdTech Integration', inquiry: 'Inquiry-Based Learning',
-          sel: 'SEL & Well-being', cce: 'CCE & Values'
-        };
-        contextParts.push(`[Teacher's pedagogical priorities this year: ${pedPriorities.map(p => priorityLabels[p] || p).join(', ')}]`);
+      // Inject the teacher's focus areas — and ask the model to actively build
+      // the teacher's capability in them, not just acknowledge them.
+      const pedPriorities = getPriorities(Store);
+      if (pedPriorities.length > 0) {
+        const labels = pedPriorities.map(priorityLabel).join(', ');
+        contextParts.push(`[Teacher's professional focus areas this year: ${labels}. Where it genuinely fits this lesson, deliberately design for and model strong practice in these areas, and name the move you're making so the teacher builds capability in them over time. Never force a focus area where it doesn't belong.]`);
       }
     }
     // Ideology lens
@@ -1573,11 +1584,20 @@ export function render(container) {
       });
     }
 
-    const enrichedContent = contextParts.length > 0
-      ? `${contextParts.join('\n\n')}\n\n${text}`
-      : text;
+    // Attached images/PDFs: name them in the text (survives persistence; base64
+    // does not) and carry the bytes on the message for the API layer to expand.
+    const attachments = pendingAttachments.slice();
+    const attachNote = attachmentContextNote(attachments);
+    const bodyText = attachNote ? (text ? `${attachNote}\n\n${text}` : attachNote) : text;
 
-    chatMessages.push({ role: 'user', content: enrichedContent });
+    const enrichedContent = contextParts.length > 0
+      ? `${contextParts.join('\n\n')}\n\n${bodyText}`
+      : bodyText;
+
+    const userMsg = { role: 'user', content: enrichedContent };
+    if (attachments.length) userMsg.attachments = attachments;
+    chatMessages.push(userMsg);
+    clearComposerAttachments();
     chatInput.value = '';
     chatInput.style.height = 'auto';
     isGenerating = true;
@@ -1588,7 +1608,10 @@ export function render(container) {
     // and the stale response must be discarded (not appended/auto-saved).
     const sessionMessages = chatMessages;
     try {
-      const response = await sendChat(sessionMessages, { trackLabel: 'lessonChat', trackDetail: [planClassContext?.subject, planClassContext?.level].filter(Boolean).join(' ') || '' });
+      // Expand any attachment-bearing messages into Gemini's multimodal shape;
+      // text-only messages pass through unchanged.
+      const apiMessages = sessionMessages.map(toMultimodalMessage);
+      const response = await sendChat(apiMessages, { trackLabel: 'lessonChat', trackDetail: [planClassContext?.subject, planClassContext?.level].filter(Boolean).join(' ') || '' });
       if (chatMessages !== sessionMessages) return;
       chatMessages.push({ role: 'assistant', content: response });
     } catch (err) {
@@ -1600,9 +1623,10 @@ export function render(container) {
         isGenerating = false;
         renderMessages(messagesEl, classes);
         renderPlanContent(container.querySelector('#plan-content'));
-        // Auto-save if editing existing lesson
+        // Auto-save if editing existing lesson — strip heavy base64 first so a
+        // few screenshots can never blow the localStorage quota.
         if (currentLessonId) {
-          Store.updateLesson(currentLessonId, { chatHistory: [...chatMessages] });
+          Store.updateLesson(currentLessonId, { chatHistory: stripAttachmentData(chatMessages) });
         }
       }
     }
@@ -1660,6 +1684,82 @@ export function render(container) {
   container.querySelector('#attach-kb-btn')?.addEventListener('click', () => {
     showAttachKBModal(container);
   });
+
+  // ── Attach images / PDFs (multimodal) ──────────────────────────────────
+  // Teachers drop a worksheet, diagram, textbook page, marking rubric or a
+  // photo of student work; Gemini reads it directly. Staged in the composer,
+  // consumed by sendMessage(), then cleared.
+  const fileInput = container.querySelector('#attach-file-input');
+  const attachBar = container.querySelector('#composer-attachments');
+
+  function renderPendingAttachments() {
+    if (!attachBar) return;
+    if (!pendingAttachments.length) {
+      attachBar.style.display = 'none';
+      attachBar.innerHTML = '';
+      return;
+    }
+    attachBar.style.display = 'flex';
+    attachBar.innerHTML = pendingAttachments.map((a, i) => {
+      const thumb = a.kind === 'image' && a.previewUrl
+        ? `<img src="${a.previewUrl}" alt="" style="width:28px;height:28px;object-fit:cover;border-radius:4px;flex-shrink:0;" />`
+        : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+      const note = a.kind === 'pdf-text' ? ' <span style="color:var(--ink-faint);">(text only)</span>' : '';
+      return `<span class="composer-attach-chip" style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg-subtle);border:1px solid var(--border-light);border-radius:var(--radius);font-size:0.75rem;max-width:220px;">
+        ${thumb}
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(a.name)}${note}</span>
+        <button class="attach-remove" data-idx="${i}" title="Remove" aria-label="Remove ${esc(a.name)}" style="border:none;background:none;cursor:pointer;color:var(--ink-faint);padding:0;line-height:1;font-size:1rem;flex-shrink:0;">&times;</button>
+      </span>`;
+    }).join('');
+    attachBar.querySelectorAll('.attach-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        pendingAttachments.splice(parseInt(btn.dataset.idx), 1);
+        renderPendingAttachments();
+      });
+    });
+  }
+
+  async function addFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const accepted = files.filter(isAcceptedAttachment);
+    const rejected = files.length - accepted.length;
+    if (rejected > 0) showToast(`${rejected} file(s) skipped — only images and PDFs can be attached.`, 'danger');
+    for (const file of accepted) {
+      if (pendingAttachments.length >= 6) { showToast('Up to 6 files per message.', 'danger'); break; }
+      try {
+        const att = await buildAttachment(file);
+        pendingAttachments.push(att);
+        renderPendingAttachments();
+      } catch (err) {
+        console.error('Attachment error:', err);
+        showToast(err.message || `Could not attach ${file.name}.`, 'danger');
+      }
+    }
+  }
+
+  container.querySelector('#attach-file-btn')?.addEventListener('click', () => fileInput?.click());
+  fileInput?.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+
+  // Drag-and-drop straight onto the chat column.
+  const chatCol = container.querySelector('.chat-messages')?.closest('.lp-chat-col') || container.querySelector('.chat-messages');
+  if (chatCol) {
+    const dragOn = () => { chatCol.style.outline = '2px dashed var(--accent)'; chatCol.style.outlineOffset = '-6px'; };
+    const dragOff = () => { chatCol.style.outline = ''; chatCol.style.outlineOffset = ''; };
+    chatCol.addEventListener('dragover', e => { if (e.dataTransfer?.types?.includes('Files')) { e.preventDefault(); dragOn(); } });
+    chatCol.addEventListener('dragleave', e => { if (e.target === chatCol) dragOff(); });
+    chatCol.addEventListener('drop', e => {
+      if (!e.dataTransfer?.files?.length) return;
+      e.preventDefault();
+      dragOff();
+      addFiles(e.dataTransfer.files);
+    });
+  }
+
+  // Re-render any attachments carried over from a re-render of the composer.
+  renderPendingAttachments();
+  // Expose so sendMessage() (defined above in the same scope) can clear the bar.
+  clearComposerAttachments = () => { pendingAttachments = []; renderPendingAttachments(); };
 
   // WS-V: composer dictation mic — FILLS #chat-input at the cursor; it never
   // calls sendMessage(). The teacher still presses Send to submit.
@@ -2493,6 +2593,25 @@ Maximum 3-5 recommendations. If nothing genuinely fits, say so — don't pad wit
 }
 
 /* ── Messages render ── */
+// Small chips showing the images/PDFs a teacher attached to a message. In-session
+// image attachments carry a previewUrl (thumbnail); after reload only light
+// metadata survives, so we fall back to a type icon.
+function renderMsgAttachments(m) {
+  const atts = Array.isArray(m.attachments) ? m.attachments : [];
+  if (!atts.length) return '';
+  const chips = atts.map(a => {
+    const thumb = a.kind === 'image' && a.previewUrl
+      ? `<img src="${a.previewUrl}" alt="" style="width:22px;height:22px;object-fit:cover;border-radius:3px;flex-shrink:0;" />`
+      : a.kind === 'image'
+        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`
+        : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+    return `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 7px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);border-radius:6px;font-size:0.6875rem;max-width:180px;">
+      ${thumb}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(a.name)}</span>
+    </span>`;
+  }).join('');
+  return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${chips}</div>`;
+}
+
 function renderMessages(el, classes) {
   if (!el) return;
 
@@ -2575,6 +2694,7 @@ function renderMessages(el, classes) {
     el.innerHTML = chatMessages.map(m => `
       <div class="chat-msg ${m.role === 'user' ? 'user' : 'ai'}">
         ${m.role === 'user' ? esc(m.content) : md(m.content)}
+        ${m.role === 'user' ? renderMsgAttachments(m) : ''}
       </div>
     `).join('');
 
@@ -2813,7 +2933,7 @@ function showSaveModal(container, classes) {
       status,
       e21ccFocus,
       components: { ...lessonComponents },
-      chatHistory: [...chatMessages],
+      chatHistory: stripAttachmentData(chatMessages),
       plan: chatMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n\n---\n\n')
     };
     // WS-5: a lesson planned via "Plan a CCE lesson" is tagged on first save;
@@ -5339,7 +5459,7 @@ function showShareModal(container) {
     version: 1,
     exportedAt: new Date().toISOString(),
     title: currentLessonId ? (Store.getLesson(currentLessonId)?.title || 'Untitled') : 'Untitled Lesson',
-    chatHistory: chatMessages,
+    chatHistory: stripAttachmentData(chatMessages),
     components: { ...lessonComponents },
     classContext: planClassContext ? { name: planClassContext.name, subject: planClassContext.subject, level: planClassContext.level } : null
   };

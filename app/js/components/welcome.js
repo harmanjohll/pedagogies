@@ -7,6 +7,7 @@
 import { Store } from '../state.js';
 import { validateApiKey, AVAILABLE_MODELS } from '../api.js';
 import { getPreferredName, setPreferredName, getCurrentUser } from './login.js';
+import { PEDAGOGICAL_PRIORITIES } from '../utils/priorities.js';
 
 export function renderWelcome(onComplete) {
   const overlay = document.createElement('div');
@@ -111,18 +112,7 @@ export function renderWelcome(onComplete) {
             Select up to 3. This helps Co-Cher tailor suggestions to your priorities.
           </p>
           <div id="ped-priorities" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-            ${[
-              { id: 'differentiation', label: 'Differentiation', icon: '&#9879;' },
-              { id: 'assessment', label: 'Assessment for Learning', icon: '&#9733;' },
-              { id: 'engagement', label: 'Student Engagement', icon: '&#9829;' },
-              { id: 'e21cc', label: 'E21CC Development', icon: '&#9883;' },
-              { id: 'edtech', label: 'EdTech Integration', icon: '&#9000;' },
-              { id: 'inquiry', label: 'Inquiry-Based Learning', icon: '?' },
-              { id: 'collaborative', label: 'Collaborative Learning', icon: '&#9733;' },
-              { id: 'sel', label: 'SEL & Well-being', icon: '&#9786;' },
-              { id: 'cce', label: 'CCE & Values', icon: '&#9825;' },
-              { id: 'direct', label: 'Direct Instruction', icon: '&#9654;' }
-            ].map(p => `
+            ${PEDAGOGICAL_PRIORITIES.map(p => `
               <label class="ped-priority-chip" style="
                 display: flex; align-items: center; gap: 6px;
                 padding: 8px 10px; border: 1.5px solid var(--border-light, #e2e8f0); border-radius: 10px;
