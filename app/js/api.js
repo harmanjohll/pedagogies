@@ -8,6 +8,7 @@ import { Store } from './state.js';
 import { trackEvent } from './utils/analytics.js';
 import { getPreferredName } from './components/login.js';
 import { SCHEMA_PRESETS } from './utils/tracking.js';
+import { TEACHING_AREAS, actionsForArea, TEACHING_ACTION_OTHER } from './utils/stp.js';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -731,6 +732,7 @@ const RUN_OF_SHOW_MODES = ['individual', 'pairs', 'groups', 'whole-class'];
 
 // The six E21CC tracking dimensions (single source of truth: utils/tracking.js)
 const E21CC_FOCUS_KEYS = SCHEMA_PRESETS.e21cc.fields.map(f => f.key);
+const TEACHING_AREA_KEYS = TEACHING_AREAS.map(a => a.key);
 
 function coerceGroupingMode(value) {
   const v = String(value ?? '').toLowerCase().trim();
@@ -766,6 +768,13 @@ export function normalizeRunOfShow(raw) {
     if (duration > 240) duration = 240;
     const mode = coerceGroupingMode(s.groupingMode ?? s.grouping?.mode);
     const existingGroups = Array.isArray(s.grouping?.groups) ? s.grouping.groups : [];
+    // STP: validate the Teaching Area against the registry, and the Teaching
+    // Action against that area's action ids (or the "other" escape hatch).
+    const teachingArea = TEACHING_AREA_KEYS.includes(s.teachingArea) ? s.teachingArea : null;
+    const validActionIds = teachingArea ? actionsForArea(teachingArea).map(a => a.id) : [];
+    const teachingAction = (teachingArea && typeof s.teachingAction === 'string'
+      && (validActionIds.includes(s.teachingAction) || s.teachingAction === TEACHING_ACTION_OTHER))
+      ? s.teachingAction : null;
     return {
       id: (typeof s.id === 'string' && s.id) ? s.id : newSegmentId(),
       name: String(s.name ?? '').trim() || `Segment ${i + 1}`,
@@ -776,8 +785,8 @@ export function normalizeRunOfShow(raw) {
       grouping: mode ? { mode, groups: existingGroups } : null,
       resources: Array.isArray(s.resources) ? s.resources : [],
       e21ccFocus: E21CC_FOCUS_KEYS.includes(s.e21ccFocus) ? s.e21ccFocus : null,
-      teachingArea: (typeof s.teachingArea === 'string' && s.teachingArea) ? s.teachingArea : null,
-      teachingAction: (typeof s.teachingAction === 'string' && s.teachingAction) ? s.teachingAction : null,
+      teachingArea,
+      teachingAction,
       teachingActionOther: String(s.teachingActionOther ?? '').trim()
     };
   });
@@ -798,6 +807,11 @@ export async function generateRunOfShow({ plan, className = '', portraitText = '
     ? `The lesson is ${duration} minutes long — segment durations must be integers summing to approximately ${duration}.`
     : 'If the plan implies a total lesson duration, make the integer segment durations sum to approximately it; otherwise assume a 55-minute lesson.';
 
+  // STP Teaching Areas + their action ids, so the stager can tag each segment.
+  const stpAreasRef = TEACHING_AREAS
+    .map(a => `  ${a.key} (${a.label}): ${actionsForArea(a.key).map(x => x.id).join(', ')}`)
+    .join('\n');
+
   const raw = await sendChat([{
     role: 'user',
     content: `Break this lesson plan into a chronological run of show.
@@ -816,10 +830,13 @@ Rules:
 - "studentInstructions" is 1-3 short imperative student-facing sentences (what students should do). No teacher jargon, no framework names, and never reveal answers.
 - "groupingMode" is exactly one of: individual | pairs | groups | whole-class.
 - "e21ccFocus" is OPTIONAL: when a segment clearly develops one 21st-century competency, set it to exactly one of: criticalThinking | creativeThinking | communication | collaboration | socialConnectedness | selfRegulation. Omit it when no single competency stands out.
+- "teachingArea" is the Singapore Teaching Practice Lesson-Enactment area the segment enacts — exactly one of: ${TEACHING_AREA_KEYS.join(' | ')}. Opening segments lean activate_prior or arouse_interest; the main body encourage_engage, deepen_questions or collaborative; the closure conclude.
+- "teachingAction" is OPTIONAL — when a clear pedagogical move fits the area, set it to one of that area's action ids (omit if unsure):
+${stpAreasRef}
 - Segments must be in chronological order and cover the whole lesson.
 
 Return STRICT JSON only (no markdown, no commentary) in exactly this shape:
-{"segments":[{"name":"Segment name","duration":10,"activity":"One-line teacher summary","studentInstructions":"Short student-facing instructions.","groupingMode":"pairs","e21ccFocus":"collaboration"}]}`,
+{"segments":[{"name":"Segment name","duration":10,"activity":"One-line teacher summary","studentInstructions":"Short student-facing instructions.","groupingMode":"pairs","e21ccFocus":"collaboration","teachingArea":"encourage_engage","teachingAction":"tps"}]}`,
     temperature: 0.4,
     maxTokens: 4096
   });
