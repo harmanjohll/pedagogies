@@ -137,14 +137,33 @@ function svgChart(chart, pal) {
     grid + `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y0}" stroke="${txt}" stroke-width="2"/>` + bars + `</svg>`;
 }
 
+/* ── Embedded video/sim: normalise a YouTube URL or bare 11-char id to a
+ * privacy-enhanced (nocookie) embed, and recover the canonical watch URL so a
+ * slide can offer a "Watch on YouTube" fallback if the embed is blocked. ── */
+function youtubeId(raw) {
+  const s = String(raw ?? '').trim();
+  if (/^[\w-]{11}$/.test(s)) return s;
+  const m = s.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? m[1] : '';
+}
+/** → { src, watch } for an embeddable media object, or null. */
+function embedSrcFor(media) {
+  const raw = (media && (media.src || media.youtube || media.id)) || '';
+  const id = youtubeId(raw);
+  if (id) return { src: `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1`, watch: `https://www.youtube.com/watch?v=${id}` };
+  if (/^https?:\/\//.test(String(raw))) return { src: String(raw), watch: '' };
+  return null;
+}
+
 /**
  * Compile a deck into ONE self-contained, professional HTML document.
  * deck: { title, slides: [{ layout?, title, subtitle?, bullets?, notes?, icon?,
  *   columns?, statement?, quote?, attribution?, chart?, image?(dataURI),
- *   svg?(string), media?({kind:'video'|'sim', src, title}) }] }
+ *   svg?(string), media?({kind:'video'|'sim', src, title}), youtube?(id|url) }] }
  * options.theme: optional { accent, accent2, bg, ink } CSS color overrides.
- * All visuals are self-contained (data:/inline SVG); only a slide.media.src
- * (video/sim embed) is external, so those slides need a connection.
+ * Visuals are self-contained (data:/inline SVG) EXCEPT an embedded video/sim
+ * (slide.media / slide.youtube), which is external and needs a connection —
+ * those slides also render a "Watch on YouTube" link as a graceful fallback.
  */
 export function compileDeckHTML(deck, { theme } = {}) {
   const safeColor = (v, fb) => (typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v.trim())) ? v.trim() : fb;
@@ -166,7 +185,12 @@ export function compileDeckHTML(deck, { theme } = {}) {
     if (typeof s?.image === 'string' && /^data:image\//.test(s.image)) return `<img class="deck-img" src="${esc(s.image)}" alt="${esc(s.imageAlt || s.title || '')}">`;
     if (typeof s?.svg === 'string' && s.svg.includes('<svg')) return `<div class="deck-svg">${s.svg}</div>`;
     if (s?.chart) { const c = svgChart(s.chart, pal); if (c) return `<div class="deck-svg">${c}</div>`; }
-    if (s?.media && typeof s.media.src === 'string' && /^https?:\/\//.test(s.media.src)) return `<iframe class="deck-embed" src="${esc(s.media.src)}" title="${esc(s.media.title || 'Embedded media')}" allow="fullscreen; autoplay" loading="lazy"></iframe>`;
+    const mediaObj = s?.media || (s?.youtube ? { kind: 'video', src: s.youtube, title: s.title } : null);
+    const embed = mediaObj ? embedSrcFor(mediaObj) : null;
+    if (embed) {
+      const link = embed.watch ? `<a class="deck-embed-link" href="${esc(embed.watch)}" target="_blank" rel="noopener">Watch on YouTube &#8599;</a>` : '';
+      return `<div class="deck-embed-wrap"><iframe class="deck-embed" src="${esc(embed.src)}" title="${esc(mediaObj.title || 'Embedded video')}" allow="fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>${link}</div>`;
+    }
     return '';
   };
   const listHTML = (arr, icon) => `<ul>${(arr || []).filter(Boolean).map(b => `<li>${icon ? svgIcon(icon, 'deck-bic') : ''}<span>${esc(b)}</span></li>`).join('')}</ul>`;
@@ -229,6 +253,26 @@ export function compileDeckHTML(deck, { theme } = {}) {
   .slide { position:fixed; inset:0; padding:7vh 8vw 9vh; display:flex; flex-direction:column; justify-content:center; opacity:0; transform:translateY(14px); transition:opacity .38s ease, transform .38s ease; }
   .slide.in { opacity:1; transform:none; }
   .slide[hidden] { display:none; }
+  /* In-slide build: heading, bullets (staggered) and the visual rise in as the
+     slide becomes active. Re-triggered each time a slide is shown. Motion-safe. */
+  @keyframes deckRise { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .slide.in .kicker, .slide.in h1, .slide.in h2, .slide.in h3, .slide.in .l-num,
+    .slide.in .sub, .slide.in .statement, .slide.in blockquote, .slide.in cite {
+      animation: deckRise .5s cubic-bezier(.22,.61,.36,1) both;
+    }
+    .slide.in .sub { animation-delay:.08s; }
+    .slide.in li { animation: deckRise .5s cubic-bezier(.22,.61,.36,1) both; }
+    .slide.in li:nth-child(1){ animation-delay:.12s; }
+    .slide.in li:nth-child(2){ animation-delay:.20s; }
+    .slide.in li:nth-child(3){ animation-delay:.28s; }
+    .slide.in li:nth-child(4){ animation-delay:.36s; }
+    .slide.in li:nth-child(5){ animation-delay:.44s; }
+    .slide.in li:nth-child(6){ animation-delay:.52s; }
+    .slide.in li:nth-child(7){ animation-delay:.60s; }
+    .slide.in li:nth-child(8){ animation-delay:.68s; }
+    .slide.in .deck-visual { animation: deckRise .6s cubic-bezier(.22,.61,.36,1) both; animation-delay:.2s; }
+  }
   .slide-inner { flex:1; display:flex; flex-direction:column; justify-content:center; gap:2.6vh; min-height:0; }
   .kicker { font-size:clamp(.8rem,1.5vw,1.05rem); font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); }
   h1 { font-size:clamp(2.2rem,6vw,4.4rem); line-height:1.06; letter-spacing:-.01em; font-weight:800; }
@@ -264,7 +308,10 @@ export function compileDeckHTML(deck, { theme } = {}) {
   .deck-svg svg, .deck-chart { width:100%; height:auto; max-height:62vh; }
   .deck-img { max-width:100%; max-height:60vh; border-radius:16px; box-shadow:0 10px 40px rgba(2,6,23,.18); object-fit:contain; }
   .deck-visual.solo .deck-img { max-height:66vh; }
-  .deck-embed { width:100%; aspect-ratio:16/9; max-height:64vh; border:0; border-radius:16px; box-shadow:0 10px 40px rgba(2,6,23,.18); background:#000; }
+  .deck-embed-wrap { width:100%; display:flex; flex-direction:column; align-items:center; gap:1.2vh; }
+  .deck-embed { width:100%; aspect-ratio:16/9; max-height:60vh; border:0; border-radius:16px; box-shadow:0 10px 40px rgba(2,6,23,.18); background:#000; }
+  .deck-embed-link { font-size:clamp(.8rem,1.4vw,1rem); font-weight:700; color:var(--accent); text-decoration:none; border:1px solid var(--line); border-radius:999px; padding:.4em 1em; }
+  .deck-embed-link:hover { border-color:var(--accent); }
   .l-exit { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; border-radius:22px; padding:6vh 6vw; }
   .l-exit .kicker, .l-exit h2 { color:#fff; }
   .l-exit li::before { background:#fff; } .l-exit .deck-bic { color:#fff; }
@@ -275,13 +322,17 @@ export function compileDeckHTML(deck, { theme } = {}) {
   #deck-ctrl { position:fixed; right:16px; bottom:14px; display:flex; gap:8px; z-index:10; }
   #deck-ctrl button { font:inherit; font-size:.85rem; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:4px 10px; cursor:pointer; }
   #deck-ctrl button:hover { color:var(--accent); border-color:var(--accent); }
+  #deck-ctrl .deck-exit-btn { font-weight:700; }
+  #deck-ctrl .deck-exit-btn:hover { color:#fff; background:#ef4444; border-color:#ef4444; }
   #deck-hint { position:fixed; left:16px; bottom:16px; font-size:.72rem; color:var(--muted); opacity:.6; z-index:10; }
+  #deck-exit-hint { position:fixed; left:0; right:0; bottom:24px; margin:0 auto; width:max-content; max-width:90vw; display:none; background:var(--ink); color:#fff; font-size:.9rem; font-weight:600; padding:10px 18px; border-radius:999px; z-index:20; box-shadow:0 8px 30px rgba(2,6,23,.3); }
   @media (max-width:720px){ .l-two,.l-section{grid-template-columns:1fr; display:flex; flex-direction:column;} .l-num{display:none;} }
   @media print {
-    body { overflow:visible; } #deck-prog,#deck-ctrl,#deck-hint { display:none !important; }
+    body { overflow:visible; } #deck-prog,#deck-ctrl,#deck-hint,#deck-exit-hint { display:none !important; }
     .slide { position:relative; inset:auto; opacity:1 !important; transform:none !important; height:auto; min-height:96vh; padding:8vh 8vw; page-break-after:always; break-after:page; display:flex !important; }
     .slide[hidden]{ display:flex !important; } .notes { display:block !important; }
-    .deck-embed { display:none; }
+    .slide *, .slide li, .slide .deck-visual { animation:none !important; opacity:1 !important; transform:none !important; }
+    .deck-embed-wrap, .deck-embed { display:none !important; }
   }
 </style>
 </head>
@@ -291,8 +342,10 @@ ${slideHTML}
 <div id="deck-ctrl">
   <button id="deck-notes" title="Toggle teacher notes (N)">Notes</button>
   <button id="deck-full" title="Fullscreen (F)">&#x26F6;</button>
+  <button id="deck-exit" class="deck-exit-btn" title="Exit presentation (Esc)">&#10005; Exit</button>
 </div>
-<div id="deck-hint">&#8592; &#8594; / click / swipe &middot; N notes &middot; F full &middot; print = PDF</div>
+<div id="deck-hint">&#8592; &#8594; / click / swipe &middot; N notes &middot; F full &middot; Esc exit &middot; print = PDF</div>
+<div id="deck-exit-hint">Presentation ended — you can close this browser tab.</div>
 <script>
 (function () {
   var slides = [].slice.call(document.querySelectorAll('.slide'));
@@ -308,12 +361,21 @@ ${slideHTML}
   }
   function next() { show(i + 1); } function prev() { show(i - 1); }
   function toggleFull(){ try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch(e){} }
+  // Exit the presentation: leave fullscreen, then close the tab (decks open via
+  // window.open, so close is permitted). If the browser blocks close, show a hint.
+  function exitDeck(){
+    try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
+    try { window.close(); } catch(e){}
+    setTimeout(function(){ var h = document.getElementById('deck-exit-hint'); if (h) h.style.display = 'block'; }, 250);
+  }
   document.addEventListener('keydown', function (e) {
     if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
     else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
     else if (e.key === 'Home') { show(0); } else if (e.key === 'End') { show(slides.length - 1); }
     else if (e.key === 'n' || e.key === 'N') { document.body.classList.toggle('show-notes'); }
     else if (e.key === 'f' || e.key === 'F') { toggleFull(); }
+    // Esc leaves fullscreen first (native); a second Esc, when not fullscreen, exits.
+    else if (e.key === 'Escape') { if (!document.fullscreenElement) exitDeck(); }
   });
   document.addEventListener('click', function (e) {
     if (e.target.closest('#deck-ctrl') || e.target.closest('a') || e.target.closest('iframe')) return;
@@ -321,6 +383,7 @@ ${slideHTML}
   });
   var nb = document.getElementById('deck-notes'); if (nb) nb.addEventListener('click', function(e){ e.stopPropagation(); document.body.classList.toggle('show-notes'); });
   var fb = document.getElementById('deck-full'); if (fb) fb.addEventListener('click', function(e){ e.stopPropagation(); toggleFull(); });
+  var xb = document.getElementById('deck-exit'); if (xb) xb.addEventListener('click', function(e){ e.stopPropagation(); exitDeck(); });
   var tx = null;
   document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
   document.addEventListener('touchend', function (e) { if (tx == null) return; var dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); } }, { passive: true });
