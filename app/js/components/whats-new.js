@@ -17,6 +17,10 @@ const SEEN_KEY = 'cocher_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v8.4', items: [
+    { icon: '&#129514;', title: 'Simulations built into lessons', text: 'The Acids and Earthquakes demo lessons now carry their simulation at the right moment: a green "Launch simulation" button appears on that segment in Present (and on the lesson page) — the sim opens right on top and closing it puts you back exactly where you were.' },
+    { icon: '&#128269;', title: 'Every sim fits — or scrolls, or zooms', text: 'ALL simulations now scale to your window (not just the chemistry practicals), scrollbars are always there and visible when content is bigger than the window, and the sim window has − / + / Fit zoom controls you can set yourself.' },
+  ] },
   { version: 'v8.3', items: [
     { icon: '&#129514;', title: 'Simulations that fit the screen', text: 'Practicals now scale themselves to your window — the data panel and apparatus stay fully visible on any projector or laptop, and a new ⛶ Fullscreen button on the sim window is made for projection.' },
     { icon: '&#127908;', title: 'Steadier voice input everywhere', text: 'Every mic (planner, reflections, class notes, rehearsal) now stops cleanly when you navigate away and tells you exactly what went wrong — mic blocked, no internet, or no mic found — instead of failing silently.' },

@@ -88,6 +88,19 @@ var LabTutorial = (function () {
         tooltip.style.left = (rect.left - gap) + 'px';
         tooltip.style.transform = 'translate(-100%, -50%)';
       }
+
+      /* Never let the tooltip land outside the viewport — a clipped or
+       * zoomed-out target can put the anchor at the window's edge. Measure
+       * the positioned box and nudge it back inside (transform preserved). */
+      var pad = 8;
+      var tr = tooltip.getBoundingClientRect();
+      var dx = 0, dy = 0;
+      if (tr.left < pad) dx = pad - tr.left;
+      else if (tr.right > window.innerWidth - pad) dx = (window.innerWidth - pad) - tr.right;
+      if (tr.top < pad) dy = pad - tr.top;
+      else if (tr.bottom > window.innerHeight - pad) dy = (window.innerHeight - pad) - tr.bottom;
+      if (dx) tooltip.style.left = (parseFloat(tooltip.style.left) + dx) + 'px';
+      if (dy) tooltip.style.top = (parseFloat(tooltip.style.top) + dy) + 'px';
     }
 
     function showStep(idx) {

@@ -17,6 +17,7 @@ import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/work
 import { applyJourneyMinimal, toggleJourneyMinimal } from '../components/keyboard-shortcuts.js';
 import { openDeckById, getMediaContent, getDeckModel, listDeckMeta } from '../utils/deck.js';
 import { openLiveSession } from '../components/live-launch.js';
+import { launchSimById } from './simulations.js';
 import { buildCardModel, openCardWindow } from '../utils/takehome-card.js';
 import { isVoiceInputSupported, createDictation, dictationErrorMessage } from '../utils/voice.js';
 import { isTouch } from '../utils/viewport.js';
@@ -1053,6 +1054,7 @@ export function renderDetail(container, { id }) {
                       </div>
                       ${seg.activity ? `<div style="font-size:0.8125rem;color:var(--ink-secondary);margin-top:2px;line-height:1.5;">${esc(seg.activity)}</div>` : ''}
                       ${seg.studentInstructions ? `<div style="font-size:0.75rem;color:var(--ink-muted);margin-top:2px;line-height:1.5;font-style:italic;">${esc(seg.studentInstructions)}</div>` : ''}
+                      ${seg.simId ? `<button type="button" class="seg-sim-btn" data-sim-id="${esc(seg.simId)}" title="Opens the simulation right here — close it to come back" style="margin-top:6px;display:inline-flex;align-items:center;gap:5px;padding:3px 12px;font-size:0.75rem;font-weight:700;color:#166534;border:1px solid #86efac;background:#f0fdf4;border-radius:999px;cursor:pointer;">&#129514; ${esc(seg.simTitle || 'Simulation')}</button>` : ''}
                     </div>
                   </div>
                 `).join('')}
@@ -1244,6 +1246,14 @@ export function renderDetail(container, { id }) {
         return;
       }
       navigate(type === 'stimulus' ? '/stimulus-material' : '/source-analysis');
+    });
+  });
+
+  // Embedded segment simulations — open the sim overlay over this page (no
+  // navigation; closing it returns right here).
+  container.querySelectorAll('.seg-sim-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!launchSimById(btn.dataset.simId)) showToast('This simulation is not available.', 'danger');
     });
   });
 

@@ -1240,3 +1240,23 @@ input:focus-visible, select:focus-visible {
   justify-content: space-between;
   gap: var(--sp-2);
 }
+
+/* ── v8.4: floating subwindows must never bury or escape the sim window ── */
+/* Small sim windows: the notebook FAB shrinks to an icon-only pill in the
+ * corner instead of covering the data panel's last rows / action buttons. */
+@media (max-width: 1100px), (max-height: 620px) {
+  .nb-fab { padding: var(--sp-3); bottom: var(--sp-3); right: var(--sp-3); }
+  .nb-fab-label { display: none; }
+}
+/* The slide-up notebook panel always fits the window and scrolls inside.
+ * min-height:0 is the actual fix: a flex child with overflow-y:auto refuses
+ * to shrink below its content without it, pushing the bottom-anchored panel
+ * past its max-height and clipping the body's own scroll region. */
+.nb-panel { max-height: min(80vh, calc(100vh - 48px)); }
+.nb-panel-body { min-height: 0; }
+/* Tutorial tooltips clamp to the viewport (see lab-tutorial.js nudge too). */
+.tutorial-tooltip {
+  max-width: min(320px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}

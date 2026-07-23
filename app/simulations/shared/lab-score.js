@@ -15,6 +15,7 @@ var LabScore = (function () {
 
     function award(id, marks, note) {
       if (awarded[id] !== undefined) return; // already scored
+      if (marks === undefined) marks = maxForId(id); // award(id) → full marks for that criterion
       awarded[id] = Math.min(marks, maxForId(id));
       if (note) notes[id] = note;
     }
@@ -120,5 +121,19 @@ var LabScore = (function () {
     };
   }
 
-  return { create: create };
+  /* Back-compat namespace API: some practicals (e.g. gas-tests) call
+   * LabScore.init(config) + LabScore.award(id) directly on the namespace —
+   * the pre-instance API. Route those to a lazily-created singleton so both
+   * styles work against the one implementation. */
+  var _default = null;
+  return {
+    create: create,
+    init: function (config) { _default = create(config); return _default; },
+    award: function (id, marks, note) { if (_default) _default.award(id, marks, note); },
+    totalAwarded: function () { return _default ? _default.totalAwarded() : 0; },
+    percentage: function () { return _default ? _default.percentage() : 0; },
+    grade: function () { return _default ? _default.grade() : ''; },
+    buildSummary: function () { return _default ? _default.buildSummary() : null; },
+    reset: function () { if (_default) _default.reset(); }
+  };
 })();
