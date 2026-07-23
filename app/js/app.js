@@ -5,6 +5,7 @@
  */
 
 import { registerRoute, initRouter } from './router.js';
+import { renderCardView } from './utils/takehome-card.js';
 import { renderSidebar } from './components/sidebar.js';
 import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
 import { renderLogin, isLoggedIn } from './components/login.js';
@@ -135,6 +136,7 @@ function init() {
   registerRoute('/question-bank', renderQuestionBank);
   registerRoute('/relief-kit', renderReliefKit);
   registerRoute('/present/:id', renderPresent);
+  registerRoute('/card/:data', (container, params) => renderCardView(container, params.data));
   registerRoute('/settings', renderSettings);
 
   // Start router

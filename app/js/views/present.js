@@ -18,12 +18,14 @@ import { mountSeatMap, clearSeatMapSessions, isSeatDragActive } from './present-
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
 import { openDeckById, getMediaContent } from '../utils/deck.js';
 import { resolveTeachingAction, TEACHING_AREA_ICONS } from '../utils/stp.js';
+import { buildCardModel, cardPreviewHTML, openCardWindow, cardShareUrl } from '../utils/takehome-card.js';
 
 let _timerId = null;
 let _remaining = 0;      // seconds left in the running segment
 let _running = false;
 let _segIdx = 0;
 let _keyHandler = null;
+let _audienceMode = false;   // assembly / open-house view: hides class-only details
 
 /* WS-D: lessons whose Present session has already been counted this page
  * session. Guards Store.recordPresentation against double-counting when the
@@ -159,6 +161,7 @@ export function renderPresent(container, params) {
   }
   _segIdx = 0;
   _running = false;
+  _audienceMode = false;
 
   document.body.classList.add('present-mode');
 
@@ -243,6 +246,7 @@ export function renderPresent(container, params) {
           <div class="present-meta">${cls ? escapeHtml(cls.name) + ' &middot; ' : ''}${segments.length ? segments.length + ' parts &middot; ' + segments.reduce((a, s) => a + (Number(s.duration) || 0), 0) + ' min' : ''}</div>
         </div>
         <div class="present-ctrl">
+          <button class="btn btn-secondary btn-sm" id="present-audience" title="Audience mode — hide class-only details (seating, groups) for an assembly / open house" aria-pressed="${_audienceMode}">&#128101; Audience</button>
           <button class="btn btn-secondary btn-sm" id="present-fullscreen" title="Fullscreen (F)">&#x26F6; Fullscreen</button>
           <button class="btn btn-secondary btn-sm" id="present-exit" title="Exit (Esc)">&times; Exit</button>
         </div>
@@ -369,8 +373,8 @@ export function renderPresent(container, params) {
   stage.addEventListener('scroll', updateMoreCue, { passive: true });
   window.addEventListener('resize', updateMoreCue);
 
-  /* Screens: index 0 = welcome (LI/SC), 1..n = segments. */
-  const screenCount = 1 + segments.length;
+  /* Screens: index 0 = welcome (LI/SC), 1..n = segments, last = takehome card. */
+  const screenCount = 1 + segments.length + 1;
 
   function stopTimer() {
     if (_timerId) { clearInterval(_timerId); _timerId = null; }
@@ -398,7 +402,7 @@ export function renderPresent(container, params) {
   function renderDots() {
     dots.innerHTML = Array.from({ length: screenCount }, (_, i) => {
       const cl = i === _segIdx ? 'now' : (i < _segIdx ? 'done' : '');
-      const label = i === 0 ? 'Welcome' : (segments[i - 1]?.name || `Part ${i}`);
+      const label = i === 0 ? 'Welcome' : (i === screenCount - 1 ? 'Takehome card' : (segments[i - 1]?.name || `Part ${i}`));
       return `<button class="present-dot ${cl}" data-idx="${i}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></button>`;
     }).join('');
     dots.querySelectorAll('.present-dot').forEach(d =>
@@ -422,7 +426,7 @@ export function renderPresent(container, params) {
         ${segments.length ? `<div class="present-meta" style="font-size:clamp(1rem,2vw,1.4rem);">Ready? &rarr;</div>` : ''}
       </div>`;
       timerBtn.style.visibility = 'hidden';
-    } else {
+    } else if (_segIdx <= segments.length) {
       const seg = segments[_segIdx - 1];
       _remaining = (Number(seg.duration) || 5) * 60;
       timerBtn.style.visibility = 'visible';
@@ -433,7 +437,7 @@ export function renderPresent(container, params) {
       // When the segment has an interactive seat map, that map already shows
       // every student by name in their seat — the group-roster cards would just
       // duplicate it and eat the vertical space the map needs. Suppress them.
-      const groupCards = (groups.length && !segHasSeats(seg)) ? `
+      const groupCards = (!_audienceMode && groups.length && !segHasSeats(seg)) ? `
         <div class="present-groups">
           ${groups.map(g => `
             <div class="present-group-card">
@@ -442,8 +446,9 @@ export function renderPresent(container, params) {
             </div>`).join('')}
         </div>` : '';
 
-      const modeLabel = GROUP_LABEL[seg.grouping?.mode || seg.groupingMode] || '';
-      const growthLabel = seg.e21ccFocus ? (E21CC_FOCUS_LABELS[seg.e21ccFocus] || '') : '';
+      // Class-only cues (grouping mode, growth focus) are hidden in Audience mode.
+      const modeLabel = _audienceMode ? '' : (GROUP_LABEL[seg.grouping?.mode || seg.groupingMode] || '');
+      const growthLabel = (_audienceMode || !seg.e21ccFocus) ? '' : (E21CC_FOCUS_LABELS[seg.e21ccFocus] || '');
 
       /* Framework moment: the segment's pedagogy framework, shown as stage
        * lines. Student-facing only — labels + studentPrompt questions; the
@@ -457,7 +462,7 @@ export function renderPresent(container, params) {
             <div class="present-framework-stage"><strong>${escapeHtml(s.label || '')}</strong>${s.studentPrompt ? ` &mdash; ${escapeHtml(s.studentPrompt)}` : ''}</div>`).join('')}
         </div>` : '';
 
-      const mapHtml = segmentMap(seg, _segIdx - 1);
+      const mapHtml = _audienceMode ? '' : segmentMap(seg, _segIdx - 1);   // seating is class-only
       // The chosen STP Teaching Action's student-facing framing (the seam:
       // teacher picks the action in the planner, students see its framing).
       // Student-safe — only the studentFraming string, never the teacher hint.
@@ -490,12 +495,40 @@ export function renderPresent(container, params) {
         const sc = seatCtxFor(seg, _segIdx - 1);
         if (sc) mountSeatMap(seatMountEl, sc);
       }
+    } else {
+      // Takehome closing screen — the audience's card to keep.
+      if (clockSR) { clockSR.textContent = ''; _lastClockAnnounce = null; }
+      timerBtn.style.visibility = 'hidden';
+      const model = buildCardModel(lesson);
+      stage.innerHTML = `<div class="present-inner">
+        <div class="present-seg-name">Take this home</div>
+        <div style="margin:1vh auto 0;">${cardPreviewHTML(model)}</div>
+        <div class="present-resources" style="margin-top:2vh;">
+          <button class="present-res-btn" id="thc-print" type="button"><span aria-hidden="true">&#128424;&#65039;</span> Print / download cards</button>
+          <button class="present-res-btn" id="thc-copy" type="button"><span aria-hidden="true">&#128279;</span> Copy card link</button>
+        </div>
+      </div>`;
+      stage.querySelector('#thc-print')?.addEventListener('click', () => openCardWindow(model));
+      stage.querySelector('#thc-copy')?.addEventListener('click', async (e) => {
+        const url = cardShareUrl(model);
+        const btn = e.currentTarget;
+        try { await navigator.clipboard.writeText(url); btn.innerHTML = '<span aria-hidden="true">&#10003;</span> Link copied'; }
+        catch { btn.innerHTML = '<span aria-hidden="true">&#128279;</span> ' + escapeHtml(url.slice(0, 36)) + '…'; }
+      });
     }
     renderDots();
     stage.scrollTop = 0; // each screen starts at the top
     requestAnimationFrame(updateMoreCue); // after layout settles
   }
 
+  container.querySelector('#present-audience')?.addEventListener('click', (e) => {
+    _audienceMode = !_audienceMode;
+    const btn = e.currentTarget;
+    btn.setAttribute('aria-pressed', String(_audienceMode));
+    btn.style.background = _audienceMode ? 'var(--accent, #4361ee)' : '';
+    btn.style.color = _audienceMode ? '#fff' : '';
+    showScreen(_segIdx); // re-render the current screen with the new filter
+  });
   container.querySelector('#present-exit').addEventListener('click', () => navigate(`/lessons/${lesson.id}`));
   container.querySelector('#present-fullscreen').addEventListener('click', () => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});

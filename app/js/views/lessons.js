@@ -16,6 +16,7 @@ import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { applyJourneyMinimal, toggleJourneyMinimal } from '../components/keyboard-shortcuts.js';
 import { openDeckById, getMediaContent } from '../utils/deck.js';
+import { buildCardModel, openCardWindow } from '../utils/takehome-card.js';
 import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 import { isTouch } from '../utils/viewport.js';
 
@@ -1028,6 +1029,7 @@ export function renderDetail(container, { id }) {
                 <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
                   <span class="badge badge-blue">${total} min &middot; ${segments.length} segment${segments.length === 1 ? '' : 's'}</span>
                   <button class="btn btn-primary btn-sm" id="present-lesson-btn" title="Open the Class Screen and run this lesson live">&#9654; Present</button>
+                  <button class="btn btn-ghost btn-sm" id="takehome-card-btn" title="Generate a one-page takehome card for the audience (print / download / share)">&#128196; Takehome card</button>
                 </div>
               </div>
               <div style="display:flex;flex-direction:column;">
@@ -1345,6 +1347,13 @@ export function renderDetail(container, { id }) {
 
   // Present — run the staged lesson on the Class Screen
   container.querySelector('#present-lesson-btn')?.addEventListener('click', () => navigate(`/present/${id}`));
+
+  // Takehome card — generate a one-page audience card (opens print/download view)
+  container.querySelector('#takehome-card-btn')?.addEventListener('click', () => {
+    const l = Store.getLesson(id);
+    if (!l) return;
+    openCardWindow(buildCardModel(l));
+  });
 
   // Print / PDF
   container.querySelector('#print-lesson-btn')?.addEventListener('click', () => {
