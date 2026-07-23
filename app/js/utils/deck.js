@@ -14,7 +14,7 @@
  * point at those ids.
  */
 
-import { idbPut, idbGet } from './storage.js';
+import { idbPut, idbGet, idbRemove } from './storage.js';
 
 const DECKS_KEY = 'cocher_decks';
 const AUDIO_KEY = 'cocher_audio_clips';
@@ -143,7 +143,11 @@ function svgChart(chart, pal) {
 function youtubeId(raw) {
   const s = String(raw ?? '').trim();
   if (/^[\w-]{11}$/.test(s)) return s;
-  const m = s.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  // Path forms: youtu.be/ID, /embed/ID, /shorts/ID, /live/ID, /v/ID.
+  let m = s.match(/(?:youtube(?:-nocookie)?\.com\/(?:embed|shorts|live|v)\/|youtu\.be\/)([\w-]{11})/);
+  if (m) return m[1];
+  // watch URL: v may be any query param position (e.g. ?list=…&v=ID).
+  m = s.match(/[?&]v=([\w-]{11})/);
   return m ? m[1] : '';
 }
 /** → { src, watch } for an embeddable media object, or null. */
@@ -326,7 +330,13 @@ export function compileDeckHTML(deck, { theme } = {}) {
   #deck-ctrl .deck-exit-btn:hover { color:#fff; background:#ef4444; border-color:#ef4444; }
   #deck-hint { position:fixed; left:16px; bottom:16px; font-size:.72rem; color:var(--muted); opacity:.6; z-index:10; }
   #deck-exit-hint { position:fixed; left:0; right:0; bottom:24px; margin:0 auto; width:max-content; max-width:90vw; display:none; background:var(--ink); color:#fff; font-size:.9rem; font-weight:600; padding:10px 18px; border-radius:999px; z-index:20; box-shadow:0 8px 30px rgba(2,6,23,.3); }
-  @media (max-width:720px){ .l-two,.l-section{grid-template-columns:1fr; display:flex; flex-direction:column;} .l-num{display:none;} }
+  @media (max-width:720px){
+    .l-two,.l-section{grid-template-columns:1fr; display:flex; flex-direction:column;} .l-num{display:none;}
+    /* Bigger touch targets for the controls, and hide the keyboard hint (irrelevant on a phone). */
+    #deck-ctrl { bottom:10px; right:10px; gap:10px; }
+    #deck-ctrl button { padding:10px 14px; font-size:.95rem; min-height:44px; }
+    #deck-hint { display:none; }
+  }
   @media print {
     body { overflow:visible; } #deck-prog,#deck-ctrl,#deck-hint,#deck-exit-hint { display:none !important; }
     .slide { position:relative; inset:auto; opacity:1 !important; transform:none !important; height:auto; min-height:96vh; padding:8vh 8vw; page-break-after:always; break-after:page; display:flex !important; }
@@ -365,7 +375,12 @@ ${slideHTML}
   // window.open, so close is permitted). If the browser blocks close, show a hint.
   function exitDeck(){
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
-    try { window.close(); } catch(e){}
+    // window.close() only works for script-opened tabs (Co-Cher opens decks via
+    // window.open). For a downloaded/double-clicked file it is a no-op, so only
+    // attempt it when we can, and always surface the hint.
+    var canClose = false;
+    try { canClose = !!window.opener || window.history.length <= 1; } catch(e){}
+    if (canClose) { try { window.close(); } catch(e){} }
     setTimeout(function(){ var h = document.getElementById('deck-exit-hint'); if (h) h.style.display = 'block'; }, 250);
   }
   document.addEventListener('keydown', function (e) {
@@ -460,6 +475,15 @@ export async function saveAudioMaterial({ lessonId, title, style, blob } = {}) {
   if (!ok) return null;
   writeList(AUDIO_KEY, [...listAudioMeta(), meta]);
   return meta;
+}
+
+/** Delete a stored deck: its IndexedDB payload AND its cocher_decks metadata
+ * row. Used when a deck is replaced (e.g. re-seeding an exemplar) so old blobs
+ * and dead list rows don't accumulate. Best-effort on the IDB side. */
+export async function deleteDeckMaterial(id) {
+  if (!id) return;
+  try { await idbRemove(MEDIA_STORE, id); } catch { /* best-effort */ }
+  writeList(DECKS_KEY, listDeckMeta().filter(m => m.id !== id));
 }
 
 /** Raw payload for a material id: deck HTML string or audio Blob. */

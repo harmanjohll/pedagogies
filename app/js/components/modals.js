@@ -14,7 +14,7 @@ export function openModal({ title, body, footer, width = 480, onClose, onMount }
   const previouslyFocused = document.activeElement;
 
   backdrop.innerHTML = `
-    <div class="modal" role="dialog" aria-modal="true" aria-label="${String(title).replace(/"/g, '&quot;')}" style="max-width: ${width}px;">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="${String(title).replace(/"/g, '&quot;')}" style="max-width: min(${width}px, calc(100vw - 32px));">
       <div class="modal-header">
         <h3 class="modal-title">${title}</h3>
         <button class="modal-close" aria-label="Close">${CLOSE_ICON}</button>

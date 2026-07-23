@@ -638,10 +638,23 @@ select.input {
 .chat-composer-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;               /* never clip controls off-row (they were unreachable on phones) */
   gap: var(--sp-2);
   padding: var(--sp-2) var(--sp-3);
   border-bottom: 1px solid var(--border-light);
   background: var(--bg-subtle);
+}
+/* Touch: give the toolbar controls a ≥40px hit area (several carry inline
+ * 28px/36px heights that need overriding). */
+@media (max-width: 768px) {
+  .chat-composer-toolbar { row-gap: var(--sp-2); }
+  .chat-composer-toolbar .btn-sm,
+  .chat-composer-toolbar > button,
+  .chat-composer-toolbar #ideology-lens,
+  .chat-composer-toolbar .fw-chip {
+    min-height: 40px !important;
+    height: auto !important;
+  }
 }
 
 .chat-input {

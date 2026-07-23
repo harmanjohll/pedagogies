@@ -173,7 +173,7 @@ export function renderPresent(container, params) {
       body.present-mode .toast-container, body.present-mode #vigilance-nudge { display: none !important; }
       body.present-mode .main-content, body.present-mode main { margin-left: 0 !important; max-width: none !important; }
       .present-root { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg, #fff); }
-      .present-top { display:flex; align-items:center; justify-content:space-between; padding: 14px 22px; border-bottom: 1px solid var(--border-light); }
+      .present-top { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding: 14px 22px; border-bottom: 1px solid var(--border-light); }
       .present-title { font-size: clamp(1.1rem, 2.2vw, 1.6rem); font-weight: 800; color: var(--ink); }
       .present-meta { font-size: clamp(0.8rem, 1.4vw, 1rem); color: var(--ink-muted); }
       /* Scrollable stage with SAFE centering: .present-inner's margin:auto
@@ -205,12 +205,13 @@ export function renderPresent(container, params) {
       .present-group-card { border: 2px solid var(--border); border-radius: 14px; padding: 12px 18px; min-width: 160px; background: var(--surface, #fff); }
       .present-group-card h4 { margin: 0 0 6px; font-size: clamp(0.95rem, 1.8vw, 1.3rem); color: var(--accent, #4361ee); }
       .present-group-card div { font-size: clamp(0.85rem, 1.5vw, 1.1rem); color: var(--ink); line-height: 1.45; }
-      .present-bottom { display:flex; align-items:center; justify-content:space-between; gap: 16px; padding: 12px 22px; border-top: 1px solid var(--border-light); }
+      .present-bottom { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap: 12px; padding: 12px 22px; border-top: 1px solid var(--border-light); }
       .present-dots { display:flex; gap: 8px; align-items:center; flex-wrap:wrap; }
       .present-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--border); cursor: pointer; border: none; padding: 0; }
       .present-dot.done { background: var(--growth, #16a34a); }
       .present-dot.now { width: 16px; height: 16px; background: var(--accent, #4361ee); }
-      .present-ctrl { display:flex; gap: 8px; }
+      .present-ctrl { display:flex; gap: 8px; flex-wrap:wrap; }
+      @media (max-width: 480px) { .present-bottom .present-ctrl { width:100%; } .present-bottom .present-ctrl .btn { flex:1 1 auto; } }
       .present-lisc { text-align: left; font-size: clamp(1rem, 2vw, 1.4rem); line-height: 1.6; max-width: 80vw; }
       .present-lisc h1, .present-lisc h2, .present-lisc h3 { font-size: 1.2em; }
       .present-framework { text-align: left; font-size: clamp(0.95rem, 1.8vw, 1.25rem); line-height: 1.6; max-width: 80vw; border: 2px solid var(--border); border-radius: 14px; padding: 12px 20px; background: var(--surface, #fff); }

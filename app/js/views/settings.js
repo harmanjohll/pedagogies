@@ -1615,7 +1615,8 @@ export function render(container) {
     const val = (focusInput?.value || '').trim();
     if (!val) return;
     const current = getPriorities(Store);
-    if (current.some(x => x.toLowerCase() === val.toLowerCase()) || isPresetPriority(val)) {
+    const matchesPresetLabel = PEDAGOGICAL_PRIORITIES.some(p => p.label.toLowerCase() === val.toLowerCase());
+    if (current.some(x => x.toLowerCase() === val.toLowerCase()) || isPresetPriority(val) || matchesPresetLabel) {
       showToast('That focus area is already on your list.');
       return;
     }

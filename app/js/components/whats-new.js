@@ -94,10 +94,13 @@ export function maybeShowWhatsNew() {
     title: `What's new in Co-Cher ${APP_VERSION}`,
     body,
     width: 520,
-    footer: `<button class="btn btn-primary" data-action="got-it">Got it</button>`
+    footer: `<button class="btn btn-primary" data-action="got-it">Got it</button>`,
+    // Record the seen version on ANY close (Got it, X, Esc, backdrop) so the
+    // digest never re-appears on the next launch just because it wasn't
+    // dismissed via the primary button.
+    onClose: () => { try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch {} },
   });
-  const dismiss = () => { try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch {} close(); };
-  backdrop.querySelector('[data-action="got-it"]').addEventListener('click', dismiss);
+  backdrop.querySelector('[data-action="got-it"]').addEventListener('click', close);
 }
 
 /* A tidy label for the last-seen version (falls back to the raw value). */

@@ -198,7 +198,13 @@ export async function sendChat(messages, options = {}) {
     // Embed system prompt in the user message (no systemInstruction) and set
     // responseMimeType — this is what Gemini reliably responds to. Callers'
     // temperature/maxTokens are honoured here just like the text path.
-    const userText = messages.map(m => m.content).join('\n\n');
+    // Content may be a plain string OR a multimodal array ({text}/{inlineData});
+    // jsonMode is text-only, so flatten to the text parts (never stringify an
+    // object to "[object Object]").
+    const textOf = (c) => Array.isArray(c)
+      ? c.map(p => (typeof p === 'string' ? p : (p && typeof p.text === 'string' ? p.text : ''))).filter(Boolean).join('\n')
+      : String(c ?? '');
+    const userText = messages.map(m => textOf(m.content)).join('\n\n');
     const combined = `${systemPrompt}\n\nUser request:\n${userText}`;
     body = {
       contents: [{ role: 'user', parts: [{ text: combined }] }],

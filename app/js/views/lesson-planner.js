@@ -313,8 +313,9 @@ let autosaveTimer = null;
 function deriveLessonTitle() {
   if (currentLessonId) { const l = Store.getLesson(currentLessonId); if (l?.title) return l.title; }
   const firstUser = chatMessages.find(m => m.role === 'user');
-  let t = firstUser ? String(firstUser.content || '') : '';
-  t = t.replace(/\[[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim();          // drop bracketed context/attachment notes
+  let t = firstUser ? String(firstUser.rawText || firstUser.content || '') : '';
+  if (!firstUser?.rawText) t = t.replace(/^(?:\s*\[[^\]]*\]\s*)+/, '');  // legacy: strip leading context blocks
+  t = t.replace(/\s+/g, ' ').trim();
   if (!t && planClassContext) t = `${planClassContext.subject || 'Lesson'} — ${planClassContext.name || ''}`.trim();
   t = t.slice(0, 60).trim();
   return t || 'Untitled lesson';
@@ -361,6 +362,16 @@ function autosaveNow() {
     if (sub) sub.textContent = `Editing: ${title}`;
   }
   markAutosave('saved');
+}
+
+/* Persist any pending autosave for the CURRENT lesson immediately and cancel the
+ * debounce. Called before switching lessons / starting a new draft so a queued
+ * save can't fire against the next lesson's state (and lose the current one). */
+function flushAutosave() {
+  if (!autosaveTimer) return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer = null;
+  autosaveNow();
 }
 
 /* ── WS-C: on-demand [EXPAND:] expansion chips ──
@@ -844,6 +855,7 @@ function buildQuickPrompts(classes) {
 export function renderForLesson(container, { id }) {
   const lesson = Store.getLesson(id);
   if (!lesson) { navigate('/lessons'); return; }
+  flushAutosave();  // persist the outgoing lesson before switching (no cross-lesson save)
   currentLessonId = id;
   chatMessages = [...(lesson.chatHistory || [])];
   vigilanceNudged = false;
@@ -858,6 +870,7 @@ export function renderForLesson(container, { id }) {
  * Internal re-renders call render() directly and keep all state. */
 export function renderNew(container) {
   if (currentLessonId) {
+    flushAutosave();  // persist the lesson we're leaving before clearing state
     currentLessonId = null;
     chatMessages = [];
     lessonComponents = {};
@@ -1658,6 +1671,9 @@ export function render(container) {
       : bodyText;
 
     const userMsg = { role: 'user', content: enrichedContent };
+    // The teacher's own words (before context injection) — a clean source for the
+    // lesson title, so an auto-attached Scheme of Work can't pollute it.
+    userMsg.rawText = text || (attachments.length ? attachments.map(a => a.name).join(', ') : '');
     if (attachments.length) userMsg.attachments = attachments;
     chatMessages.push(userMsg);
     clearComposerAttachments();
@@ -1677,6 +1693,13 @@ export function render(container) {
       const response = await sendChat(apiMessages, { trackLabel: 'lessonChat', trackDetail: [planClassContext?.subject, planClassContext?.level].filter(Boolean).join(' ') || '' });
       if (chatMessages !== sessionMessages) return;
       chatMessages.push({ role: 'assistant', content: response });
+      // The model has now "seen" these files — drop their base64 so subsequent
+      // turns don't re-upload them (the chip keeps its previewUrl; pdf-text keeps
+      // its text). This is what stops multi-file conversations blowing the 20 MB
+      // request ceiling.
+      if (userMsg.attachments) {
+        userMsg.attachments = userMsg.attachments.map(({ data, ...rest }) => rest);
+      }
     } catch (err) {
       if (chatMessages !== sessionMessages) return;
       chatMessages.push({ role: 'assistant', content: `I encountered an error: ${err.message}` });
@@ -2997,12 +3020,17 @@ function showSaveModal(container, classes) {
       chatHistory: stripAttachmentData(chatMessages),
       plan: chatMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n\n---\n\n')
     };
-    // WS-5: a lesson planned via "Plan a CCE lesson" is tagged on first save;
-    // updates never touch kind, so existing lessons keep whatever they have.
-    if (!existing && cceContext) data.kind = 'cce';
+    // Re-read the live lesson id at click time: autosave may have created this
+    // draft while the dialog was open, so branching on the id captured at
+    // modal-open would create a DUPLICATE lesson.
+    const liveId = currentLessonId;
+    const liveExisting = liveId ? Store.getLesson(liveId) : null;
+    // WS-5: tag a CCE-planned lesson on its first real save — even when autosave
+    // already created the (untagged) draft.
+    if (cceContext && !(liveExisting && liveExisting.kind)) data.kind = 'cce';
 
-    if (existing) {
-      Store.updateLesson(currentLessonId, data);
+    if (liveExisting) {
+      Store.updateLesson(liveId, data);
       showToast('Lesson updated!', 'success');
       close();
       // Refresh the cockpit in place — title, run of show, journey, spatial bar
@@ -3031,7 +3059,11 @@ function showSaveModal(container, classes) {
 function suggestTitle() {
   const firstUser = chatMessages.find(m => m.role === 'user');
   if (!firstUser) return '';
-  return firstUser.content.slice(0, 60) + (firstUser.content.length > 60 ? '...' : '');
+  // Prefer the teacher's own words; fall back to content with leading context
+  // blocks stripped, so an auto-attached Scheme of Work can't become the title.
+  let t = String(firstUser.rawText || firstUser.content || '');
+  if (!firstUser.rawText) t = t.replace(/^(?:\s*\[[^\]]*\]\s*)+/, '').replace(/\s+/g, ' ').trim();
+  return t.slice(0, 60) + (t.length > 60 ? '...' : '');
 }
 
 function escAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
