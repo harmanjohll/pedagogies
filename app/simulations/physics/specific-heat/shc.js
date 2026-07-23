@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ── Constants from data file ──
   var DATA    = SHC_DATA;
+  // Declared up top: markProcedure('select') runs early in this handler, long
+  // before the procedure-tracking section — a late declaration left this
+  // undefined at first call (load-time crash).
+  var STEP_ORDER = ['select', 'insert', 'startTemp', 'powerOn', 'collect', 'calculate'];
   var METALS  = DATA.metals;
   var POWER   = DATA.heaterPower;
   var VOLTAGE = DATA.voltage;
@@ -930,7 +934,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // PROCEDURE TRACKING
   // ══════════════════════════════════════
 
-  var STEP_ORDER = ['select', 'insert', 'startTemp', 'powerOn', 'collect', 'calculate'];
+  // (STEP_ORDER is declared at the top of this handler — see the constants.)
 
   function markProcedure(step) {
     state.procedureDone[step] = true;

@@ -17,6 +17,7 @@ import { layoutToSVG } from './spatial-designer.js';
 import { mountSeatMap, clearSeatMapSessions, isSeatDragActive } from './present-seatmap.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
 import { openDeckById, getMediaContent, getDeckModel, listDeckMeta } from '../utils/deck.js';
+import { launchSimById } from './simulations.js';
 import { openLiveSession } from '../components/live-launch.js';
 import { showToast } from '../components/toast.js';
 import { resolveTeachingAction, TEACHING_AREA_ICONS } from '../utils/stp.js';
@@ -486,12 +487,25 @@ export function renderPresent(container, params) {
         ${growthLabel ? `<span class="present-groupmode present-growth">This activity grows: ${escapeHtml(growthLabel)}</span>` : ''}
         ${actionHtml}
         ${seg.studentInstructions ? `<div class="present-instructions">${escapeHtml(seg.studentInstructions)}</div>` : ''}
+        ${seg.simId ? `<div class="present-resources">
+          <button class="present-res-btn" data-launch-sim="${escapeHtml(seg.simId)}" type="button" style="border-color:#86efac;background:#f0fdf4;color:#166534;font-weight:700;">
+            <span aria-hidden="true">&#129514;</span> Launch simulation${seg.simTitle ? `: ${escapeHtml(seg.simTitle)}` : ''}
+          </button>
+        </div>` : ''}
         ${frameworkPanel}
         ${groupCards}
         ${mapHtml}
         ${materialsRow()}
       </div>`;
       wireMaterialButtons();
+      // Embedded simulation: opens in the sim overlay ON TOP of Present, so
+      // closing it lands the teacher back on this exact screen — the lesson
+      // flow is never broken by a navigation.
+      stage.querySelectorAll('[data-launch-sim]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!launchSimById(btn.dataset.launchSim)) markUnavailable(btn);
+        });
+      });
       // Mount the interactive seat map (if this segment has seated students).
       const seatMountEl = stage.querySelector('.present-seatmap-mount');
       if (seatMountEl) {

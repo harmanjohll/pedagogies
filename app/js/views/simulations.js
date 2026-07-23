@@ -593,6 +593,110 @@ function applyBuilderPrefill(container, p) {
   showToast('Builder pre-filled from your lesson — review and hit Generate.', 'default');
 }
 
+/* ── Universal fit engine (v8.4) ──
+ * One fit-root selector per built-in sim family: the COLUMN CONTAINER that
+ * holds the side panels (topbars stay unscaled). v8.3 only covered
+ * `.practical-layout` (3 sims); every other sim family names its wrapper
+ * differently, so the list is explicit — sims live in this repo, so a new
+ * family means one selector added here. Unknown docs simply get no zoom
+ * (the injected scroll rescue still applies). */
+const FIT_ROOT_SELECTORS = [
+  '.practical-layout',                                          // titration, gas-tests, chromatography
+  '.diff-layout', '.enzyme-layout', '.ft-layout', '.micro-layout',
+  '.osm-layout', '.photo-layout',                               // biology
+  '.el-layout', '.qa-layout', '.rates-layout', '.salts-layout', // chemistry
+  '.density-layout', '.em-layout', '.lens-layout', '.ohm-layout',
+  '.pend-layout', '.shc-layout', '.waves-layout',               // physics
+  '.builder-layout', '.viewer-layout', '.sim-layout',           // molecular-*, particle-dynamics
+  '.critique-main', '.design-main', '.kitchen-main', '.rhythm-main',
+  'body > .app > .main',                                        // stave-notation (generic names)
+];
+
+/* Flow-model sims scroll the document naturally (no body{overflow:hidden}
+ * shell), so zooming them skips the height compensation the app-shell sims
+ * need. diffusion lacks the .container class the other six carry — hence an
+ * explicit list rather than a structural check. */
+const FLOW_LAYOUTS = ['.diff-layout', '.micro-layout', '.osm-layout',
+  '.el-layout', '.rates-layout', '.salts-layout', '.lens-layout'];
+
+function findFitRoot(doc) {
+  for (const sel of FIT_ROOT_SELECTORS) {
+    const el = doc.querySelector(sel);
+    if (el) { el.classList.add('cocher-fit-root'); return el; }
+  }
+  return null;
+}
+
+/* Scale-to-fit + manual zoom for one sim document. zoomState is owned by the
+ * overlay ({mode:'fit'|'manual', manual:0.5–2}); onApplied(f) reports every
+ * applied factor back to the overlay UI. Reset-first so repeated runs never
+ * compound; when zoom alone can't fit (floor 0.55, or a manual zoom-in), the
+ * escape classes unclip the layout so the body scrolls instead. */
+function setupSimFit(doc, layout, zoomState, onApplied) {
+  const isPractical = layout.classList.contains('practical-layout');
+  const isFlow = FLOW_LAYOUTS.some((sel) => { try { return layout.matches(sel); } catch (e) { return false; } });
+  let unclipped = [];
+  let applied = 1;
+  const apply = () => {
+    try {
+      layout.style.zoom = ''; layout.style.height = '';
+      layout.classList.remove('cocher-overflowing');
+      unclipped.forEach(el => el.classList.remove('cocher-unclip'));
+      unclipped = [];
+      // Practicals ≤1024px: the injected stacking rescue owns the layout
+      // (single column, nothing to fit) — unless the teacher zoomed manually.
+      if (isPractical && doc.documentElement.clientWidth <= 1024 && zoomState.mode === 'fit') {
+        applied = 1; onApplied(1); return;
+      }
+      const need = layout.scrollWidth, have = layout.clientWidth;
+      let f;
+      if (zoomState.mode === 'manual') f = Math.min(2, Math.max(0.5, zoomState.manual));
+      else f = (need <= have + 2) ? 1 : Math.max(0.55, have / need);
+      if (f !== 1) {
+        if (!isFlow) {
+          // App shells size to the viewport; zoomed units are visually smaller,
+          // so stretch the layout's height to keep filling the window.
+          const h = layout.getBoundingClientRect().height;
+          layout.style.height = Math.round(h / f) + 'px';
+        }
+        layout.style.zoom = String(f);
+      }
+      // Still overflowing (floor hit / manual zoom-in)? Unclip up to <body>
+      // so the always-on scroll rescue can actually reach the content.
+      if (layout.scrollWidth > layout.clientWidth + 2) {
+        layout.classList.add('cocher-overflowing');
+        for (let a = layout.parentElement; a && a !== doc.body; a = a.parentElement) {
+          a.classList.add('cocher-unclip'); unclipped.push(a);
+        }
+      }
+      applied = f; onApplied(f);
+    } catch (e) { /* measurement raced a teardown */ }
+  };
+  apply();
+  setTimeout(apply, 350);
+  setTimeout(apply, 1200);
+  const winRef = doc.defaultView;
+  let raf = null;
+  if (winRef) winRef.addEventListener('resize', () => {
+    if (raf) return;
+    raf = winRef.requestAnimationFrame(() => { raf = null; apply(); });
+  });
+  return { apply, getApplied: () => applied };
+}
+
+/**
+ * Open a built-in simulation by catalogue id from ANYWHERE in the app (e.g.
+ * a lesson's run-of-show segment in Present). The overlay stacks over the
+ * current view, so closing it returns exactly where the teacher was —
+ * presentation flow is never broken by a navigation.
+ */
+export function launchSimById(simId) {
+  const sim = SIMULATIONS.find(s => s.id === simId && s.path);
+  if (!sim) return false;
+  openOverlay(null, sim.title, { src: sim.path });
+  return true;
+}
+
 /* ── Iframe overlay with drag-to-resize edges ── */
 function openOverlay(container, title, opts) {
   // opts: { src } for trusted built-ins, or { srcdoc, spec } for generated sims
@@ -608,12 +712,36 @@ function openOverlay(container, title, opts) {
   // Top bar: title + hint + close
   const topBar = document.createElement('div');
   topBar.style.cssText = 'display:flex;align-items:center;gap:12px;padding:6px 16px;background:#12122a;color:#fff;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.08);user-select:none;';
+  const zoomBtnCss = 'background:none;border:1px solid rgba(255,255,255,0.25);color:#fff;cursor:pointer;padding:2px 8px;font-size:0.8rem;line-height:1.4;border-radius:6px;';
   topBar.innerHTML = `
     <span style="font-weight:600;font-size:0.9375rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${escapeHtml(title)}</span>
     <span style="font-size:0.6875rem;color:rgba(255,255,255,0.3);">Drag edges to resize</span>
+    ${opts.src ? `
+    <div id="sim-zoom-ctl" style="display:none;align-items:center;gap:3px;" title="Zoom the simulation — Fit auto-sizes it to the window">
+      <button id="sim-zoom-out" title="Zoom out" style="${zoomBtnCss}">&minus;</button>
+      <span id="sim-zoom-label" style="min-width:40px;text-align:center;font-size:0.72rem;color:rgba(255,255,255,0.75);">100%</span>
+      <button id="sim-zoom-in" title="Zoom in" style="${zoomBtnCss}">+</button>
+      <button id="sim-zoom-fit" title="Auto-fit to the window" style="${zoomBtnCss}">Fit</button>
+    </div>` : ''}
     <button id="sim-overlay-fs" title="Fullscreen (great on a projector)" style="background:none;border:none;color:#fff;cursor:pointer;padding:4px 10px;font-size:1.05rem;line-height:1;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='none'">&#x26F6;</button>
     <button id="sim-overlay-close" style="background:none;border:none;color:#fff;cursor:pointer;padding:4px 10px;font-size:1.25rem;line-height:1;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='none'">&times;</button>
   `;
+
+  // Zoom state is per-overlay (dies with it): 'fit' auto-sizes; −/+ switch to
+  // manual, seeded from whatever is currently applied. updateZoomUI reveals
+  // the control on the first successful fit — so it never shows for a sim the
+  // injection couldn't reach.
+  const zoomState = { mode: 'fit', manual: 1 };
+  let simFit = null;
+  function updateZoomUI(f) {
+    const ctl = topBar.querySelector('#sim-zoom-ctl');
+    if (!ctl) return;
+    ctl.style.display = 'inline-flex';
+    const lbl = ctl.querySelector('#sim-zoom-label');
+    if (lbl) lbl.textContent = Math.round(f * 100) + '%';
+    const fit = ctl.querySelector('#sim-zoom-fit');
+    if (fit) fit.style.background = zoomState.mode === 'fit' ? 'rgba(67,97,238,0.45)' : 'none';
+  }
 
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'flex:1;min-height:0;min-width:0;border:none;width:100%;height:100%;background:#1e1f2b;';
@@ -638,33 +766,58 @@ function openOverlay(container, title, opts) {
       const doc = iframe.contentDocument || iframe.contentWindow.document;
       if (!doc || !doc.head) return false;
       if (!doc.getElementById('cocher-sim-base')) {
-        // Responsive base styles for all sim iframes
+        // Universal containment: SCROLLING IS THE ESCAPE HATCH. Never trap
+        // content — body scroll beats every sim's own overflow:hidden shell,
+        // and classic (always-painted) scrollbars make scrollability
+        // discoverable (styling ::-webkit-scrollbar opts out of macOS
+        // invisible overlay scrollbars).
         const style = doc.createElement('style');
         style.id = 'cocher-sim-base';
         style.textContent = `
-          body { margin: 0; overflow-x: hidden; width: 100%; }
+          html { overflow: auto; scrollbar-width: thin; }
+          body { margin: 0; width: 100%; overflow: auto !important; scrollbar-gutter: stable; }
           * { box-sizing: border-box; }
           /* No !important: a sim that sizes its canvas via inline styles (fixed
            * aspect) must win, or the drawing gets squashed/cut. */
           canvas { max-width: 100%; height: auto; }
           .guide-panel, .data-panel, [class*="panel"] { min-width: 0; overflow-wrap: break-word; }
+          ::-webkit-scrollbar { width: 11px; height: 11px; }
+          ::-webkit-scrollbar-track { background: rgba(120,130,160,0.10); }
+          ::-webkit-scrollbar-thumb { background: rgba(120,130,160,0.55); border-radius: 6px;
+            border: 3px solid transparent; background-clip: padding-box; }
+          ::-webkit-scrollbar-thumb:hover { background: rgba(120,130,160,0.85); }
+          /* Applied by the fit engine ONLY when zoom can't fit: unclip so the
+           * body scroll can reach everything. Never static. */
+          .cocher-fit-root.cocher-overflowing { overflow: visible !important; min-width: min-content; }
+          .cocher-unclip { overflow: visible !important; }
         `;
         doc.head.appendChild(style);
       }
       // Additional layout overrides for labsim practicals
       if (doc.querySelector('.practical-layout') && !doc.getElementById('cocher-sim-overrides')) {
-        injectSimLayoutOverrides(doc);
+        injectSimLayoutOverrides(doc, () => { if (simFit) simFit.apply(); });
       }
-      // Done when the doc has finished parsing (a practical's layout element is
-      // static HTML, so by 'interactive' everything we target exists).
-      return doc.readyState !== 'loading' || !!doc.getElementById('cocher-sim-overrides');
+      // Fit engine: every sim family gets scale-to-fit + the overlay's manual
+      // zoom (v8.3 covered only .practical-layout). Wire once per doc.
+      if (!simFit) {
+        const layout = findFitRoot(doc);
+        if (layout) simFit = setupSimFit(doc, layout, zoomState, updateZoomUI);
+      }
+      // Done when the doc has finished parsing (layout wrappers are static
+      // HTML, so by 'interactive' everything we target exists).
+      return doc.readyState !== 'loading';
     } catch (e) { return false; /* cross-origin or sandbox restriction */ }
   };
-  iframe.addEventListener('load', injectSimStyles);
-  const injectPoll = setInterval(() => {
-    // Self-terminating: once injected, or when the overlay is gone.
-    if (injectSimStyles() || !document.body.contains(iframe)) clearInterval(injectPoll);
-  }, 200);
+  // srcdoc (generated) sims are sandboxed without same-origin — injection can
+  // never succeed, so don't try (their subwindow fixes ride in via the shared
+  // design-system.css composed into the doc instead).
+  if (opts.src) {
+    iframe.addEventListener('load', injectSimStyles);
+    const injectPoll = setInterval(() => {
+      // Self-terminating: once injected, or when the overlay is gone.
+      if (injectSimStyles() || !document.body.contains(iframe)) clearInterval(injectPoll);
+    }, 200);
+  }
 
   win.appendChild(topBar);
   // Custom sims that carry a pedagogical spec get app-owned chrome around the
@@ -739,7 +892,10 @@ function openOverlay(container, title, opts) {
     if (resizing.includes('right'))  right  = Math.max(0, Math.min(right - dx, vw - MIN - left));
     win.style.top = top + 'px'; win.style.left = left + 'px';
     win.style.right = right + 'px'; win.style.bottom = bottom + 'px';
-    win.style.borderRadius = (top > 0 || left > 0 || right > 0 || bottom > 0) ? '10px' : '0';
+    const inset = (top > 0 || left > 0 || right > 0 || bottom > 0);
+    win.style.borderRadius = inset ? '10px' : '0';
+    // Breathing margin around the sim whenever the window is dragged off-full.
+    win.style.padding = inset ? '0 8px 8px' : '0';
   }
 
   function onMouseUp() {
@@ -761,6 +917,22 @@ function openOverlay(container, title, opts) {
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
   };
+
+  // Manual zoom: −/+ nudge by 10 points from the currently APPLIED factor
+  // (so from an auto-fit of 72%, − goes to ~60%); Fit returns to auto.
+  const zoomNudge = (d) => {
+    if (!simFit) return;
+    zoomState.mode = 'manual';
+    zoomState.manual = Math.min(2, Math.max(0.5, Math.round(simFit.getApplied() * 10 + d) / 10));
+    simFit.apply();
+  };
+  overlay.querySelector('#sim-zoom-out')?.addEventListener('click', () => zoomNudge(-1));
+  overlay.querySelector('#sim-zoom-in')?.addEventListener('click', () => zoomNudge(1));
+  overlay.querySelector('#sim-zoom-fit')?.addEventListener('click', () => {
+    if (!simFit) return;
+    zoomState.mode = 'fit';
+    simFit.apply();
+  });
 
   overlay.querySelector('#sim-overlay-close').addEventListener('click', closeOverlay);
   // Fullscreen the sim window (projector-friendly). Esc first exits fullscreen
@@ -879,8 +1051,10 @@ function buildPedagogyShell(iframe, spec) {
   return shell;
 }
 
-/* ── Inject layout overrides into labsim simulation iframes ── */
-function injectSimLayoutOverrides(doc) {
+/* ── Inject layout overrides into labsim practical iframes (3-panel sims
+ * with the literal .practical-layout wrapper). requestRefit re-runs the
+ * overlay's shared fit engine after a column-handle drag. ── */
+function injectSimLayoutOverrides(doc, requestRefit) {
   // 1. CSS overrides: narrower panels, scrollable body, collapsible notebook
   const style = doc.createElement('style');
   style.id = 'cocher-sim-overrides';
@@ -899,9 +1073,9 @@ function injectSimLayoutOverrides(doc) {
       min-width: 300px !important;
     }
     .data-panel {
-      flex: 0 0 200px !important;
+      flex: 0 0 220px !important;
       min-width: 140px !important;
-      max-width: 360px !important;
+      max-width: 420px !important;
     }
     /* Narrow viewport (ANY pointer, not just touch): stack the practical
      * columns and let the document scroll. Forcing display:flex above defeats
@@ -925,15 +1099,15 @@ function injectSimLayoutOverrides(doc) {
       .cocher-col-handle { display: none !important; }
     }
     .cocher-col-handle {
-      flex: 0 0 5px;
+      flex: 0 0 7px;
       cursor: col-resize;
-      background: transparent;
+      background: rgba(67,97,238,0.10); /* visible at rest — teachers can't use a handle they can't see */
       position: relative;
       z-index: 5;
       transition: background 0.15s;
     }
     .cocher-col-handle:hover, .cocher-col-handle.active {
-      background: rgba(67,97,238,0.25);
+      background: rgba(67,97,238,0.28);
     }
     .cocher-col-handle::after {
       content: '';
@@ -941,11 +1115,11 @@ function injectSimLayoutOverrides(doc) {
       top: 50%; left: 50%;
       transform: translate(-50%,-50%);
       width: 2px; height: 36px;
-      background: rgba(160,170,195,0.3);
+      background: rgba(120,135,180,0.5);
       border-radius: 1px;
     }
     .cocher-col-handle:hover::after, .cocher-col-handle.active::after {
-      background: rgba(67,97,238,0.5);
+      background: rgba(67,97,238,0.6);
       height: 48px;
     }
     .lab-notebook-slot {
@@ -1007,7 +1181,7 @@ function injectSimLayoutOverrides(doc) {
       if (active.dataset.side === 'left' && guide) {
         guide.style.flex = `0 0 ${Math.max(120, Math.min(360, startW + dx))}px`;
       } else if (active.dataset.side === 'right' && data) {
-        data.style.flex = `0 0 ${Math.max(140, Math.min(360, startW - dx))}px`;
+        data.style.flex = `0 0 ${Math.max(140, Math.min(420, startW - dx))}px`;
       }
     });
 
@@ -1018,40 +1192,8 @@ function injectSimLayoutOverrides(doc) {
       doc.body.style.cursor = '';
       doc.body.style.userSelect = '';
       if (workbench) workbench.style.pointerEvents = '';
-      fitPractical();
-    });
-
-    // 2b. Scale-to-fit: when the panels' intrinsic minimums (fixed apparatus,
-    // non-compressible data tables) exceed the iframe width, zoom the whole
-    // practical down so nothing is ever clipped — the failure mode on
-    // wide-but-not-wide-enough projector windows, which the ≤1024px stacking
-    // rescue below doesn't reach. Height is compensated (zoomed units are
-    // visually smaller) so the layout still fills the window. Reset-first so
-    // repeated runs never compound.
-    const fitPractical = () => {
-      try {
-        layout.style.zoom = '';
-        layout.style.height = '';
-        if (doc.documentElement.clientWidth <= 1024) return; // stacked mode
-        const need = layout.scrollWidth, have = layout.clientWidth;
-        if (need <= have + 2) return;                        // fits naturally
-        const f = Math.max(0.55, have / need);
-        const h = layout.getBoundingClientRect().height;
-        layout.style.zoom = String(f);
-        layout.style.height = Math.round(h / f) + 'px';
-      } catch (e) { /* measurement raced a teardown */ }
-    };
-    // Run once now, then again as late-loading apparatus/fonts settle, and on
-    // every iframe resize (the overlay's drag-resize fires the inner window's
-    // resize event).
-    fitPractical();
-    setTimeout(fitPractical, 350);
-    setTimeout(fitPractical, 1200);
-    let fitRaf = null;
-    const winRef = doc.defaultView;
-    if (winRef) winRef.addEventListener('resize', () => {
-      if (fitRaf) return;
-      fitRaf = winRef.requestAnimationFrame(() => { fitRaf = null; fitPractical(); });
+      // Panel widths changed — let the overlay's shared fit engine re-fit.
+      if (typeof requestRefit === 'function') requestRefit();
     });
   }
 

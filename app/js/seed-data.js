@@ -2036,7 +2036,7 @@ export function seedExemplarsIfNeeded() {
    it also appears for existing installs on this version.
    ══════════════════════════════════════════════════════ */
 
-const SHOWCASE_SEED_KEY = 'cocher_showcase_seeded_v4';
+const SHOWCASE_SEED_KEY = 'cocher_showcase_seeded_v5';
 
 /* A six-pod discussion layout (+ teacher desk) sized to the 1440×720 canvas,
  * with one saved scene the seated segments point at. */
@@ -2075,6 +2075,8 @@ function buildShowcaseSegments(specSegs, students, podIids, sceneId) {
     duration: s.duration || 10,
     activity: s.activity || '',
     studentInstructions: s.studentInstructions || '',
+    simId: s.simId || null,
+    simTitle: s.simTitle || null,
     layoutSceneId: s.grouped ? sceneId : null,
     grouping: s.grouped ? { mode: 'groups', groups: seatIntoPods(students, podIids) }
       : (s.mode ? { mode: s.mode, groups: [] } : null),
@@ -2182,10 +2184,12 @@ const SHOWCASE_LESSONS = [
       { name: 'Test the everyday', duration: 15, teachingArea: 'encourage_engage', teachingAction: 'poe', grouped: true, e21ccFocus: 'collaboration',
         activity: 'Groups predict, then test household substances with universal indicator, and classify each as acid / neutral / base.', studentInstructions: 'Predict first. Test each substance. Record the pH, then sort it: acid, neutral or base.' },
       { name: 'Neutralisation: where does the acid go?', duration: 12, teachingArea: 'deepen_questions', teachingAction: 'funnel', mode: 'whole-class', e21ccFocus: 'criticalThinking',
-        activity: 'Build the word equation acid + base → salt + water through funnelling questions.', studentInstructions: 'Answer each question. Be ready to explain what happens to the H⁺ and OH⁻ ions.' },
+        simId: 'titration', simTitle: 'Acid-Base Titration',
+        activity: 'Build the word equation acid + base → salt + water through funnelling questions, then demonstrate it live in the Acid-Base Titration simulation — watch the indicator flick at the endpoint.', studentInstructions: 'Answer each question. Watch the titration on screen — be ready to explain what happens to the H⁺ and OH⁻ ions at the endpoint.' },
       { name: 'GROW: what do you now understand?', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_grow',
         activity: 'Close with the GROW reflection routine.', studentInstructions: 'Gift yourself one thing you understand. Rise: one gap. Own: a real-life example.' }
     ],
+    sims: [{ id: 'titration', title: 'Acid-Base Titration' }],
     deck: { title: 'Acids, Bases & Salts', wallPrompt: 'One thing you now understand about acids and bases?', slides: [
       { layout: 'title', title: 'Acids, Bases & Salts', subtitle: 'The Universal Indicator Lab', bullets: ['Identify acids & bases', 'Read the pH scale', 'Explain neutralisation'], icon: 'experiment' },
       { layout: 'statement', statement: 'Acids release H⁺ ions. Bases release OH⁻ ions.', icon: 'idea' },
@@ -2224,10 +2228,12 @@ const SHOWCASE_LESSONS = [
       { name: 'Jigsaw: three plate boundaries', duration: 15, teachingArea: 'collaborative', teachingAction: 'jigsaw', grouped: true, e21ccFocus: 'collaboration',
         activity: 'Each group becomes the expert on one boundary type, then teaches the others.', studentInstructions: 'Learn your boundary as a group. Be ready to teach it in 60 seconds.' },
       { name: 'Why do earthquakes cluster?', duration: 12, teachingArea: 'deepen_questions', teachingAction: 'socratic', mode: 'whole-class', e21ccFocus: 'criticalThinking',
-        activity: 'Socratic questioning links boundaries to the distribution of hazards.', studentInstructions: 'Explain your reasoning. What is your evidence?' },
+        simId: 'waves', simTitle: 'Waves & Ripple Tank',
+        activity: 'Socratic questioning links boundaries to the distribution of hazards. Show the Waves & Ripple Tank simulation: seismic energy radiates as waves from a source — exactly why shaking is strongest near the boundary.', studentInstructions: 'Watch how the waves spread from the source. Explain your reasoning — what is your evidence?' },
       { name: '3-2-1: living with risk', duration: 10, teachingArea: 'conclude', teachingAction: 'three_two_one', mode: 'individual',
         activity: 'Consolidate with a 3-2-1 exit.', studentInstructions: '3 facts · 2 hazards · 1 reason people stay.' }
     ],
+    sims: [{ id: 'waves', title: 'Waves & Ripple Tank' }],
     deck: { title: 'Volcanoes & Earthquakes', wallPrompt: 'One reason people choose to live on the Ring of Fire?', slides: [
       { layout: 'title', title: 'Volcanoes & Earthquakes', subtitle: 'Living on the Ring of Fire', bullets: ['Link boundaries to hazards', 'Compare boundary types', 'Judge why people stay'], icon: 'globe' },
       { layout: 'visual', title: 'Watch: the Ring of Fire', youtube: 'Vu6t3e4oqrE', notes: 'A short clip on the Ring of Fire. As they watch, students note WHERE volcanoes and earthquakes cluster — the hook for the whole lesson.' },
@@ -2321,6 +2327,38 @@ function attachShowcaseDeck(lessonId, spec) {
   } catch { /* deck is optional */ }
 }
 
+/* Bring an ALREADY-SEEDED showcase lesson up to date with the spec's embedded
+ * simulations: link the sims as resources (skipping any already there) and
+ * stamp simId/simTitle onto the matching run-of-show segments (matched by
+ * name), refreshing those segments' activity text. Synchronous and additive —
+ * a teacher's own edits to other segments are untouched. */
+function refreshShowcaseSims(lesson, spec) {
+  const updates = {};
+  if (Array.isArray(spec.sims) && spec.sims.length) {
+    const have = new Set((lesson.attachedResources || [])
+      .filter(r => r && r.type === 'simulation').map(r => r.id));
+    const add = spec.sims.filter(s => !have.has(s.id))
+      .map(s => ({ type: 'simulation', id: s.id, title: s.title }));
+    if (add.length) updates.attachedResources = [...(lesson.attachedResources || []), ...add];
+  }
+  const segs = lesson.runOfShow?.segments;
+  if (Array.isArray(segs)) {
+    const byName = new Map((spec.segments || []).filter(s => s.simId).map(s => [s.name, s]));
+    let changed = false;
+    const next = segs.map(seg => {
+      const src = byName.get(seg.name);
+      if (src && seg.simId !== src.simId) {
+        changed = true;
+        return { ...seg, simId: src.simId, simTitle: src.simTitle || null,
+          activity: src.activity || seg.activity, studentInstructions: src.studentInstructions || seg.studentInstructions };
+      }
+      return seg;
+    });
+    if (changed) updates.runOfShow = { ...lesson.runOfShow, segments: next };
+  }
+  if (Object.keys(updates).length) Store.updateLesson(lesson.id, updates);
+}
+
 export function seedShowcaseLessonsIfNeeded() {
   if (localStorage.getItem(SHOWCASE_SEED_KEY)) return;
   if (Store.getClasses().length === 0) return; // classes must exist first
@@ -2328,9 +2366,14 @@ export function seedShowcaseLessonsIfNeeded() {
   SHOWCASE_LESSONS.forEach((spec, idx) => {
     const existing = (Store.get('lessons') || []).find(l => l.title === spec.title);
     if (existing) {
-      // Seeded by an earlier version — just refresh the showcase deck in place
-      // (adds the animations + embedded video) without duplicating the lesson.
-      if (existing.isExemplar) attachShowcaseDeck(existing.id, spec);
+      // Seeded by an earlier version — refresh the showcase deck in place and
+      // bring the embedded simulations up to date, without duplicating the
+      // lesson. (Sim refresh is synchronous; the deck write is async and
+      // re-reads the lesson, so the order is safe.)
+      if (existing.isExemplar) {
+        refreshShowcaseSims(existing, spec);
+        attachShowcaseDeck(existing.id, spec);
+      }
       return;
     }
     const cls = ensureShowcaseClass(spec.subjectIncludes, spec.classDef);
@@ -2353,6 +2396,8 @@ export function seedShowcaseLessonsIfNeeded() {
       contentArea: spec.contentArea || undefined,
       chatHistory: spec.chat ? [{ role: 'user', content: spec.chat.user }, { role: 'assistant', content: spec.chat.assistant }] : [],
       plan: spec.chat ? spec.chat.assistant : '',
+      attachedResources: Array.isArray(spec.sims)
+        ? spec.sims.map(s => ({ type: 'simulation', id: s.id, title: s.title })) : [],
       components,
       spatialLayout: layout.id,
       runOfShow: { generatedAt: now, segments },
