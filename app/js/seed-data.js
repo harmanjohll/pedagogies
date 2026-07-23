@@ -2036,7 +2036,7 @@ export function seedExemplarsIfNeeded() {
    it also appears for existing installs on this version.
    ══════════════════════════════════════════════════════ */
 
-const SHOWCASE_SEED_KEY = 'cocher_showcase_seeded_v3';
+const SHOWCASE_SEED_KEY = 'cocher_showcase_seeded_v4';
 
 /* A six-pod discussion layout (+ teacher desk) sized to the 1440×720 canvas,
  * with one saved scene the seated segments point at. */

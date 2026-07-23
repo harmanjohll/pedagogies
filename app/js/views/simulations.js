@@ -615,7 +615,7 @@ function openOverlay(container, title, opts) {
   `;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'flex:1;border:none;width:100%;height:100%;background:#1e1f2b;';
+  iframe.style.cssText = 'flex:1;min-height:0;min-width:0;border:none;width:100%;height:100%;background:#1e1f2b;';
   if (opts.src) iframe.src = opts.src;
   // Generated sims: storage holds RAW HTML — the shared widget library is
   // composed in on the fly at launch (falls back to the raw doc offline).
@@ -626,25 +626,44 @@ function openOverlay(container, title, opts) {
   // to the trusted built-in sims loaded via src (needed for layout injection).
   iframe.setAttribute('sandbox', opts.src ? 'allow-scripts allow-same-origin allow-popups' : 'allow-scripts');
 
-  // Inject responsive CSS + layout overrides into simulations after load
-  iframe.addEventListener('load', () => {
+  // Inject responsive CSS + layout overrides into simulations. IMPORTANT: do
+  // NOT wait for the iframe's `load` event alone — a sim referencing a CDN
+  // resource that a school network blocks (or serves slowly) keeps the doc in
+  // readyState 'loading' for seconds (or forever), and the containment fixes
+  // would never arrive. The DOM (<head>, .practical-layout) exists long before
+  // `load`, so inject as soon as it's there; idempotent via the style ids.
+  const injectSimStyles = () => {
     try {
       const doc = iframe.contentDocument || iframe.contentWindow.document;
-      // Responsive base styles for all sim iframes
-      const style = doc.createElement('style');
-      style.textContent = `
-        body { margin: 0; overflow-x: hidden; width: 100%; }
-        * { box-sizing: border-box; }
-        canvas { max-width: 100%; height: auto !important; }
-        .guide-panel, .data-panel, [class*="panel"] { min-width: 0; overflow-wrap: break-word; }
-      `;
-      doc.head.appendChild(style);
+      if (!doc || !doc.head) return false;
+      if (!doc.getElementById('cocher-sim-base')) {
+        // Responsive base styles for all sim iframes
+        const style = doc.createElement('style');
+        style.id = 'cocher-sim-base';
+        style.textContent = `
+          body { margin: 0; overflow-x: hidden; width: 100%; }
+          * { box-sizing: border-box; }
+          /* No !important: a sim that sizes its canvas via inline styles (fixed
+           * aspect) must win, or the drawing gets squashed/cut. */
+          canvas { max-width: 100%; height: auto; }
+          .guide-panel, .data-panel, [class*="panel"] { min-width: 0; overflow-wrap: break-word; }
+        `;
+        doc.head.appendChild(style);
+      }
       // Additional layout overrides for labsim practicals
-      if (doc.querySelector('.practical-layout')) {
+      if (doc.querySelector('.practical-layout') && !doc.getElementById('cocher-sim-overrides')) {
         injectSimLayoutOverrides(doc);
       }
-    } catch (e) { /* cross-origin or sandbox restriction */ }
-  });
+      // Done when the doc has finished parsing (a practical's layout element is
+      // static HTML, so by 'interactive' everything we target exists).
+      return doc.readyState !== 'loading' || !!doc.getElementById('cocher-sim-overrides');
+    } catch (e) { return false; /* cross-origin or sandbox restriction */ }
+  };
+  iframe.addEventListener('load', injectSimStyles);
+  const injectPoll = setInterval(() => {
+    // Self-terminating: once injected, or when the overlay is gone.
+    if (injectSimStyles() || !document.body.contains(iframe)) clearInterval(injectPoll);
+  }, 200);
 
   win.appendChild(topBar);
   // Custom sims that carry a pedagogical spec get app-owned chrome around the
@@ -858,7 +877,7 @@ function injectSimLayoutOverrides(doc) {
   const style = doc.createElement('style');
   style.id = 'cocher-sim-overrides';
   style.textContent = `
-    body { overflow-y: auto !important; }
+    body { overflow: auto !important; }
     .practical-layout {
       display: flex !important;
     }
@@ -876,13 +895,24 @@ function injectSimLayoutOverrides(doc) {
       min-width: 140px !important;
       max-width: 360px !important;
     }
-    /* Mobile (touch + narrow): stack the practical columns so nothing overflows a phone */
-    @media (hover: none) and (max-width: 768px) {
-      .practical-layout { flex-wrap: wrap !important; }
+    /* Narrow viewport (ANY pointer, not just touch): stack the practical
+     * columns and let the document scroll. Forcing display:flex above defeats
+     * the sims' own grid reflow (e.g. titration's 1024px single-column
+     * breakpoint), so this override must supply the equivalent — the old
+     * touch-only 768px gate left mouse laptops/projectors in a 640–1024px
+     * dead-zone where fixed-width apparatus was clipped with no scrollbar. */
+    @media (max-width: 1024px) {
+      html, body { overflow: auto !important; height: auto !important; }
+      .practical-layout {
+        flex-wrap: wrap !important;
+        overflow: visible !important;
+        height: auto !important;
+      }
       .guide-panel, .workbench-panel, .data-panel {
         flex: 1 1 100% !important;
         min-width: 0 !important;
         max-width: none !important;
+        overflow: visible !important;
       }
       .cocher-col-handle { display: none !important; }
     }

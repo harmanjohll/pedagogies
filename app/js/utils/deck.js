@@ -15,6 +15,7 @@
  */
 
 import { idbPut, idbGet, idbRemove } from './storage.js';
+import { navigate } from '../router.js';
 
 const DECKS_KEY = 'cocher_decks';
 const AUDIO_KEY = 'cocher_audio_clips';
@@ -193,7 +194,10 @@ export function compileDeckHTML(deck, { theme } = {}) {
     const embed = mediaObj ? embedSrcFor(mediaObj) : null;
     if (embed) {
       const link = embed.watch ? `<a class="deck-embed-link" href="${esc(embed.watch)}" target="_blank" rel="noopener">Watch on YouTube &#8599;</a>` : '';
-      return `<div class="deck-embed-wrap"><iframe class="deck-embed" src="${esc(embed.src)}" title="${esc(mediaObj.title || 'Embedded video')}" allow="fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>${link}</div>`;
+      // referrerpolicy matters: YouTube's player refuses to load without a
+      // referrer (embed "Error 153"), which is also why decks must be VIEWED
+      // from a real URL (the in-app #/deck/:id viewer) rather than a blob: tab.
+      return `<div class="deck-embed-wrap"><iframe class="deck-embed" src="${esc(embed.src)}" title="${esc(mediaObj.title || 'Embedded video')}" allow="fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>${link}</div>`;
     }
     return '';
   };
@@ -375,6 +379,8 @@ ${slideHTML}
   // window.open, so close is permitted). If the browser blocks close, show a hint.
   function exitDeck(){
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
+    // Inside the app's #/deck/:id viewer (an iframe): ask the app to close us.
+    try { if (window.parent && window.parent !== window) { window.parent.postMessage({ type: 'cocher-deck-exit' }, '*'); return; } } catch(e){}
     // window.close() only works for script-opened tabs (Co-Cher opens decks via
     // window.open). For a downloaded/double-clicked file it is a no-op, so only
     // attempt it when we can, and always surface the hint.
@@ -514,18 +520,17 @@ export async function getMediaContent(id) {
 }
 
 /**
- * Open a stored deck in a new tab via a blob: URL (works fully offline —
- * the document is self-contained). Resolves true when opened, false when
+ * Open a stored deck in the IN-APP viewer (#/deck/:id). Decks used to open in
+ * a new tab via a blob: URL — but blob documents send no Referer, and
+ * YouTube's player refuses to load without one (embed "Error 153"), so any
+ * slide video silently failed. Viewing from the app's real URL fixes that,
+ * and keeps everything inside Co-Cher. Resolves true when opened, false when
  * the content is missing on this device.
  */
 export async function openDeckById(id) {
   const html = await getMediaContent(id);
   if (typeof html !== 'string' || !html) return false;
-  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-  window.open(url, '_blank');
-  // The new tab holds its own copy of the document once loaded; revoke
-  // after a grace period so the URL doesn't pin the Blob forever.
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  navigate(`/deck/${id}`);
   return true;
 }
 

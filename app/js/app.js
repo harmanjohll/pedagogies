@@ -40,6 +40,7 @@ import { render as renderReportComments } from './views/report-comments.js';
 import { render as renderQuestionBank } from './views/question-bank.js';
 import { render as renderReliefKit } from './views/relief-kit.js';
 import { renderPresent } from './views/present.js';
+import { renderDeckViewer } from './views/deck-viewer.js';
 import { initGlobalSearch, openSearch } from './components/unified-search.js';
 import { initOnboarding } from './components/onboarding.js';
 import { startTour, isTourComplete } from './components/spotlight-tour.js';
@@ -136,6 +137,7 @@ function init() {
   registerRoute('/question-bank', renderQuestionBank);
   registerRoute('/relief-kit', renderReliefKit);
   registerRoute('/present/:id', renderPresent);
+  registerRoute('/deck/:id', renderDeckViewer);
   registerRoute('/card/:data', (container, params) => renderCardView(container, params.data));
   registerRoute('/settings', renderSettings);
 

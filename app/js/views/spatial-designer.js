@@ -3047,8 +3047,13 @@ export function render(container) {
     const layout = Store.getSavedLayouts().find(l => l.id === payload.layoutId);
     if (!layout) { showToast('That linked layout could not be found.', 'danger'); return; }
 
-    // 1) Port the furniture — but never stomp a layout already on the canvas.
-    if (layoutRoot.querySelectorAll('g[data-id]').length === 0) loadSavedLayout(layout);
+    // 1) Port the furniture. The teacher explicitly clicked "Open" on THIS
+    // lesson's layout, so load it even when the canvas already holds something
+    // (a leftover from an earlier visit). The old "never stomp the canvas"
+    // rule silently skipped the load — then the seat map's instance-iids
+    // matched nothing on the stale canvas and the students' name pills never
+    // appeared. Explicit intent wins; saved layouts are never touched by this.
+    loadSavedLayout(layout);
 
     // 2) Resolve the segment's seating → iid : [studentName]
     const lesson = payload.lessonId ? Store.getLesson(payload.lessonId) : null;
@@ -3058,8 +3063,16 @@ export function render(container) {
     // Flat seat map for THIS canvas: iid -> [studentId] (only resolvable students).
     const seats = {};
     (segment?.grouping?.groups || []).forEach(g => {
-      const sm = (g.seatMap && typeof g.seatMap === 'object') ? g.seatMap : {};
-      Object.entries(sm).forEach(([iid, sids]) => {
+      let sm = (g.seatMap && typeof g.seatMap === 'object' && Object.keys(g.seatMap).length > 0) ? g.seatMap : null;
+      // Legacy groups (placed before named seats existed) carry itemIds +
+      // studentIds but no seatMap — derive one round-robin, the same formula
+      // the Place-Groups Done handler uses, so their students still show up.
+      if (!sm && Array.isArray(g.itemIds) && g.itemIds.length && Array.isArray(g.studentIds) && g.studentIds.length) {
+        sm = {};
+        g.itemIds.forEach(iid => { sm[iid] = []; });
+        g.studentIds.forEach((sid, j) => { sm[g.itemIds[j % g.itemIds.length]].push(sid); });
+      }
+      Object.entries(sm || {}).forEach(([iid, sids]) => {
         (Array.isArray(sids) ? sids : []).forEach(sid => {
           if (!idToName.has(sid)) return;
           (seats[String(iid)] = seats[String(iid)] || []).push(sid);
