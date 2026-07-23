@@ -170,11 +170,20 @@ export const LIVE_ENGINE_JS = String.raw`
     ({join:rJoin,watch:rWatch,poll:rPoll,quiz:rQuiz,wall:rWall,card:rCard}[s.mode]||rWatch)(stage,s);
     if(ROLE==='presenter') rControls(controls,s);
   }
+  function joinLink(){ if(!JOIN_URL) return ''; return JOIN_URL + (JOIN_URL.indexOf('?')>=0?'&':'?') + 'room=' + encodeURIComponent(ROOM); }
+  function qrSvg(text){
+    try{ if(typeof window.qrcode!=='function'||!text) return '';
+      var q=window.qrcode(0,'M'); q.addData(text); q.make();
+      return q.createSvgTag({cellSize:6,margin:2,scalable:true});
+    }catch(e){ return ''; }
+  }
   function rJoin(stage){
     if(ROLE==='presenter'){
-      stage.innerHTML='<div class="kicker">Join the room</div><div class="roomcode-big">'+esc(ROOM)+'</div>'+
-        (JOIN_URL?'<div class="body">On your phone open<br><b>'+esc(JOIN_URL)+'</b><br>and enter this code.</div>':'<div class="body">Open the class link on your phone and enter this code.</div>')+
-        '<div class="pill">'+Object.keys(joiners).length+' joined</div>';
+      var link=joinLink(), svg=qrSvg(link);
+      var qrCol=svg?('<div class="joincol"><div class="qrbox">'+svg+'</div><div class="pill">Scan to join</div></div>'):'';
+      var codeCol='<div class="joincol"><div class="kicker">Join the room</div><div class="roomcode-big">'+esc(ROOM)+'</div>'+
+        (JOIN_URL?'<div class="body">or open <b>'+esc(JOIN_URL)+'</b><br>and enter this code</div>':'<div class="body">Open the class link on your phone and enter this code.</div>')+'</div>';
+      stage.innerHTML='<div class="joinrow">'+qrCol+codeCol+'</div><div class="pill" style="margin-top:1vh">'+Object.keys(joiners).length+' joined</div>';
     } else { stage.innerHTML='<div class="kicker">You’re in ✓</div><div class="big">Look up at the screen</div><div class="body">This phone will follow along and ask for your input.</div>'; }
   }
   function rWatch(stage,s){
@@ -299,6 +308,10 @@ export const LIVE_CSS = String.raw`
   .wall{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; width:min(1100px,92vw); } .wall .tile{ padding:10px 16px; border-radius:999px; font-size:clamp(.9rem,1.8vw,1.3rem); font-weight:600; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); animation:pop .4s ease; } body.audience .wall .tile{ background:#fff; border:1px solid #e3e6eb; } @keyframes pop{ from{transform:scale(.8);opacity:0} to{transform:none;opacity:1} }
   .note{ font-size:.95rem; opacity:.7; max-width:32ch; } .pill{ display:inline-block; padding:6px 16px; border-radius:999px; font-weight:700; font-size:.85rem; background:rgba(255,226,0,.14); color:var(--yellow); } body.audience .pill{ background:#eef1ff; color:var(--navy); } .pill.ok{ background:rgba(22,163,74,.15); color:#166534; } .pill.bad{ background:rgba(225,29,72,.12); color:#9f1239; }
   .roomcode-big{ font-size:clamp(2.6rem,10vw,6rem); font-weight:800; letter-spacing:.1em; } body.presenter .roomcode-big{ color:var(--yellow); }
+  .joinrow{ display:flex; align-items:center; justify-content:center; gap:clamp(20px,5vw,64px); flex-wrap:wrap; }
+  .joincol{ display:flex; flex-direction:column; align-items:center; gap:1.4vh; }
+  .qrbox{ background:#fff; padding:14px; border-radius:16px; line-height:0; box-shadow:0 10px 40px rgba(0,0,0,.3); }
+  .qrbox svg{ width:clamp(150px,24vh,280px); height:auto; display:block; } .qrbox .qrcap{ line-height:1.2; margin-top:8px; font-size:.7rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#334155; text-align:center; }
   .cmd{ width:min(440px,94vw); background:#fff; color:#0f172a; border-radius:18px; overflow:hidden; box-shadow:0 16px 50px rgba(0,0,0,.25); text-align:left; }
   .cmd .band{ height:12px; background:linear-gradient(90deg,var(--navy) 0 70%,var(--yellow) 70% 100%); } .cmd .in{ padding:22px 24px; } .cmd h2{ color:var(--navy); font-size:1.35rem; margin:2px 0 4px; }
   .cmd .k{ font-size:.68rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--red); } .cmd .sec{ font-size:.68rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--navy); margin:15px 0 6px; }
@@ -325,13 +338,13 @@ function sessionShellHTML(landing) {
   </div>`;
 }
 
-function htmlDoc({ title, bodyInner, headScript, mqttSrc }) {
+function htmlDoc({ title, bodyInner, headScript, mqttSrc, qrSrc }) {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${title}</title><style>${LIVE_CSS}</style></head>
 <body>${bodyInner}
 <script src="${mqttSrc}"></script>
-<script>${headScript}</script>
+${qrSrc ? `<script src="${qrSrc}"></script>\n` : ''}<script>${headScript}</script>
 <script>${LIVE_ENGINE_JS}</script>
 </body></html>`;
 }
@@ -345,7 +358,7 @@ export function compileLivePresenterHTML(deck, ctx = {}) {
   const head = `window.__ROLE='presenter';window.__ROOM=${JSON.stringify(normRoom(ctx.room))};`
     + `window.__SLIDES=${JSON.stringify(slides)};window.__JOIN_URL=${JSON.stringify(ctx.joinUrl || '')};`
     + `window.__BROKER=${JSON.stringify(ctx.broker || DEFAULT_BROKER)};`;
-  return htmlDoc({ title: `${deck?.title || 'Lesson'} — Live (presenter)`, bodyInner: sessionShellHTML(''), headScript: head, mqttSrc: ctx.mqttSrc || 'mqtt.min.js' });
+  return htmlDoc({ title: `${deck?.title || 'Lesson'} — Live (presenter)`, bodyInner: sessionShellHTML(''), headScript: head, mqttSrc: ctx.mqttSrc || 'mqtt.min.js', qrSrc: ctx.qrSrc || 'qrcode.min.js' });
 }
 
 /**

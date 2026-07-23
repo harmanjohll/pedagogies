@@ -442,20 +442,40 @@ export function listAudioMeta() {
  * localStorage 'cocher_decks'. Resolves the metadata entry, or null when
  * the payload could not be stored (metadata is only written after the
  * payload write succeeds, so lists never point at missing content).
+ *
+ * Pass the original `deck` model to also stash the slide MODEL under the
+ * sibling IDB key `<id>:model` — that's what lets a stored deck later be run
+ * as a Live session (the HTML is a compiled artefact; the live runtime needs
+ * the structured slides + their interactions). The metadata gets `hasModel`
+ * so callers can offer "Go Live" without a probe read.
  */
-export async function saveDeckMaterial({ lessonId, title, html, slideCount } = {}) {
+export async function saveDeckMaterial({ lessonId, title, html, slideCount, deck } = {}) {
   if (typeof html !== 'string' || !html) return null;
+  const id = materialId('deck');
+  const ok = await idbPut(MEDIA_STORE, id, html);
+  if (!ok) return null;
+  let hasModel = false;
+  if (deck && Array.isArray(deck.slides)) {
+    hasModel = await idbPut(MEDIA_STORE, id + ':model', deck);
+  }
   const meta = {
-    id: materialId('deck'),
+    id,
     lessonId: lessonId || null,
     title: String(title || 'Slide deck').slice(0, 140),
     slideCount: Number(slideCount) || 0,
+    hasModel: !!hasModel,
     createdAt: Date.now()
   };
-  const ok = await idbPut(MEDIA_STORE, meta.id, html);
-  if (!ok) return null;
   writeList(DECKS_KEY, [...listDeckMeta(), meta]);
   return meta;
+}
+
+/** The stored slide MODEL for a deck id (for running it as a Live session),
+ * or null when this deck was saved without one (HTML-only, legacy). */
+export async function getDeckModel(id) {
+  if (!id) return null;
+  const model = await idbGet(MEDIA_STORE, id + ':model');
+  return (model && Array.isArray(model.slides)) ? model : null;
 }
 
 /**
@@ -483,6 +503,7 @@ export async function saveAudioMaterial({ lessonId, title, style, blob } = {}) {
 export async function deleteDeckMaterial(id) {
   if (!id) return;
   try { await idbRemove(MEDIA_STORE, id); } catch { /* best-effort */ }
+  try { await idbRemove(MEDIA_STORE, id + ':model'); } catch { /* best-effort */ }
   writeList(DECKS_KEY, listDeckMeta().filter(m => m.id !== id));
 }
 
