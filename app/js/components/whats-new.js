@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v8.0', items: [
+    { icon: '&#128241;', title: 'Live Sessions — students join on their phones', text: 'When you generate a deck, hit "Live" to run it as a live session: students open a link, enter a room code, and follow along — voting on predict-&-reveal quizzes, answering polls, and adding to a word-wall in real time. Everyone leaves with a personal command card built from their own answers. Nothing is stored; it just needs internet.' },
+  ] },
   { version: 'v7.9', items: [
     { icon: '&#128101;', title: 'Audience mode + takehome cards', text: 'Present has an Audience mode for assemblies / open house (hides class-only seating & groups) and ends on a "take your card" screen. Generate a one-page takehome card from any lesson — print a stack, download it, or share a link.' },
     { icon: '&#128736;&#65039;', title: 'A big reliability pass', text: 'Fixed image/PDF attachments that could fail to send, autosave edge cases (no lost replies, no duplicate lessons), tidier lesson titles, and cleaner decks — plus a mobile sweep so the planner toolbar, deck controls and Present bars behave on a phone.' },
