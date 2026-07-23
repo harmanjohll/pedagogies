@@ -15,7 +15,8 @@ import { getCurrentUser } from '../components/login.js';
 import { loadTT, findTeacherRow, buildMyTimetable } from './dashboard.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { applyJourneyMinimal, toggleJourneyMinimal } from '../components/keyboard-shortcuts.js';
-import { openDeckById, getMediaContent } from '../utils/deck.js';
+import { openDeckById, getMediaContent, getDeckModel, listDeckMeta } from '../utils/deck.js';
+import { openLiveSession } from '../components/live-launch.js';
 import { buildCardModel, openCardWindow } from '../utils/takehome-card.js';
 import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 import { isTouch } from '../utils/viewport.js';
@@ -54,6 +55,10 @@ const RESOURCE_CHIP = {
   audio:      { badge: 'badge-rose',   label: 'Audio' }
 };
 const chipMeta = (t) => RESOURCE_CHIP[t] || { badge: 'badge-amber', label: 'Source' };
+
+/* Does this stored deck carry a slide MODEL, so it can be run as a Live
+ * session? Reads the deck metadata list only (no async probe). */
+const deckHasModel = (id) => listDeckMeta().some(m => m.id === id && m.hasModel);
 
 /* Inline playback for an attached audio clip (WS-4). The WAV Blob lives in
  * the IndexedDB 'media' store; playback is fully offline via an object URL. */
@@ -1075,11 +1080,14 @@ export function renderDetail(container, { id }) {
               <h3 style="font-size:1rem;font-weight:600;margin-bottom:var(--sp-3);color:var(--ink);">Linked Resources</h3>
               <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);">
                 ${resources.map(r => `
+                  <span style="display:inline-flex;align-items:center;gap:var(--sp-1);">
                   <button class="btn btn-ghost btn-sm linked-resource-chip" data-type="${r.type}" data-res-id="${esc(r.id || '')}" style="display:inline-flex;align-items:center;gap:var(--sp-1);padding:var(--sp-1) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-lg);font-size:0.8125rem;border:1px solid var(--border-light);cursor:pointer;">
                     <span class="badge ${chipMeta(r.type).badge}" style="font-size:0.625rem;">${chipMeta(r.type).label}</span>
                     <span style="color:var(--ink);">${esc(r.title)}</span>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" stroke-width="2" style="margin-left:2px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </button>
+                  ${r.type === 'deck' && r.id && deckHasModel(r.id) ? `<button class="btn btn-ghost btn-sm go-live-chip" data-res-id="${esc(r.id)}" title="Run this deck as a live session — students scan a QR to join, vote and respond, and leave with a personal card" style="display:inline-flex;align-items:center;gap:4px;padding:var(--sp-1) var(--sp-3);border-radius:var(--radius-lg);font-size:0.8125rem;border:1px solid #f5c2ce;background:#fff1f4;color:#e11d48;font-weight:700;cursor:pointer;">&#9654; Go Live</button>` : ''}
+                  </span>
                 `).join('')}
               </div>
             </div>`;
@@ -1232,6 +1240,18 @@ export function renderDetail(container, { id }) {
         return;
       }
       navigate(type === 'stimulus' ? '/stimulus-material' : '/source-analysis');
+    });
+  });
+
+  // "Go Live" on an attached deck — load the stored slide MODEL and run it.
+  container.querySelectorAll('.go-live-chip').forEach(chip => {
+    chip.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      chip.disabled = true;
+      const model = await getDeckModel(chip.dataset.resId);
+      chip.disabled = false;
+      if (!model) { showToast('This deck can’t be run live on this device.', 'danger'); return; }
+      openLiveSession(model);
     });
   });
 

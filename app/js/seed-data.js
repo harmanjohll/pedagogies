@@ -2036,7 +2036,7 @@ export function seedExemplarsIfNeeded() {
    it also appears for existing installs on this version.
    ══════════════════════════════════════════════════════ */
 
-const SHOWCASE_SEED_KEY = 'cocher_showcase_seeded_v2';
+const SHOWCASE_SEED_KEY = 'cocher_showcase_seeded_v3';
 
 /* A six-pod discussion layout (+ teacher desk) sized to the 1440×720 canvas,
  * with one saved scene the seated segments point at. */
@@ -2186,15 +2186,17 @@ const SHOWCASE_LESSONS = [
       { name: 'GROW: what do you now understand?', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_grow',
         activity: 'Close with the GROW reflection routine.', studentInstructions: 'Gift yourself one thing you understand. Rise: one gap. Own: a real-life example.' }
     ],
-    deck: { title: 'Acids, Bases & Salts', slides: [
+    deck: { title: 'Acids, Bases & Salts', wallPrompt: 'One thing you now understand about acids and bases?', slides: [
       { layout: 'title', title: 'Acids, Bases & Salts', subtitle: 'The Universal Indicator Lab', bullets: ['Identify acids & bases', 'Read the pH scale', 'Explain neutralisation'], icon: 'experiment' },
       { layout: 'statement', statement: 'Acids release H⁺ ions. Bases release OH⁻ ions.', icon: 'idea' },
       { layout: 'visual', title: 'Watch: what is the pH scale?', youtube: 'ckbsHM2igT0', notes: 'FuseSchool — What Is The pH Scale (~3 min). Pause on the universal-indicator colours and ask students to predict where an everyday liquid sits.' },
-      { layout: 'visual', title: 'The pH scale', chart: { type: 'bar', title: 'pH of everyday substances', data: [{ label: 'Lemon', value: 2 }, { label: 'Coffee', value: 5 }, { label: 'Water', value: 7 }, { label: 'Soap', value: 9 }, { label: 'Bleach', value: 13 }] } },
+      { layout: 'visual', title: 'The pH scale', chart: { type: 'bar', title: 'pH of everyday substances', data: [{ label: 'Lemon', value: 2 }, { label: 'Coffee', value: 5 }, { label: 'Water', value: 7 }, { label: 'Soap', value: 9 }, { label: 'Bleach', value: 13 }] },
+        interaction: { type: 'quiz', label: 'pH of lemon juice', q: 'Lemon juice turns universal indicator red. Its pH is about…', options: ['2 — acidic', '7 — neutral', '12 — basic'], answer: 0, why: 'Red means strongly acidic — lemon juice sits around pH 2.' } },
       { layout: 'columns', title: 'Tell them apart', icon: 'target', columns: [{ heading: 'Acids', items: ['pH below 7', 'Taste sour', 'Turn blue litmus red', 'React with metals'] }, { heading: 'Bases', items: ['pH above 7', 'Feel soapy', 'Turn red litmus blue', 'Neutralise acids'] }] },
       { layout: 'bullets', title: 'Neutralisation', icon: 'experiment', bullets: ['Acid + Base → Salt + Water', 'HCl + NaOH → NaCl + H₂O', 'H⁺ and OH⁻ join to make water', 'Antacids calm an acidic stomach'] },
       { layout: 'visual', title: 'Neutralisation in action', svg: ANIM_NEUTRALISATION, notes: 'The H⁺ and OH⁻ ions move together and vanish as a water molecule forms — that is why the acid “disappears”.' },
-      { layout: 'quote', quote: 'Where does the acid go when it is neutralised?', attribution: "Today's driving question" },
+      { layout: 'quote', quote: 'Where does the acid go when it is neutralised?', attribution: "Today's driving question",
+        interaction: { type: 'quiz', label: 'Products of neutralisation', q: 'Acid + Base → ?', options: ['Salt + Water', 'Salt + Hydrogen gas', 'A stronger acid'], answer: 0, why: 'Neutralisation always makes a salt and water: H⁺ + OH⁻ → H₂O.' } },
       { layout: 'exit', title: 'Exit ticket', icon: 'check', bullets: ['Place milk (pH 6) on the scale', 'Name the salt from HCl + KOH', 'One thing you now understand'] }
     ] }
   },
@@ -2226,15 +2228,17 @@ const SHOWCASE_LESSONS = [
       { name: '3-2-1: living with risk', duration: 10, teachingArea: 'conclude', teachingAction: 'three_two_one', mode: 'individual',
         activity: 'Consolidate with a 3-2-1 exit.', studentInstructions: '3 facts · 2 hazards · 1 reason people stay.' }
     ],
-    deck: { title: 'Volcanoes & Earthquakes', slides: [
+    deck: { title: 'Volcanoes & Earthquakes', wallPrompt: 'One reason people choose to live on the Ring of Fire?', slides: [
       { layout: 'title', title: 'Volcanoes & Earthquakes', subtitle: 'Living on the Ring of Fire', bullets: ['Link boundaries to hazards', 'Compare boundary types', 'Judge why people stay'], icon: 'globe' },
       { layout: 'visual', title: 'Watch: the Ring of Fire', youtube: 'Vu6t3e4oqrE', notes: 'A short clip on the Ring of Fire. As they watch, students note WHERE volcanoes and earthquakes cluster — the hook for the whole lesson.' },
       { layout: 'statement', statement: 'About 90% of earthquakes strike along plate boundaries.', icon: 'warning' },
       { layout: 'visual', title: 'How an earthquake travels', svg: ANIM_SEISMIC, notes: 'Waves radiate outward from the epicentre. Link this back to WHY the strongest shaking clusters along boundaries.' },
-      { layout: 'visual', title: 'Where the Earth shakes hardest', chart: { type: 'bar', title: 'Largest recorded earthquakes (magnitude)', data: [{ label: 'Chile 1960', value: 9.5 }, { label: 'Alaska 1964', value: 9.2 }, { label: 'Sumatra 2004', value: 9.1 }, { label: 'Japan 2011', value: 9.0 }] } },
+      { layout: 'visual', title: 'Where the Earth shakes hardest', chart: { type: 'bar', title: 'Largest recorded earthquakes (magnitude)', data: [{ label: 'Chile 1960', value: 9.5 }, { label: 'Alaska 1964', value: 9.2 }, { label: 'Sumatra 2004', value: 9.1 }, { label: 'Japan 2011', value: 9.0 }] },
+        interaction: { type: 'quiz', label: 'Strongest earthquake', q: 'Which was the most powerful earthquake ever recorded?', options: ['Chile 1960', 'Japan 2011', 'Sumatra 2004'], answer: 0, why: 'The 1960 Valdivia (Chile) quake reached magnitude 9.5 — the strongest ever recorded.' } },
       { layout: 'columns', title: 'Two kinds of boundary', icon: 'target', columns: [{ heading: 'Destructive', items: ['Plates collide', 'Subduction', 'Explosive volcanoes', 'Strong quakes'] }, { heading: 'Constructive', items: ['Plates separate', 'New crust forms', 'Gentle volcanoes', 'Weaker quakes'] }] },
       { layout: 'bullets', title: 'Why live here?', icon: 'idea', bullets: ['Fertile volcanic soil', 'Geothermal energy', 'Tourism and jobs', 'Home and heritage'] },
-      { layout: 'quote', quote: 'Would you live next to a volcano? Why?', attribution: 'Decision point' },
+      { layout: 'quote', quote: 'Would you live next to a volcano? Why?', attribution: 'Decision point',
+        interaction: { type: 'poll', q: 'Would you choose to live near an active volcano?', low: 'Never', high: 'Definitely' } },
       { layout: 'exit', title: '3-2-1 exit', icon: 'check', bullets: ['3 facts about plate boundaries', '2 hazards of the Ring of Fire', '1 reason people stay'] }
     ] }
   },
@@ -2268,9 +2272,10 @@ const SHOWCASE_LESSONS = [
       { name: 'My digital promise', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_act',
         activity: 'Commit to one responsible change, ACT-on-feedback style.', studentInstructions: 'Write one habit to keep, one to change, and one person to look out for.' }
     ],
-    deck: { title: 'Think Before You Share', slides: [
+    deck: { title: 'Think Before You Share', wallPrompt: 'One responsible habit you will keep online?', slides: [
       { layout: 'title', title: 'Think Before You Share', subtitle: 'Cyber Wellness · Choices', bullets: ['Weigh online consequences', 'Respect yourself and others', 'Make a digital promise'], icon: 'globe' },
-      { layout: 'quote', quote: 'Would you say it to their face?', attribution: 'Before you post' },
+      { layout: 'quote', quote: 'Would you say it to their face?', attribution: 'Before you post',
+        interaction: { type: 'poll', q: 'Before you post — would you say it to their face?', low: 'Never', high: 'Always' } },
       { layout: 'visual', title: 'Watch: think before you post', youtube: 'wyjd73tUXig', notes: 'Common Sense Education — Oversharing: Think Before You Post. Ask students to spot one moment the poster could have paused.' },
       { layout: 'statement', statement: 'What you share online can last forever.', icon: 'warning' },
       { layout: 'visual', title: 'The ripple of a single post', svg: ANIM_RIPPLE, notes: 'One share reaches far beyond its target. Connect to “who else sees it?” and “can I undo it?”.' },
@@ -2291,8 +2296,13 @@ function attachShowcaseDeck(lessonId, spec) {
   if (!spec.deck) return;
   const deckTitle = spec.deck.title || spec.title;
   try {
-    const html = compileDeckHTML({ title: deckTitle, slides: spec.deck.slides });
-    saveDeckMaterial({ lessonId, title: deckTitle, html, slideCount: spec.deck.slides.length })
+    // Store the slide MODEL alongside the HTML so the showcase decks can be run
+    // one-click as a Live session (predict-&-reveal quizzes, polls, word-wall,
+    // command card). compileDeckHTML ignores the `interaction` fields; the live
+    // runtime reads them.
+    const deckModel = { title: deckTitle, slides: spec.deck.slides, wallPrompt: spec.deck.wallPrompt };
+    const html = compileDeckHTML(deckModel);
+    saveDeckMaterial({ lessonId, title: deckTitle, html, slideCount: spec.deck.slides.length, deck: deckModel })
       .then(meta => {
         if (!meta) return;
         const l = Store.getLesson(lessonId); if (!l) return;

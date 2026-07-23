@@ -8,7 +8,7 @@
 import { Store } from '../state.js';
 import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, mapSegmentsToSTP, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech, generateSVGDiagram, generateImage } from '../api.js';
 import { cceContextBlock } from './cce.js';
-import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, openDeckById, downloadBlob } from '../utils/deck.js';
+import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, getDeckModel, openDeckById, downloadBlob } from '../utils/deck.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -26,7 +26,7 @@ import { layoutToSVG } from './spatial-designer.js';
 import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 import { ATTACH_ACCEPT, isAcceptedAttachment, buildAttachment, toMultimodalMessage, attachmentContextNote, stripAttachmentData } from '../utils/attachments.js';
 import { priorityLabel, getPriorities } from '../utils/priorities.js';
-import { compileLivePresenterHTML, normRoom as normLiveRoom } from '../utils/live-deck.js';
+import { openLiveSession } from '../components/live-launch.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
@@ -4838,6 +4838,12 @@ const RESOURCE_META = {
 };
 const resourceMeta = (type) => RESOURCE_META[type] || { badge: 'badge-amber', label: 'Source' };
 
+/* Does this stored deck carry a slide MODEL (so it can be run as a Live
+ * session)? Reads the metadata list only — no async probe. */
+function deckHasModel(id) {
+  return listDeckMeta().some(m => m.id === id && m.hasModel);
+}
+
 function renderLinkedResourcesSection(container) {
   const el = container.querySelector('#linked-resources-section');
   if (!el) return;
@@ -4879,6 +4885,9 @@ function renderLinkedResourcesSection(container) {
                   ${esc(r.title)} <span aria-hidden="true">${r.type === 'deck' ? '&#8599;' : '&#9654;'}</span>
                 </button>`
               : `<span style="color:var(--ink);">${esc(r.title)}</span>`}
+              ${r.type === 'deck' && r.id && deckHasModel(r.id) ? `
+                <button class="btn btn-ghost btn-sm go-live-btn" data-id="${escAttr(r.id)}" title="Run this deck as a live session — students join on their phones, vote and respond, and leave with a personal card" style="padding:1px 5px;color:#e11d48;font-weight:700;">&#9654; Live</button>`
+              : ''}
               <button class="btn btn-ghost btn-sm unlink-resource-btn" data-idx="${idx}" title="Remove" style="padding:1px 3px;color:var(--danger);margin-left:2px;">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
@@ -4903,6 +4912,18 @@ function renderLinkedResourcesSection(container) {
       } else {
         showAudioPlaybackModal(btn.dataset.id, btn.dataset.title);
       }
+    });
+  });
+
+  // Wire "Go Live" — load the stored slide MODEL and run it as a live session.
+  el.querySelectorAll('.go-live-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      btn.disabled = true;
+      const model = await getDeckModel(btn.dataset.id);
+      btn.disabled = false;
+      if (!model) { showToast('This deck can’t be run live on this device.', 'danger'); return; }
+      openLiveSession(model);
     });
   });
 
@@ -5104,7 +5125,7 @@ function showDeckPreviewModal(container, deck, args) {
       <button class="btn btn-primary" data-action="attach">Save &amp; attach</button>`
   });
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
-  backdrop.querySelector('[data-action="live"]').addEventListener('click', () => { close(); launchLiveSession(deck); });
+  backdrop.querySelector('[data-action="live"]').addEventListener('click', () => { close(); openLiveSession(deck); });
   backdrop.querySelector('[data-action="download"]').addEventListener('click', () => {
     downloadBlob(new Blob([compileDeckHTML(deck)], { type: 'text/html' }), deckFilename(deck.title));
   });
@@ -5129,7 +5150,8 @@ function showDeckPreviewModal(container, deck, args) {
       lessonId: currentLessonId,
       title: deck.title,
       html: compileDeckHTML(deck),
-      slideCount: deck.slides.length
+      slideCount: deck.slides.length,
+      deck
     });
     if (!meta) {
       btn.disabled = false;
@@ -5141,37 +5163,6 @@ function showDeckPreviewModal(container, deck, args) {
     close();
     renderLinkedResourcesSection(container);
   });
-}
-
-/* ── Live session: compile the deck into a presenter surface (students join on
- * phones via the hosted live/join.html) and open it. Sync is client-side (MQTT +
- * room code); nothing is stored. ── */
-function launchLiveSession(deck) {
-  const base = new URL('../live/', location.href).href;          // → …/pedagogies/live/
-  const joinUrl = base + 'join.html';
-  const stem = (String(deck?.title || '').replace(/[^A-Za-z]/g, '').slice(0, 4).toUpperCase() || 'ROOM');
-  const room = normLiveRoom(stem + (10 + Math.floor(Math.random() * 90)));
-  let html;
-  try { html = compileLivePresenterHTML(deck, { room, joinUrl, mqttSrc: base + 'mqtt.min.js' }); }
-  catch (e) { showToast('Could not build the live session: ' + e.message, 'danger'); return; }
-  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-  const win = window.open(url, '_blank');
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
-  const { backdrop, close } = openModal({
-    title: '&#9654; Live session started',
-    width: 440,
-    body: `
-      <p style="font-size:0.875rem;line-height:1.6;color:var(--ink);margin-bottom:var(--sp-3);">The presenter opened in a new tab &mdash; put it on the projector.</p>
-      <div style="background:var(--bg-subtle);border-radius:var(--radius-lg);padding:var(--sp-4);text-align:center;margin-bottom:var(--sp-3);">
-        <div style="font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);">Students join at</div>
-        <div style="font-weight:700;word-break:break-all;margin:4px 0 10px;">${esc(joinUrl)}</div>
-        <div style="font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);">Room code</div>
-        <div style="font-size:2rem;font-weight:800;letter-spacing:0.1em;color:var(--accent);">${esc(room)}</div>
-      </div>
-      <p style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Everything is live and in the moment &mdash; nothing is saved, so export the room&rsquo;s input from the presenter before closing it. A live session needs an internet connection${win ? '' : '. Your browser blocked the pop-up &mdash; allow pop-ups and try again'}.</p>`,
-    footer: `<button class="btn btn-primary" data-action="ok">Got it</button>`
-  });
-  backdrop.querySelector('[data-action="ok"]').addEventListener('click', close);
 }
 
 /* ── Audio clip: form → script preview (editable) → voice → attach ── */
