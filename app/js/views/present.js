@@ -16,7 +16,9 @@ import { escapeHtml, md } from '../utils/markdown.js';
 import { layoutToSVG } from './spatial-designer.js';
 import { mountSeatMap, clearSeatMapSessions, isSeatDragActive } from './present-seatmap.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
-import { openDeckById, getMediaContent } from '../utils/deck.js';
+import { openDeckById, getMediaContent, getDeckModel, listDeckMeta } from '../utils/deck.js';
+import { openLiveSession } from '../components/live-launch.js';
+import { showToast } from '../components/toast.js';
 import { resolveTeachingAction, TEACHING_AREA_ICONS } from '../utils/stp.js';
 import { buildCardModel, cardPreviewHTML, openCardWindow, cardShareUrl } from '../utils/takehome-card.js';
 
@@ -246,6 +248,7 @@ export function renderPresent(container, params) {
           <div class="present-meta">${cls ? escapeHtml(cls.name) + ' &middot; ' : ''}${segments.length ? segments.length + ' parts &middot; ' + segments.reduce((a, s) => a + (Number(s.duration) || 0), 0) + ' min' : ''}</div>
         </div>
         <div class="present-ctrl">
+          <button class="btn btn-secondary btn-sm" id="present-golive" title="Run this lesson's deck as a live session — students scan a QR to join on their phones, vote and respond, and leave with a personal card" style="color:#e11d48;font-weight:700;">&#9654; Go Live</button>
           <button class="btn btn-secondary btn-sm" id="present-audience" title="Audience mode — hide class-only details (seating, groups) for an assembly / open house" aria-pressed="${_audienceMode}">&#128101; Audience</button>
           <button class="btn btn-secondary btn-sm" id="present-fullscreen" title="Fullscreen (F)">&#x26F6; Fullscreen</button>
           <button class="btn btn-secondary btn-sm" id="present-exit" title="Exit (Esc)">&times; Exit</button>
@@ -520,6 +523,22 @@ export function renderPresent(container, params) {
     stage.scrollTop = 0; // each screen starts at the top
     requestAnimationFrame(updateMoreCue); // after layout settles
   }
+
+  // Go Live — run this lesson's attached deck as a two-device session (same
+  // tab; Esc in the live view returns here). Needs a deck saved WITH its
+  // slide model (v8.1+); older HTML-only decks can't be run live.
+  container.querySelector('#present-golive')?.addEventListener('click', async () => {
+    const deckIds = (lesson.attachedResources || []).filter(r => r.type === 'deck' && r.id).map(r => r.id);
+    const withModel = new Set(listDeckMeta().filter(m => m.hasModel).map(m => m.id));
+    const liveId = deckIds.find(id => withModel.has(id));
+    if (!liveId) {
+      showToast('No Live-ready deck on this lesson yet — generate one in the Lesson Planner (Slide Deck), then hit Go Live.', 'warning');
+      return;
+    }
+    const model = await getDeckModel(liveId);
+    if (!model) { showToast('This deck can’t be run live on this device.', 'danger'); return; }
+    openLiveSession(model);
+  });
 
   container.querySelector('#present-audience')?.addEventListener('click', (e) => {
     _audienceMode = !_audienceMode;

@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v8.2', items: [
+    { icon: '&#127968;', title: 'Live now lives inside Co-Cher', text: 'Hit “▶ Go Live” right from Present (or any Live-ready deck): your screen becomes the projector view in the same tab — QR on screen, students scan and land inside Co-Cher too (no separate page, no login for them). Esc brings you straight back to where you were, and refreshing mid-session keeps the same room so phones stay in.' },
+  ] },
   { version: 'v8.1', items: [
     { icon: '&#128241;', title: 'Scan-to-join QR codes', text: 'Live sessions now show a big QR code on the projector — students point their phone camera at it and they’re in, no typing. The room code and link are still there as a backup.' },
     { icon: '&#9654;&#65039;', title: 'Go Live on the demo lessons', text: 'The ready-made showcase lessons (Acids/Bases/Salts, Volcanoes & Earthquakes, Cyber Wellness) now have a one-tap “Go Live” on their decks — run a full workshop with predict-&-reveal quizzes, live polls, a word-wall and a personal command card, without building anything first.' },

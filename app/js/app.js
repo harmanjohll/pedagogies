@@ -41,6 +41,7 @@ import { render as renderQuestionBank } from './views/question-bank.js';
 import { render as renderReliefKit } from './views/relief-kit.js';
 import { renderPresent } from './views/present.js';
 import { renderDeckViewer } from './views/deck-viewer.js';
+import { renderLivePresent, renderLiveJoin } from './views/live.js';
 import { initGlobalSearch, openSearch } from './components/unified-search.js';
 import { initOnboarding } from './components/onboarding.js';
 import { startTour, isTourComplete } from './components/spotlight-tour.js';
@@ -138,6 +139,9 @@ function init() {
   registerRoute('/relief-kit', renderReliefKit);
   registerRoute('/present/:id', renderPresent);
   registerRoute('/deck/:id', renderDeckViewer);
+  registerRoute('/live', renderLivePresent);
+  registerRoute('/join', renderLiveJoin);
+  registerRoute('/join/:room', renderLiveJoin);
   registerRoute('/card/:data', (container, params) => renderCardView(container, params.data));
   registerRoute('/settings', renderSettings);
 
@@ -182,6 +186,15 @@ function init() {
 
 /* ── Bootstrap ── */
 document.addEventListener('DOMContentLoaded', () => {
+  // Students joining a Live session open THIS app on their phones (#/join/…
+  // from the projector's QR). They are not teachers: no login, no welcome, no
+  // onboarding — boot the join surface directly as a fullscreen overlay.
+  const joinMatch = (window.location.hash || '').match(/^#\/join(?:\/([^/?]+))?/);
+  if (joinMatch) {
+    renderLiveJoin(document.body, { room: joinMatch[1] ? decodeURIComponent(joinMatch[1]) : '' });
+    return;
+  }
+
   function startApp() {
     if (shouldShowWelcome()) {
       renderWelcome(() => init());
