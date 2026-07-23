@@ -1553,7 +1553,7 @@ ${String(plan ?? '').slice(0, 8000)}`
     temperature: 0.6,
     maxTokens: 6144,
     systemPrompt: `You are a senior instructional designer creating a POLISHED, engaging projector slide deck for a Singapore classroom. Return ONLY JSON:
-{"title":"deck title","slides":[{"layout":"...","title":"...","subtitle":"...","bullets":["..."],"icon":"...","columns":[{"heading":"...","items":["..."]}],"statement":"...","quote":"...","attribution":"...","chart":{"type":"bar|line|donut","title":"...","data":[{"label":"...","value":12}]},"svgPrompt":"...","imagePrompt":"...","notes":"..."}]}
+{"title":"deck title","slides":[{"layout":"...","title":"...","subtitle":"...","bullets":["..."],"icon":"...","columns":[{"heading":"...","items":["..."]}],"statement":"...","quote":"...","attribution":"...","chart":{"type":"bar|line|donut","title":"...","data":[{"label":"...","value":12}]},"svgPrompt":"...","imagePrompt":"...","interaction":{"type":"quiz","q":"...","options":["...","..."],"answer":0,"why":"...","label":"..."},"notes":"..."}]}
 
 Design rules:
 - 6-12 slides. VARY "layout" so the deck never reads as a wall of bullets. Layouts:
@@ -1571,6 +1571,7 @@ Design rules:
   · "svgPrompt" — a one-line description of a simple concept DIAGRAM to draw (e.g. "particle diffusion from high to low concentration with arrows"). Best for processes, cycles, structures, relationships.
   · "imagePrompt" — a one-line description of a real-world IMAGE when a photo helps (e.g. "close-up of a rusting iron nail"). Use sparingly.
   · "icon" — one signpost icon from: idea, target, question, check, warning, group, experiment, book, clock, globe, chart, spark, rocket, compass.
+- OPTIONAL "interaction" on 1-3 slides where a quick check-for-understanding fits (used ONLY if the teacher runs a Live Session, otherwise ignored): a "quiz" (a predict-then-reveal question — "q", 2-4 short "options", 0-based "answer", a one-line "why", a short "label" naming the idea), a "poll" (an opinion/confidence scale — "q"), or a "wall" (an open one-word/phrase prompt — "q"). Prefer quizzes on common misconceptions.
 - "notes" = one short teacher note (what to say/do), ≤20 words.
 - Student-facing language on slides. No markdown syntax. Describe visuals in the *Prompt/chart fields ONLY — never paste URLs or external resources into any string.`
   });
@@ -1594,6 +1595,20 @@ function normalizeDeck(data, fallbackTitle) {
   const normCols = (cols) => (Array.isArray(cols) ? cols : [])
     .map(c => ({ heading: clampStr(c?.heading, 60), items: (Array.isArray(c?.items) ? c.items : []).map(x => clampStr(x, 120)).filter(Boolean).slice(0, 5) }))
     .filter(c => c.heading || c.items.length).slice(0, 3);
+  // Optional per-slide interaction (only used when the teacher runs a Live Session).
+  const normInteraction = (it) => {
+    if (!it || typeof it !== 'object') return undefined;
+    if (it.type === 'quiz') {
+      const options = (Array.isArray(it.options) ? it.options : []).map(o => clampStr(o, 60)).filter(Boolean).slice(0, 4);
+      if (options.length < 2) return undefined;
+      let answer = Number(it.answer);
+      if (!Number.isInteger(answer) || answer < 0 || answer >= options.length) answer = 0;
+      return { type: 'quiz', q: clampStr(it.q, 160), options, answer, why: clampStr(it.why, 200) || undefined, label: clampStr(it.label, 60) || undefined };
+    }
+    if (it.type === 'poll') return { type: 'poll', q: clampStr(it.q, 160), low: clampStr(it.low, 24) || undefined, high: clampStr(it.high, 24) || undefined };
+    if (it.type === 'wall') return { type: 'wall', q: clampStr(it.q, 160), placeholder: clampStr(it.placeholder, 48) || undefined };
+    return undefined;
+  };
 
   const slides = (Array.isArray(data?.slides) ? data.slides : [])
     .map(s => {
@@ -1613,6 +1628,8 @@ function normalizeDeck(data, fallbackTitle) {
       };
       const cols = normCols(s?.columns);
       if (cols.length) out.columns = cols;
+      const interaction = normInteraction(s?.interaction);
+      if (interaction) out.interaction = interaction;
       return out;
     })
     .filter(s => s.title || s.bullets.length || s.statement || s.quote || s.chart || s.columns)

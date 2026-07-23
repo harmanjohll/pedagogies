@@ -26,6 +26,7 @@ import { layoutToSVG } from './spatial-designer.js';
 import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 import { ATTACH_ACCEPT, isAcceptedAttachment, buildAttachment, toMultimodalMessage, attachmentContextNote, stripAttachmentData } from '../utils/attachments.js';
 import { priorityLabel, getPriorities } from '../utils/priorities.js';
+import { compileLivePresenterHTML, normRoom as normLiveRoom } from '../utils/live-deck.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
@@ -5098,10 +5099,12 @@ function showDeckPreviewModal(container, deck, args) {
     footer: `
       <button class="btn btn-secondary" data-action="cancel">Cancel</button>
       <button class="btn btn-ghost" data-action="regen">Regenerate</button>
+      <button class="btn btn-ghost" data-action="live" title="Run this deck as a live session — students join on their phones, vote and respond, and leave with a personal card">&#9654; Live</button>
       <button class="btn btn-ghost" data-action="download">Download .html</button>
       <button class="btn btn-primary" data-action="attach">Save &amp; attach</button>`
   });
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
+  backdrop.querySelector('[data-action="live"]').addEventListener('click', () => { close(); launchLiveSession(deck); });
   backdrop.querySelector('[data-action="download"]').addEventListener('click', () => {
     downloadBlob(new Blob([compileDeckHTML(deck)], { type: 'text/html' }), deckFilename(deck.title));
   });
@@ -5138,6 +5141,37 @@ function showDeckPreviewModal(container, deck, args) {
     close();
     renderLinkedResourcesSection(container);
   });
+}
+
+/* ── Live session: compile the deck into a presenter surface (students join on
+ * phones via the hosted live/join.html) and open it. Sync is client-side (MQTT +
+ * room code); nothing is stored. ── */
+function launchLiveSession(deck) {
+  const base = new URL('../live/', location.href).href;          // → …/pedagogies/live/
+  const joinUrl = base + 'join.html';
+  const stem = (String(deck?.title || '').replace(/[^A-Za-z]/g, '').slice(0, 4).toUpperCase() || 'ROOM');
+  const room = normLiveRoom(stem + (10 + Math.floor(Math.random() * 90)));
+  let html;
+  try { html = compileLivePresenterHTML(deck, { room, joinUrl, mqttSrc: base + 'mqtt.min.js' }); }
+  catch (e) { showToast('Could not build the live session: ' + e.message, 'danger'); return; }
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+  const win = window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  const { backdrop, close } = openModal({
+    title: '&#9654; Live session started',
+    width: 440,
+    body: `
+      <p style="font-size:0.875rem;line-height:1.6;color:var(--ink);margin-bottom:var(--sp-3);">The presenter opened in a new tab &mdash; put it on the projector.</p>
+      <div style="background:var(--bg-subtle);border-radius:var(--radius-lg);padding:var(--sp-4);text-align:center;margin-bottom:var(--sp-3);">
+        <div style="font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);">Students join at</div>
+        <div style="font-weight:700;word-break:break-all;margin:4px 0 10px;">${esc(joinUrl)}</div>
+        <div style="font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);">Room code</div>
+        <div style="font-size:2rem;font-weight:800;letter-spacing:0.1em;color:var(--accent);">${esc(room)}</div>
+      </div>
+      <p style="font-size:0.75rem;color:var(--ink-muted);line-height:1.5;">Everything is live and in the moment &mdash; nothing is saved, so export the room&rsquo;s input from the presenter before closing it. A live session needs an internet connection${win ? '' : '. Your browser blocked the pop-up &mdash; allow pop-ups and try again'}.</p>`,
+    footer: `<button class="btn btn-primary" data-action="ok">Got it</button>`
+  });
+  backdrop.querySelector('[data-action="ok"]').addEventListener('click', close);
 }
 
 /* ── Audio clip: form → script preview (editable) → voice → attach ── */
