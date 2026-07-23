@@ -102,3 +102,10 @@ export function readLiveSession() {
     return (parsed && parsed.deck && Array.isArray(parsed.deck.slides)) ? parsed : null;
   } catch { return null; }
 }
+
+/** Drop the stash on a CLEAN exit (End session / Esc) — so back-button or a
+ * bookmark can never resurrect a finished room. A mid-lesson refresh never
+ * passes through here, so it still reuses the same room. */
+export function clearLiveSession() {
+  try { sessionStorage.removeItem(LIVE_STASH_KEY); } catch { /* ignore */ }
+}

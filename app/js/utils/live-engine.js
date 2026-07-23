@@ -139,10 +139,15 @@ function rid() { return Math.random().toString(36).slice(2) + Date.now().toStrin
  * Envelope {kind, payload, id}; ids dedupe the double delivery. */
 function makeBus(room, broker, onStatus) {
   const base = TOPIC_BASE + '/' + room;
-  const listeners = {}; const seen = {};
+  const listeners = {};
+  let seen = {}, seenN = 0;
+  // Dedupe ids accrete one per message; cap so a marathon session can't grow
+  // without bound. A wipe only risks re-emitting a message still in flight on
+  // BOTH channels at that instant — vanishingly rare, and renders are idempotent.
+  const mark = (id) => { if (++seenN > 6000) { seen = {}; seenN = 1; } seen[id] = 1; };
   let client = null, mqok = false;
   const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('cocher-live-' + room) : null;
-  function emit(env) { if (!env || !env.id || seen[env.id]) return; seen[env.id] = 1; (listeners[env.kind] || []).forEach(cb => cb(env.payload)); }
+  function emit(env) { if (!env || !env.id || seen[env.id]) return; mark(env.id); (listeners[env.kind] || []).forEach(cb => cb(env.payload)); }
   if (bc) bc.onmessage = (e) => emit(e.data);
   try {
     client = window.mqtt && window.mqtt.connect(broker, { clean: true, keepalive: 30, connectTimeout: 8000, reconnectPeriod: 4000 });
@@ -159,7 +164,7 @@ function makeBus(room, broker, onStatus) {
     on(k, cb) { (listeners[k] = listeners[k] || []).push(cb); },
     publish(k, p, retain) {
       const env = { kind: k, payload: p, id: rid() };
-      seen[env.id] = 1;
+      mark(env.id);
       if (bc) { try { bc.postMessage(env); } catch { /* closed */ } }
       if (client && mqok) { try { client.publish(base + '/' + k, JSON.stringify(env), { retain: !!retain, qos: 0 }); } catch { /* drop */ } }
     },
@@ -181,7 +186,8 @@ function makeBus(room, broker, onStatus) {
  *   joinLabel?: string      (presenter display text for the link),
  *   onExit?: () => void     (presenter Exit button / Esc; audience Leave)
  * }
- * Returns { destroy, api } — api also lands on window.__live (presenter).
+ * Returns { destroy, api } — api also lands on window.__live for BOTH roles
+ * (the verification suites drive the audience through it too).
  */
 export function mountLive(host, opts = {}) {
   const ROLE = opts.role === 'presenter' ? 'presenter' : 'audience';
@@ -211,6 +217,7 @@ export function mountLive(host, opts = {}) {
       <label for="lv-room-in">Room code</label>
       <input id="lv-room-in" maxlength="12" autocomplete="off" spellcheck="false" placeholder="ROOM">
       <button id="lv-go-join">Join →</button>
+      <a id="lv-open-app" href="#" style="display:block;text-align:center;margin-top:14px;font-size:.78rem;color:#9fb0e8;text-decoration:underline;">Not joining a session? Open Co-Cher</a>
     </div></div>` : ''}
     <div class="lv-session" id="lv-session" ${ROLE === 'audience' && !opts.room ? 'style="display:none"' : ''}>
       <div class="lv-offline" id="lv-offline">Can’t reach the room — just follow the main screen. 👀</div>
@@ -406,6 +413,10 @@ export function mountLive(host, opts = {}) {
     const ri = $('lv-room-in'); const jb = $('lv-go-join');
     if (jb) jb.onclick = () => connect(ri.value);
     if (ri) ri.addEventListener('keydown', (e) => { if (e.key === 'Enter') connect(ri.value); });
+    // Escape hatch for a teacher who landed here (the #/join boot path skips
+    // the whole app shell): reload without the hash → normal Co-Cher boot.
+    const oa = $('lv-open-app');
+    if (oa) oa.addEventListener('click', (e) => { e.preventDefault(); location.replace(location.pathname + location.search); });
   }
 
   const api = { get view() { return view; }, get agg() { return agg; }, get my() { return my; }, go, doReveal, connect };

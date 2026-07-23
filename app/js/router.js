@@ -5,6 +5,7 @@
  */
 
 import { trackEvent } from './utils/analytics.js';
+import { abortAllDictations } from './utils/voice.js';
 
 const routes = new Map();
 let currentRoute = null;
@@ -69,6 +70,11 @@ function handleRoute() {
     try { currentCleanup(); } catch (e) { console.warn('Co-Cher: view cleanup failed', e); }
     currentCleanup = null;
   }
+
+  // No dictation survives navigation: a mic left "Listening…" in the outgoing
+  // view would otherwise stay hot against a torn-down DOM (and make the next
+  // start() race). Views don't need their own teardown for this.
+  abortAllDictations();
 
   // Try exact match first
   if (routes.has(full)) {

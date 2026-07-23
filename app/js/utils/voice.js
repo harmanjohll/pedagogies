@@ -27,6 +27,40 @@ export function isVoiceInputSupported() {
     !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
+/* Every controller that is actively listening, so navigation can silence the
+ * lot without each view wiring its own teardown (the bug class fixed for
+ * Lesson Rehearsal, now guaranteed centrally — the router calls
+ * abortAllDictations() on every route change). */
+const activeDictations = new Set();
+
+/** Abort every in-flight dictation (fires their onEnd). Safe to call anytime. */
+export function abortAllDictations() {
+  activeDictations.forEach((d) => { try { d.abort(); } catch (_) { /* already gone */ } });
+  activeDictations.clear();
+}
+
+/**
+ * One user-facing message per dictation failure class — or null for benign
+ * ends (aborted / no speech) that deserve silence. Accepts either a
+ * SpeechRecognitionErrorEvent (.error) or a thrown exception (.name).
+ * @param {any} err
+ * @returns {string|null}
+ */
+export function dictationErrorMessage(err) {
+  const code = err?.error || err?.name || '';
+  if (code === 'aborted' || code === 'AbortError' || code === 'no-speech') return null;
+  if (code === 'not-allowed' || code === 'NotAllowedError' || code === 'service-not-allowed') {
+    return 'Microphone access denied — allow the mic for this site in your browser settings.';
+  }
+  if (code === 'network') {
+    return 'Voice input needs internet (speech is transcribed online) — check the connection and try again.';
+  }
+  if (code === 'audio-capture') {
+    return 'No microphone found — check that a mic is connected and enabled.';
+  }
+  return 'Voice input error — please try again.';
+}
+
 /**
  * @typedef {Object} DictationOptions
  * @property {(finalText: string) => void} [onResult]   Concatenated FINAL transcript for the utterance.
@@ -103,19 +137,21 @@ export function createDictation(options = {}) {
 
     rec.onend = () => {
       listening = false;
+      activeDictations.delete(controller);
       if (typeof onEnd === 'function') onEnd();
     };
 
     return rec;
   }
 
-  return {
+  const controller = {
     start() {
       if (listening) return false; // robust to double-start
       recognition = build();
       try {
         recognition.start();
         listening = true;
+        activeDictations.add(controller);
         return true;
       } catch (err) {
         // Chromium throws InvalidStateError if start() races an existing session.
@@ -135,4 +171,5 @@ export function createDictation(options = {}) {
       }
     },
   };
+  return controller;
 }

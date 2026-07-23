@@ -17,6 +17,10 @@ const SEEN_KEY = 'cocher_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v8.3', items: [
+    { icon: '&#129514;', title: 'Simulations that fit the screen', text: 'Practicals now scale themselves to your window — the data panel and apparatus stay fully visible on any projector or laptop, and a new ⛶ Fullscreen button on the sim window is made for projection.' },
+    { icon: '&#127908;', title: 'Steadier voice input everywhere', text: 'Every mic (planner, reflections, class notes, rehearsal) now stops cleanly when you navigate away and tells you exactly what went wrong — mic blocked, no internet, or no mic found — instead of failing silently.' },
+  ] },
   { version: 'v8.2', items: [
     { icon: '&#127968;', title: 'Live now lives inside Co-Cher', text: 'Hit “▶ Go Live” right from Present (or any Live-ready deck): your screen becomes the projector view in the same tab — QR on screen, students scan and land inside Co-Cher too (no separate page, no login for them). Esc brings you straight back to where you were, and refreshing mid-session keeps the same room so phones stay in.' },
   ] },

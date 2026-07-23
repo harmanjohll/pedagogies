@@ -23,7 +23,7 @@ import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
 import { TEACHING_AREAS, TEACHING_AREA_ICONS, TEACHING_AREA_LABELS, actionsForArea, resolveTeachingAction, TEACHING_ACTION_OTHER } from '../utils/stp.js';
 import { layoutToSVG } from './spatial-designer.js';
-import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
+import { isVoiceInputSupported, createDictation, dictationErrorMessage } from '../utils/voice.js';
 import { ATTACH_ACCEPT, isAcceptedAttachment, buildAttachment, toMultimodalMessage, attachmentContextNote, stripAttachmentData } from '../utils/attachments.js';
 import { priorityLabel, getPriorities } from '../utils/priorities.js';
 import { openLiveSession } from '../components/live-launch.js';
@@ -1074,7 +1074,11 @@ function wireMic(root, { buttonId, statusId, fieldId, lang = 'en-SG' }) {
       // FILL only — never submit. The teacher still presses Send.
       insertTextAtCursor(field, finalText);
     },
-    onError() { setState(false); },
+    onError(err) {
+      setState(false);
+      const msg = dictationErrorMessage(err);
+      if (msg) showToast(msg, 'warning');
+    },
     onEnd() { setState(false); },
   });
 
