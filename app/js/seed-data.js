@@ -6,7 +6,7 @@
  */
 
 import { Store, generateId } from './state.js';
-import { compileDeckHTML, saveDeckMaterial } from './utils/deck.js';
+import { compileDeckHTML, saveDeckMaterial, deleteDeckMaterial } from './utils/deck.js';
 
 const SEED_KEY = 'cocher_seeded';
 
@@ -2297,10 +2297,15 @@ function attachShowcaseDeck(lessonId, spec) {
         if (!meta) return;
         const l = Store.getLesson(lessonId); if (!l) return;
         // Drop any earlier auto-seeded deck of the same title; keep the rest.
-        const ars = (Array.isArray(l.attachedResources) ? l.attachedResources : [])
+        const prev = (Array.isArray(l.attachedResources) ? l.attachedResources : [])
+          .filter(r => r && r.type === 'deck' && r.title === deckTitle);
+        const ars = (l.attachedResources || [])
           .filter(r => !(r && r.type === 'deck' && r.title === deckTitle));
         ars.push({ type: 'deck', id: meta.id, title: meta.title || deckTitle });
         Store.updateLesson(lessonId, { attachedResources: ars });
+        // Clean up the deck(s) this one replaced — IDB blob + cocher_decks row —
+        // so re-seeding never orphans blobs or duplicates the Materials list.
+        prev.forEach(r => { if (r.id && r.id !== meta.id) deleteDeckMaterial(r.id); });
       })
       .catch(() => { /* deck is optional — lesson still works without it */ });
   } catch { /* deck is optional */ }

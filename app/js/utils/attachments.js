@@ -20,14 +20,17 @@
 
 // accept= string for the hidden <input type="file"> — images + PDF.
 export const ATTACH_ACCEPT =
-  'image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf,.png,.jpg,.jpeg,.webp,.gif,.pdf';
+  'image/png,image/jpeg,image/jpg,image/webp,application/pdf,.png,.jpg,.jpeg,.webp,.pdf';
 
 const MAX_INLINE_BYTES = 6 * 1024 * 1024; // ~6MB raw → ~8MB base64, safely under Gemini's ~20MB request ceiling
 const IMAGE_MAX_EDGE = 1600;              // longest-side px after downscale — keeps worksheets legible but light
 const PDF_TEXT_PAGE_CAP = 20;             // when falling back to text, cap pages so the context stays bounded
+// Gemini inline images accept only these types; anything else (gif, svg, heic…)
+// is re-encoded to JPEG via canvas before it is ever sent.
+const GEMINI_IMAGE_TYPES = /^image\/(png|jpe?g|webp)$/;
 
 function isImageFile(file) {
-  return /^image\//.test(file.type || '') || /\.(png|jpe?g|webp|gif)$/i.test(file.name || '');
+  return /^image\//.test(file.type || '') || /\.(png|jpe?g|webp|gif|svg)$/i.test(file.name || '');
 }
 function isPdfFile(file) {
   return (file.type || '') === 'application/pdf' || /\.pdf$/i.test(file.name || '');
@@ -83,11 +86,12 @@ async function buildImageAttachment(file) {
   const longest = Math.max(img.width || 0, img.height || 0);
   const scale = longest > 0 ? Math.min(1, IMAGE_MAX_EDGE / longest) : 1;
 
-  // Already small enough on both axes and under the inline cap → keep as-is.
-  if (scale >= 1 && base64Bytes(originalB64) <= MAX_INLINE_BYTES) {
+  // Already small enough AND a type Gemini accepts inline → keep as-is.
+  // Anything else (gif/svg/heic/oversized) falls through to a JPEG re-encode.
+  if (scale >= 1 && GEMINI_IMAGE_TYPES.test(file.type || '') && base64Bytes(originalB64) <= MAX_INLINE_BYTES) {
     return {
       name: file.name, kind: 'image',
-      mimeType: file.type || 'image/png', data: originalB64,
+      mimeType: file.type, data: originalB64,
       previewUrl: dataUrl,
     };
   }
@@ -196,7 +200,13 @@ export function stripAttachmentData(messages) {
     if (!Array.isArray(m.attachments) || !m.attachments.length) return m;
     return {
       ...m,
-      attachments: m.attachments.map(a => ({ name: a.name, kind: a.kind, mimeType: a.mimeType })),
+      attachments: m.attachments.map(a => {
+        const light = { name: a.name, kind: a.kind, mimeType: a.mimeType };
+        // A PDF's extracted text is cheap (not base64) and is what the model
+        // actually read — keep it so it survives reload and re-sends.
+        if (a.kind === 'pdf-text' && a.text) light.text = a.text;
+        return light;
+      }),
     };
   });
 }

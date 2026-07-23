@@ -18,12 +18,14 @@ import { mountSeatMap, clearSeatMapSessions, isSeatDragActive } from './present-
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
 import { openDeckById, getMediaContent } from '../utils/deck.js';
 import { resolveTeachingAction, TEACHING_AREA_ICONS } from '../utils/stp.js';
+import { buildCardModel, cardPreviewHTML, openCardWindow, cardShareUrl } from '../utils/takehome-card.js';
 
 let _timerId = null;
 let _remaining = 0;      // seconds left in the running segment
 let _running = false;
 let _segIdx = 0;
 let _keyHandler = null;
+let _audienceMode = false;   // assembly / open-house view: hides class-only details
 
 /* WS-D: lessons whose Present session has already been counted this page
  * session. Guards Store.recordPresentation against double-counting when the
@@ -159,6 +161,7 @@ export function renderPresent(container, params) {
   }
   _segIdx = 0;
   _running = false;
+  _audienceMode = false;
 
   document.body.classList.add('present-mode');
 
@@ -173,7 +176,7 @@ export function renderPresent(container, params) {
       body.present-mode .toast-container, body.present-mode #vigilance-nudge { display: none !important; }
       body.present-mode .main-content, body.present-mode main { margin-left: 0 !important; max-width: none !important; }
       .present-root { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg, #fff); }
-      .present-top { display:flex; align-items:center; justify-content:space-between; padding: 14px 22px; border-bottom: 1px solid var(--border-light); }
+      .present-top { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding: 14px 22px; border-bottom: 1px solid var(--border-light); }
       .present-title { font-size: clamp(1.1rem, 2.2vw, 1.6rem); font-weight: 800; color: var(--ink); }
       .present-meta { font-size: clamp(0.8rem, 1.4vw, 1rem); color: var(--ink-muted); }
       /* Scrollable stage with SAFE centering: .present-inner's margin:auto
@@ -205,12 +208,13 @@ export function renderPresent(container, params) {
       .present-group-card { border: 2px solid var(--border); border-radius: 14px; padding: 12px 18px; min-width: 160px; background: var(--surface, #fff); }
       .present-group-card h4 { margin: 0 0 6px; font-size: clamp(0.95rem, 1.8vw, 1.3rem); color: var(--accent, #4361ee); }
       .present-group-card div { font-size: clamp(0.85rem, 1.5vw, 1.1rem); color: var(--ink); line-height: 1.45; }
-      .present-bottom { display:flex; align-items:center; justify-content:space-between; gap: 16px; padding: 12px 22px; border-top: 1px solid var(--border-light); }
+      .present-bottom { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap: 12px; padding: 12px 22px; border-top: 1px solid var(--border-light); }
       .present-dots { display:flex; gap: 8px; align-items:center; flex-wrap:wrap; }
       .present-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--border); cursor: pointer; border: none; padding: 0; }
       .present-dot.done { background: var(--growth, #16a34a); }
       .present-dot.now { width: 16px; height: 16px; background: var(--accent, #4361ee); }
-      .present-ctrl { display:flex; gap: 8px; }
+      .present-ctrl { display:flex; gap: 8px; flex-wrap:wrap; }
+      @media (max-width: 480px) { .present-bottom .present-ctrl { width:100%; } .present-bottom .present-ctrl .btn { flex:1 1 auto; } }
       .present-lisc { text-align: left; font-size: clamp(1rem, 2vw, 1.4rem); line-height: 1.6; max-width: 80vw; }
       .present-lisc h1, .present-lisc h2, .present-lisc h3 { font-size: 1.2em; }
       .present-framework { text-align: left; font-size: clamp(0.95rem, 1.8vw, 1.25rem); line-height: 1.6; max-width: 80vw; border: 2px solid var(--border); border-radius: 14px; padding: 12px 20px; background: var(--surface, #fff); }
@@ -242,6 +246,7 @@ export function renderPresent(container, params) {
           <div class="present-meta">${cls ? escapeHtml(cls.name) + ' &middot; ' : ''}${segments.length ? segments.length + ' parts &middot; ' + segments.reduce((a, s) => a + (Number(s.duration) || 0), 0) + ' min' : ''}</div>
         </div>
         <div class="present-ctrl">
+          <button class="btn btn-secondary btn-sm" id="present-audience" title="Audience mode — hide class-only details (seating, groups) for an assembly / open house" aria-pressed="${_audienceMode}">&#128101; Audience</button>
           <button class="btn btn-secondary btn-sm" id="present-fullscreen" title="Fullscreen (F)">&#x26F6; Fullscreen</button>
           <button class="btn btn-secondary btn-sm" id="present-exit" title="Exit (Esc)">&times; Exit</button>
         </div>
@@ -368,8 +373,8 @@ export function renderPresent(container, params) {
   stage.addEventListener('scroll', updateMoreCue, { passive: true });
   window.addEventListener('resize', updateMoreCue);
 
-  /* Screens: index 0 = welcome (LI/SC), 1..n = segments. */
-  const screenCount = 1 + segments.length;
+  /* Screens: index 0 = welcome (LI/SC), 1..n = segments, last = takehome card. */
+  const screenCount = 1 + segments.length + 1;
 
   function stopTimer() {
     if (_timerId) { clearInterval(_timerId); _timerId = null; }
@@ -397,7 +402,7 @@ export function renderPresent(container, params) {
   function renderDots() {
     dots.innerHTML = Array.from({ length: screenCount }, (_, i) => {
       const cl = i === _segIdx ? 'now' : (i < _segIdx ? 'done' : '');
-      const label = i === 0 ? 'Welcome' : (segments[i - 1]?.name || `Part ${i}`);
+      const label = i === 0 ? 'Welcome' : (i === screenCount - 1 ? 'Takehome card' : (segments[i - 1]?.name || `Part ${i}`));
       return `<button class="present-dot ${cl}" data-idx="${i}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></button>`;
     }).join('');
     dots.querySelectorAll('.present-dot').forEach(d =>
@@ -421,7 +426,7 @@ export function renderPresent(container, params) {
         ${segments.length ? `<div class="present-meta" style="font-size:clamp(1rem,2vw,1.4rem);">Ready? &rarr;</div>` : ''}
       </div>`;
       timerBtn.style.visibility = 'hidden';
-    } else {
+    } else if (_segIdx <= segments.length) {
       const seg = segments[_segIdx - 1];
       _remaining = (Number(seg.duration) || 5) * 60;
       timerBtn.style.visibility = 'visible';
@@ -432,7 +437,7 @@ export function renderPresent(container, params) {
       // When the segment has an interactive seat map, that map already shows
       // every student by name in their seat — the group-roster cards would just
       // duplicate it and eat the vertical space the map needs. Suppress them.
-      const groupCards = (groups.length && !segHasSeats(seg)) ? `
+      const groupCards = (!_audienceMode && groups.length && !segHasSeats(seg)) ? `
         <div class="present-groups">
           ${groups.map(g => `
             <div class="present-group-card">
@@ -441,8 +446,9 @@ export function renderPresent(container, params) {
             </div>`).join('')}
         </div>` : '';
 
-      const modeLabel = GROUP_LABEL[seg.grouping?.mode || seg.groupingMode] || '';
-      const growthLabel = seg.e21ccFocus ? (E21CC_FOCUS_LABELS[seg.e21ccFocus] || '') : '';
+      // Class-only cues (grouping mode, growth focus) are hidden in Audience mode.
+      const modeLabel = _audienceMode ? '' : (GROUP_LABEL[seg.grouping?.mode || seg.groupingMode] || '');
+      const growthLabel = (_audienceMode || !seg.e21ccFocus) ? '' : (E21CC_FOCUS_LABELS[seg.e21ccFocus] || '');
 
       /* Framework moment: the segment's pedagogy framework, shown as stage
        * lines. Student-facing only — labels + studentPrompt questions; the
@@ -456,7 +462,7 @@ export function renderPresent(container, params) {
             <div class="present-framework-stage"><strong>${escapeHtml(s.label || '')}</strong>${s.studentPrompt ? ` &mdash; ${escapeHtml(s.studentPrompt)}` : ''}</div>`).join('')}
         </div>` : '';
 
-      const mapHtml = segmentMap(seg, _segIdx - 1);
+      const mapHtml = _audienceMode ? '' : segmentMap(seg, _segIdx - 1);   // seating is class-only
       // The chosen STP Teaching Action's student-facing framing (the seam:
       // teacher picks the action in the planner, students see its framing).
       // Student-safe — only the studentFraming string, never the teacher hint.
@@ -489,12 +495,40 @@ export function renderPresent(container, params) {
         const sc = seatCtxFor(seg, _segIdx - 1);
         if (sc) mountSeatMap(seatMountEl, sc);
       }
+    } else {
+      // Takehome closing screen — the audience's card to keep.
+      if (clockSR) { clockSR.textContent = ''; _lastClockAnnounce = null; }
+      timerBtn.style.visibility = 'hidden';
+      const model = buildCardModel(lesson);
+      stage.innerHTML = `<div class="present-inner">
+        <div class="present-seg-name">Take this home</div>
+        <div style="margin:1vh auto 0;">${cardPreviewHTML(model)}</div>
+        <div class="present-resources" style="margin-top:2vh;">
+          <button class="present-res-btn" id="thc-print" type="button"><span aria-hidden="true">&#128424;&#65039;</span> Print / download cards</button>
+          <button class="present-res-btn" id="thc-copy" type="button"><span aria-hidden="true">&#128279;</span> Copy card link</button>
+        </div>
+      </div>`;
+      stage.querySelector('#thc-print')?.addEventListener('click', () => openCardWindow(model));
+      stage.querySelector('#thc-copy')?.addEventListener('click', async (e) => {
+        const url = cardShareUrl(model);
+        const btn = e.currentTarget;
+        try { await navigator.clipboard.writeText(url); btn.innerHTML = '<span aria-hidden="true">&#10003;</span> Link copied'; }
+        catch { btn.innerHTML = '<span aria-hidden="true">&#128279;</span> ' + escapeHtml(url.slice(0, 36)) + '…'; }
+      });
     }
     renderDots();
     stage.scrollTop = 0; // each screen starts at the top
     requestAnimationFrame(updateMoreCue); // after layout settles
   }
 
+  container.querySelector('#present-audience')?.addEventListener('click', (e) => {
+    _audienceMode = !_audienceMode;
+    const btn = e.currentTarget;
+    btn.setAttribute('aria-pressed', String(_audienceMode));
+    btn.style.background = _audienceMode ? 'var(--accent, #4361ee)' : '';
+    btn.style.color = _audienceMode ? '#fff' : '';
+    showScreen(_segIdx); // re-render the current screen with the new filter
+  });
   container.querySelector('#present-exit').addEventListener('click', () => navigate(`/lessons/${lesson.id}`));
   container.querySelector('#present-fullscreen').addEventListener('click', () => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
