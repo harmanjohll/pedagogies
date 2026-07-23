@@ -11,6 +11,7 @@ import { showToast } from '../components/toast.js';
 import { trackEvent } from '../utils/analytics.js';
 import { sendChat } from '../api.js';
 import { getCurrentUser } from '../components/login.js';
+import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
 
 /* ── Constants ── */
 
@@ -127,6 +128,14 @@ let debriefContent = null;
 let assignedStudents = []; // { name, persona, color }
 let selectedFeedbackFrames = ['stp']; // default to STP
 let customFeedbackFocus = ''; // free-text "Other" focus
+// The live dictation controller (utils/voice.js), held at module scope so BOTH
+// the route cleanup and every re-render can abort an in-flight session — this
+// view rebuilds its innerHTML on each chat turn, which used to orphan a hot
+// mic (stuck "Listening…", InvalidStateError on the next start).
+let micDictation = null;
+function abortMicDictation() {
+  if (micDictation) { try { micDictation.abort(); } catch { /* ignore */ } micDictation = null; }
+}
 
 /* ── API ── */
 
@@ -315,6 +324,7 @@ export function render(container) {
 
   // Return cleanup function
   return () => {
+    abortMicDictation(); // never leave the mic hot after navigating away
     selectedLessonId = null;
     rehearsalActive = false;
     rehearsalEnded = false;
@@ -676,6 +686,10 @@ function startRehearsal(container) {
 /* ── Rehearsal Chat Interface (Step 3) ── */
 
 function renderRehearsalInterface(container) {
+  // This render replaces the whole innerHTML — abort any in-flight dictation
+  // FIRST so a mid-speech re-render (e.g. sending a message) never orphans a
+  // live recognition session against detached nodes.
+  abortMicDictation();
   const lesson = Store.getLesson(selectedLessonId);
   const cls = lesson?.classId ? Store.getClass(lesson.classId) : null;
 
@@ -856,64 +870,47 @@ function renderRehearsalInterface(container) {
     });
   }
 
-  // Event: mic button (Web Speech API)
+  // Event: mic button — the shared hardened dictation helper (utils/voice.js),
+  // same pattern as the planner/lessons composers: paint "listening" ONLY when
+  // start() actually succeeds, reset on error/end, abortable across re-renders.
   const micBtn = container.querySelector('#rh-mic-btn');
   const chatInput = container.querySelector('#rh-chat-input');
   if (micBtn && chatInput) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      let recognition = null;
+    if (isVoiceInputSupported()) {
       let isListening = false;
-
+      let prevValue = '';
+      const paintListening = (on) => {
+        isListening = on;
+        micBtn.style.background = on ? '#ef4444' : '';
+        micBtn.style.borderColor = on ? '#ef4444' : '';
+        const ic = micBtn.querySelector('svg'); if (ic) ic.style.stroke = on ? '#fff' : '';
+        chatInput.placeholder = on ? 'Listening...' : 'Speak to your class...';
+        if (!on) chatInput.focus();
+      };
       micBtn.addEventListener('click', () => {
-        if (isListening && recognition) {
-          recognition.stop();
-          return;
+        if (isListening && micDictation) { micDictation.stop(); return; }
+        prevValue = chatInput.value;
+        const dictation = createDictation({
+          lang: 'en-SG',
+          onInterim: (t) => { chatInput.value = prevValue + (prevValue ? ' ' : '') + t; },
+          onResult: (t) => { chatInput.value = prevValue + (prevValue ? ' ' : '') + t; },
+          onError: (err) => {
+            paintListening(false);
+            // err is a SpeechRecognitionErrorEvent (has .error) or a thrown
+            // exception from a failed start() (has .name).
+            const code = err?.error || err?.name || '';
+            if (code === 'not-allowed' || code === 'NotAllowedError') {
+              showToast('Microphone access denied. Please allow microphone permission in your browser settings.', 'warning');
+            } else if (code !== 'aborted' && code !== 'AbortError' && code !== 'no-speech') {
+              showToast('Voice input error. Please try again.', 'warning');
+            }
+          },
+          onEnd: () => { paintListening(false); micDictation = null; },
+        });
+        if (dictation.start()) {
+          micDictation = dictation;
+          paintListening(true);
         }
-        recognition = new SpeechRecognition();
-        recognition.lang = 'en-SG';
-        recognition.interimResults = true;
-        recognition.continuous = false;
-        recognition.maxAlternatives = 1;
-
-        const prevValue = chatInput.value;
-        isListening = true;
-        micBtn.style.background = '#ef4444';
-        micBtn.style.borderColor = '#ef4444';
-        micBtn.querySelector('svg').style.stroke = '#fff';
-        chatInput.placeholder = 'Listening...';
-
-        recognition.onresult = (event) => {
-          let transcript = '';
-          for (let i = 0; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-          }
-          chatInput.value = prevValue + (prevValue ? ' ' : '') + transcript;
-        };
-
-        recognition.onend = () => {
-          isListening = false;
-          micBtn.style.background = '';
-          micBtn.style.borderColor = '';
-          micBtn.querySelector('svg').style.stroke = '';
-          chatInput.placeholder = 'Speak to your class...';
-          chatInput.focus();
-        };
-
-        recognition.onerror = (event) => {
-          isListening = false;
-          micBtn.style.background = '';
-          micBtn.style.borderColor = '';
-          micBtn.querySelector('svg').style.stroke = '';
-          chatInput.placeholder = 'Speak to your class...';
-          if (event.error === 'not-allowed') {
-            showToast('Microphone access denied. Please allow microphone permission in your browser settings.', 'warning');
-          } else if (event.error !== 'aborted') {
-            showToast('Voice input error. Please try again.', 'warning');
-          }
-        };
-
-        recognition.start();
       });
     } else {
       micBtn.addEventListener('click', () => {

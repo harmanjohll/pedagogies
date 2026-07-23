@@ -1363,7 +1363,22 @@ export function renderDetail(container, { id }) {
   });
 
   // Spatial layout - open in designer
-  container.querySelector('#view-spatial-btn')?.addEventListener('click', () => navigate('/spatial'));
+  container.querySelector('#view-spatial-btn')?.addEventListener('click', () => {
+    // Carry the lesson's linked layout (and its first seated segment, so the
+    // students' name pills appear) into the designer — a bare navigate landed
+    // the teacher on a BLANK canvas, which read as a broken link.
+    try {
+      const segs = lesson.runOfShow?.segments || [];
+      const seated = segs.find(s => (s.grouping?.groups || []).some(g =>
+        (g.seatMap && Object.keys(g.seatMap).length) || ((g.itemIds || []).length && (g.studentIds || []).length)));
+      sessionStorage.setItem('cocher_open_layout', JSON.stringify({
+        layoutId: lesson.spatialLayout,
+        lessonId: lesson.id,
+        segmentId: seated?.id || null,
+      }));
+    } catch { /* designer still opens; it just can't preload */ }
+    navigate('/spatial');
+  });
 
   // Present — run the staged lesson on the Class Screen
   container.querySelector('#present-lesson-btn')?.addEventListener('click', () => navigate(`/present/${id}`));

@@ -870,6 +870,15 @@ export function renderForLesson(container, { id }) {
  * the previously opened lesson. An unsaved draft (no id) is preserved.
  * Internal re-renders call render() directly and keep all state. */
 export function renderNew(container) {
+  // Spatial Designer's "Use in Lesson Planner" navigates to the ID-LESS route
+  // (it doesn't know which lesson was open). If a lesson IS still open here,
+  // resetting would wipe currentLessonId before the link is consumed — the
+  // layout would silently attach to nothing. Instead, bounce back into that
+  // lesson's own route; the link key survives and render() links it there.
+  if (currentLessonId && sessionStorage.getItem('cocher_link_spatial_layout')) {
+    navigate(`/lesson-planner/${currentLessonId}`);
+    return;
+  }
   if (currentLessonId) {
     flushAutosave();  // persist the lesson we're leaving before clearing state
     currentLessonId = null;
@@ -1122,10 +1131,11 @@ export function render(container) {
     try {
       reflectionInsights = JSON.parse(reflectionInsightsRaw);
       sessionStorage.removeItem('cocher_reflection_insights');
-    } catch {}
-  } else {
-    sessionStorage.removeItem('cocher_reflection_insights');
+    } catch { sessionStorage.removeItem('cocher_reflection_insights'); }
   }
+  // NOTE: when a draft is in progress the key is deliberately KEPT (like
+  // cocher_planner_prefill) so "Plan next lesson with insights" isn't silently
+  // discarded — it applies on the next fresh conversation instead.
 
   // Pick up spatial layout link from Spatial Designer
   const incomingSpatialId = sessionStorage.getItem('cocher_link_spatial_layout');

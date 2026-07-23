@@ -17,9 +17,13 @@ const SEEN_KEY = 'cocher_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v8.2', items: [
+    { icon: '&#127968;', title: 'Live now lives inside Co-Cher', text: 'Hit “▶ Go Live” right from Present (or any Live-ready deck): your screen becomes the projector view in the same tab — QR on screen, students scan and land inside Co-Cher too (no separate page, no login for them). Esc brings you straight back to where you were, and refreshing mid-session keeps the same room so phones stay in.' },
+  ] },
   { version: 'v8.1', items: [
     { icon: '&#128241;', title: 'Scan-to-join QR codes', text: 'Live sessions now show a big QR code on the projector — students point their phone camera at it and they’re in, no typing. The room code and link are still there as a backup.' },
     { icon: '&#9654;&#65039;', title: 'Go Live on the demo lessons', text: 'The ready-made showcase lessons (Acids/Bases/Salts, Volcanoes & Earthquakes, Cyber Wellness) now have a one-tap “Go Live” on their decks — run a full workshop with predict-&-reveal quizzes, live polls, a word-wall and a personal command card, without building anything first.' },
+    { icon: '&#128736;&#65039;', title: 'Fixes that matter in class', text: 'Slide decks now open inside Co-Cher and their YouTube videos actually play (the old pop-out tab blocked them). “Open in Designer” reliably brings the room AND your students’ seated names. Simulations (like Titration) now fit the window on any screen. Rehearsal voice input no longer gets stuck.' },
   ] },
   { version: 'v8.0', items: [
     { icon: '&#128241;', title: 'Live Sessions — students join on their phones', text: 'When you generate a deck, hit "Live" to run it as a live session: students open a link, enter a room code, and follow along — voting on predict-&-reveal quizzes, answering polls, and adding to a word-wall in real time. Everyone leaves with a personal command card built from their own answers. Nothing is stored; it just needs internet.' },
