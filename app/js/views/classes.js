@@ -16,7 +16,7 @@ import {
   SCHEMA_PRESETS, getSchemaForClass, getFieldValue, applyFieldUpdate,
   levelMeta as fieldLevelMeta, E21CC_LEVELS
 } from '../utils/tracking.js';
-import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
+import { isVoiceInputSupported, createDictation, dictationErrorMessage } from '../utils/voice.js';
 
 const E21CC_DIMS = [
   { key: 'criticalThinking',    label: 'Critical Thinking',     short: 'CT',  color: '#6366f1' },
@@ -106,7 +106,11 @@ function wireMic(root, { buttonId, statusId, fieldId, lang = 'en-SG' }) {
       // FILL only — never save. The teacher still presses Save / Add.
       insertTextAtCursor(field, finalText);
     },
-    onError() { setState(false); },
+    onError(err) {
+      setState(false);
+      const msg = dictationErrorMessage(err);
+      if (msg) showToast(msg, 'warning');
+    },
     onEnd() { setState(false); },
   });
 

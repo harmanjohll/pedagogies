@@ -19,9 +19,9 @@
  * and a single bad precache entry never aborts install.
  */
 
-const VERSION = 'v8.2';                       // match APP_VERSION in js/version.js
+const VERSION = 'v8.3';                       // match APP_VERSION in js/version.js
 const CACHE_PREFIX = 'cocher-';
-const CACHE_NAME = CACHE_PREFIX + VERSION;  // → 'cocher-v7'
+const CACHE_NAME = CACHE_PREFIX + VERSION;  // e.g. 'cocher-v8.3'
 
 /* The app shell, relative to this worker (scope = the app/ directory). Only
  * the essentials — the rest of the module graph and assets populate at

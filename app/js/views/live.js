@@ -18,15 +18,18 @@
  */
 
 import { mountLive, loadScriptOnce } from '../utils/live-engine.js';
-import { liveSlidesFromDeck, readLiveSession } from '../utils/live-deck.js';
+import { liveSlidesFromDeck, readLiveSession, clearLiveSession } from '../utils/live-deck.js';
 import { showToast } from '../components/toast.js';
 import { navigate } from '../router.js';
 
 /* …/pedagogies/live/ regardless of which page we're on. */
 const liveAssetBase = () => new URL('../live/', location.href).href;
-/* The student join link: this very app, #/join/<ROOM>. */
+/* The student join link: this very app, #/join/<ROOM>. The QR encodes the
+ * direct cocher.html URL; the on-screen TYPABLE fallback shows the short site
+ * root (…/pedagogies/#/join), whose index.html forwards the hash into the app
+ * — every character a student types must resolve. */
 const joinHref = () => `${location.origin}${location.pathname}#/join/`;
-const joinLabel = () => `${location.host}${location.pathname.replace(/cocher\.html$/, '')}#/join`;
+const joinLabel = () => `${location.host}${location.pathname.replace(/app\/cocher\.html$/, '')}#/join`;
 
 function goBack(fallback) {
   if (window.history.length > 1) window.history.back();
@@ -59,7 +62,9 @@ export function renderLivePresent(container) {
       slides: liveSlidesFromDeck(stash.deck),
       joinHref: joinHref(),
       joinLabel: joinLabel(),
-      onExit: () => goBack('/lessons'),
+      // Clean exit invalidates the stash: back-button / bookmark can't
+      // resurrect this room. (Refresh doesn't exit, so it keeps the room.)
+      onExit: () => { clearLiveSession(); goBack('/lessons'); },
     });
   })();
 

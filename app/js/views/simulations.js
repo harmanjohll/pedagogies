@@ -611,6 +611,7 @@ function openOverlay(container, title, opts) {
   topBar.innerHTML = `
     <span style="font-weight:600;font-size:0.9375rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${escapeHtml(title)}</span>
     <span style="font-size:0.6875rem;color:rgba(255,255,255,0.3);">Drag edges to resize</span>
+    <button id="sim-overlay-fs" title="Fullscreen (great on a projector)" style="background:none;border:none;color:#fff;cursor:pointer;padding:4px 10px;font-size:1.05rem;line-height:1;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='none'">&#x26F6;</button>
     <button id="sim-overlay-close" style="background:none;border:none;color:#fff;cursor:pointer;padding:4px 10px;font-size:1.25rem;line-height:1;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='none'">&times;</button>
   `;
 
@@ -762,7 +763,14 @@ function openOverlay(container, title, opts) {
   };
 
   overlay.querySelector('#sim-overlay-close').addEventListener('click', closeOverlay);
-  const escHandler = (e) => { if (e.key === 'Escape') closeOverlay(); };
+  // Fullscreen the sim window (projector-friendly). Esc first exits fullscreen
+  // (native), and only closes the overlay when NOT fullscreen — so one Esc
+  // never tears down both at once.
+  overlay.querySelector('#sim-overlay-fs')?.addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else win.requestFullscreen?.().catch(() => {});
+  });
+  const escHandler = (e) => { if (e.key === 'Escape' && !document.fullscreenElement) closeOverlay(); };
   document.addEventListener('keydown', escHandler);
 }
 
@@ -1010,6 +1018,40 @@ function injectSimLayoutOverrides(doc) {
       doc.body.style.cursor = '';
       doc.body.style.userSelect = '';
       if (workbench) workbench.style.pointerEvents = '';
+      fitPractical();
+    });
+
+    // 2b. Scale-to-fit: when the panels' intrinsic minimums (fixed apparatus,
+    // non-compressible data tables) exceed the iframe width, zoom the whole
+    // practical down so nothing is ever clipped — the failure mode on
+    // wide-but-not-wide-enough projector windows, which the ≤1024px stacking
+    // rescue below doesn't reach. Height is compensated (zoomed units are
+    // visually smaller) so the layout still fills the window. Reset-first so
+    // repeated runs never compound.
+    const fitPractical = () => {
+      try {
+        layout.style.zoom = '';
+        layout.style.height = '';
+        if (doc.documentElement.clientWidth <= 1024) return; // stacked mode
+        const need = layout.scrollWidth, have = layout.clientWidth;
+        if (need <= have + 2) return;                        // fits naturally
+        const f = Math.max(0.55, have / need);
+        const h = layout.getBoundingClientRect().height;
+        layout.style.zoom = String(f);
+        layout.style.height = Math.round(h / f) + 'px';
+      } catch (e) { /* measurement raced a teardown */ }
+    };
+    // Run once now, then again as late-loading apparatus/fonts settle, and on
+    // every iframe resize (the overlay's drag-resize fires the inner window's
+    // resize event).
+    fitPractical();
+    setTimeout(fitPractical, 350);
+    setTimeout(fitPractical, 1200);
+    let fitRaf = null;
+    const winRef = doc.defaultView;
+    if (winRef) winRef.addEventListener('resize', () => {
+      if (fitRaf) return;
+      fitRaf = winRef.requestAnimationFrame(() => { fitRaf = null; fitPractical(); });
     });
   }
 

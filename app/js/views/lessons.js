@@ -18,7 +18,7 @@ import { applyJourneyMinimal, toggleJourneyMinimal } from '../components/keyboar
 import { openDeckById, getMediaContent, getDeckModel, listDeckMeta } from '../utils/deck.js';
 import { openLiveSession } from '../components/live-launch.js';
 import { buildCardModel, openCardWindow } from '../utils/takehome-card.js';
-import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
+import { isVoiceInputSupported, createDictation, dictationErrorMessage } from '../utils/voice.js';
 import { isTouch } from '../utils/viewport.js';
 
 const STATUS_MAP = {
@@ -168,7 +168,11 @@ function wireMic(btn, container) {
         field.value = base;
         field.dispatchEvent(new Event('input', { bubbles: true }));
       },
-      onError: () => { showToast('Could not capture audio — check mic permissions.', 'danger'); },
+      onError: (err) => {
+        setActive(false);
+        const msg = dictationErrorMessage(err);
+        if (msg) showToast(msg, 'warning');
+      },
       onEnd: () => { setActive(false); dictation = null; },
     });
     if (dictation.start()) setActive(true);

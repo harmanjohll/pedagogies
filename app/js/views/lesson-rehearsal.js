@@ -11,7 +11,7 @@ import { showToast } from '../components/toast.js';
 import { trackEvent } from '../utils/analytics.js';
 import { sendChat } from '../api.js';
 import { getCurrentUser } from '../components/login.js';
-import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
+import { isVoiceInputSupported, createDictation, dictationErrorMessage } from '../utils/voice.js';
 
 /* ── Constants ── */
 
@@ -896,14 +896,8 @@ function renderRehearsalInterface(container) {
           onResult: (t) => { chatInput.value = prevValue + (prevValue ? ' ' : '') + t; },
           onError: (err) => {
             paintListening(false);
-            // err is a SpeechRecognitionErrorEvent (has .error) or a thrown
-            // exception from a failed start() (has .name).
-            const code = err?.error || err?.name || '';
-            if (code === 'not-allowed' || code === 'NotAllowedError') {
-              showToast('Microphone access denied. Please allow microphone permission in your browser settings.', 'warning');
-            } else if (code !== 'aborted' && code !== 'AbortError' && code !== 'no-speech') {
-              showToast('Voice input error. Please try again.', 'warning');
-            }
+            const msg = dictationErrorMessage(err);
+            if (msg) showToast(msg, 'warning');
           },
           onEnd: () => { paintListening(false); micDictation = null; },
         });

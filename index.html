@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="refresh" content="0;url=app/cocher.html" />
+  <!-- Hash-preserving redirect: …/pedagogies/#/join/ROOM must land on
+       app/cocher.html#/join/ROOM (the typable Live join link shown on the
+       projector). A meta refresh would drop the hash, so it lives in
+       <noscript> as the no-JS fallback only. -->
+  <script>location.replace('app/cocher.html' + location.hash);</script>
+  <noscript><meta http-equiv="refresh" content="0;url=app/cocher.html" /></noscript>
   <title>Redirecting to Co-Cher...</title>
 </head>
 <body>
