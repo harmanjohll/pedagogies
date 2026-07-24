@@ -11,6 +11,7 @@ import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { escapeHtml } from '../utils/markdown.js';
 import { trackEvent } from '../utils/analytics.js';
+import { saveArtifact, savedArtifactsHTML, wireSavedArtifacts, consumeOpenArtifact, getArtifact, listArtifacts } from '../utils/library.js';
 
 const BLOOMS = [
   { key: 'Remember', color: '#3b82f6' },
@@ -72,6 +73,7 @@ export function render(container) {
   let items = [];
   let isGenerating = false;
   let regeneratingIdx = -1;
+  let savedBankId = null;   // Library id once THIS set is saved
 
   function renderView() {
     container.innerHTML = `
@@ -137,6 +139,9 @@ export function render(container) {
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
             <button id="qb-generate" class="btn btn-primary" ${isGenerating ? 'disabled' : ''}>${isGenerating ? 'Generating...' : 'Generate Questions'}</button>
             ${items.length ? `
+              ${savedBankId
+                ? '<span style="align-self:center;font-size:0.75rem;color:var(--success,#22c55e);font-weight:600;">&#10003; Saved to Library</span>'
+                : '<button id="qb-save" class="btn btn-secondary">Save to Library</button>'}
               <button id="qb-blueprint" class="btn btn-secondary">Send to AoL Blueprint</button>
               <button id="qb-print-student" class="btn btn-ghost" title="Answer key is excluded from the printout">Print Student Copy</button>
               <button id="qb-print-teacher" class="btn btn-ghost" title="Includes the answer key in the printout">Print Teacher Copy (with answers)</button>
@@ -164,6 +169,7 @@ export function render(container) {
               </div>
             `).join('') : ''}
             ${!isGenerating && !items.length ? `
+              ${savedArtifactsHTML('questionbank', escapeHtml)}
               <div style="text-align:center;padding:36px 20px;color:var(--ink-muted);border:2px dashed var(--border);border-radius:12px;font-size:0.875rem;">
                 Set a subject and topic, pick your Bloom's spread, and generate a question bank.
               </div>` : ''}
@@ -192,6 +198,29 @@ export function render(container) {
       });
     });
     container.querySelector('#qb-generate')?.addEventListener('click', generateBank);
+    container.querySelector('#qb-save')?.addEventListener('click', async () => {
+      const meta = await saveArtifact({
+        kind: 'questionbank',
+        title: [topic || 'Question Bank', subject].filter(Boolean).join(' — '),
+        subject, level,
+        summary: `${items.length} questions`,
+        data: { subject, level, topic, count, mix, blooms: [...blooms], items },
+      });
+      if (meta) { savedBankId = meta.id; showToast('Question bank saved to your Library.', 'success'); renderView(); }
+      else showToast('Could not save — browser storage unavailable.', 'danger');
+    });
+    // Saved banks: open restores the set for editing / printing / blueprinting.
+    wireSavedArtifacts(container, {
+      onOpen: (id, meta, data) => {
+        subject = data.subject || ''; level = data.level || level; topic = data.topic || '';
+        count = data.count || count; mix = data.mix || mix;
+        if (Array.isArray(data.blooms) && data.blooms.length) blooms = new Set(data.blooms);
+        items = Array.isArray(data.items) ? data.items : [];
+        savedBankId = id;
+        renderView();
+      },
+      onChanged: renderView,
+    });
     container.querySelector('#qb-blueprint')?.addEventListener('click', sendToBlueprint);
     container.querySelector('#qb-print-student')?.addEventListener('click', () => printBank(false));
     container.querySelector('#qb-print-teacher')?.addEventListener('click', () => printBank(true));
@@ -230,6 +259,7 @@ export function render(container) {
         showToast('Could not parse the AI response — please try again.', 'danger');
       } else {
         items = parsed;
+        savedBankId = null;   // fresh set → not yet in the Library
       }
     } catch (err) {
       console.error('Question Bank generation error:', err);
@@ -258,6 +288,7 @@ export function render(container) {
       const replacement = normItem(parseJson(raw, false));
       if (replacement) {
         items[idx] = replacement;
+        savedBankId = null;   // edited set → save again to keep the change
         showToast(`Q${idx + 1} regenerated.`, 'success');
       } else {
         showToast('Could not parse the regenerated question — kept the original.', 'warning');
@@ -361,4 +392,20 @@ export function render(container) {
   }
 
   renderView();
+
+  // Ctrl+K asked us to open a specific saved bank.
+  const openId = consumeOpenArtifact();
+  if (openId) {
+    (async () => {
+      const meta = listArtifacts('questionbank').find(a => a.id === openId);
+      const data = meta ? await getArtifact(openId) : null;
+      if (!data) return;
+      subject = data.subject || ''; level = data.level || level; topic = data.topic || '';
+      count = data.count || count; mix = data.mix || mix;
+      if (Array.isArray(data.blooms) && data.blooms.length) blooms = new Set(data.blooms);
+      items = Array.isArray(data.items) ? data.items : [];
+      savedBankId = openId;
+      renderView();
+    })();
+  }
 }

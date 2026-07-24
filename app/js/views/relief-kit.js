@@ -13,6 +13,7 @@ import { md, escapeHtml } from '../utils/markdown.js';
 import { trackEvent } from '../utils/analytics.js';
 import { loadTT, findTeacherRow } from './dashboard.js';
 import { getCurrentUser } from '../components/login.js';
+import { saveArtifact, savedArtifactsHTML, wireSavedArtifacts, consumeOpenArtifact, getArtifact, listArtifacts } from '../utils/library.js';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const WEEK_TYPES = ['Odd', 'Even'];
@@ -66,6 +67,7 @@ export function render(container) {
   let materials = 'worksheets';
   let output = '';
   let isGenerating = false;
+  let savedArtifact = null;   // Library id once THIS output is saved
 
   function renderView() {
     if (disposed) return;
@@ -133,7 +135,12 @@ export function render(container) {
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
             <button id="rk-generate" class="btn btn-primary" ${isGenerating ? 'disabled' : ''}>${isGenerating ? 'Building relief pack...' : 'Generate Relief Kit'}</button>
             ${output ? '<button id="rk-print" class="btn btn-secondary">Print relief pack</button>' : ''}
+            ${output ? (savedArtifact
+              ? '<span style="align-self:center;font-size:0.75rem;color:var(--success,#22c55e);font-weight:600;">&#10003; Saved to Library</span>'
+              : '<button id="rk-save" class="btn btn-secondary">Save to Library</button>') : ''}
           </div>
+
+          ${!output && !isGenerating ? savedArtifactsHTML('reliefkit', escapeHtml) : ''}
 
           <div id="rk-output">
             ${isGenerating ? '<div class="card" style="padding:var(--sp-4, 16px);"><div class="chat-typing">Writing a run sheet, worksheet, and answer key for a non-specialist...</div></div>' : ''}
@@ -173,6 +180,27 @@ export function render(container) {
     });
     container.querySelector('#rk-generate')?.addEventListener('click', generateKit);
     container.querySelector('#rk-print')?.addEventListener('click', printPack);
+    container.querySelector('#rk-save')?.addEventListener('click', async () => {
+      const meta = await saveArtifact({
+        kind: 'reliefkit',
+        title: [topic || 'Relief Kit', className || subject].filter(Boolean).join(' — '),
+        subject, level,
+        summary: [className, materials].filter(Boolean).join(' · '),
+        data: { className, subject, level, topic, materials, output },
+      });
+      if (meta) { savedArtifact = meta.id; showToast('Relief Kit saved to your Library.', 'success'); renderView(); }
+      else showToast('Could not save — browser storage unavailable.', 'danger');
+    });
+    // Saved kits: open restores the form + the full pack, ready to print.
+    wireSavedArtifacts(container, {
+      onOpen: (id, meta, data) => {
+        className = data.className || ''; subject = data.subject || ''; level = data.level || '';
+        topic = data.topic || ''; materials = data.materials || 'worksheets';
+        output = data.output || ''; savedArtifact = id; selectedSlot = -1;
+        renderView();
+      },
+      onChanged: renderView,
+    });
   }
 
   async function generateKit() {
@@ -222,6 +250,7 @@ Concise answers for every worksheet task so the relief teacher (or the returning
         maxTokens: 6144
       });
       output = text;
+      savedArtifact = null;   // fresh pack → not yet in the Library
     } catch (err) {
       console.error('Relief Kit generation error:', err);
       showToast(`Generation failed: ${err.message}`, 'danger');
@@ -293,6 +322,20 @@ Concise answers for every worksheet task so the relief teacher (or the returning
     ttLoaded = true;
     if (!disposed) renderView();
   })();
+
+  // Ctrl+K asked us to open a specific saved kit.
+  const openId = consumeOpenArtifact();
+  if (openId) {
+    (async () => {
+      const meta = listArtifacts('reliefkit').find(a => a.id === openId);
+      const data = meta ? await getArtifact(openId) : null;
+      if (!data || disposed) return;
+      className = data.className || ''; subject = data.subject || ''; level = data.level || '';
+      topic = data.topic || ''; materials = data.materials || 'worksheets';
+      output = data.output || ''; savedArtifact = openId; selectedSlot = -1;
+      renderView();
+    })();
+  }
 
   // Router cleanup contract — stop the async timetable load from touching
   // the container after navigation.

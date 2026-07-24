@@ -13,6 +13,7 @@ import { navigate } from '../router.js';
 import { processLatex } from '../utils/latex.js';
 import { escapeHtml, sanitizeSvg } from '../utils/markdown.js';
 import { idbPut } from '../utils/storage.js';
+import { saveArtifact, savedArtifactsHTML, wireSavedArtifacts, consumeOpenArtifact, getArtifact, listArtifacts } from '../utils/library.js';
 
 /* ── SVG icon library (inline, small) ── */
 const I = {
@@ -520,6 +521,7 @@ export function render(container) {
   let aborted = false;
   let currentStep = -1;
   const outputs = {};     // step id → raw text
+  let runArtifactId = null;   // Library artifact this run autosaves into
   let expandedDive = null; // { stepId, type, text } for deep-dive panel
   let params = {};
   let awaitingAt = null;          // next step index while paused at a checkpoint
@@ -714,8 +716,10 @@ export function render(container) {
 
           <div class="ap-header">
             <h1>Co-Cher+<span class="ap-beta">BETA</span></h1>
-            <p>Full-workflow autopilot — SoW to Reflection in one pass.</p>
+            <p>Full-workflow autopilot — SoW to Reflection in one pass. Runs autosave to your Library as they generate.</p>
           </div>
+
+          ${!running && !Object.keys(outputs).length ? savedArtifactsHTML('autolesson', escapeHtml) : ''}
 
           ${pendingRefinement ? `
             <div class="ap-refine-banner" style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:16px;border-radius:10px;background:var(--accent-light);border:1px solid var(--accent);">
@@ -1064,6 +1068,20 @@ export function render(container) {
       });
     });
 
+    // Saved runs (Library): open restores the whole run — params, every
+    // step's output, and where it paused; rename/delete manage the shelf.
+    const restoreRun = (id, meta, data) => {
+      runArtifactId = id;
+      params = { ...(data.params || {}) };
+      for (const key of Object.keys(outputs)) delete outputs[key];
+      Object.assign(outputs, data.outputs || {});
+      currentStep = typeof data.currentStep === 'number' ? data.currentStep : Object.keys(outputs).length;
+      running = false; awaitingAt = null;
+      renderView();
+      showToast(`Restored “${meta?.title || 'run'}” — every step is back.`, 'success');
+    };
+    wireSavedArtifacts(container, { onOpen: restoreRun, onChanged: renderView });
+
     // Run/stop buttons
     const runBtn = container.querySelector('#ap-run-btn');
     const stopBtn = container.querySelector('#ap-stop-btn');
@@ -1171,6 +1189,7 @@ export function render(container) {
     pendingRefinement = null; // folded into this run's notes; banner clears
     aborted = false;
     awaitingAt = null;
+    runArtifactId = null;   // a fresh pass is a NEW Library artifact
     for (const key of Object.keys(outputs)) delete outputs[key];
     for (const key of Object.keys(stepAdjustments)) delete stepAdjustments[key];
     for (const key of Object.keys(savedToLibrary)) delete savedToLibrary[key];
@@ -1215,6 +1234,22 @@ export function render(container) {
         outputs[step.id] = text;
         currentStep = i + 1;
 
+        // KNOWLEDGE MANAGEMENT: autosave the run into the Library after every
+        // completed step — a generated run can never be lost to navigation
+        // again. One artifact per run, updated in place; reopen from the
+        // "Saved runs" strip (or Ctrl+K) restores everything.
+        try {
+          const meta = await saveArtifact({
+            id: runArtifactId,
+            kind: 'autolesson',
+            title: [params.topic || 'Auto-Lesson', params.subject].filter(Boolean).join(' — '),
+            subject: params.subject, level: params.level,
+            summary: `${Object.keys(outputs).length}/${STEPS.length} steps generated`,
+            data: { params: { ...params }, outputs: { ...outputs }, currentStep },
+          });
+          if (meta) runArtifactId = meta.id;
+        } catch (e) { /* autosave is best-effort; the run continues */ }
+
         // Checkpoint: hand control back to the teacher between steps
         if (checkpoint && i < STEPS.length - 1) {
           running = false;
@@ -1238,4 +1273,20 @@ export function render(container) {
   }
 
   renderView();
+
+  // Ctrl+K (or another view) asked us to open a specific saved run.
+  const openId = consumeOpenArtifact();
+  if (openId) {
+    (async () => {
+      const meta = listArtifacts('autolesson').find(a => a.id === openId);
+      const data = meta ? await getArtifact(openId) : null;
+      if (!data) return;
+      runArtifactId = openId;
+      params = { ...(data.params || {}) };
+      for (const key of Object.keys(outputs)) delete outputs[key];
+      Object.assign(outputs, data.outputs || {});
+      currentStep = typeof data.currentStep === 'number' ? data.currentStep : Object.keys(outputs).length;
+      renderView();
+    })();
+  }
 }
