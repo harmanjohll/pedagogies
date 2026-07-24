@@ -16,6 +16,7 @@
  */
 
 import { idbPut, idbGet, idbRemove } from './storage.js';
+import { md, escapeHtml } from './markdown.js';
 
 const LIST_KEY = 'cocher_library';
 const MEDIA_STORE = 'media';
@@ -130,6 +131,81 @@ export function savedArtifactsHTML(kind, esc) {
           </div>`).join('')}
       </div>
     </div>`;
+}
+
+/* ── Readable renderings of an artifact payload ──
+ * One text form (for AI context injection) and one printable document (for
+ * viewing from a lesson / Present without navigating away). Both degrade
+ * gracefully for unknown kinds. */
+
+const AUTOLESSON_STEP_LABELS = { sow: 'Scheme of Work', lesson: 'Lesson Plan', enactment: 'Enactment Resources', assessment: 'Assessment', reflection: 'Reflection' };
+
+export function artifactContextText(kind, data) {
+  if (!data) return '';
+  if (kind === 'reliefkit') return data.output || '';
+  if (kind === 'questionbank') {
+    return (data.items || []).map((q, i) =>
+      `Q${i + 1} (${q.bloom || '?'}, ${q.marks ?? '?'} marks, ${q.difficulty || '?'}): ${q.question}\nAnswer: ${q.answer}`).join('\n\n');
+  }
+  if (kind === 'autolesson') {
+    return Object.entries(data.outputs || {})
+      .map(([step, text]) => `## ${AUTOLESSON_STEP_LABELS[step] || step}\n${text}`).join('\n\n');
+  }
+  try { return JSON.stringify(data).slice(0, 4000); } catch { return ''; }
+}
+
+function artifactBodyHTML(kind, data) {
+  if (kind === 'reliefkit') return md(data.output || '');
+  if (kind === 'questionbank') {
+    return (data.items || []).map((q, i) => `
+      <div style="margin:0 0 18px;padding:12px 14px;border:1px solid #e2e5ea;border-radius:10px;page-break-inside:avoid;">
+        <div style="font-weight:700;margin-bottom:4px;">Q${i + 1}. ${escapeHtml(q.question || '')}</div>
+        <div style="font-size:0.8rem;color:#64748b;margin-bottom:6px;">${escapeHtml([q.bloom, q.difficulty, (q.marks != null ? q.marks + ' mark' + (q.marks === 1 ? '' : 's') : '')].filter(Boolean).join(' · '))}</div>
+        <div style="font-size:0.9rem;"><strong>Answer:</strong> ${escapeHtml(q.answer || '')}</div>
+      </div>`).join('');
+  }
+  if (kind === 'autolesson') {
+    return Object.entries(data.outputs || {}).map(([step, text]) =>
+      `<h2 style="margin:26px 0 10px;font-size:1.15rem;border-bottom:2px solid #e2e5ea;padding-bottom:6px;">${escapeHtml(AUTOLESSON_STEP_LABELS[step] || step)}</h2>${md(text || '')}`).join('');
+  }
+  return `<pre style="white-space:pre-wrap;">${escapeHtml(artifactContextText(kind, data))}</pre>`;
+}
+
+/**
+ * Open an artifact as a clean printable document in a new tab — usable from
+ * a lesson page or mid-Present without any navigation. Returns false when
+ * the artifact is missing or the pop-up was blocked.
+ */
+export async function openArtifactWindow(id) {
+  const meta = listArtifacts().find(a => a.id === id);
+  if (!meta) return false;
+  // window.open must happen in the synchronous part of the click gesture —
+  // mobile Safari (and strict desktop blockers) refuse pop-ups requested
+  // after an await. Open the tab first, then fill it from IndexedDB.
+  const w = window.open('', '_blank');
+  if (!w) return false;
+  const data = await getArtifact(id);
+  if (!data) { try { w.close(); } catch { /* ignore */ } return false; }
+  const k = artifactKind(meta.kind);
+  w.document.write(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${escapeHtml(meta.title)}</title>
+    <style>
+      body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; max-width: 820px; margin: 0 auto; padding: 28px 20px 60px; color: #0f172a; line-height: 1.6; }
+      .hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; border-bottom: 3px solid #000C53; padding-bottom: 10px; margin-bottom: 18px; }
+      .hd h1 { font-size: 1.4rem; margin: 0; }
+      .hd .k { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${k.color}; }
+      .toolbar { position: sticky; top: 0; background: #fff; padding: 8px 0; text-align: right; }
+      .toolbar button { padding: 8px 18px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: 600; cursor: pointer; }
+      table { border-collapse: collapse; } td, th { border: 1px solid #e2e5ea; padding: 6px 10px; }
+      @media print { .toolbar { display: none; } }
+    </style></head><body>
+    <div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>
+    <div class="hd"><span class="k">${k.icon} ${escapeHtml(k.label)}</span><h1>${escapeHtml(meta.title)}</h1></div>
+    ${artifactBodyHTML(meta.kind, data)}
+    </body></html>`);
+  w.document.close();
+  return true;
 }
 
 export function wireSavedArtifacts(container, { onOpen, onChanged }) {

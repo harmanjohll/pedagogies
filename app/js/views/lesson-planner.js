@@ -27,6 +27,7 @@ import { isVoiceInputSupported, createDictation, dictationErrorMessage } from '.
 import { ATTACH_ACCEPT, isAcceptedAttachment, buildAttachment, toMultimodalMessage, attachmentContextNote, stripAttachmentData } from '../utils/attachments.js';
 import { priorityLabel, getPriorities } from '../utils/priorities.js';
 import { openLiveSession } from '../components/live-launch.js';
+import { listArtifacts, getArtifact, artifactContextText, artifactKind, openArtifactWindow } from '../utils/library.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
@@ -60,6 +61,28 @@ function saveSelectedReferenceIds() {
   try { sessionStorage.setItem(PLANNER_REF_KEY, JSON.stringify(selectedReferenceIds)); } catch {}
 }
 let selectedReferenceIds = loadSelectedReferenceIds();
+
+/* ── Library artifact picker (v8.8) ──
+ * Saved Lab outputs (Relief Kits, Question Banks, Auto-Lesson runs) toggle ON
+ * as AI context just like References. Payloads live in IndexedDB so they're
+ * fetched async on toggle and cached; injection itself stays synchronous. */
+const PLANNER_ART_KEY = 'cocher_planner_artifact_ids';
+function loadSelectedArtifactIds() {
+  try { const r = sessionStorage.getItem(PLANNER_ART_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
+}
+function saveSelectedArtifactIds() {
+  try { sessionStorage.setItem(PLANNER_ART_KEY, JSON.stringify(selectedArtifactIds)); } catch {}
+}
+let selectedArtifactIds = loadSelectedArtifactIds();
+const artifactContextCache = new Map(); // artifact id → context text (filled on toggle / restore)
+function primeArtifactContext(id) {
+  if (artifactContextCache.has(id)) return;
+  const meta = listArtifacts().find(a => a.id === id);
+  if (!meta) return;
+  getArtifact(id).then(data => {
+    if (data) artifactContextCache.set(id, artifactContextText(meta.kind, data));
+  });
+}
 
 /* ── Consume a spatial layout linked before a lesson existed ──
  * render() stashes cocher_pending_spatial_layout when a layout arrives from the
@@ -1635,6 +1658,19 @@ export function render(container) {
         else body = content.slice(0, 2000);
         if (!body) return;
         contextParts.push(`[Reference — ${r.name}]:\n${body}`);
+      });
+    }
+    // Library artifacts (v8.8) — saved Lab outputs toggled on for this session.
+    // Payloads were primed into artifactContextCache when toggled; anything not
+    // yet resolved (IndexedDB still loading) is skipped this message and will
+    // be there for the next one.
+    if (selectedArtifactIds.length > 0) {
+      const arts = listArtifacts();
+      selectedArtifactIds.forEach(id => {
+        const meta = arts.find(a => a.id === id);
+        const text = artifactContextCache.get(id);
+        if (!meta || !text) return;
+        contextParts.push(`[Library — ${meta.title} (${artifactKind(meta.kind).label})]:\n${text.slice(0, 2500)}`);
       });
     }
     // Auto-attach SoW if available and first message (background context)
@@ -4645,30 +4681,45 @@ function renderKBChips(container) {
 }
 
 /* ── Reference library picker chip bar ──
- * Lists the teacher's My References; each chip toggles the reference into the
- * generation context. Selection persists for the session (sessionStorage). */
+ * Lists the teacher's My References and (v8.8) saved Library artifacts; each
+ * chip toggles the item into the generation context. Selection persists for
+ * the session (sessionStorage). Artifact payloads are fetched from IndexedDB
+ * when toggled ON and cached, so injection stays synchronous. */
 function renderReferenceChips(container) {
   const bar = container.querySelector('#ref-picker-bar');
   if (!bar) return;
 
   const refs = Store.getReferences();
-  if (!refs.length) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  const arts = listArtifacts();
+  if (!refs.length && !arts.length) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+
+  // Restored session selections (page reload) still need their payloads.
+  selectedArtifactIds.forEach(primeArtifactContext);
+
+  const chip = (cls, idAttr, id, on, tip, dot, label) =>
+    `<button class="${cls}" data-${idAttr}="${esc(id)}" aria-pressed="${on}" title="${esc(tip)}" style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:var(--radius-full);font-size:0.75rem;font-weight:500;cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--border)'};background:${on ? 'var(--accent-light)' : 'var(--bg-card)'};color:${on ? 'var(--accent-dark)' : 'var(--ink-muted)'};">
+      <span style="width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${on ? 'var(--accent)' : dot}"></span>
+      ${esc(label)}
+    </button>`;
 
   bar.style.display = '';
   bar.innerHTML = `
-    <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
+    ${refs.length ? `<div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
       <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);">References:</span>
       <div style="display:flex;gap:var(--sp-1);flex-wrap:wrap;">
-        ${refs.map(r => {
-          const on = selectedReferenceIds.includes(r.id);
-          const tip = r.summary ? r.summary.slice(0, 140) : (r.source?.filename || 'Reference');
-          return `<button class="ref-chip" data-ref-id="${esc(r.id)}" aria-pressed="${on}" title="${esc(tip)}" style="display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:var(--radius-full);font-size:0.75rem;font-weight:500;cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--border)'};background:${on ? 'var(--accent-light)' : 'var(--bg-card)'};color:${on ? 'var(--accent-dark)' : 'var(--ink-muted)'};">
-            <span style="width:6px;height:6px;border-radius:50%;flex-shrink:0;background:${on ? 'var(--accent)' : 'var(--border)'};"></span>
-            ${esc(r.name.slice(0, 32))}
-          </button>`;
-        }).join('')}
+        ${refs.map(r => chip('ref-chip', 'ref-id', r.id, selectedReferenceIds.includes(r.id),
+          r.summary ? r.summary.slice(0, 140) : (r.source?.filename || 'Reference'),
+          'var(--border)', r.name.slice(0, 32))).join('')}
       </div>
-    </div>`;
+    </div>` : ''}
+    ${arts.length ? `<div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;${refs.length ? 'margin-top:4px;' : ''}">
+      <span style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-faint);">Library:</span>
+      <div style="display:flex;gap:var(--sp-1);flex-wrap:wrap;">
+        ${arts.map(a => chip('art-chip', 'art-id', a.id, selectedArtifactIds.includes(a.id),
+          `${artifactKind(a.kind).label} — toggle into AI context`,
+          artifactKind(a.kind).color, a.title.slice(0, 32))).join('')}
+      </div>
+    </div>` : ''}`;
 
   bar.querySelectorAll('.ref-chip').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -4677,6 +4728,16 @@ function renderReferenceChips(container) {
       if (i >= 0) selectedReferenceIds.splice(i, 1);
       else selectedReferenceIds.push(id);
       saveSelectedReferenceIds();
+      renderReferenceChips(container);
+    });
+  });
+  bar.querySelectorAll('.art-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.artId;
+      const i = selectedArtifactIds.indexOf(id);
+      if (i >= 0) selectedArtifactIds.splice(i, 1);
+      else { selectedArtifactIds.push(id); primeArtifactContext(id); }
+      saveSelectedArtifactIds();
       renderReferenceChips(container);
     });
   });
@@ -4854,8 +4915,13 @@ const RESOURCE_META = {
   source:     { badge: 'badge-amber',  label: 'Source' },
   simulation: { badge: 'badge-green',  label: 'Simulation' },
   deck:       { badge: 'badge-violet', label: 'Deck' },
-  audio:      { badge: 'badge-rose',   label: 'Audio' }
+  audio:      { badge: 'badge-rose',   label: 'Audio' },
+  // Library artifacts (v8.8) — attachable like decks, viewable in Present.
+  autolesson:   { badge: 'badge-violet', label: 'Auto-Lesson' },
+  reliefkit:    { badge: 'badge-amber',  label: 'Relief Kit' },
+  questionbank: { badge: 'badge-blue',   label: 'Questions' }
 };
+const ARTIFACT_TYPES = new Set(['autolesson', 'reliefkit', 'questionbank']);
 const resourceMeta = (type) => RESOURCE_META[type] || { badge: 'badge-amber', label: 'Source' };
 
 /* Does this stored deck carry a slide MODEL (so it can be run as a Live
@@ -4900,9 +4966,9 @@ function renderLinkedResourcesSection(container) {
           ${attachedResources.map((r, idx) => `
             <div style="display:flex;align-items:center;gap:var(--sp-1);padding:var(--sp-1) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-lg);font-size:0.8125rem;border:1px solid var(--border-light);">
               <span class="badge ${resourceMeta(r.type).badge}" style="font-size:0.625rem;">${resourceMeta(r.type).label}</span>
-              ${(r.type === 'deck' || r.type === 'audio') && r.id ? `
-                <button class="btn btn-ghost btn-sm open-material-btn" data-type="${r.type}" data-id="${escAttr(r.id)}" data-title="${escAttr(r.title || '')}" title="${r.type === 'deck' ? 'Open deck in a new tab' : 'Play audio clip'}" style="padding:1px 4px;color:var(--ink);">
-                  ${esc(r.title)} <span aria-hidden="true">${r.type === 'deck' ? '&#8599;' : '&#9654;'}</span>
+              ${(r.type === 'deck' || r.type === 'audio' || ARTIFACT_TYPES.has(r.type)) && r.id ? `
+                <button class="btn btn-ghost btn-sm open-material-btn" data-type="${r.type}" data-id="${escAttr(r.id)}" data-title="${escAttr(r.title || '')}" title="${r.type === 'deck' ? 'Open deck in a new tab' : r.type === 'audio' ? 'Play audio clip' : 'View this Library item'}" style="padding:1px 4px;color:var(--ink);">
+                  ${esc(r.title)} <span aria-hidden="true">${r.type === 'audio' ? '&#9654;' : '&#8599;'}</span>
                 </button>`
               : `<span style="color:var(--ink);">${esc(r.title)}</span>`}
               ${r.type === 'deck' && r.id && deckHasModel(r.id) ? `
@@ -4929,6 +4995,9 @@ function renderLinkedResourcesSection(container) {
       if (btn.dataset.type === 'deck') {
         const ok = await openDeckById(btn.dataset.id);
         if (!ok) showToast('Deck content not found on this device.', 'danger');
+      } else if (ARTIFACT_TYPES.has(btn.dataset.type)) {
+        const ok = await openArtifactWindow(btn.dataset.id);
+        if (!ok) showToast('This Library item is not on this device.', 'danger');
       } else {
         showAudioPlaybackModal(btn.dataset.id, btn.dataset.title);
       }
@@ -4974,7 +5043,8 @@ function showLinkResourcesModal(container) {
     ...stimulusLib.map(s => ({ type: 'stimulus', id: s.id, title: s.title || s.topic || 'Untitled Stimulus' })),
     ...sourceLib.map(s => ({ type: 'source', id: s.id, title: s.title || s.topic || 'Untitled Source' })),
     ...listDeckMeta().map(d => ({ type: 'deck', id: d.id, title: d.title || 'Untitled Deck' })),
-    ...listAudioMeta().map(a => ({ type: 'audio', id: a.id, title: a.title || 'Untitled Clip' }))
+    ...listAudioMeta().map(a => ({ type: 'audio', id: a.id, title: a.title || 'Untitled Clip' })),
+    ...listArtifacts().map(a => ({ type: a.kind, id: a.id, title: a.title || 'Untitled' }))
   ];
 
   const available = allResources.filter(r => !attachedIds.has(r.id));

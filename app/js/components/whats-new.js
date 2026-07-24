@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v8.8', items: [
+    { icon: '\u{1F3DB}\u{FE0F}', title: 'The Library — one home for everything you’ve saved', text: 'A new Library page (sidebar, under Growth) gathers your saved Auto-Lesson runs, Relief Kits, Question Banks, References, slide decks and audio clips in one searchable place. Attach any Lab output to a lesson and it appears in Present as a one-tap printable handout; toggle it ON in the Lesson Planner’s chip bar and Co-Cher uses it as context when planning. Built phone-first, so it all works on your mobile too.' },
+  ] },
   { version: 'v8.7', items: [
     { icon: '\u{1F4DA}', title: 'Labs now save to your Library', text: 'Auto-Lesson runs autosave as they generate — navigate away and every step is still there, reopenable from a \u201CSaved runs\u201D shelf. Relief Kits and Question Banks get Save to Library + their own shelves too. And Ctrl+K now finds ALL of it: saved runs, kits, banks, your References, decks and audio clips.' },
   ] },
