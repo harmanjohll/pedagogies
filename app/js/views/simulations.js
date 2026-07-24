@@ -1075,7 +1075,8 @@ function injectSimLayoutOverrides(doc, requestRefit) {
     .data-panel {
       flex: 0 0 220px !important;
       min-width: 140px !important;
-      max-width: 420px !important;
+      /* Wide enough that dragging can reveal the FULL readings table. */
+      max-width: 560px !important;
     }
     /* Narrow viewport (ANY pointer, not just touch): stack the practical
      * columns and let the document scroll. Forcing display:flex above defeats
@@ -1098,6 +1099,11 @@ function injectSimLayoutOverrides(doc, requestRefit) {
       }
       .cocher-col-handle { display: none !important; }
     }
+    /* Guide-panel config rows: at our narrowed panel widths the sims' fixed
+     * min-width value readouts (e.g. "0.100 M") poke past the panel edge and
+     * clip to a glyph-sliver. Let the row wrap instead. */
+    .guide-panel .flex { flex-wrap: wrap; }
+    .guide-panel .config-value { min-width: 0 !important; white-space: nowrap; }
     .cocher-col-handle {
       flex: 0 0 7px;
       cursor: col-resize;
@@ -1158,34 +1164,46 @@ function injectSimLayoutOverrides(doc, requestRefit) {
     if (workbench) layout.insertBefore(h1, workbench);
     if (data) layout.insertBefore(h2, data);
 
-    // Drag resize logic
+    // Drag resize logic. Three correctness rules learned the hard way:
+    //  1. The default panel widths above are stylesheet !important (they must
+    //     beat each sim's own CSS) — so the drag MUST write inline styles
+    //     with the 'important' priority too, or it silently does nothing.
+    //  2. Pointer capture on the handle, so the drag keeps tracking even when
+    //     the cursor leaves the iframe (mousemove-on-document did not).
+    //  3. Pointer positions are visual px but flex-basis is layout px — when
+    //     the fit engine has the practical zoomed, divide by the zoom factor.
     let active = null, startX = 0, startW = 0;
+    const zoomOf = () => (parseFloat(layout.style.zoom) || 1);
+    const setBasis = (panel, px) => panel.style.setProperty('flex', `0 0 ${Math.round(px)}px`, 'important');
+    const LIMITS = { left: [120, 360], right: [140, 560] };
 
-    layout.addEventListener('mousedown', (e) => {
+    layout.addEventListener('pointerdown', (e) => {
       const handle = e.target.closest('.cocher-col-handle');
       if (!handle) return;
       e.preventDefault();
       active = handle;
       startX = e.clientX;
       const panel = handle.dataset.side === 'left' ? guide : data;
-      startW = panel ? panel.getBoundingClientRect().width : 0;
+      startW = panel ? panel.getBoundingClientRect().width / zoomOf() : 0;
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* capture is best-effort */ }
       handle.classList.add('active');
       doc.body.style.cursor = 'col-resize';
       doc.body.style.userSelect = 'none';
       if (workbench) workbench.style.pointerEvents = 'none';
     });
 
-    doc.addEventListener('mousemove', (e) => {
+    layout.addEventListener('pointermove', (e) => {
       if (!active) return;
-      const dx = e.clientX - startX;
+      const dx = (e.clientX - startX) / zoomOf();
+      const [min, max] = LIMITS[active.dataset.side] || [120, 560];
       if (active.dataset.side === 'left' && guide) {
-        guide.style.flex = `0 0 ${Math.max(120, Math.min(360, startW + dx))}px`;
+        setBasis(guide, Math.max(min, Math.min(max, startW + dx)));
       } else if (active.dataset.side === 'right' && data) {
-        data.style.flex = `0 0 ${Math.max(140, Math.min(420, startW - dx))}px`;
+        setBasis(data, Math.max(min, Math.min(max, startW - dx)));
       }
     });
 
-    doc.addEventListener('mouseup', () => {
+    const endDrag = () => {
       if (!active) return;
       active.classList.remove('active');
       active = null;
@@ -1194,7 +1212,20 @@ function injectSimLayoutOverrides(doc, requestRefit) {
       if (workbench) workbench.style.pointerEvents = '';
       // Panel widths changed — let the overlay's shared fit engine re-fit.
       if (typeof requestRefit === 'function') requestRefit();
+    };
+    layout.addEventListener('pointerup', endDrag);
+    layout.addEventListener('pointercancel', endDrag);
+
+    // Double-click a divider → back to the default widths.
+    layout.addEventListener('dblclick', (e) => {
+      const handle = e.target.closest('.cocher-col-handle');
+      if (!handle) return;
+      const panel = handle.dataset.side === 'left' ? guide : data;
+      if (panel) panel.style.removeProperty('flex');
+      if (typeof requestRefit === 'function') requestRefit();
     });
+
+    [h1, h2].forEach(h => { h.title = 'Drag to resize the panels · double-click to reset'; });
   }
 
   // 3. Collapse Lab Notebook by default with toggle bar

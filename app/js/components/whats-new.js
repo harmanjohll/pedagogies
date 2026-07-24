@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v8.6', items: [
+    { icon: '&#8596;&#65039;', title: 'Sim panels you can actually resize', text: 'The dividers between a practical\u2019s panels now really drag — widen the data table, shrink the guide, double-click a divider to reset. The drag tracks smoothly even at zoom, and the value readouts no longer clip at narrow widths.' },
+  ] },
   { version: 'v8.5', items: [
     { icon: '&#127908;', title: 'The mic now works in every browser', text: 'Arc, Safari and Firefox don’t have built-in dictation — so when the browser can’t transcribe, Co-Cher now records your voice and transcribes it with your own Gemini key (a brief “Transcribing…” after you stop talking). Chrome and Edge keep their instant live dictation.' },
   ] },
