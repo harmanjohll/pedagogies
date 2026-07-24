@@ -31,6 +31,59 @@ function getQuickActions() {
 function getAllSearchableItems() {
   const items = [...getQuickActions()];
 
+  // Library artifacts (Lab outputs: Auto-Lesson runs, Relief Kits, Question
+  // Banks). Opening routes to the owning Lab, which auto-restores the artifact.
+  try {
+    const arts = JSON.parse(localStorage.getItem('cocher_library') || '[]');
+    const KIND_ROUTE = { autolesson: '/autopilot', reliefkit: '/relief-kit', questionbank: '/question-bank' };
+    const KIND_LABEL = { autolesson: 'Auto-Lesson run', reliefkit: 'Relief Kit', questionbank: 'Question Bank' };
+    arts.forEach(a => {
+      const route = KIND_ROUTE[a.kind];
+      if (!route) return;
+      items.push({
+        type: 'library', icon: 'LIB', color: '#8b5cf6',
+        title: a.title, subtitle: `${KIND_LABEL[a.kind]}${a.subject ? ' · ' + a.subject : ''}`,
+        searchText: `${a.title} ${a.kind} ${a.subject || ''} ${a.level || ''} ${a.summary || ''} library`,
+        action: () => {
+          try { sessionStorage.setItem('cocher_open_artifact', a.id); } catch { /* ignore */ }
+          navigate(route);
+        }
+      });
+    });
+  } catch { /* ignore */ }
+
+  // My References (the teacher's document library)
+  (Store.get('references') || []).forEach(r => {
+    items.push({
+      type: 'reference', icon: 'REF', color: '#0d9488',
+      title: r.name, subtitle: `Reference${r.source?.filename ? ' · ' + r.source.filename : ''}`,
+      searchText: `${r.name} ${r.summary || ''} ${r.source?.filename || ''} reference`,
+      action: () => navigate('/my-growth')
+    });
+  });
+
+  // Materials: slide decks + audio clips (metadata lists; payloads in IDB)
+  try {
+    const decks = JSON.parse(localStorage.getItem('cocher_decks') || '[]');
+    decks.forEach(d => {
+      items.push({
+        type: 'deck', icon: 'DECK', color: '#7c3aed',
+        title: d.title, subtitle: `Slide deck · ${d.slideCount || '?'} slides`,
+        searchText: `${d.title} slide deck presentation`,
+        action: () => navigate(`/deck/${d.id}`)
+      });
+    });
+    const clips = JSON.parse(localStorage.getItem('cocher_audio_clips') || '[]');
+    clips.forEach(c => {
+      items.push({
+        type: 'audio', icon: 'AUD', color: '#e11d48',
+        title: c.title, subtitle: `Audio clip${c.style ? ' · ' + c.style : ''}`,
+        searchText: `${c.title} ${c.style || ''} audio clip`,
+        action: () => navigate('/lessons')
+      });
+    });
+  } catch { /* ignore */ }
+
   // Custom-built simulations (metadata only; HTML lives in IndexedDB)
   try {
     const sims = JSON.parse(localStorage.getItem('cocher_custom_sims') || '[]');

@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v8.7', items: [
+    { icon: '\u{1F4DA}', title: 'Labs now save to your Library', text: 'Auto-Lesson runs autosave as they generate — navigate away and every step is still there, reopenable from a \u201CSaved runs\u201D shelf. Relief Kits and Question Banks get Save to Library + their own shelves too. And Ctrl+K now finds ALL of it: saved runs, kits, banks, your References, decks and audio clips.' },
+  ] },
   { version: 'v8.6', items: [
     { icon: '&#8596;&#65039;', title: 'Sim panels you can actually resize', text: 'The dividers between a practical\u2019s panels now really drag — widen the data table, shrink the guide, double-click a divider to reset. The drag tracks smoothly even at zoom, and the value readouts no longer clip at narrow widths.' },
   ] },
