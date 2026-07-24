@@ -6,7 +6,7 @@
  * lineage and the freeze procedure (storage keys must be namespaced).
  */
 
-export const APP_VERSION = 'v8.7';
+export const APP_VERSION = 'v8.8';
 
 /* Relative to app/cocher.html */
 export const PREVIOUS_VERSIONS = [

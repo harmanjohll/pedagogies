@@ -17,6 +17,7 @@ import { layoutToSVG } from './spatial-designer.js';
 import { mountSeatMap, clearSeatMapSessions, isSeatDragActive } from './present-seatmap.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
 import { openDeckById, getMediaContent, getDeckModel, listDeckMeta } from '../utils/deck.js';
+import { openArtifactWindow } from '../utils/library.js';
 import { launchSimById } from './simulations.js';
 import { openLiveSession } from '../components/live-launch.js';
 import { showToast } from '../components/toast.js';
@@ -301,11 +302,15 @@ export function renderPresent(container, params) {
     clockSR.textContent = msg;
   }
 
-  /* ── Attached materials (WS-4): decks + audio clips on segment screens.
+  /* ── Attached materials (WS-4): decks + audio clips on segment screens;
+   * v8.8 adds Library artifacts (Relief Kits, Question Banks, Auto-Lesson
+   * runs) which open as a printable window over the presentation.
    * Student-safe: titles only — no styles, notes, or teacher copy. Toasts
    * are hidden in present-mode, so failures report inline on the button. */
+  const ARTIFACT_TYPES = new Set(['autolesson', 'reliefkit', 'questionbank']);
+  const MATERIAL_ICON = { deck: '&#128444;&#65039;', audio: '&#127911;', autolesson: '&#9889;', reliefkit: '\u{1F9F0}', questionbank: '&#10067;' };
   const materials = (lesson.attachedResources || [])
-    .filter(r => r && (r.type === 'deck' || r.type === 'audio') && r.id);
+    .filter(r => r && (r.type === 'deck' || r.type === 'audio' || ARTIFACT_TYPES.has(r.type)) && r.id);
   const _audioUrls = new Map(); // material id → object URL (revoked on route cleanup)
 
   function materialsRow() {
@@ -313,8 +318,8 @@ export function renderPresent(container, params) {
     return `<div class="present-resources">
       ${materials.map((r, i) => `
         <button class="present-res-btn" data-res-idx="${i}" type="button">
-          <span aria-hidden="true">${r.type === 'deck' ? '&#128444;&#65039;' : '&#127911;'}</span>
-          ${escapeHtml(r.title || (r.type === 'deck' ? 'Slides' : 'Audio clip'))}
+          <span aria-hidden="true">${MATERIAL_ICON[r.type] || '&#128196;'}</span>
+          ${escapeHtml(r.title || (r.type === 'deck' ? 'Slides' : r.type === 'audio' ? 'Audio clip' : 'Material'))}
         </button>`).join('')}
     </div>
     <div class="present-res-player" id="present-res-player"></div>`;
@@ -356,12 +361,20 @@ export function renderPresent(container, params) {
     updateMoreCue();
   }
 
+  async function openArtifactMaterial(btn, r) {
+    btn.disabled = true;
+    const ok = await openArtifactWindow(r.id);
+    if (ok) { btn.disabled = false; } else { markUnavailable(btn); }
+  }
+
   function wireMaterialButtons() {
     stage.querySelectorAll('.present-res-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const r = materials[Number(btn.dataset.resIdx)];
         if (!r) return;
-        if (r.type === 'deck') { openDeckMaterial(btn, r); } else { toggleAudioMaterial(btn, r); }
+        if (r.type === 'deck') { openDeckMaterial(btn, r); }
+        else if (ARTIFACT_TYPES.has(r.type)) { openArtifactMaterial(btn, r); }
+        else { toggleAudioMaterial(btn, r); }
       });
     });
   }

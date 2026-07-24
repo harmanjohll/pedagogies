@@ -21,6 +21,7 @@ import { launchSimById } from './simulations.js';
 import { buildCardModel, openCardWindow } from '../utils/takehome-card.js';
 import { isVoiceInputSupported, createDictation, dictationErrorMessage } from '../utils/voice.js';
 import { isTouch } from '../utils/viewport.js';
+import { openArtifactWindow } from '../utils/library.js';
 
 const STATUS_MAP = {
   draft: { label: 'Draft', badge: 'badge-gray' },
@@ -53,8 +54,12 @@ const RESOURCE_CHIP = {
   simulation: { badge: 'badge-green',  label: 'Simulation' },
   source:     { badge: 'badge-amber',  label: 'Source' },
   deck:       { badge: 'badge-violet', label: 'Deck' },
-  audio:      { badge: 'badge-rose',   label: 'Audio' }
+  audio:      { badge: 'badge-rose',   label: 'Audio' },
+  autolesson:   { badge: 'badge-violet', label: 'Auto-Lesson' },
+  reliefkit:    { badge: 'badge-amber',  label: 'Relief Kit' },
+  questionbank: { badge: 'badge-blue',   label: 'Questions' }
 };
+const ARTIFACT_TYPES = new Set(['autolesson', 'reliefkit', 'questionbank']);
 const chipMeta = (t) => RESOURCE_CHIP[t] || { badge: 'badge-amber', label: 'Source' };
 
 /* Does this stored deck carry a slide MODEL, so it can be run as a Live
@@ -1240,6 +1245,12 @@ export function renderDetail(container, { id }) {
       if (type === 'audio') {
         const res = (lesson.attachedResources || []).find(r => r.id === chip.dataset.resId);
         showAudioClipModal(chip.dataset.resId, res?.title || 'Audio clip');
+        return;
+      }
+      if (ARTIFACT_TYPES.has(type)) {
+        openArtifactWindow(chip.dataset.resId).then(ok => {
+          if (!ok) showToast('This Library item is not on this device.', 'danger');
+        });
         return;
       }
       if (type === 'simulation') {
