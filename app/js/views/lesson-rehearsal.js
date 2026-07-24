@@ -893,6 +893,8 @@ function renderRehearsalInterface(container) {
         const dictation = createDictation({
           lang: 'en-SG',
           onInterim: (t) => { chatInput.value = prevValue + (prevValue ? ' ' : '') + t; },
+          // Recorder fallback (Arc/Safari/Firefox): show the async wait.
+          onPhase: (p) => { chatInput.placeholder = p === 'transcribing' ? 'Transcribing…' : 'Listening...'; },
           onResult: (t) => { chatInput.value = prevValue + (prevValue ? ' ' : '') + t; },
           onError: (err) => {
             paintListening(false);

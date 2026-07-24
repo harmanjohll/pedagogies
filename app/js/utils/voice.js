@@ -1,30 +1,54 @@
 /*
- * Co-Cher Voice Input (v7) — press-to-talk Speech-to-Text
- * =======================================================
- * A thin, honest wrapper over the Web Speech API's (webkit)SpeechRecognition.
- * The Phase-2 view agents attach this to a mic button beside a text field: the
- * teacher presses to dictate and the recognised text is surfaced back to the
- * caller. It NEVER submits, sends, or mutates anything on its own — it only
- * hands text to your callbacks (teacher-leads principle). The teacher stays in
- * control of what happens with the words.
+ * Co-Cher Voice Input — press-to-talk Speech-to-Text (two backends)
+ * =================================================================
+ * A thin, honest wrapper that gives every mic in the app ONE controller
+ * shape, backed by whichever engine actually works in this browser:
  *
- * CAPABILITY NOTE: Web Speech recognition is effectively Chromium-only (Chrome,
- * Edge, and Chromium-based mobile browsers) and is NETWORK-BACKED — audio is
- * streamed to a remote service for transcription. It is unavailable in Firefox
- * and desktop Safari. Always gate the mic UI on isVoiceInputSupported() so
- * unsupported browsers simply never render the button.
+ *  1. Web Speech API ((webkit)SpeechRecognition) — Chrome/Edge. Streaming,
+ *     interim text, fast. BUT it is network-backed via Google's hosted
+ *     speech service, which Chromium FORKS (Arc, Brave, …) ship without:
+ *     there the constructor exists and then recognition fails instantly
+ *     with a 'network' error even on perfect wifi.
+ *  2. Recorder fallback — getUserMedia + MediaRecorder (universal), then
+ *     transcription via the teacher's own Gemini key (api.js
+ *     transcribeAudio — the same endpoint every other Co-Cher AI feature
+ *     uses). Chosen automatically when (1) is missing (Firefox/Safari) or
+ *     the moment it fails with a service error; the choice is remembered
+ *     so later presses skip the broken engine.
  *
- * Pure module: no imports, no DOM beyond the recognition object it constructs.
+ * Either way the wrapper NEVER submits, sends, or mutates anything on its
+ * own — it only hands text to your callbacks (teacher-leads principle).
  */
 
+import { Store } from '../state.js';
+import { transcribeAudio } from '../api.js';
+
+const BACKEND_KEY = 'cocher_voice_backend';
+let preferRecorder = (() => {
+  try { return localStorage.getItem(BACKEND_KEY) === 'recorder'; } catch (_) { return false; }
+})();
+function rememberRecorderBackend() {
+  preferRecorder = true;
+  try { localStorage.setItem(BACKEND_KEY, 'recorder'); } catch (_) { /* ignore */ }
+}
+
+function speechCtor() {
+  return (typeof window !== 'undefined') &&
+    (window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+function canRecord() {
+  return (typeof window !== 'undefined') &&
+    !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+}
+
 /**
- * Whether the browser exposes a (webkit)SpeechRecognition constructor.
- * Guarded for SSR/no-window (returns false).
+ * Whether ANY dictation backend is available: built-in speech recognition,
+ * or the record-and-transcribe fallback (mic capture is universal; the
+ * Gemini key requirement is surfaced at press time, not render time).
  * @returns {boolean}
  */
 export function isVoiceInputSupported() {
-  return typeof window !== 'undefined' &&
-    !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  return !!(speechCtor() || canRecord());
 }
 
 /* Every controller that is actively listening, so navigation can silence the
@@ -49,67 +73,67 @@ export function abortAllDictations() {
 export function dictationErrorMessage(err) {
   const code = err?.error || err?.name || '';
   if (code === 'aborted' || code === 'AbortError' || code === 'no-speech') return null;
+  if (code === 'no-key') {
+    return 'This browser’s built-in dictation isn’t available — add your Gemini API key in Settings and Co-Cher will transcribe for you (Chrome/Edge have built-in dictation).';
+  }
   if (code === 'not-allowed' || code === 'NotAllowedError' || code === 'service-not-allowed') {
     return 'Microphone access denied — allow the mic for this site in your browser settings.';
   }
   if (code === 'network') {
     return 'Voice input needs internet (speech is transcribed online) — check the connection and try again.';
   }
-  if (code === 'audio-capture') {
+  if (code === 'audio-capture' || code === 'NotFoundError') {
     return 'No microphone found — check that a mic is connected and enabled.';
   }
+  // Transcription helper throws plain Errors with useful text — pass those on.
+  if (err instanceof Error && err.message) return err.message;
   return 'Voice input error — please try again.';
 }
 
 /**
  * @typedef {Object} DictationOptions
- * @property {(finalText: string) => void} [onResult]   Concatenated FINAL transcript for the utterance.
- * @property {(interimText: string) => void} [onInterim] Live, not-yet-final transcript.
- * @property {(error: any) => void} [onError]           SpeechRecognition error event (or a start() failure).
- * @property {() => void} [onEnd]                       Fired once recognition ends (stop/abort or completed utterance).
+ * @property {(finalText: string) => void} [onResult]   Final transcript (streamed per utterance on Web Speech; once per press on the recorder fallback).
+ * @property {(interimText: string) => void} [onInterim] Live, not-yet-final transcript (Web Speech only).
+ * @property {(error: any) => void} [onError]           Error event / exception (classify with dictationErrorMessage).
+ * @property {() => void} [onEnd]                       Fired once, when the press is fully over (incl. after fallback transcription).
+ * @property {(phase: 'recording'|'transcribing') => void} [onPhase] Recorder-fallback progress, so the UI can say "Transcribing…".
  * @property {string} [lang]                            BCP-47 language tag; defaults to 'en-SG' (Singapore English).
  */
 
 /**
- * @typedef {Object} Dictation
- * @property {() => boolean} start  Begin listening for a single press-to-talk utterance. Returns true if it started.
- * @property {() => void} stop      Stop listening but let the final result flush (fires onEnd).
- * @property {() => void} abort     Stop immediately and discard any pending result (fires onEnd).
- */
-
-/**
- * Create a press-to-talk dictation controller.
- *
- * Configured for a single utterance: continuous = false, interimResults = true.
- * On each result event the FINAL segments are concatenated and passed to
- * onResult(text); in-progress text goes to onInterim(text). Robust to being
- * started twice — a second start() while already listening is a no-op.
- *
- * When speech input is unsupported this returns an honest no-op controller
- * (start() -> false) so callers can construct it unconditionally and rely on
- * isVoiceInputSupported() to decide whether to show the mic.
+ * Create a press-to-talk dictation controller: { start(): boolean, stop(), abort() }.
+ * start() → true means "listening" (paint the mic hot). With the recorder
+ * fallback, stop() ends the recording and the transcript arrives via
+ * onResult after a short 'transcribing' phase. Robust to double-start.
  *
  * @param {DictationOptions} [options]
- * @returns {Dictation}
  */
 export function createDictation(options = {}) {
-  const { onResult, onInterim, onError, onEnd, lang = 'en-SG' } = options;
+  const { onResult, onInterim, onError, onEnd, onPhase, lang = 'en-SG' } = options;
 
-  const Ctor = (typeof window !== 'undefined') &&
-    (window.SpeechRecognition || window.webkitSpeechRecognition);
+  const Ctor = speechCtor();
 
-  if (!Ctor) {
-    // Unsupported: honest no-op controller. Callers should have hidden the mic.
-    return {
-      start() { return false; },
-      stop() {},
-      abort() {},
-    };
+  if (!Ctor && !canRecord()) {
+    // No backend at all: honest no-op controller. Callers should have hidden the mic.
+    return { start() { return false; }, stop() {}, abort() {} };
   }
 
   let recognition = null;
   let listening = false;
+  let mode = null;              // 'sr' | 'rec'
 
+  // Recorder state
+  let recStream = null, recorder = null, recChunks = [], recTimer = null;
+  let transcribing = false, discarded = false;
+
+  const phase = (p) => { if (typeof onPhase === 'function') onPhase(p); };
+  const fireError = (e) => { if (typeof onError === 'function') onError(e); };
+  const finish = () => {
+    activeDictations.delete(controller);
+    if (typeof onEnd === 'function') onEnd();
+  };
+
+  /* ── Backend 1: Web Speech ── */
   function build() {
     const rec = new Ctor();
     rec.lang = lang;
@@ -132,21 +156,102 @@ export function createDictation(options = {}) {
     };
 
     rec.onerror = (event) => {
-      if (typeof onError === 'function') onError(event);
+      const code = event?.error || '';
+      // The Arc/Brave signature: the service is unreachable BY DESIGN. Switch
+      // to the recorder fallback within this same press (button stays hot),
+      // and remember so future presses skip the broken engine entirely.
+      // Neuter the dead recognition's handlers first — nothing it fires
+      // during/after abort() may tear down the press we're handing over.
+      if ((code === 'network' || code === 'service-not-allowed') && canRecord() && Store.get('apiKey')) {
+        rememberRecorderBackend();
+        rec.onresult = null; rec.onerror = null; rec.onend = null;
+        try { rec.abort(); } catch (_) { /* already dead */ }
+        beginRecorder();
+        return;
+      }
+      fireError(event);
     };
 
     rec.onend = () => {
       listening = false;
-      activeDictations.delete(controller);
-      if (typeof onEnd === 'function') onEnd();
+      finish();
     };
 
     return rec;
   }
 
+  /* ── Backend 2: record locally, transcribe with Gemini ── */
+  function beginRecorder() {
+    mode = 'rec';
+    if (!Store.get('apiKey')) {
+      listening = false;
+      activeDictations.delete(controller);
+      fireError({ error: 'no-key' });
+      if (typeof onEnd === 'function') onEnd(); // reset any hot UI from a mid-press switch
+      return false;
+    }
+    listening = true;
+    discarded = false;
+    activeDictations.add(controller);
+    phase('recording');
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      if (!listening) { stream.getTracks().forEach(t => t.stop()); return; } // aborted while asking
+      recStream = stream;
+      recChunks = [];
+      recorder = new MediaRecorder(stream);
+      recorder.ondataavailable = (e) => { if (e.data && e.data.size) recChunks.push(e.data); };
+      recorder.onstop = handleRecorderStop;
+      recorder.start();
+      // Press-to-talk, not open mic: hard cap so a forgotten press can't record forever.
+      recTimer = setTimeout(() => controller.stop(), 60000);
+    }).catch((err) => {
+      listening = false;
+      fireError(err);
+      finish();
+    });
+    return true;
+  }
+
+  function releaseStream() {
+    try { if (recStream) recStream.getTracks().forEach(t => t.stop()); } catch (_) { /* gone */ }
+    recStream = null;
+  }
+
+  async function handleRecorderStop() {
+    clearTimeout(recTimer);
+    const blob = new Blob(recChunks, { type: (recorder && recorder.mimeType) || 'audio/webm' });
+    releaseStream();
+    recorder = null;
+    recChunks = [];
+    listening = false;
+    if (discarded || !blob.size) { finish(); return; }
+    transcribing = true;
+    phase('transcribing');
+    try {
+      const data = await blobToBase64(blob);
+      const text = await transcribeAudio({ data, mimeType: blob.type || 'audio/webm', lang });
+      if (!discarded && text && typeof onResult === 'function') onResult(text);
+    } catch (err) {
+      if (!discarded) fireError(err);
+    }
+    transcribing = false;
+    finish();
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = () => reject(new Error('Could not read the recording.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
   const controller = {
     start() {
-      if (listening) return false; // robust to double-start
+      if (listening || transcribing) return false; // robust to double-start
+      if (!Ctor || preferRecorder) return beginRecorder();
+      mode = 'sr';
       recognition = build();
       try {
         recognition.start();
@@ -156,16 +261,33 @@ export function createDictation(options = {}) {
       } catch (err) {
         // Chromium throws InvalidStateError if start() races an existing session.
         listening = false;
-        if (typeof onError === 'function') onError(err);
+        fireError(err);
         return false;
       }
     },
     stop() {
+      if (mode === 'rec') {
+        if (recorder && recorder.state !== 'inactive') { try { recorder.stop(); } catch (_) { /* done */ } }
+        return;
+      }
       if (recognition && listening) {
         try { recognition.stop(); } catch (_) { /* already stopped */ }
       }
     },
     abort() {
+      if (mode === 'rec') {
+        discarded = true;
+        clearTimeout(recTimer);
+        if (recorder && recorder.state !== 'inactive') {
+          try { recorder.stop(); } catch (_) { /* done */ } // onstop sees discarded → no transcribe
+        } else if (listening && !transcribing) {
+          // Still waiting on the permission prompt, or nothing recording yet.
+          releaseStream();
+          listening = false;
+          finish();
+        }
+        return;
+      }
       if (recognition) {
         try { recognition.abort(); } catch (_) { /* already aborted */ }
       }

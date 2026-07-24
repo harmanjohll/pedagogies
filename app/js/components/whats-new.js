@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v8.5', items: [
+    { icon: '&#127908;', title: 'The mic now works in every browser', text: 'Arc, Safari and Firefox don’t have built-in dictation — so when the browser can’t transcribe, Co-Cher now records your voice and transcribes it with your own Gemini key (a brief “Transcribing…” after you stop talking). Chrome and Edge keep their instant live dictation.' },
+  ] },
   { version: 'v8.4', items: [
     { icon: '&#129514;', title: 'Simulations built into lessons', text: 'The Acids and Earthquakes demo lessons now carry their simulation at the right moment: a green "Launch simulation" button appears on that segment in Present (and on the lesson page) — the sim opens right on top and closing it puts you back exactly where you were.' },
     { icon: '&#128269;', title: 'Every sim fits — or scrolls, or zooms', text: 'ALL simulations now scale to your window (not just the chemistry practicals), scrollbars are always there and visible when content is bigger than the window, and the sim window has − / + / Fit zoom controls you can set yourself.' },
