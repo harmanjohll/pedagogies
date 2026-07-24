@@ -201,48 +201,53 @@ export function compileDeckHTML(deck, { theme } = {}) {
     }
     return '';
   };
-  const listHTML = (arr, icon) => `<ul>${(arr || []).filter(Boolean).map(b => `<li>${icon ? svgIcon(icon, 'deck-bic') : ''}<span>${esc(b)}</span></li>`).join('')}</ul>`;
+  /* data-ed attributes carry each text node's model path ("3.bullets.1") so
+   * the deck editor (#/deck/:id Edit mode) can map a tap back to the field it
+   * came from. Inert in normal viewing/printing. Indices are MODEL indices —
+   * falsy entries render nothing but never shift the numbering. */
+  const listHTML = (arr, icon, edp) => `<ul>${(arr || []).map((b, j) => b ? `<li>${icon ? svgIcon(icon, 'deck-bic') : ''}<span${edp ? ` data-ed="${edp}.${j}"` : ''}>${esc(b)}</span></li>` : '').join('')}</ul>`;
 
   const slideBody = (s, i) => {
     const layout = LAYOUTS.has(s?.layout) ? s.layout : (i === 0 ? 'title' : 'bullets');
     const heading = esc(s?.title || (i === 0 ? title : `Slide ${i + 1}`));
-    const sub = s?.subtitle ? `<p class="sub">${esc(s.subtitle)}</p>` : '';
+    const hEd = ` data-ed="${i}.title"`;
+    const sub = s?.subtitle ? `<p class="sub" data-ed="${i}.subtitle">${esc(s.subtitle)}</p>` : '';
     const bullets = (Array.isArray(s?.bullets) ? s.bullets : []).filter(Boolean);
     const vis = visualHTML(s);
     const ico = s?.icon && DECK_ICONS[s.icon] ? `<span class="deck-head-ic">${svgIcon(s.icon)}</span>` : '';
 
     if (layout === 'title') {
-      return `<div class="l-title"><p class="kicker">${esc(s?.kicker || title)}</p><h1>${heading}</h1>${sub}${bullets.length ? listHTML(bullets, s?.icon) : ''}</div>`;
+      return `<div class="l-title"><p class="kicker" data-ed="${i}.kicker">${esc(s?.kicker || title)}</p><h1${hEd}>${heading}</h1>${sub}${bullets.length ? listHTML(s?.bullets, s?.icon, `${i}.bullets`) : ''}</div>`;
     }
     if (layout === 'section') {
-      return `<div class="l-section"><span class="l-num">${String(i + 1).padStart(2, '0')}</span><div>${ico}<h2>${heading}</h2>${sub}</div></div>`;
+      return `<div class="l-section"><span class="l-num">${String(i + 1).padStart(2, '0')}</span><div>${ico}<h2${hEd}>${heading}</h2>${sub}</div></div>`;
     }
     if (layout === 'statement') {
-      return `<div class="l-statement">${ico}<p class="statement">${esc(s?.statement || s?.title || '')}</p>${sub}</div>`;
+      return `<div class="l-statement">${ico}<p class="statement" data-ed="${i}.${s?.statement ? 'statement' : 'title'}">${esc(s?.statement || s?.title || '')}</p>${sub}</div>`;
     }
     if (layout === 'quote') {
-      return `<div class="l-quote"><blockquote>&ldquo;${esc(s?.quote || s?.title || '')}&rdquo;</blockquote>${s?.attribution ? `<cite>— ${esc(s.attribution)}</cite>` : ''}</div>`;
+      return `<div class="l-quote"><blockquote>&ldquo;<span data-ed="${i}.${s?.quote ? 'quote' : 'title'}">${esc(s?.quote || s?.title || '')}</span>&rdquo;</blockquote>${s?.attribution ? `<cite>— <span data-ed="${i}.attribution">${esc(s.attribution)}</span></cite>` : ''}</div>`;
     }
     if (layout === 'columns') {
       const cols = (Array.isArray(s?.columns) ? s.columns : []).slice(0, 3);
-      return `<div class="l-head">${ico}<h2>${heading}</h2></div>${sub}<div class="l-cols">${cols.map(c => `<div class="col"><h3>${esc(c?.heading || '')}</h3>${listHTML(c?.items, s?.icon)}</div>`).join('')}</div>`;
+      return `<div class="l-head">${ico}<h2${hEd}>${heading}</h2></div>${sub}<div class="l-cols">${cols.map((c, ci) => `<div class="col"><h3 data-ed="${i}.columns.${ci}.heading">${esc(c?.heading || '')}</h3>${listHTML(c?.items, s?.icon, `${i}.columns.${ci}.items`)}</div>`).join('')}</div>`;
     }
     if (layout === 'exit') {
-      return `<div class="l-exit"><p class="kicker">${esc(s?.kicker || 'Exit ticket')}</p><h2>${heading}</h2>${sub}${bullets.length ? listHTML(bullets) : ''}</div>`;
+      return `<div class="l-exit"><p class="kicker" data-ed="${i}.kicker">${esc(s?.kicker || 'Exit ticket')}</p><h2${hEd}>${heading}</h2>${sub}${bullets.length ? listHTML(s?.bullets, null, `${i}.bullets`) : ''}</div>`;
     }
     if (layout === 'visual' || (!bullets.length && vis)) {
-      return `<div class="l-head">${ico}<h2>${heading}</h2></div>${sub}<div class="deck-visual solo">${vis}</div>`;
+      return `<div class="l-head">${ico}<h2${hEd}>${heading}</h2></div>${sub}<div class="deck-visual solo">${vis}</div>`;
     }
     // bullets — split to two columns when a visual is present
     if (vis) {
-      return `<div class="l-head">${ico}<h2>${heading}</h2></div>${sub}<div class="l-two"><div class="l-two-text">${listHTML(bullets, s?.icon)}</div><div class="deck-visual">${vis}</div></div>`;
+      return `<div class="l-head">${ico}<h2${hEd}>${heading}</h2></div>${sub}<div class="l-two"><div class="l-two-text">${listHTML(s?.bullets, s?.icon, `${i}.bullets`)}</div><div class="deck-visual">${vis}</div></div>`;
     }
-    return `<div class="l-head">${ico}<h2>${heading}</h2></div>${sub}${listHTML(bullets, s?.icon)}`;
+    return `<div class="l-head">${ico}<h2${hEd}>${heading}</h2></div>${sub}${listHTML(s?.bullets, s?.icon, `${i}.bullets`)}`;
   };
 
   const slideHTML = slides.map((s, i) => `<section class="slide l-${LAYOUTS.has(s?.layout) ? s.layout : (i === 0 ? 'title' : 'bullets')}"${i > 0 ? ' hidden' : ''}>
   <div class="slide-inner">${slideBody(s, i)}</div>
-  ${s?.notes ? `<div class="notes"><strong>Teacher note:</strong> ${esc(s.notes)}</div>` : ''}
+  ${s?.notes ? `<div class="notes"><strong>Teacher note:</strong> <span data-ed="${i}.notes">${esc(s.notes)}</span></div>` : ''}
   <div class="slide-foot"><span>${esc(title)}</span><span>${i + 1} / ${total}</span></div>
 </section>`).join('\n');
 
@@ -485,6 +490,63 @@ export async function getDeckModel(id) {
 }
 
 /**
+ * Overwrite a stored deck IN PLACE (same id — lesson attachments, Present's
+ * materials row and Go Live all keep pointing at it). This is the deck
+ * editor's save path. Pass `stashPrevModel: true` to snapshot the CURRENT
+ * model to `<id>:model:prev` before overwriting — the editor does this once
+ * per editing session, so Revert always returns to how the deck looked when
+ * editing began. Resolves the updated metadata entry, or null on failure.
+ */
+export async function updateDeckMaterial(id, { html, deck, title, stashPrevModel = false } = {}) {
+  const list = listDeckMeta();
+  const meta = list.find(m => m.id === id);
+  if (!meta || typeof html !== 'string' || !html) return null;
+  if (stashPrevModel) {
+    const prev = await idbGet(MEDIA_STORE, id + ':model');
+    if (prev && Array.isArray(prev.slides)) {
+      const stashed = await idbPut(MEDIA_STORE, id + ':model:prev', prev);
+      if (stashed) meta.hasPrev = true;
+    }
+  }
+  const ok = await idbPut(MEDIA_STORE, id, html);
+  if (!ok) return null;
+  if (deck && Array.isArray(deck.slides)) {
+    const modelOk = await idbPut(MEDIA_STORE, id + ':model', deck);
+    if (modelOk) { meta.hasModel = true; meta.slideCount = deck.slides.length; }
+  }
+  if (title) meta.title = String(title).slice(0, 140);
+  meta.updatedAt = Date.now();
+  writeList(DECKS_KEY, list);
+  return meta;
+}
+
+/**
+ * Swap a deck back to its stashed pre-edit model (and recompile). The current
+ * model moves INTO the stash slot, so calling revert again re-applies the
+ * edits — an undo/redo toggle, never a destructive rollback. Resolves true
+ * when a revert happened.
+ */
+export async function revertDeckMaterial(id) {
+  const prev = await idbGet(MEDIA_STORE, id + ':model:prev');
+  if (!prev || !Array.isArray(prev.slides)) return false;
+  const cur = await idbGet(MEDIA_STORE, id + ':model');
+  const html = compileDeckHTML(prev);
+  const ok = await idbPut(MEDIA_STORE, id, html);
+  if (!ok) return false;
+  await idbPut(MEDIA_STORE, id + ':model', prev);
+  if (cur && Array.isArray(cur.slides)) await idbPut(MEDIA_STORE, id + ':model:prev', cur);
+  const list = listDeckMeta();
+  const meta = list.find(m => m.id === id);
+  if (meta) {
+    meta.slideCount = prev.slides.length;
+    if (prev.title) meta.title = String(prev.title).slice(0, 140);
+    meta.updatedAt = Date.now();
+    writeList(DECKS_KEY, list);
+  }
+  return true;
+}
+
+/**
  * Persist an audio clip: WAV Blob into IDB 'media', metadata into
  * localStorage 'cocher_audio_clips'. Resolves the metadata entry or null.
  */
@@ -510,6 +572,7 @@ export async function deleteDeckMaterial(id) {
   if (!id) return;
   try { await idbRemove(MEDIA_STORE, id); } catch { /* best-effort */ }
   try { await idbRemove(MEDIA_STORE, id + ':model'); } catch { /* best-effort */ }
+  try { await idbRemove(MEDIA_STORE, id + ':model:prev'); } catch { /* best-effort */ }
   writeList(DECKS_KEY, listDeckMeta().filter(m => m.id !== id));
 }
 

@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v8.9', items: [
+    { icon: '\u{1F58C}\u{FE0F}', title: 'Editable slide decks + the magic AI brush', text: 'Open any deck and hit ✎ Edit: tap any text on a slide to change it right there (it saves as you go). For bigger tweaks, switch on the AI brush — tap what should change, drop numbered pins, type an instruction on each (“punchier”, “make this a donut chart”, “split this slide”) and Apply them all in one go. Revert brings back the pre-edit version any time, and edited decks keep their images, videos and Live quizzes.' },
+  ] },
   { version: 'v8.8', items: [
     { icon: '\u{1F3DB}\u{FE0F}', title: 'The Library — one home for everything you’ve saved', text: 'A new Library page (sidebar, under Growth) gathers your saved Auto-Lesson runs, Relief Kits, Question Banks, References, slide decks and audio clips in one searchable place. Attach any Lab output to a lesson and it appears in Present as a one-tap printable handout; toggle it ON in the Lesson Planner’s chip bar and Co-Cher uses it as context when planning. Built phone-first, so it all works on your mobile too.' },
   ] },

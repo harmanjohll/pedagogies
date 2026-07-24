@@ -1651,6 +1651,7 @@ function normalizeDeck(data, fallbackTitle) {
         bullets: (Array.isArray(s?.bullets) ? s.bullets : []).map(b => clampStr(b, 160)).filter(Boolean).slice(0, 5),
         notes: clampStr(s?.notes, 240) || undefined,
         icon: clampStr(s?.icon, 20) || undefined,
+        kicker: clampStr(s?.kicker, 80) || undefined,
         statement: clampStr(s?.statement, 200) || undefined,
         quote: clampStr(s?.quote, 240) || undefined,
         attribution: clampStr(s?.attribution, 80) || undefined,
@@ -1662,6 +1663,9 @@ function normalizeDeck(data, fallbackTitle) {
       if (cols.length) out.columns = cols;
       const interaction = normInteraction(s?.interaction);
       if (interaction) out.interaction = interaction;
+      // Slide identity marker used by editDeck to restore stored visuals onto
+      // kept slides. Absent from fresh generations; stripped before storage.
+      if (Number.isInteger(s?._i)) out._i = s._i;
       return out;
     })
     .filter(s => s.title || s.bullets.length || s.statement || s.quote || s.chart || s.columns)
@@ -1670,6 +1674,66 @@ function normalizeDeck(data, fallbackTitle) {
     throw new Error('The model returned too few usable slides — please try again.');
   }
   return { title: clampStr(data?.title, 140) || clampStr(fallbackTitle, 140) || 'Slide deck', slides };
+}
+
+/* ── Magic-brush deck editing ──
+ * Applies a teacher's pinned edit instructions to an EXISTING deck model and
+ * returns the full updated model. Heavy stored visuals (data-URI images,
+ * generated SVG diagrams) never travel to the API: they are redacted to
+ * placeholders on the way out and restored onto kept slides on the way back
+ * via the `_i` original-index marker — so a 300 KB image costs zero tokens
+ * and can never be mangled by the model. Interactions (Live quizzes/polls)
+ * and embeds are restored the same way, keeping edited decks Live-ready. */
+export async function editDeck({ deck, edits } = {}) {
+  if (!deck || !Array.isArray(deck.slides) || !deck.slides.length) {
+    throw new Error('This deck has no editable slide model.');
+  }
+  const list = (Array.isArray(edits) ? edits : []).filter(e => e && String(e.instruction || '').trim());
+  if (!list.length) throw new Error('Add an instruction to at least one pin first.');
+
+  const redacted = {
+    title: deck.title,
+    slides: deck.slides.map((s, i) => {
+      const c = { ...s, _i: i };
+      if (c.image) c.image = '[IMAGE kept as-is]';
+      if (c.svg) c.svg = '[DIAGRAM kept as-is]';
+      return c;
+    }),
+  };
+  // "3.bullets.1" (data-ed path) → "slides[3].bullets[1]" for the prompt.
+  const prettyPath = (p) => 'slides[' + String(p).split('.').map((t, k) =>
+    k === 0 ? `${t}]` : (/^\d+$/.test(t) ? `[${t}]` : `.${t}`)).join('');
+  const editLines = list.map((e, n) =>
+    `${n + 1}. ${e.path != null && e.path !== '' ? `Target: ${prettyPath(e.path)}` : 'Target: the whole deck'}` +
+    `${e.anchor ? ` (currently: "${String(e.anchor).slice(0, 120)}")` : ''} — ${String(e.instruction).slice(0, 500)}`).join('\n');
+
+  const raw = await sendChat([{
+    role: 'user',
+    content: `Current deck JSON:\n${JSON.stringify(redacted).slice(0, 24000)}\n\nRequested edits:\n${editLines}`,
+  }], {
+    trackLabel: 'editDeck',
+    jsonMode: true,
+    temperature: 0.3,
+    maxTokens: 8192,
+    systemPrompt: `You are precisely editing an EXISTING classroom slide deck. Apply ONLY the requested edits; every other slide and field stays VERBATIM — same wording, same order, same layouts. An edit may reword text, change a layout or chart, split or merge slides, or add/remove a slide when explicitly asked.
+Return ONLY the FULL updated deck as JSON in exactly the input shape: {"title":"...","slides":[...]}.
+Rules:
+- Each kept slide keeps its "_i" unchanged (its original index). Slides you create get NO "_i". Never renumber existing slides.
+- "[IMAGE kept as-is]" and "[DIAGRAM kept as-is]" are placeholders for stored visuals — copy them through unchanged; never invent replacements.
+- Allowed layouts: title, section, bullets, columns, statement, quote, visual, exit. TLDR discipline: bullets ≤12 words, ≤4 per slide. Student-facing language, no markdown syntax, no URLs.`,
+  });
+
+  const result = normalizeDeck(parseJsonResponse(raw, 'deck edits'), deck.title);
+  result.slides.forEach(s => {
+    const orig = Number.isInteger(s._i) ? deck.slides[s._i] : null;
+    if (orig) {
+      ['image', 'imageAlt', 'svg', 'media', 'youtube'].forEach(k => { if (orig[k] && !s[k]) s[k] = orig[k]; });
+      if (orig.interaction && !s.interaction) s.interaction = orig.interaction;
+      if (orig.kicker && !s.kicker) s.kicker = orig.kicker;
+    }
+    delete s._i;
+  });
+  return result;
 }
 
 /* ── Podcast-style script generation (text model, jsonMode) ──
