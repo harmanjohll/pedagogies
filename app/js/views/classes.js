@@ -102,6 +102,12 @@ function wireMic(root, { buttonId, statusId, fieldId, lang = 'en-SG' }) {
     onInterim(interim) {
       if (statusEl && interim) { statusEl.textContent = interim; statusEl.style.display = ''; }
     },
+    // Recorder fallback (Arc/Safari/Firefox): label the async wait after stop.
+    onPhase(p) {
+      const label = p === 'transcribing' ? 'Transcribing…' : 'Listening…';
+      if (wordEl) wordEl.textContent = label;
+      if (statusEl) { statusEl.textContent = label; statusEl.style.display = ''; }
+    },
     onResult(finalText) {
       // FILL only — never save. The teacher still presses Save / Add.
       insertTextAtCursor(field, finalText);

@@ -162,6 +162,8 @@ function wireMic(btn, container) {
     dictation = createDictation({
       lang: 'en-SG',
       onInterim: (txt) => { field.value = base ? `${base} ${txt}` : txt; },
+      // Recorder fallback: this site is button-only, so the title carries it.
+      onPhase: (p) => { btn.title = p === 'transcribing' ? 'Transcribing…' : 'Listening — tap to stop'; },
       onResult: (txt) => {
         const clean = String(txt || '').trim();
         if (!clean) return;

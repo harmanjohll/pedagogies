@@ -1455,6 +1455,38 @@ Align with Singapore's SBQ (Source-Based Questions) or SEQ format where applicab
  * Returns a data: URL. Image calls burn free-tier quota quickly, so
  * callers keep this opt-in. Fails with a clear message when the key or
  * tier has no image access. */
+/* ── Speech-to-text via Gemini (the dictation FALLBACK) ──
+ * Used by utils/voice.js when the browser's built-in Web Speech service is
+ * broken (Arc/Brave fire instant 'network' errors — Chromium forks without
+ * Google's hosted speech backend) or absent (Firefox, Safari). The mic audio
+ * is recorded locally and transcribed here with the teacher's own key — the
+ * same endpoint every other Co-Cher AI feature already uses. */
+export async function transcribeAudio({ data, mimeType, lang = 'en-SG' } = {}) {
+  trackEvent('ai', 'generate', 'transcription', mimeType || '');
+  const apiKey = Store.get('apiKey');
+  if (!apiKey) {
+    throw new Error('No API key configured. Please add your Gemini API key in Settings.');
+  }
+  if (!data) throw new Error('Nothing was recorded.');
+  const model = 'gemini-2.5-flash';
+  const res = await fetchWithRetry(`${ENDPOINT}/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: `You transcribe a teacher's dictated speech. Return ONLY the verbatim transcript as plain text — no commentary, no quotation marks, no labels. Language: ${lang} (Singapore English); keep code-switched words as spoken. If the audio contains no speech, return an empty string.` }] },
+      contents: [{ role: 'user', parts: [{ inlineData: { mimeType: mimeType || 'audio/webm', data } }] }],
+      generationConfig: { temperature: 0 }
+    })
+  }, { timeoutMs: 45000 });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(friendlyApiError(res.status, err?.error?.message || `API error ${res.status}`));
+  }
+  const out = await res.json();
+  const parts = out?.candidates?.[0]?.content?.parts || [];
+  return parts.map(p => p.text || '').join('').trim();
+}
+
 export async function generateImage(prompt, options = {}) {
   trackEvent('ai', 'generate', 'image', options.trackDetail || '');
   const apiKey = Store.get('apiKey');
