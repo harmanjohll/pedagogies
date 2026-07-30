@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <!-- Hash-preserving redirect: …/pedagogies/cocher2/#/join/ROOM must land on
+       cocher2.html#/join/ROOM (the typable Live join link shown on the
+       projector). A meta refresh would drop the hash, so it lives in
+       <noscript> as the no-JS fallback only.
+
+       This file also keeps the short link INSIDE this version — the root
+       …/pedagogies/ redirect points at Co-Cher 1, so a student typing the
+       short link must not be bounced into the other version's Live engine. -->
+  <script>location.replace('cocher2.html' + location.hash);</script>
+  <noscript><meta http-equiv="refresh" content="0;url=cocher2.html" /></noscript>
+  <title>Redirecting to Co-Cher 2...</title>
+</head>
+<body>
+  <p>Redirecting to <a href="cocher2.html">Co-Cher 2</a>...</p>
+</body>
+</html>
