@@ -1,0 +1,12 @@
+{
+  "schools": [
+    {
+      "id": "bty",
+      "name": "Beatty Secondary School",
+      "domains": [
+        "btyss.moe.edu.sg"
+      ],
+      "pack": "bty.json"
+    }
+  ]
+}

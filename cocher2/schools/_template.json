@@ -1,0 +1,50 @@
+{
+  "id": "",
+  "name": "",
+  "shortName": "",
+  "domains": [],
+  "values": "",
+  "contacts": {
+    "allStaff": ""
+  },
+  "calendar": {
+    "cycle": "none",
+    "weeks": []
+  },
+  "bell": {
+    "dayStart": "07:30",
+    "periodMinutes": 30,
+    "periods": [
+      {
+        "id": 1,
+        "start": "07:30",
+        "end": "08:00"
+      }
+    ],
+    "grid": {
+      "*": {
+        "Mon": [
+          1
+        ],
+        "Tue": [
+          1
+        ],
+        "Wed": [
+          1
+        ],
+        "Thu": [
+          1
+        ],
+        "Fri": [
+          1
+        ]
+      }
+    }
+  },
+  "levels": [],
+  "streams": [],
+  "departments": [],
+  "subjects": [],
+  "cca": [],
+  "frameworks": []
+}
