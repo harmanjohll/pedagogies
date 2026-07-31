@@ -1,0 +1,293 @@
+{
+  "schoolId": "sajc",
+  "teacher": {
+    "name": "Tham Kine Thong",
+    "email": "tham_kine_thong@sajc.moe.edu.sg"
+  },
+  "source": {
+    "file": "SEM2_J2_MATH_1.pdf (Chan Wai Yee)",
+    "note": "DEMO/TEST data \u2014 dummy account for multi-school onboarding tests"
+  },
+  "entries": [
+    {
+      "cycle": "Even",
+      "day": "Mon",
+      "start": "12:00",
+      "end": "13:00",
+      "title": "PD-J1-H2-MATH",
+      "class": "StaffMath1",
+      "room": null,
+      "kind": "pd"
+    },
+    {
+      "cycle": "Even",
+      "day": "Mon",
+      "start": "13:00",
+      "end": "14:30",
+      "title": "J2-H2-MATH-TUT",
+      "class": "25S09-PCM",
+      "room": "D403",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Tue",
+      "start": "10:30",
+      "end": "11:30",
+      "title": "25S19-PEM/25S19-PMCL L",
+      "class": null,
+      "room": "D101",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Tue",
+      "start": "12:30",
+      "end": "14:00",
+      "title": "J2-H2-MATH-TUT",
+      "class": "25S07-PCM",
+      "room": "D401",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Wed",
+      "start": "10:30",
+      "end": "11:30",
+      "title": "25S09-PCM",
+      "class": null,
+      "room": "D403",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Wed",
+      "start": "11:30",
+      "end": "12:30",
+      "title": "PD-J2-H2-MATH",
+      "class": "StaffMath2",
+      "room": null,
+      "kind": "pd"
+    },
+    {
+      "cycle": "Even",
+      "day": "Wed",
+      "start": "13:30",
+      "end": "14:30",
+      "title": "J2-ASSEMBLY(CC)",
+      "class": "Staff",
+      "room": "LTCC",
+      "kind": "school"
+    },
+    {
+      "cycle": "Even",
+      "day": "Wed",
+      "start": "15:30",
+      "end": "16:00",
+      "title": "StaffHOD",
+      "class": null,
+      "room": null,
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Thu",
+      "start": "08:00",
+      "end": "08:30",
+      "title": "PLT/StaffMtg (0735-0830)",
+      "class": null,
+      "room": null,
+      "kind": "school"
+    },
+    {
+      "cycle": "Even",
+      "day": "Thu",
+      "start": "11:00",
+      "end": "12:00",
+      "title": "J2-SLEAD",
+      "class": "Staff",
+      "room": null,
+      "kind": "school"
+    },
+    {
+      "cycle": "Even",
+      "day": "Thu",
+      "start": "13:00",
+      "end": "14:30",
+      "title": "J2-H2-MATH-TUT",
+      "class": "25S07-PCM",
+      "room": null,
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Fri",
+      "start": "09:30",
+      "end": "11:00",
+      "title": "J2-H2-MATH-TUT",
+      "class": null,
+      "room": "D101",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Fri",
+      "start": "11:30",
+      "end": "12:30",
+      "title": "PD-J2-H2-MATH",
+      "class": "StaffMath2",
+      "room": null,
+      "kind": "pd"
+    },
+    {
+      "cycle": "Even",
+      "day": "Fri",
+      "start": "15:30",
+      "end": "16:00",
+      "title": "StaffMath2",
+      "class": null,
+      "room": null,
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Mon",
+      "start": "10:30",
+      "end": "11:30",
+      "title": "25S07-PCM",
+      "class": null,
+      "room": "D401",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Mon",
+      "start": "12:30",
+      "end": "14:00",
+      "title": "J2-H2-MATH-TUT",
+      "class": "25S19-PEM/25S19-P",
+      "room": "D101",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Tue",
+      "start": "09:30",
+      "end": "11:00",
+      "title": "J2-H2-MATH-TUT",
+      "class": null,
+      "room": "D403",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Tue",
+      "start": "11:00",
+      "end": "12:00",
+      "title": "PD-J1-H2-MATH",
+      "class": "StaffMath1",
+      "room": null,
+      "kind": "pd"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Tue",
+      "start": "14:00",
+      "end": "15:00",
+      "title": "PD-J2-H2-MATH",
+      "class": "StaffMath2",
+      "room": null,
+      "kind": "pd"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Wed",
+      "start": "11:30",
+      "end": "12:30",
+      "title": "J2-ASSEMBLY(CC)",
+      "class": "Staff",
+      "room": "LTCC",
+      "kind": "school"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Wed",
+      "start": "15:30",
+      "end": "16:00",
+      "title": "StaffHOD",
+      "class": null,
+      "room": null,
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Thu",
+      "start": "08:00",
+      "end": "08:30",
+      "title": "PLT/StaffMtg (0735-0830)",
+      "class": null,
+      "room": null,
+      "kind": "school"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Thu",
+      "start": "12:30",
+      "end": "13:30",
+      "title": "J2-SLE",
+      "class": "Staff",
+      "room": null,
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Thu",
+      "start": "13:30",
+      "end": "15:00",
+      "title": "J2-H2-MATH-TUT",
+      "class": "25S09-PCM",
+      "room": "D403",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Fri",
+      "start": "08:30",
+      "end": "10:00",
+      "title": "J2-H2-MATH-TUT",
+      "class": "25S07-PCM",
+      "room": "D401",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Fri",
+      "start": "11:00",
+      "end": "12:30",
+      "title": "J2-H2-MATH-TUT",
+      "class": "25S19-PEM/25S19-PMCL",
+      "room": "D101",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Fri",
+      "start": "12:30",
+      "end": "13:30",
+      "title": "PD-J2-H2-MATH",
+      "class": "StaffMath2",
+      "room": null,
+      "kind": "pd"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Fri",
+      "start": "15:30",
+      "end": "16:00",
+      "title": "StaffMath2",
+      "class": null,
+      "room": null,
+      "kind": "lesson"
+    }
+  ]
+}
