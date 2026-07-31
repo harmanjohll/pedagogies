@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.1', items: [
+    { icon: '\u{1F511}', title: 'Sign in from any school', text: 'Co-Cher no longer checks you against one school\u2019s staff list. Your email address tells it which school you\u2019re at, and if your school isn\u2019t set up yet you simply pick it from a list \u2014 or carry on without one. Colleague lists (Find a Teacher, the staff picker) now only ever show people from your own school.' },
+  ] },
   { version: 'v1.0', items: [
     { icon: '\u{1F3EB}', title: 'Co-Cher 2 — built for any school', text: 'This is a new line of Co-Cher. Everything from Co-Cher 1 is here, and the work from now on makes it usable beyond one school: your own timetable, your own calendar and bell schedule, your own frameworks. Co-Cher 1 is still running and untouched — bring your lessons across with Settings → Data → Export there, then Import here.' },
   ] },
