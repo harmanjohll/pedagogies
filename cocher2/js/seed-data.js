@@ -63,6 +63,17 @@ function randomE21CC() {
   };
 }
 
+/* Sample lessons seeded before v1.5 carry no isExemplar flag, so they have to
+ * be recognised by title. Without this, a teacher whose only lessons ARE the
+ * samples looks like a teacher with work in progress, and the level migration
+ * politely declines to help the very people it exists for. */
+const LEGACY_SAMPLE_TITLES = new Set([
+  'Chemical Bonding — Ionic & Covalent',
+  'Kinematics — Speed, Velocity & Graphs',
+  'Integration \u2014 Area Under a Curve',
+]);
+const isSampleLesson = (l) => !!l?.isExemplar || LEGACY_SAMPLE_TITLES.has(l?.title);
+
 /* The sample classes Co-Cher shipped before it knew what school you were in.
  * Recognised here so an untouched set can be swapped for the right one. */
 const LEGACY_SECONDARY_SAMPLE = [
@@ -86,7 +97,7 @@ function clearMismatchedSampleContent() {
   const sig = classes.map(c => `${c.name}|${c.level}|${c.subject}`).sort().join('~');
   if (sig !== LEGACY_SECONDARY_SAMPLE) return false;
   const lessons = Store.get('lessons') || [];
-  if (lessons.some(l => !l.isExemplar)) return false;          // they have planned something real
+  if (lessons.some(l => !isSampleLesson(l))) return false;     // they have planned something real
 
   // Take the showcase's attachments with them, or a primary teacher inherits a
   // "3E Chemistry — Discussion Pods" layout and an acids-and-bases deck.
@@ -1655,7 +1666,8 @@ export function seedLessonsIfNeeded() {
     if (created) {
       Store.updateLesson(created.id, {
         status: ex.status,
-        components: ex.components
+        components: ex.components,
+        isExemplar: true          // sample content, not the teacher's own work
       });
     }
   });
@@ -2439,6 +2451,14 @@ export function seedShowcaseLessonsIfNeeded() {
   if (localStorage.getItem('cocher2_showcase_seeded_v5') && !isPrimary()) return;   // pre-v1.5 flag
   if (localStorage.getItem(SHOWCASE_SEED_KEY())) return;
   if (Store.getClasses().length === 0) return; // classes must exist first
+  // The showcase is a first-run demo, and it MAKES a class when none matches its
+  // level. A teacher who has already planned something real does not need the
+  // demo and should certainly not find two new classes in their sidebar because
+  // of it — so once there is real work here, this stays out of the way.
+  if ((Store.get('lessons') || []).some(l => !isSampleLesson(l))) {
+    localStorage.setItem(SHOWCASE_SEED_KEY(), '1');
+    return;
+  }
   const now = Date.now();
   (isPrimary() ? primaryShowcaseLessons() : SHOWCASE_LESSONS).forEach((spec, idx) => {
     const existing = (Store.get('lessons') || []).find(l => l.title === spec.title);
