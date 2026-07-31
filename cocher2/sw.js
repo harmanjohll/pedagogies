@@ -19,7 +19,7 @@
  * and a single bad precache entry never aborts install.
  */
 
-const VERSION = 'v1.3';                       // match APP_VERSION in js/version.js
+const VERSION = 'v1.4';                       // match APP_VERSION in js/version.js
 const CACHE_PREFIX = 'cocher2-';
 const CACHE_NAME = CACHE_PREFIX + VERSION;  // e.g. 'cocher2-v1.0'
 

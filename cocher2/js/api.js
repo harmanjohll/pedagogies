@@ -177,6 +177,16 @@ export async function sendChat(messages, options = {}) {
   const maxTokens = options.maxTokens ?? 4096;
 
   // Inject school profile into system prompt when available
+  // The school's own T&L language, quoted verbatim from its pack. Takes
+  // precedence over the free-text school profile: a named approach beats a
+  // teacher-typed sentence about their school.
+  try {
+    const { schoolTeachingContext } = await import('./utils/school.js');
+    const { getCurrentUser } = await import('./components/login.js');
+    const ctx = await schoolTeachingContext(getCurrentUser()?.schoolId);
+    if (ctx) systemPrompt += `\n\n${ctx}`;
+  } catch { /* no school, no pack, or offline — the prompt simply stays generic */ }
+
   const schoolProfile = Store.getSchoolProfile?.() || {};
   if (schoolProfile.values) {
     systemPrompt += `\n\nThe teacher's school values are: ${schoolProfile.values}. Where these values naturally align with the lesson content, weave them in subtly. Do NOT force or contrive connections — only reference school values when the context genuinely supports it.`;

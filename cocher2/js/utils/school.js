@@ -158,3 +158,48 @@ export function resetSchoolCache() {
   _registry = null;
   _packs = new Map();
 }
+
+/**
+ * The school's OWN teaching-and-learning language, formatted for injection into
+ * AI prompts. Quoted VERBATIM from the school's published material rather than
+ * paraphrased — a lesson designed against a summary of a school's pedagogy is
+ * not designed against that school's pedagogy.
+ *
+ * Anything the school has not published stays absent. Where an acronym's
+ * expansion is unknown (PVPS's STAR and ASK, for instance), the model is told
+ * so explicitly, so it uses the name without inventing the letters.
+ */
+export async function schoolTeachingContext(id, { subject } = {}) {
+  const p = await loadPack(id);
+  if (!p) return '';
+  const lines = [];
+  const idn = p.identity || {};
+  if (p.name) lines.push(`School: ${p.name}${idn.motto ? ` — motto "${idn.motto}"${idn.mottoGloss ? ` (${idn.mottoGloss})` : ''}` : ''}`);
+  if (idn.vision) lines.push(`Vision: ${idn.vision}`);
+  if (idn.mission) lines.push(`Mission: ${idn.mission}`);
+  if (Array.isArray(p.values) && p.values.length) lines.push(`Values${idn.valuesAcronym ? ` (${idn.valuesAcronym})` : ''}: ${p.values.join(' · ')}`);
+  if (idn.philosophy) lines.push(`Philosophy: ${idn.philosophy}`);
+
+  // Subject-matched approach first; otherwise every approach, so a cross-subject
+  // lesson still sees the school's whole T&L stance.
+  const all = Array.isArray(p.teachingApproaches) ? p.teachingApproaches : [];
+  const picked = subject ? all.filter(a => String(a.subject || '').toLowerCase() === String(subject).toLowerCase()) : [];
+  (picked.length ? picked : all).forEach(a => {
+    lines.push(`\n[${a.subject} — ${a.name}] ${a.verbatim || ''}`);
+    if (a.grounding) lines.push(`  Grounded in: ${a.grounding}`);
+    if (a.inquiry) lines.push(`  Inquiry stance: ${a.inquiry}`);
+    if (Array.isArray(a.processSkills)) lines.push(`  Process skills: ${a.processSkills.join(', ')}`);
+    if (a.strategies) lines.push(`  Strategies: ${a.strategies}`);
+    if (a.ftgp) lines.push(`  Form Teacher Guidance Period: ${a.ftgp}`);
+    if (a.levelBadges) lines.push(`  Level progression: ${Object.entries(a.levelBadges).map(([k, v]) => `${k} = ${v}`).join('; ')}`);
+    if (a.unresolved) lines.push(`  IMPORTANT: ${a.unresolved}`);
+  });
+
+  const haf = p.programmes?.haf;
+  if (haf?.domains) lines.push(`\nRecognition (${haf.name}) spans: ${haf.domains.join(', ')}.`);
+  if (p.programmes?.assessment?.verbatim) lines.push(`\nAssessment stance: ${p.programmes.assessment.verbatim}`);
+  if (p.programmes?.discipline?.verbatim) lines.push(`Discipline stance: ${p.programmes.discipline.verbatim}`);
+
+  if (!lines.length) return '';
+  return `[The teacher's school — use ITS OWN language and approaches. The wording below is quoted from the school's published material; reproduce its terminology exactly rather than substituting generic equivalents. Do not invent expansions for acronyms the school has not defined.]\n${lines.join('\n')}`;
+}
