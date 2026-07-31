@@ -6,6 +6,7 @@
  */
 
 import { openModal } from './modals.js';
+import { getCurrentUser } from './login.js';
 
 const TT_CSV_URL = './btyrelief/BTYTT_2026Sem2_v1.csv';
 const ALL_STAFF_EMAIL = 'BTYSS_all_staff@btyss.moe.edu.sg';
@@ -17,6 +18,8 @@ let _staffCache = null;
  * Returns deduplicated array of { name, email, department }.
  */
 export async function loadStaffDirectory() {
+  // Beatty's roster only — never expose it to another school's teacher.
+  if ((getCurrentUser()?.schoolId ?? 'bty') !== 'bty') return [];
   if (_staffCache) return _staffCache;
 
   try {

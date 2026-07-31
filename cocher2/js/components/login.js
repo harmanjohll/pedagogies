@@ -1,50 +1,22 @@
 /*
- * Co-Cher Login Screen
- * ====================
- * Email-based login validated against the timetable CSV (single source of truth).
- * Admin/tester accounts are also supported — they exist in the CSV but are
- * excluded from operational lists like relief pools.
+ * Co-Cher 2 Login Screen
+ * ======================
+ * Email-based sign-in, resolved to a SCHOOL by email domain.
+ *
+ * Co-Cher 1 gated sign-in on Beatty's staff timetable CSV: your email had to
+ * appear in that file or you could not get in, and a failed fetch left the
+ * allowlist empty so EVERY login failed. That is the single thing this version
+ * had to fix — a teacher from any school must be able to sign in.
+ *
+ * Now: the email's domain is matched against schools/registry.json. Known
+ * domain → straight in, with the school recorded on the user. Unknown domain →
+ * the teacher picks their school from a list (or continues without one). The
+ * registry never gates entry; it only says which school you belong to.
  */
 
 import { Store } from '../state.js';
 import { trackEvent } from '../utils/analytics.js';
-
-const TT_CSV_URL = './btyrelief/BTYTT_2026Sem2_v1.csv';
-
-let _authorisedList = null;   // [{ name, email }]
-
-/**
- * Load authorised teacher list from the timetable CSV.
- * Extracts unique {name, email} pairs from the "NAME" and "Teacher's Email" columns.
- */
-async function loadAuthorisedTeachers() {
-  if (_authorisedList) return _authorisedList;
-  try {
-    const res = await fetch(TT_CSV_URL);
-    const text = await res.text();
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length < 2) { _authorisedList = []; return _authorisedList; }
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^\uFEFF/, ''));
-    const nameIdx = headers.indexOf('NAME');
-    const emailIdx = headers.indexOf("Teacher's Email");
-    if (nameIdx < 0 || emailIdx < 0) { _authorisedList = []; return _authorisedList; }
-
-    const seen = new Set();
-    _authorisedList = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',');
-      const email = (cols[emailIdx] || '').trim().toLowerCase();
-      const name = (cols[nameIdx] || '').trim();
-      if (email && !seen.has(email)) {
-        seen.add(email);
-        _authorisedList.push({ name, email });
-      }
-    }
-  } catch {
-    _authorisedList = [];
-  }
-  return _authorisedList;
-}
+import { schoolForEmail, listSchools, resetSchoolCache } from '../utils/school.js';
 
 export function getCurrentUser() {
   try {
@@ -88,6 +60,7 @@ export function setCurrentUser(user) {
 }
 
 export function clearCurrentUser() {
+  resetSchoolCache();
   localStorage.removeItem('cocher2_current_user');
   // Clear API key so next user must enter their own
   Store.set('apiKey', '');
@@ -107,7 +80,7 @@ function animateOut(overlay, onComplete) {
 }
 
 function showNamePrompt(overlay, teacher, onComplete) {
-  const guessed = guessFirstName(teacher.name);
+  const guessed = guessFirstName(teacher.name || teacher.email.split('@')[0].replace(/[._]+/g, ' '));
   const card = overlay.querySelector('#login-card');
   card.id = 'name-card';
   card.style.transition = 'opacity 0.25s, transform 0.25s';
@@ -188,7 +161,6 @@ function showNamePrompt(overlay, teacher, onComplete) {
 }
 
 export async function renderLogin(onComplete) {
-  const teachers = await loadAuthorisedTeachers();
 
   const overlay = document.createElement('div');
   overlay.className = 'welcome-overlay';
@@ -222,7 +194,7 @@ export async function renderLogin(onComplete) {
         <input
           type="email"
           id="login-email"
-          placeholder="e.g. name@btyss.moe.edu.sg or name@moe.edu.sg"
+          placeholder="e.g. name@yourschool.moe.edu.sg"
           autocomplete="email"
           style="
             width: 100%; padding: 12px 14px;
@@ -237,7 +209,7 @@ export async function renderLogin(onComplete) {
           onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none';"
         />
         <p style="font-size: 0.75rem; color: #94a3b8; margin: 0 0 20px; line-height: 1.5;">
-          Use the email registered with your school.
+          Your school is recognised from your email address.
         </p>
 
         <p id="login-error" style="
@@ -269,39 +241,24 @@ export async function renderLogin(onComplete) {
   const goBtn = overlay.querySelector('#login-go');
   const errorEl = overlay.querySelector('#login-error');
 
-  goBtn.addEventListener('click', () => {
+  goBtn.addEventListener('click', async () => {
     const email = emailInput.value.trim().toLowerCase();
     errorEl.style.display = 'none';
 
-    if (!email) {
-      errorEl.textContent = 'Please enter your email address.';
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      errorEl.textContent = 'Please enter a valid email address.';
       errorEl.style.display = 'block';
       return;
     }
 
-    // Match against CSV teacher list (case-insensitive, cross-domain via prefix)
-    const emailPrefix = email.split('@')[0];
-    const teacher = teachers.find(t => t.email.toLowerCase() === email)
-      || teachers.find(t => t.email.toLowerCase().split('@')[0] === emailPrefix);
-    if (!teacher) {
-      errorEl.textContent = 'Email not recognised. Please check with your administrator.';
-      errorEl.style.display = 'block';
-      emailInput.style.borderColor = '#f43f5e';
-      emailInput.style.boxShadow = '0 0 0 3px #ffe4e6';
-      return;
-    }
+    // The domain decides the school. An unknown domain is NOT a rejection —
+    // the teacher simply tells us which school they're from.
+    goBtn.disabled = true;
+    const match = await schoolForEmail(email);
+    goBtn.disabled = false;
 
-    setCurrentUser(teacher);
-    trackEvent('session', 'login', teacher.email, teacher.name || '');
-
-    // Check if this is a first-time login (no preferred name set)
-    if (!teacher.preferredName) {
-      showNamePrompt(overlay, teacher, onComplete);
-      return;
-    }
-
-    // Animate out
-    animateOut(overlay, onComplete);
+    if (!match) { showSchoolPicker(overlay, email, onComplete); return; }
+    signIn(overlay, { email, schoolId: match.id, schoolName: match.name }, onComplete);
   });
 
   emailInput.addEventListener('keydown', (e) => {
@@ -316,6 +273,44 @@ export async function renderLogin(onComplete) {
   });
 
   setTimeout(() => emailInput.focus(), 300);
+}
+
+/* Persist the user and move on to naming. */
+function signIn(overlay, user, onComplete) {
+  setCurrentUser(user);
+  trackEvent('session', 'login', user.email, user.schoolName || '');
+  showNamePrompt(overlay, user, onComplete);
+}
+
+/**
+ * Unknown email domain — ask which school, rather than turning the teacher
+ * away. "Not listed" is a first-class option: Co-Cher still works without a
+ * school pack, just without school-specific calendar/levels/frameworks.
+ */
+async function showSchoolPicker(overlay, email, onComplete) {
+  const schools = await listSchools();
+  const card = overlay.querySelector('#login-card');
+  card.innerHTML = `
+    <div style="text-align:left;">
+      <h2 style="font-size:1.25rem;font-weight:700;color:var(--ink,#000C53);margin:0 0 6px;">Which school are you at?</h2>
+      <p style="color:var(--ink-muted,#64748b);font-size:0.875rem;margin:0 0 18px;line-height:1.5;">
+        We don't recognise <strong>${email.split('@')[1]}</strong> yet. Pick your school so Co-Cher uses the right
+        calendar, levels and frameworks.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        ${schools.map(s => `<button class="sch-opt" data-id="${s.id}" data-name="${s.name}" style="
+          width:100%;padding:13px 14px;text-align:left;border:1.5px solid #e2e8f0;border-radius:12px;
+          background:var(--bg-subtle,#f8fafc);font-family:inherit;font-size:0.9rem;font-weight:600;
+          color:var(--ink,#0f172a);cursor:pointer;min-height:48px;">${s.name}</button>`).join('')}
+        <button class="sch-opt" data-id="" data-name="" style="
+          width:100%;padding:13px 14px;text-align:left;border:1.5px dashed #cbd5e1;border-radius:12px;
+          background:transparent;font-family:inherit;font-size:0.9rem;color:var(--ink-muted,#64748b);
+          cursor:pointer;min-height:48px;">My school isn't listed &mdash; continue anyway</button>
+      </div>
+    </div>`;
+  card.querySelectorAll('.sch-opt').forEach(b => b.addEventListener('click', () => {
+    signIn(overlay, { email, schoolId: b.dataset.id || null, schoolName: b.dataset.name || '' }, onComplete);
+  }));
 }
 
 export function isLoggedIn() {

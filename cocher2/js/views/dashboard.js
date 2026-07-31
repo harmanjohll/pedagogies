@@ -247,11 +247,24 @@ function getDailyQuote() {
   return pool[dayOfYear % pool.length];
 }
 
-/* ── Timetable (TT) Awareness ── */
+/* ── Timetable (TT) Awareness ──
+ * The bundled CSV is BEATTY'S staff timetable. It must never be served to a
+ * teacher from another school: their own timetable would be missing, and the
+ * colleague-facing surfaces (Find a Teacher, staff picker, relief) would list
+ * strangers from a school they have nothing to do with. So this loader is
+ * school-scoped — anyone not at Beatty gets an empty set, and those surfaces
+ * render their empty states instead of someone else's roster.
+ *
+ * Per-school timetables arrive via the teacher's own import (canonical entries
+ * with real clock times); this CSV path is Beatty's legacy source only. */
 let _ttCache = null;
+let _ttCacheSchool = null;
 
 export async function loadTT() {
-  if (_ttCache) return _ttCache;
+  const schoolId = getCurrentUser()?.schoolId ?? 'bty';   // legacy users have no schoolId
+  if (_ttCache && _ttCacheSchool === schoolId) return _ttCache;
+  _ttCacheSchool = schoolId;
+  if (schoolId !== 'bty') { _ttCache = []; return _ttCache; }
   try {
     const res = await fetch('./btyrelief/BTYTT_2026Sem2_v1.csv');
     const text = await res.text();
