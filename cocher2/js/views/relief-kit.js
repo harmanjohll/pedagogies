@@ -11,6 +11,7 @@ import { sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { md, escapeHtml } from '../utils/markdown.js';
 import { trackEvent } from '../utils/analytics.js';
+import { exampleLevel } from '../utils/vocabulary.js';
 import { loadTT, findTeacherRow } from './dashboard.js';
 import { getCurrentUser } from '../components/login.js';
 import { saveArtifact, savedArtifactsHTML, wireSavedArtifacts, consumeOpenArtifact, getArtifact, listArtifacts } from '../utils/library.js';
@@ -118,7 +119,7 @@ export function render(container) {
             </div>
             <div>
               <label class="rk-label" for="rk-level">Level</label>
-              <input id="rk-level" class="input" type="text" value="${escapeHtml(level)}" placeholder="e.g. Sec 3 Express" style="width:100%;box-sizing:border-box;">
+              <input id="rk-level" class="input" type="text" value="${escapeHtml(level)}" placeholder="e.g. ${escapeHtml(exampleLevel())}" style="width:100%;box-sizing:border-box;">
             </div>
             <div>
               <label class="rk-label" for="rk-topic">Topic students are on</label>

@@ -6,6 +6,7 @@
 
 import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
+import { studentDescriptor } from '../utils/vocabulary.js';
 import { confirmDialog } from '../components/modals.js';
 import { sendChat } from '../api.js';
 
@@ -474,7 +475,7 @@ function bindExpandedAreaListeners(content, area) {
       outputEl.innerHTML = '<em>Generating suggestions...</em>';
       try {
         const text = await sendChat(
-          [{ role: 'user', content: `You are an experienced CCA teacher-in-charge in a Singapore secondary school. Design a practical, ready-to-use training session plan for "${cca.name}" (${cat?.label || 'CCA'}).
+          [{ role: 'user', content: `You are an experienced CCA teacher-in-charge in a Singapore school, working with ${studentDescriptor()}. Design a practical, ready-to-use training session plan for "${cca.name}" (${cat?.label || 'CCA'}).
 
 Format as a clean session plan:
 

@@ -30,6 +30,16 @@ schools this beats a database comfortably.
 Name, email domains, week cycle and calendar, slot length, levels, streams,
 subjects, departments, CCAs, and the school's own frameworks.
 
+`levels` does more work than it looks. Co-Cher infers the school's STAGE from
+those names — primary, secondary or junior college — and that decides every
+level picker, every sample lesson, and what the AI assumes about the age of the
+learners. List them the way the school says them ("Primary 5", "Sec 3", "JC1").
+
+`sampleClasses` is optional and worth setting: three `{ name, level, subject }`
+entries used for the demo classes a teacher sees on first run. Real class codes
+from the school's own timetable make Co-Cher look like the school on day one.
+No pupils are named — this is configuration, not a roster.
+
 **`staff.json`** — the roster.
 
 ```json

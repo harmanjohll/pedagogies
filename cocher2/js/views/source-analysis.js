@@ -12,6 +12,17 @@ import { confirmDialog } from '../components/modals.js';
 import { createFileUploadZone } from '../components/pdf-upload.js';
 import { printSourceAnalysis } from '../components/print-export.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
+import { levelOptions, isPrimary, isJC } from '../utils/vocabulary.js';
+
+/* Source work exists at every stage, but the subjects that carry it do not:
+ * General Paper is JC-only, and a primary school runs neither History nor
+ * Geography as separate subjects. */
+const saSubjects = () => [
+  ...(isPrimary() ? [] : ['History', 'Geography']),
+  'Social Studies',
+  ...(isJC() ? ['General Paper'] : []),
+  'CCE',
+];
 
 /* ── Storage helpers ── */
 const STORAGE_KEY = 'cocher2_source_library';
@@ -624,24 +635,14 @@ export function render(container) {
             <label class="sa-label">Subject</label>
             <select class="sa-select" id="sa-subject">
               <option value="">Select...</option>
-              <option value="History">History</option>
-              <option value="Social Studies">Social Studies</option>
-              <option value="Geography">Geography</option>
-              <option value="General Paper">General Paper</option>
-              <option value="CCE">CCE</option>
+              ${saSubjects().map(s => `<option value="${s}">${s}</option>`).join('')}
             </select>
           </div>
           <div class="sa-field">
             <label class="sa-label">Level</label>
             <select class="sa-select" id="sa-level">
               <option value="">Select...</option>
-              <option value="Sec 1">Sec 1</option>
-              <option value="Sec 2">Sec 2</option>
-              <option value="Sec 3">Sec 3</option>
-              <option value="Sec 4">Sec 4</option>
-              <option value="Sec 5">Sec 5</option>
-              <option value="JC 1">JC 1</option>
-              <option value="JC 2">JC 2</option>
+              ${levelOptions()}
             </select>
           </div>
         </div>
@@ -807,24 +808,14 @@ export function render(container) {
             <label class="sa-label">Subject</label>
             <select class="sa-select" id="sa-manual-subject">
               <option value="">Select...</option>
-              <option value="History">History</option>
-              <option value="Social Studies">Social Studies</option>
-              <option value="Geography">Geography</option>
-              <option value="General Paper">General Paper</option>
-              <option value="CCE">CCE</option>
+              ${saSubjects().map(s => `<option value="${s}">${s}</option>`).join('')}
             </select>
           </div>
           <div class="sa-field">
             <label class="sa-label">Level</label>
             <select class="sa-select" id="sa-manual-level">
               <option value="">Select...</option>
-              <option value="Sec 1">Sec 1</option>
-              <option value="Sec 2">Sec 2</option>
-              <option value="Sec 3">Sec 3</option>
-              <option value="Sec 4">Sec 4</option>
-              <option value="Sec 5">Sec 5</option>
-              <option value="JC 1">JC 1</option>
-              <option value="JC 2">JC 2</option>
+              ${levelOptions()}
             </select>
           </div>
         </div>

@@ -12,9 +12,10 @@ import { sendChat } from '../api.js';
 import { getCurrentUser } from '../components/login.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
 import { openStaffPicker, loadStaffDirectory, renderRecipientChips, ALL_STAFF_EMAIL } from '../components/staff-picker.js';
+import { loadDirectory, availabilityFromEntries, departmentsOf } from '../utils/directory.js';
 import { openRamsEditor } from '../components/rams-editor.js';
 import { renderAdminWorkflow, bindAdminWorkflowClicks } from '../components/admin-workflow.js';
-import { loadTT, ensureCalendar, getTTPeriodKey, getWeekTypeForDate, periodCol, periodsForDay, periodStartMin, periodEndMin, fmtClockShort, PERIOD_LEN_MIN } from './dashboard.js';
+import { ensureCalendar, getTTPeriodKey, getWeekTypeForDate, periodCol, periodsForDay, periodStartMin, periodEndMin, fmtClockShort, PERIOD_LEN_MIN } from './dashboard.js';
 
 /**
  * FormSG Pre-fill Configuration
@@ -328,7 +329,7 @@ export function render(container) {
           </div>
           <div class="card" style="padding:var(--sp-4);">
             <p style="font-size:0.8125rem;color:var(--ink-muted);margin:0 0 var(--sp-3);line-height:1.5;">
-              See if a colleague is free to meet — pick a department, then a teacher. Availability is read live from the school timetable.
+              See if a colleague is free to meet &mdash; pick a department, then a teacher. Availability is read live from the timetable your school has published.
             </p>
             <div id="ft-selectors" style="display:grid;grid-template-columns:1fr 1fr 0.9fr;gap:var(--sp-3);">
               <div>
@@ -410,7 +411,6 @@ function renderQuickTools(el) {
  * still free today, and how heavy their teaching load is — so a meeting can
  * be offered considerately. Read-only: it never messages or books anyone.
  * Uses the teacher's name (never a guessed pronoun) in all copy. */
-function ftDeptOf(row) { return (row['DEPARTMENT'] || '').trim() || 'Unassigned'; }
 function ftTeacherName(row) { return (row['NAME'] || '').trim(); }
 
 function ftFmtDuration(mins) {
@@ -479,8 +479,7 @@ function ftDateLabel(dateObj) {
   catch { return dateObj.toDateString(); }
 }
 
-function ftRenderResult(el, row, dateObj) {
-  const a = ftAvailability(row, dateObj);
+function ftRenderResult(el, a, dateObj) {
   const name = esc(a.name);
   const dateLbl = esc(ftDateLabel(dateObj));
   if (a.off) {
@@ -499,7 +498,7 @@ function ftRenderResult(el, row, dateObj) {
       : `<div class="ft-now ft-free">&#128994; Free right now — a good time to meet ${name}</div>`)
       + `<p class="ft-line">${esc(a.nowState.note)}</p>`;
   } else {
-    header = `<div class="ft-now" style="color:var(--ink);">&#128197; ${dateLbl} &middot; ${esc(a.weekType)} week</div>`;
+    header = `<div class="ft-now" style="color:var(--ink);">&#128197; ${dateLbl}${a.weekType ? ` &middot; ${esc(a.weekType)} week` : ''}</div>`;
   }
 
   const slotLabel = a.isToday ? 'Free periods left today' : `Free periods on ${dateLbl}`;
@@ -520,43 +519,74 @@ async function renderFindTeacher(container) {
   const dateSel = container.querySelector('#ft-date');
   const result = container.querySelector('#ft-result');
   if (!deptSel || !teacherSel || !result) return;
+
   const getSelectedDate = () => {
     const v = dateSel && dateSel.value;
     return v ? new Date(v + 'T00:00:00') : new Date();
   };
-  const renderSelected = () => {
-    if (teacherSel.value === '') { result.innerHTML = ''; return; }
-    const row = tt[Number(teacherSel.value)];
-    if (row) ftRenderResult(result, row, getSelectedDate());
-  };
 
-  let tt = [];
-  try { [tt] = await Promise.all([loadTT(), ensureCalendar()]); } catch { tt = []; }
-  if (!tt || !tt.length) {
-    deptSel.innerHTML = '<option value="">Timetable unavailable</option>';
-    result.innerHTML = `<p class="ft-line ft-muted">The school timetable couldn't be loaded${navigator.onLine ? '' : ' — you appear to be offline'}.</p>`;
+  // The roster, from whichever source this school has. Beatty keeps its exact
+  // period-column reading; every other school is answered from the canonical
+  // clock-time entries in its published timetable.
+  let dir = { source: 'none', teachers: [], reason: '' };
+  try { dir = await loadDirectory(); } catch { /* fall through to the empty state */ }
+  if (dir.source === 'bty-csv') { try { await ensureCalendar(); } catch { /* calendar optional */ } }
+
+  if (!dir.teachers.length) {
+    deptSel.innerHTML = '<option value="">Nothing published yet</option>';
+    deptSel.disabled = true;
+    teacherSel.innerHTML = '<option value="">&mdash;</option>';
+    teacherSel.disabled = true;
+    result.innerHTML = `<div class="ft-panel">
+      <p class="ft-line ft-muted">${esc(dir.reason || 'No staff timetable is available.')}</p>
+      <p class="ft-line ft-muted">${navigator.onLine ? 'You can still import your own timetable from Settings &rarr; My Timetable.' : 'You appear to be offline &mdash; this may fill in once you reconnect.'}</p>
+    </div>`;
     return;
   }
 
-  const depts = [...new Set(tt.map(ftDeptOf))].sort((x, y) => x.localeCompare(y));
-  deptSel.innerHTML = `<option value="">Select a department&hellip;</option>` +
-    depts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  const renderSelected = async () => {
+    if (teacherSel.value === '') { result.innerHTML = ''; return; }
+    const person = dir.teachers[Number(teacherSel.value)];
+    if (!person) return;
+    const date = getSelectedDate();
+    // Beatty's CSV row still goes through the period-column reader it was
+    // written for; anything else is computed from real clock times.
+    const a = dir.source === 'bty-csv' && person.row
+      ? ftAvailability(person.row, date)
+      : await availabilityFromEntries(person, date, dir.schoolId);
+    ftRenderResult(result, a, date);
+  };
 
-  deptSel.addEventListener('change', () => {
-    result.innerHTML = '';
-    const d = deptSel.value;
-    if (!d) {
-      teacherSel.disabled = true;
-      teacherSel.innerHTML = '<option value="">Select a department first</option>';
-      return;
-    }
-    const inDept = tt.map((r, i) => ({ r, i }))
-      .filter(x => ftDeptOf(x.r) === d && ftTeacherName(x.r))
-      .sort((x, y) => ftTeacherName(x.r).localeCompare(ftTeacherName(y.r)));
+  const depts = departmentsOf(dir);
+  const hasDepts = depts.length > 1 || (depts.length === 1 && depts[0] !== 'Unassigned');
+  const fillTeachers = (dept) => {
+    const inDept = dir.teachers
+      .map((t, i) => ({ t, i }))
+      .filter(x => !dept || (x.t.department || 'Unassigned') === dept);
     teacherSel.disabled = false;
-    teacherSel.innerHTML = `<option value="">Select a teacher&hellip;</option>` +
-      inDept.map(x => `<option value="${x.i}">${esc(ftTeacherName(x.r))}</option>`).join('');
-  });
+    teacherSel.innerHTML = `<option value="">Select a teacher&hellip;</option>`
+      + inDept.map(x => `<option value="${x.i}">${esc(x.t.name)}</option>`).join('');
+  };
+
+  if (hasDepts) {
+    deptSel.innerHTML = `<option value="">Select a department&hellip;</option>`
+      + depts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+    deptSel.addEventListener('change', () => {
+      result.innerHTML = '';
+      if (!deptSel.value) {
+        teacherSel.disabled = true;
+        teacherSel.innerHTML = '<option value="">Select a department first</option>';
+        return;
+      }
+      fillTeachers(deptSel.value);
+    });
+  } else {
+    // A school that published no departments should not be blocked by a
+    // department picker it can never fill — list everyone straight away.
+    deptSel.innerHTML = `<option value="">All staff</option>`;
+    deptSel.disabled = true;
+    fillTeachers('');
+  }
 
   teacherSel.addEventListener('change', renderSelected);
   dateSel?.addEventListener('change', renderSelected);

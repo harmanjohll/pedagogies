@@ -1,75 +1,46 @@
 /*
  * Staff Directory & Picker Component
  * ===================================
- * Loads staff from BTYTT timetable CSV and provides a multi-select picker modal.
- * Includes "All Staff" option, department filtering, search, select all/deselect all.
+ * A multi-select picker over the school's staff, used by admin notifications.
+ *
+ * The roster itself comes from utils/directory.js, which knows how to answer
+ * "who works here" for ANY school — a published staff.json, Beatty's CSV, or an
+ * honest nothing. This file only renders the choosing.
  */
 
 import { openModal } from './modals.js';
-import { getCurrentUser } from './login.js';
+import { loadDirectory } from '../utils/directory.js';
 
-const TT_CSV_URL = './btyrelief/BTYTT_2026Sem2_v1.csv';
 const ALL_STAFF_EMAIL = 'BTYSS_all_staff@btyss.moe.edu.sg';
 
-let _staffCache = null;
-
 /**
- * Load the full staff directory from the timetable CSV.
- * Returns deduplicated array of { name, email, department }.
+ * The full staff directory: [{ name, email, department }].
+ * Empty when the school has published nothing — see `staffDirectoryReason()`
+ * for what to tell the teacher in that case.
  */
 export async function loadStaffDirectory() {
-  // Beatty's roster only — never expose it to another school's teacher.
-  if ((getCurrentUser()?.schoolId ?? 'bty') !== 'bty') return [];
-  if (_staffCache) return _staffCache;
-
-  try {
-    const res = await fetch(TT_CSV_URL);
-    const text = await res.text();
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
-    if (lines.length < 2) { _staffCache = []; return _staffCache; }
-
-    const headers = lines[0].replace(/^\uFEFF/, '').split(',').map(h => h.trim());
-    const deptIdx = headers.indexOf('DEPARTMENT');
-    const nameIdx = headers.indexOf('NAME');
-    const emailIdx = headers.findIndex(h => h === "Teacher's Email");
-
-    if (nameIdx < 0 || emailIdx < 0) { _staffCache = []; return _staffCache; }
-
-    const seen = new Set();
-    _staffCache = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',');
-      const email = (cols[emailIdx] || '').trim().toLowerCase();
-      const name = (cols[nameIdx] || '').trim();
-      const department = deptIdx >= 0 ? (cols[deptIdx] || '').trim() : '';
-
-      if (name && email && email !== '0' && !seen.has(email)) {
-        seen.add(email);
-        _staffCache.push({ name, email, department });
-      }
-    }
-
-    // Sort alphabetically
-    _staffCache.sort((a, b) => a.name.localeCompare(b.name));
-  } catch {
-    _staffCache = [];
-  }
-
-  return _staffCache;
+  const dir = await loadDirectory();
+  return (dir.teachers || []).filter(t => t.email).map(t => ({
+    name: t.name, email: t.email, department: t.department || '',
+  }));
 }
 
-/**
- * Open a staff picker modal for selecting recipients.
- * @param {Object} opts
- * @param {Function} opts.onSelect - callback(selectedEmails[])
- * @param {boolean} [opts.multiSelect=true]
- * @param {string[]} [opts.preSelected=[]] - pre-selected emails
- * @param {boolean} [opts.showAllStaff=true] - show "All Staff" option
- */
+/** Why the directory is empty, in words an administrator can act on. */
+export async function staffDirectoryReason() {
+  const dir = await loadDirectory();
+  return dir.reason || '';
+}
+
 export async function openStaffPicker(opts = {}) {
-  const { onSelect, multiSelect = true, preSelected = [], showAllStaff = true } = opts;
-  const staff = await loadStaffDirectory();
+  const { onSelect, multiSelect = true, preSelected = [] } = opts;
+  const dir = await loadDirectory();
+  const staff = (dir.teachers || []).filter(t => t.email)
+    .map(t => ({ name: t.name, email: t.email, department: t.department || '' }));
   const departments = [...new Set(staff.map(s => s.department).filter(Boolean))].sort();
+  // The all-staff alias is one school's mailing list, not a universal address.
+  // Offer it only where it exists, rather than sending another school's mail to it.
+  const showAllStaff = (opts.showAllStaff ?? true) && dir.source === 'bty-csv';
+  const emptyReason = dir.reason || 'No staff found.';
 
   let selected = new Set(preSelected.map(e => e.toLowerCase()));
   let allStaffSelected = selected.has(ALL_STAFF_EMAIL.toLowerCase());
@@ -128,7 +99,7 @@ export async function openStaffPicker(opts = {}) {
 
       <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-md);">
         ${filtered.length === 0 ? `
-          <div style="padding:var(--sp-6);text-align:center;color:var(--ink-faint);font-size:0.8125rem;">No staff found.</div>
+          <div style="padding:var(--sp-5);text-align:center;color:var(--ink-faint);font-size:0.8125rem;line-height:1.55;">${esc(staff.length ? 'No match for that search.' : emptyReason)}</div>
         ` : filtered.map(s => `
           <label class="sp-staff-row" style="display:flex;align-items:center;gap:var(--sp-3);padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-light);transition:background 0.1s;${selected.has(s.email) ? 'background:var(--accent-light);' : ''}" data-email="${esc(s.email)}">
             <input type="checkbox" class="sp-staff-check" data-email="${esc(s.email)}" ${selected.has(s.email) ? 'checked' : ''} />

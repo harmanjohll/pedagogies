@@ -62,6 +62,12 @@ export function setCurrentUser(user) {
 
 export function clearCurrentUser() {
   resetSchoolCache();
+  // Everything derived from the old school goes with it: the next teacher must
+  // not inherit the last one's levels, subjects or colleague list. Imported
+  // dynamically because both of those modules import THIS one to find out who
+  // is signed in — a static import here would close the cycle.
+  import('../utils/vocabulary.js').then(m => m.resetVocabulary()).catch(() => {});
+  import('../utils/directory.js').then(m => m.resetDirectory()).catch(() => {});
   localStorage.removeItem('cocher2_current_user');
   // Clear API key so next user must enter their own
   Store.set('apiKey', '');

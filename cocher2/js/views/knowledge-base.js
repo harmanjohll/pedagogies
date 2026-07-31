@@ -10,6 +10,7 @@ import { showToast } from '../components/toast.js';
 import { openModal } from '../components/modals.js';
 import { createFileUploadZone } from '../components/pdf-upload.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
+import { exampleLevel } from '../utils/vocabulary.js';
 
 const FRAMEWORKS = [
   {
@@ -756,7 +757,7 @@ function renderDepartmentSchemes(container) {
     el.innerHTML = `
       <div class="card" style="text-align:center;padding:var(--sp-6);border:1px dashed var(--border);background:transparent;">
         <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-1);">No schemes defined yet</p>
-        <p style="font-size:0.75rem;color:var(--ink-faint);">Define your department's topic sequence by term (e.g., Sec 3 History: Term 1 = Cold War, Term 2 = Decolonisation).</p>
+        <p style="font-size:0.75rem;color:var(--ink-faint);">Define your department's topic sequence by term (e.g., ${esc(exampleLevel())} Science: Term 1 = Cycles, Term 2 = Systems).</p>
       </div>`;
     return;
   }
@@ -799,7 +800,7 @@ function showAddSchemeModal(container) {
     body: `
       <div class="input-group">
         <label class="input-label">Scheme Name</label>
-        <input class="input" id="scheme-name" placeholder="e.g. Sec 3 History Topic Sequence" />
+        <input class="input" id="scheme-name" placeholder="e.g. ${esc(exampleLevel())} Science Topic Sequence" />
       </div>
       <div class="input-group">
         <label class="input-label">Department</label>
@@ -807,7 +808,7 @@ function showAddSchemeModal(container) {
       </div>
       <div class="input-group">
         <label class="input-label">Level</label>
-        <input class="input" id="scheme-level" placeholder="e.g. Sec 3" />
+        <input class="input" id="scheme-level" placeholder="e.g. ${esc(exampleLevel())}" />
       </div>
       <div class="input-group">
         <label class="input-label">Terms</label>

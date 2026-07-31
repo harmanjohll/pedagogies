@@ -6,9 +6,16 @@
  */
 
 import { Store, generateId } from './state.js';
-import { compileDeckHTML, saveDeckMaterial, deleteDeckMaterial } from './utils/deck.js';
+import { compileDeckHTML, saveDeckMaterial, deleteDeckMaterial, listDeckMeta } from './utils/deck.js';
+import { isPrimary, schoolStage, sampleClasses } from './utils/vocabulary.js';
+import { primaryChatExemplars, primaryLifecycleExemplars, primaryShowcaseLessons, PRIMARY_REHEARSED } from './seed-primary.js';
 
-const SEED_KEY = 'cocher2_seeded';
+/* Seed keys carry the school STAGE. A primary teacher and a secondary teacher
+ * need different sample content, so "already seeded" has to mean "already
+ * seeded FOR THIS KIND OF SCHOOL". Each seeder still checks for existing data
+ * before writing, so a stage change can never duplicate a teacher's classes. */
+const stageTag = () => schoolStage() || 'default';
+const SEED_KEY = () => `cocher2_seeded_${stageTag()}`;
 
 /* ── Student name pools ── */
 const NAMES = [
@@ -56,18 +63,63 @@ function randomE21CC() {
   };
 }
 
+/* The sample classes Co-Cher shipped before it knew what school you were in.
+ * Recognised here so an untouched set can be swapped for the right one. */
+const LEGACY_SECONDARY_SAMPLE = [
+  '4A Pure Chemistry|GCE O Level / G3|Pure Chemistry',
+  '4B Combined Science|GCE O Level / G3|Combined Science',
+  '4C Mathematics|GCE O Level / G3|Mathematics',
+].sort().join('~');
+
+/**
+ * A primary teacher who signed in before Co-Cher understood school levels is
+ * sitting on three secondary classes and nine secondary exemplars. Clear them
+ * so the right sample content can seed — but ONLY when the teacher has added
+ * nothing of their own. One self-made class, one real lesson, one student
+ * added by hand, and this does nothing at all: sample content is never worth
+ * deleting a teacher's work for.
+ */
+function clearMismatchedSampleContent() {
+  if (!schoolStage() || schoolStage() === 'secondary') return false;
+  const classes = Store.getClasses();
+  if (classes.length !== 3) return false;
+  const sig = classes.map(c => `${c.name}|${c.level}|${c.subject}`).sort().join('~');
+  if (sig !== LEGACY_SECONDARY_SAMPLE) return false;
+  const lessons = Store.get('lessons') || [];
+  if (lessons.some(l => !l.isExemplar)) return false;          // they have planned something real
+
+  // Take the showcase's attachments with them, or a primary teacher inherits a
+  // "3E Chemistry — Discussion Pods" layout and an acids-and-bases deck.
+  const goneIds = new Set(lessons.map(l => l.id));
+  listDeckMeta().filter(m => goneIds.has(m.lessonId)).forEach(m => { deleteDeckMaterial(m.id); });
+  // Only the layouts those lessons actually pointed at — the generic sample
+  // layouts (plain pods, exam rows) belong to no subject and stay.
+  const goneLayouts = new Set(lessons.map(l => l.spatialLayout).filter(Boolean));
+  (Store.get('savedLayouts') || [])
+    .filter(l => l.isSample && goneLayouts.has(l.id))
+    .forEach(l => Store.deleteLayout(l.id));
+  lessons.forEach(l => Store.deleteLesson(l.id));
+  classes.forEach(c => Store.deleteClass(c.id));
+  // Let every seeder run again for the school we now know this teacher is in.
+  [SEED_KEY(), LESSON_SEED_KEY(), EXEMPLAR_SEED_KEY(), SHOWCASE_SEED_KEY()]
+    .forEach(k => { try { localStorage.removeItem(k); } catch { /* ignore */ } });
+  return true;
+}
+
 export function seedIfNeeded() {
-  if (localStorage.getItem(SEED_KEY)) return;
+  const migrated = clearMismatchedSampleContent();
+  // Before v1.5 the seed flags carried no stage. Honour the old flag for
+  // anyone whose stage did NOT change under them, so a teacher who deliberately
+  // deleted the sample classes does not find them back the next morning.
+  if (!migrated && localStorage.getItem('cocher2_seeded') && !isPrimary()) return;
+  if (localStorage.getItem(SEED_KEY())) return;
   if (Store.getClasses().length > 0) {
-    localStorage.setItem(SEED_KEY, '1');
+    localStorage.setItem(SEED_KEY(), '1');
     return;
   }
 
-  const classes = [
-    { name: '4A Pure Chemistry', level: 'GCE O Level / G3', subject: 'Pure Chemistry' },
-    { name: '4B Combined Science', level: 'GCE O Level / G3', subject: 'Combined Science' },
-    { name: '4C Mathematics', level: 'GCE O Level / G3', subject: 'Mathematics' },
-  ];
+  // The school's own levels and, where its pack names them, its own class codes.
+  const classes = sampleClasses();
 
   classes.forEach((cls, ci) => {
     const created = Store.addClass(cls);
@@ -80,7 +132,7 @@ export function seedIfNeeded() {
     }
   });
 
-  localStorage.setItem(SEED_KEY, '1');
+  localStorage.setItem(SEED_KEY(), '1');
 }
 
 /* ══════════ PD Starter Packs ══════════ */
@@ -1254,7 +1306,7 @@ export function seedCCAIfNeeded() {
 
 /* ══════════ Exemplar Lesson Plans ══════════ */
 
-const LESSON_SEED_KEY = 'cocher2_lessons_seeded';
+const LESSON_SEED_KEY = () => `cocher2_lessons_seeded_${stageTag()}`;
 
 const EXEMPLAR_LESSONS = [
   {
@@ -1569,23 +1621,29 @@ Key discussion point for (e): the limits include a negative $x$-value \u2014 doe
 ];
 
 export function seedLessonsIfNeeded() {
-  if (localStorage.getItem(LESSON_SEED_KEY)) return;
+  if (localStorage.getItem('cocher2_lessons_seeded') && !isPrimary()) return;   // pre-v1.5 flag
+  if (localStorage.getItem(LESSON_SEED_KEY())) return;
   const existing = Store.get('lessons') || [];
   if (existing.length > 0) {
-    localStorage.setItem(LESSON_SEED_KEY, '1');
+    localStorage.setItem(LESSON_SEED_KEY(), '1');
     return;
   }
 
   const classes = Store.getClasses();
   if (classes.length === 0) return; // classes must be seeded first
 
-  EXEMPLAR_LESSONS.forEach(ex => {
-    const cls = classes[ex.classKey] || classes[0];
+  // Primary schools get the primary set; everyone else keeps the secondary one,
+  // which is also the closest fit for a junior college until a JC set exists.
+  const primary = isPrimary();
+  (primary ? primaryChatExemplars() : EXEMPLAR_LESSONS).forEach(ex => {
+    // Primary exemplars name their subject and level; the secondary set is all
+    // one level and still addresses its class positionally.
+    const cls = primary ? classForExemplar(ex, classes) : (classes[ex.classKey] || classes[0]);
     // Set the plan from the last assistant message
     const lastAssistantMsg = [...ex.chatHistory].reverse().find(m => m.role === 'assistant');
     Store.addLesson({
       title: ex.title,
-      classId: cls.id,
+      classId: cls ? cls.id : null,
       chatHistory: ex.chatHistory,
       plan: lastAssistantMsg?.content || '',
       objectives: ex.objectives,
@@ -1602,14 +1660,14 @@ export function seedLessonsIfNeeded() {
     }
   });
 
-  localStorage.setItem(LESSON_SEED_KEY, '1');
+  localStorage.setItem(LESSON_SEED_KEY(), '1');
 }
 
 /* ══════════════════════════════════════════════════════
    Full-Lifecycle Exemplar Lessons — 9 subjects
    ══════════════════════════════════════════════════════ */
 
-const EXEMPLAR_SEED_KEY = 'cocher2_exemplars_seeded_v1';
+const EXEMPLAR_SEED_KEY = () => `cocher2_exemplars_seeded_v1_${stageTag()}`;
 const DAY = 86400000;
 
 const LIFECYCLE_EXEMPLARS = [
@@ -1967,9 +2025,21 @@ Return to the glow sticks — students explain the difference using collision th
 ];
 
 /* Turn a compact exemplar spec into the Store lesson shape. */
+/**
+ * The class a sample lesson belongs to. Subject alone is not enough: a Primary 6
+ * ratio lesson attached to a Primary 4 class is exactly the wrong-level content
+ * this release exists to remove. When an exemplar names its level, the class
+ * must match BOTH — and no class at all beats the wrong one.
+ */
+function classForExemplar(ex, classes) {
+  const subjectHit = (c) => (ex.classMatch || []).some(m =>
+    (c.subject || '').toLowerCase().includes(m.toLowerCase()));
+  if (ex.level) return classes.find(c => subjectHit(c) && c.level === ex.level) || null;
+  return classes.find(subjectHit) || null;
+}
+
 function buildExemplarLesson(ex, classes, now) {
-  const cls = classes.find(c => (ex.classMatch || []).some(m =>
-    (c.subject || '').toLowerCase().includes(m.toLowerCase()))) || null;
+  const cls = classForExemplar(ex, classes);
   const chatHistory = ex.chat ? [
     { role: 'user', content: ex.chat.user },
     { role: 'assistant', content: ex.chat.assistant }
@@ -2003,15 +2073,19 @@ const EXEMPLAR_REHEARSED = new Set([
 ]);
 
 export function seedExemplarsIfNeeded() {
-  if (localStorage.getItem(EXEMPLAR_SEED_KEY)) return;
+  if (localStorage.getItem('cocher2_exemplars_seeded_v1') && !isPrimary()) return;   // pre-v1.5 flag
+  if (localStorage.getItem(EXEMPLAR_SEED_KEY())) return;
   const classes = Store.getClasses();
   if (classes.length === 0) return; // classes must exist first
   const now = Date.now();
   const existing = Store.get('lessons') || [];
-  LIFECYCLE_EXEMPLARS.forEach(ex => {
+  const primary = isPrimary();
+  const set = primary ? primaryLifecycleExemplars() : LIFECYCLE_EXEMPLARS;
+  const rehearsed = primary ? PRIMARY_REHEARSED : EXEMPLAR_REHEARSED;
+  set.forEach(ex => {
     if (existing.some(l => l.title === ex.title)) return;
     const spec = { ...ex };
-    if (EXEMPLAR_REHEARSED.has(ex.title)) spec.rehearsedAt = 4;
+    if (rehearsed.has(ex.title)) spec.rehearsedAt = 4;
     const created = Store.addLesson(buildExemplarLesson(spec, classes, now));
     // addLesson forces status 'draft' and reflection '' — apply the rest
     Store.updateLesson(created.id, {
@@ -2025,7 +2099,7 @@ export function seedExemplarsIfNeeded() {
       updatedAt: now - (spec.updatedDaysAgo || 5) * DAY
     });
   });
-  localStorage.setItem(EXEMPLAR_SEED_KEY, '1');
+  localStorage.setItem(EXEMPLAR_SEED_KEY(), '1');
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2036,7 +2110,7 @@ export function seedExemplarsIfNeeded() {
    it also appears for existing installs on this version.
    ══════════════════════════════════════════════════════ */
 
-const SHOWCASE_SEED_KEY = 'cocher2_showcase_seeded_v5';
+const SHOWCASE_SEED_KEY = () => `cocher2_showcase_seeded_v5_${stageTag()}`;
 
 /* A six-pod discussion layout (+ teacher desk) sized to the 1440×720 canvas,
  * with one saved scene the seated segments point at. */
@@ -2058,9 +2132,11 @@ function seatIntoPods(students, podIids) {
   return groups.filter(g => g.studentIds.length);
 }
 
-/* Find a class by subject substring, else create a fresh 32-student class. */
+/* Find a class by subject AND level, else create a fresh 32-student class.
+ * Level matters: a showcase pitched at one year must not be hung on another. */
 function ensureShowcaseClass(subjectIncludes, def) {
-  const found = Store.getClasses().find(c => (c.subject || '').toLowerCase().includes(subjectIncludes.toLowerCase()));
+  const bySubject = (c) => (c.subject || '').toLowerCase().includes(subjectIncludes.toLowerCase());
+  const found = Store.getClasses().find(c => bySubject(c) && (!def?.level || c.level === def.level));
   if (found) return Store.getClass(found.id);
   const cls = Store.addClass({ name: def.name, level: def.level, subject: def.subject });
   for (let i = 0; i < 32; i++) Store.addStudent(cls.id, { name: NAMES[i % NAMES.length], e21cc: randomE21CC() });
@@ -2360,10 +2436,11 @@ function refreshShowcaseSims(lesson, spec) {
 }
 
 export function seedShowcaseLessonsIfNeeded() {
-  if (localStorage.getItem(SHOWCASE_SEED_KEY)) return;
+  if (localStorage.getItem('cocher2_showcase_seeded_v5') && !isPrimary()) return;   // pre-v1.5 flag
+  if (localStorage.getItem(SHOWCASE_SEED_KEY())) return;
   if (Store.getClasses().length === 0) return; // classes must exist first
   const now = Date.now();
-  SHOWCASE_LESSONS.forEach((spec, idx) => {
+  (isPrimary() ? primaryShowcaseLessons() : SHOWCASE_LESSONS).forEach((spec, idx) => {
     const existing = (Store.get('lessons') || []).find(l => l.title === spec.title);
     if (existing) {
       // Seeded by an earlier version — refresh the showcase deck in place and
@@ -2410,7 +2487,7 @@ export function seedShowcaseLessonsIfNeeded() {
     // graceful) so the deck demo works with no API key. compileDeckHTML is sync.
     attachShowcaseDeck(created.id, spec);
   });
-  localStorage.setItem(SHOWCASE_SEED_KEY, '1');
+  localStorage.setItem(SHOWCASE_SEED_KEY(), '1');
 }
 
 /* ══════════════════════════════════════════════════════

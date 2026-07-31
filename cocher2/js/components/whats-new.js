@@ -17,6 +17,10 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.5', items: [
+    { icon: '\u{1F393}', title: 'Co-Cher knows what level you teach', text: 'Every level picker, sample class and AI prompt now uses YOUR school\u2019s levels. A primary teacher is offered Primary 1\u20136, not Sec 1\u2013JC 2, and the sample lessons that come with Co-Cher are primary lessons \u2014 bar models, the celery experiment, personal recount \u2014 not O-Level chemistry.' },
+    { icon: '\u{1F465}', title: 'Find a Teacher works at any school', text: 'Looking up a colleague\u2019s free periods no longer needs one particular school\u2019s timetable file. It reads whatever your school has published, using real clock times \u2014 and if your school hasn\u2019t published anything yet, it says so plainly instead of loading forever.' },
+  ] },
   { version: 'v1.4', items: [
     { icon: '\u{1F3AF}', title: 'Co-Cher speaks your school\u2019s language', text: 'Lesson design now draws on your school\u2019s OWN teaching approaches, quoted word-for-word from what your school has published \u2014 its vision, values, named subject approaches and frameworks. Where your school hasn\u2019t defined something, Co-Cher says so rather than inventing it.' },
   ] },

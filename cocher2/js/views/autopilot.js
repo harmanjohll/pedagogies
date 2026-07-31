@@ -14,6 +14,21 @@ import { processLatex } from '../utils/latex.js';
 import { escapeHtml, sanitizeSvg } from '../utils/markdown.js';
 import { idbPut } from '../utils/storage.js';
 import { saveArtifact, savedArtifactsHTML, wireSavedArtifacts, consumeOpenArtifact, getArtifact, listArtifacts } from '../utils/library.js';
+import { levels, defaultSchoolType } from '../utils/vocabulary.js';
+
+/* The school's own year names when the chosen type IS the teacher's school
+ * (a PVPS teacher should see "Primary 5", not "P5"); the national vocabulary
+ * otherwise, because Auto-Lesson can be pointed at any level. */
+function apYears(type) {
+  if (type && type === defaultSchoolType()) return levels();
+  if (type === 'primary') return ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'];
+  if (type === 'secondary') return ['Sec 1', 'Sec 2', 'Sec 3', 'Sec 4', 'Sec 5'];
+  if (type === 'jc') return ['JC 1', 'JC 2'];
+  return [];
+}
+/* Pre-select the teacher's own school type. */
+const apSel = (t) => (t === defaultSchoolType() ? ' selected' : '');
+
 
 /* ── SVG icon library (inline, small) ── */
 const I = {
@@ -755,9 +770,9 @@ export function render(container) {
               <label for="ap-school-type">School Type</label>
               <select id="ap-school-type" class="input" style="width:100%;box-sizing:border-box;">
                 <option value="">Select...</option>
-                <option value="primary">Primary</option>
-                <option value="secondary">Secondary</option>
-                <option value="jc">Junior College</option>
+                <option value="primary"${apSel('primary')}>Primary</option>
+                <option value="secondary"${apSel('secondary')}>Secondary</option>
+                <option value="jc"${apSel('jc')}>Junior College</option>
               </select>
             </div>
             <div>
@@ -1122,16 +1137,14 @@ export function render(container) {
 
     if (schoolType && yearSelect && demandSelect) {
       schoolType.addEventListener('change', () => {
-        const type = schoolType.value;
-        let years = [];
-        if (type === 'primary') years = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'];
-        else if (type === 'secondary') years = ['Sec 1', 'Sec 2', 'Sec 3', 'Sec 4', 'Sec 5'];
-        else if (type === 'jc') years = ['JC 1', 'JC 2'];
-
         yearSelect.innerHTML = '<option value="">Select...</option>' +
-          years.map(y => `<option value="${y}">${y}</option>`).join('');
+          apYears(schoolType.value).map(y => `<option value="${y}">${y}</option>`).join('');
         demandSelect.innerHTML = '<option value="">Select year first...</option>';
       });
+
+      // Start on the teacher's own school type, with its year list already
+      // filled — a primary teacher should not have to tell Co-Cher twice.
+      if (schoolType.value) schoolType.dispatchEvent(new Event('change'));
 
       yearSelect.addEventListener('change', () => {
         const type = schoolType.value;
@@ -1139,13 +1152,13 @@ export function render(container) {
         const prevDemand = demandSelect.value;
         let demands = [];
 
-        if (type === 'primary' && ['P5', 'P6'].includes(year)) {
+        if (type === 'primary' && /\b(?:P|Primary\s*)[56]\b/.test(year)) {
           demands = ['Standard', 'Foundation'];
         } else if (type === 'secondary') {
           // Full Subject-Based Banding: G1/G2/G3 applies from the 2024 Sec 1
           // cohort, i.e. Sec 1-3 in 2026. Sec 4-5 are the last legacy
           // streamed cohorts (Express / N(A) / N(T)).
-          demands = ['Sec 4', 'Sec 5'].includes(year)
+          demands = /\b(?:Sec(?:ondary)?\s*)[45]\b/.test(year)
             ? ['Express', 'N(A)', 'N(T)']
             : ['G1', 'G2', 'G3'];
         } else if (type === 'jc') {

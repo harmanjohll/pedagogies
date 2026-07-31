@@ -36,7 +36,12 @@ neither version can read the other's data.
 
 | Version | Location | Live URL | Storage namespace | Status |
 |---------|----------|----------|-------------------|--------|
-| v1.0 | `cocher2/` (full fork of v8.9 — every feature carried over unchanged; the multi-school work starts from here: per-school timetable/roster/calendar/bell schedule, School Packs, school-scoped colleague surfaces) | `/pedagogies/cocher2/` | `cocher2_*` + IndexedDB `cocher2` | **Current (active)** |
+| v1.5 | Level awareness. `utils/vocabulary.js` primes the school's own levels/subjects at boot, so every level picker, sample class and AI prompt speaks the school's stage — a primary teacher is offered Primary 1–6, not Sec 1–JC 2. `seed-primary.js` adds a full primary sample set (chat exemplars, six lifecycle lessons, two showcase lessons with decks), and an untouched legacy secondary sample set is swapped out for it. `utils/directory.js` makes the staff picker and Find a Teacher work for any school — a published `staff.json`, Beatty's CSV, or an honest empty state. | `/pedagogies/cocher2/` | `cocher2_*` + IndexedDB `cocher2` | **Current (active)** |
+| v1.4 | PVPS pack — school identity, values and named T&L approaches quoted verbatim into every AI prompt, with an explicit do-not-invent guard for undefined acronyms | `/pedagogies/cocher2/` | `cocher2_*` | Superseded |
+| v1.3 | Backend client (Drive folder-per-school + Apps Script read proxy) and one-tap onboarding from a school-published timetable | `/pedagogies/cocher2/` | `cocher2_*` | Superseded |
+| v1.2 | Co-Cher 2 identity — neutral by default, tinted by each school's own accent | `/pedagogies/cocher2/` | `cocher2_*` | Superseded |
+| v1.1 | Domain-routed sign-in — no roster gate, unknown domains pick a school rather than being rejected | `/pedagogies/cocher2/` | `cocher2_*` | Superseded |
+| v1.0 | `cocher2/` (full fork of v8.9 — every feature carried over unchanged; the multi-school work starts from here: per-school timetable/roster/calendar/bell schedule, School Packs, school-scoped colleague surfaces) | `/pedagogies/cocher2/` | `cocher2_*` + IndexedDB `cocher2` | Superseded |
 
 ---
 
