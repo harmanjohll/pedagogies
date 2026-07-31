@@ -1,0 +1,367 @@
+{
+  "id": "bty",
+  "name": "Beatty Secondary School",
+  "shortName": "Beatty",
+  "domains": [
+    "btyss.moe.edu.sg"
+  ],
+  "values": "Discipline, Resilience, Empathy, Adaptability, Mindfulness",
+  "contacts": {
+    "allStaff": "BTYSS_all_staff@btyss.moe.edu.sg"
+  },
+  "calendar": {
+    "cycle": "oddEven",
+    "weeks": [
+      {
+        "start": "2026-01-05",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-01-12",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-01-19",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-01-26",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-02-02",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-02-09",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-02-16",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-02-23",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-03-02",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-03-09",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-03-16",
+        "cycle": null
+      },
+      {
+        "start": "2026-03-23",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-03-30",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-04-06",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-04-13",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-04-20",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-04-27",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-05-04",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-05-11",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-05-18",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-05-25",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-06-01",
+        "cycle": null
+      },
+      {
+        "start": "2026-06-08",
+        "cycle": null
+      },
+      {
+        "start": "2026-06-15",
+        "cycle": null
+      },
+      {
+        "start": "2026-06-22",
+        "cycle": null
+      },
+      {
+        "start": "2026-06-29",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-07-06",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-07-13",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-07-20",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-07-27",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-08-03",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-08-10",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-08-17",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-08-24",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-08-31",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-09-07",
+        "cycle": null
+      },
+      {
+        "start": "2026-09-14",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-09-21",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-09-28",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-10-05",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-10-12",
+        "cycle": "Odd"
+      },
+      {
+        "start": "2026-10-19",
+        "cycle": "Even"
+      },
+      {
+        "start": "2026-10-26",
+        "cycle": "Odd"
+      }
+    ]
+  },
+  "levels": [
+    "Secondary 1",
+    "Secondary 2",
+    "Secondary 3",
+    "Secondary 4",
+    "Secondary 5"
+  ],
+  "streams": [
+    "G1",
+    "G2",
+    "G3"
+  ],
+  "departments": [
+    "Aesthetics & Technology",
+    "Economics",
+    "English Language & Literature",
+    "Humanities",
+    "Mathematics",
+    "Mother Tongue Languages",
+    "Physical Education",
+    "Science"
+  ],
+  "subjects": [
+    "AL",
+    "AM",
+    "AR",
+    "CA",
+    "CL",
+    "DT",
+    "EC",
+    "EL",
+    "FC",
+    "GE",
+    "HE",
+    "LI",
+    "MA",
+    "ML",
+    "MU",
+    "PC",
+    "PE",
+    "PG",
+    "PO",
+    "SB",
+    "SE",
+    "SS",
+    "ST",
+    "TL"
+  ],
+  "cca": [
+    {
+      "name": "Basketball",
+      "category": "sports"
+    },
+    {
+      "name": "Track & Field",
+      "category": "sports"
+    },
+    {
+      "name": "Badminton",
+      "category": "sports"
+    },
+    {
+      "name": "Concert Band",
+      "category": "performing"
+    },
+    {
+      "name": "Chinese Dance",
+      "category": "performing"
+    },
+    {
+      "name": "Drama Club",
+      "category": "performing"
+    },
+    {
+      "name": "National Cadet Corps (NCC)",
+      "category": "uniformed"
+    },
+    {
+      "name": "Girl Guides",
+      "category": "uniformed"
+    },
+    {
+      "name": "St John Brigade",
+      "category": "uniformed"
+    },
+    {
+      "name": "Scouts",
+      "category": "uniformed"
+    },
+    {
+      "name": "Robotics Club",
+      "category": "clubs"
+    },
+    {
+      "name": "Debate Society",
+      "category": "clubs"
+    },
+    {
+      "name": "Environmental Club",
+      "category": "clubs"
+    }
+  ],
+  "frameworks": [
+    {
+      "id": "fw_bty_grow",
+      "name": "GROW by Reflecting",
+      "purpose": "metacognition",
+      "guidance": "The GROW by Reflecting routine empowers students to become proactive, self-reflective learners. Each stage guides personal reflection: celebrating success, planning improvement, owning knowledge, and looking ahead.",
+      "stages": [
+        {
+          "key": "G",
+          "label": "Gift yourself success",
+          "prompt": "Celebrate what you DO understand. \"What is one thing I understand? How would I teach this to a friend?\"",
+          "studentPrompt": "What is one thing I understand?"
+        },
+        {
+          "key": "R",
+          "label": "Rise above with small steps",
+          "prompt": "Identify gaps and plan improvement. \"What do I not yet understand? What will I do to improve?\"",
+          "studentPrompt": "What do I not yet understand?"
+        },
+        {
+          "key": "O",
+          "label": "Own your knowledge",
+          "prompt": "Connect learning to real life and share it. \"What is one real-life example? How have I shared this?\"",
+          "studentPrompt": "What is one real-life example?"
+        },
+        {
+          "key": "W",
+          "label": "Watch for what comes next",
+          "prompt": "Look ahead and prepare. \"What do I already know about the next topic? What is coming up?\"",
+          "studentPrompt": "What do I already know about the next topic?"
+        }
+      ]
+    },
+    {
+      "id": "fw_bty_act",
+      "name": "ACT on Feedback",
+      "purpose": "feedback",
+      "guidance": "A learner-centred framework for acting on feedback received. ACT teaches students to treat feedback as a growth tool rather than a judgement, moving from passive receipt to active response.",
+      "stages": [
+        {
+          "key": "A",
+          "label": "Acknowledge",
+          "prompt": "\"How do I feel about this feedback? How might it help me learn better?\"",
+          "studentPrompt": "How do I feel about this feedback?"
+        },
+        {
+          "key": "C",
+          "label": "Connect",
+          "prompt": "\"How does this connect with success criteria/my goals? How does this connect with previous feedback?\"",
+          "studentPrompt": "How does this connect with the success criteria or my goals?"
+        },
+        {
+          "key": "T",
+          "label": "Test",
+          "prompt": "\"What habit do I need to adjust? How will I know I am improving?\"",
+          "studentPrompt": "What habit do I need to adjust?"
+        }
+      ]
+    }
+  ],
+  "learningPractice": {
+    "name": "The Learning Practice",
+    "outer": [
+      "GROW",
+      "ACT",
+      "MAP",
+      "ASK"
+    ],
+    "inner": [
+      "Prepare",
+      "Participate",
+      "Process"
+    ]
+  },
+  "slotMinutes": 35,
+  "joinCode": ""
+}

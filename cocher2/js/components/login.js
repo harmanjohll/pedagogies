@@ -17,6 +17,7 @@
 import { Store } from '../state.js';
 import { trackEvent } from '../utils/analytics.js';
 import { schoolForEmail, listSchools, resetSchoolCache } from '../utils/school.js';
+import { seedDemoTimetable } from '../utils/demo-timetables.js';
 
 export function getCurrentUser() {
   try {
@@ -278,6 +279,10 @@ export async function renderLogin(onComplete) {
 /* Persist the user and move on to naming. */
 function signIn(overlay, user, onComplete) {
   setCurrentUser(user);
+  // Demo accounts get their timetable once, here — sign-in is the only point
+  // guaranteed to run before the app paints, whatever the welcome/onboarding
+  // flow does next. Real teachers import their own; this is a no-op for them.
+  seedDemoTimetable(user.email);
   trackEvent('session', 'login', user.email, user.schoolName || '');
   showNamePrompt(overlay, user, onComplete);
 }
