@@ -154,6 +154,37 @@ export function importSchoolRoster(doc, schoolId) {
   return { ok: true, count: teachers.length };
 }
 
+/**
+ * Turn a pasted staff list into the roster shape. A school website lists names
+ * under headings and nothing else — no emails, no timetables — so that is
+ * exactly what this produces. Nothing is invented: no address is guessed from
+ * a name, because school mail sent to a guessed address is a real mistake in
+ * the real world, and no timetable is fabricated, because "we don't know when
+ * they teach" has to stay distinguishable from "they are free".
+ *
+ * Accepts, one per line:
+ *   Mdm Adeline Ang            → under the most recent heading
+ *   Adeline Ang, Mathematics   → explicit department
+ *   == Mathematics ==          → a heading (any line ending in ':' works too)
+ */
+export function parseStaffList(text) {
+  const SALUTATION = /^(?:mr|mrs|ms|mdm|miss|dr|encik|cikgu)\.?\s+/i;
+  const HEADING = /^(?:={2,}\s*(.+?)\s*={2,}|(.+?):)$/;
+  const teachers = [];
+  let dept = '';
+  String(text || '').split(/\r?\n/).forEach(raw => {
+    const line = raw.trim();
+    if (!line) return;
+    const h = HEADING.exec(line);
+    if (h) { dept = (h[1] || h[2] || '').trim(); return; }
+    const [namePart, deptPart] = line.split(/\s*[,|\t]\s*/);
+    const name = String(namePart || '').replace(SALUTATION, '').trim();
+    if (!name || name.length > 60) return;
+    teachers.push({ name, email: '', department: (deptPart || dept || '').trim(), entries: [] });
+  });
+  return teachers;
+}
+
 /** Forget the locally loaded roster for a school. */
 export function clearSchoolRoster(schoolId) {
   try {
@@ -217,6 +248,11 @@ export async function availabilityFromEntries(teacher, dateObj = new Date(), sch
   const now = new Date();
   const isToday = dateObj.getFullYear() === now.getFullYear()
     && dateObj.getMonth() === now.getMonth() && dateObj.getDate() === now.getDate();
+
+  // A roster can carry names without timetables — a staff list copied from the
+  // school website, for instance. "No entries" then means WE DO NOT KNOW, which
+  // is a different answer from "free", and must never be rendered as one.
+  if (!(teacher?.entries || []).length) return { off: 'unknown', name, isToday };
 
   const dow = dateObj.getDay();
   if (dow < 1 || dow > 5) return { off: 'weekend', name, isToday };

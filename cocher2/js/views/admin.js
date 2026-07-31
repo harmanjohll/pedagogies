@@ -12,7 +12,7 @@ import { sendChat } from '../api.js';
 import { getCurrentUser } from '../components/login.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
 import { openStaffPicker, loadStaffDirectory, renderRecipientChips, ALL_STAFF_EMAIL } from '../components/staff-picker.js';
-import { loadDirectory, availabilityFromEntries, departmentsOf, importSchoolRoster, clearSchoolRoster } from '../utils/directory.js';
+import { loadDirectory, availabilityFromEntries, departmentsOf, importSchoolRoster, clearSchoolRoster, parseStaffList } from '../utils/directory.js';
 import { isPrimary, isJC, levelFromTop, exampleLevel } from '../utils/vocabulary.js';
 
 /* ── Examples that belong to THIS school ─────────────────────────────
@@ -514,6 +514,15 @@ function ftDateLabel(dateObj) {
 function ftRenderResult(el, a, dateObj) {
   const name = esc(a.name);
   const dateLbl = esc(ftDateLabel(dateObj));
+  if (a.off === 'unknown') {
+    // Say what we do not know. Guessing "free" here would send a colleague to
+    // knock on a door in the middle of someone's lesson.
+    el.innerHTML = `<div class="ft-panel">
+      <div class="ft-now" style="color:var(--ink);">&#9898; No timetable for ${name}</div>
+      <p class="ft-line ft-muted">${name} is on the staff list, but their timetable has not been loaded, so Co-Cher cannot say when they are free. Ask them, or load a staff timetable that includes their week.</p>
+    </div>`;
+    return;
+  }
   if (a.off) {
     const why = a.off === 'weekend' ? 'a weekend' : (a.off === 'nonteaching' ? 'a non-teaching week' : 'a day with no scheduled periods');
     el.innerHTML = `<div class="ft-panel">
@@ -587,7 +596,14 @@ async function renderFindTeacher(container) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
         <button class="btn btn-secondary btn-sm" id="ft-load">Load staff timetable&hellip;</button>
         <input type="file" id="ft-file" accept="application/json,.json" style="display:none;" />
-        <span style="font-size:0.6875rem;color:var(--ink-faint);">A staff timetable file (.json) from your school administrator.</span>
+        <button class="btn btn-ghost btn-sm" id="ft-paste">Paste a staff list instead</button>
+      </div>
+      <div id="ft-paste-box" style="display:none;margin-top:10px;">
+        <textarea class="input" id="ft-paste-text" rows="7" placeholder="Paste your school's staff page — one name per line.&#10;&#10;Mathematics:&#10;Mdm Adeline Ang&#10;Mr Tan Wei Ming&#10;&#10;Science:&#10;Ms Jamie Lie&#10;&#10;Names only is fine. Co-Cher will list your colleagues, and say plainly that it does not know their timetables." style="width:100%;box-sizing:border-box;font-size:0.8125rem;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button class="btn btn-primary btn-sm" id="ft-paste-go">Add these colleagues</button>
+          <span style="font-size:0.6875rem;color:var(--ink-faint);align-self:center;">No email addresses are guessed, and no timetables are invented.</span>
+        </div>
       </div>
     </div>`;
     wireRosterLoad(container, result);
@@ -665,6 +681,23 @@ function wireRosterLoad(container, result) {
   const file = result.querySelector('#ft-file');
   if (!btn || !file) return;
   btn.addEventListener('click', () => file.click());
+
+  // Paste path: a staff page copied off the school website is names and nothing
+  // more, which is enough to list colleagues honestly.
+  const pasteBtn = result.querySelector('#ft-paste');
+  const box = result.querySelector('#ft-paste-box');
+  pasteBtn?.addEventListener('click', () => {
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    if (box.style.display === 'block') box.querySelector('#ft-paste-text')?.focus();
+  });
+  box?.querySelector('#ft-paste-go')?.addEventListener('click', () => {
+    const teachers = parseStaffList(box.querySelector('#ft-paste-text').value);
+    if (!teachers.length) { showToast('No names found in that text.', 'error'); return; }
+    const res = importSchoolRoster({ teachers }, getCurrentUser()?.schoolId);
+    if (!res.ok) { showToast(res.error, 'error'); return; }
+    showToast(`${res.count} colleagues added.`, 'success');
+    renderFindTeacher(container);
+  });
   file.addEventListener('change', async () => {
     const f = file.files?.[0];
     if (!f) return;
