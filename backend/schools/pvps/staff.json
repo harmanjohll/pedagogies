@@ -1,0 +1,203 @@
+{
+  "schoolId": "pvps",
+  "note": "DEMO data — fictional teacher",
+  "teachers": [
+    {
+      "name": "Jamie Lie",
+      "email": "jamie_lie@pvps.moe.edu.sg",
+      "source": "PVPS_Timetable_Teacher.xlsx (Adeline Ang)",
+      "entries": [
+        {
+          "cycle": null,
+          "day": "Mon",
+          "start": "07:30",
+          "end": "08:30",
+          "title": "MATH",
+          "class": "6R3",
+          "room": null,
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Mon",
+          "start": "09:30",
+          "end": "10:30",
+          "title": "SCI",
+          "class": "6C,6I",
+          "room": "J5-01B,J5-02",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Mon",
+          "start": "10:30",
+          "end": "11:00",
+          "title": "MATH",
+          "class": "5R1,5R2",
+          "room": "A3-04,J4-05",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Mon",
+          "start": "11:00",
+          "end": "12:00",
+          "title": "FTGP 6I",
+          "class": null,
+          "room": null,
+          "kind": "school"
+        },
+        {
+          "cycle": null,
+          "day": "Mon",
+          "start": "12:00",
+          "end": "12:30",
+          "title": "ASSEMBLY",
+          "class": null,
+          "room": null,
+          "kind": "school"
+        },
+        {
+          "cycle": null,
+          "day": "Tue",
+          "start": "09:30",
+          "end": "10:00",
+          "title": "DUTY@PARADE SQ",
+          "class": null,
+          "room": null,
+          "kind": "duty"
+        },
+        {
+          "cycle": null,
+          "day": "Tue",
+          "start": "10:00",
+          "end": "10:30",
+          "title": "MATH",
+          "class": "6R3",
+          "room": null,
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Tue",
+          "start": "12:00",
+          "end": "12:30",
+          "title": "SDC",
+          "class": "SDC",
+          "room": "MEET RM 1",
+          "kind": "school"
+        },
+        {
+          "cycle": null,
+          "day": "Tue",
+          "start": "12:30",
+          "end": "13:30",
+          "title": "MATH",
+          "class": "5R1,5R2",
+          "room": "A3-04,J4-05",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Wed",
+          "start": "09:00",
+          "end": "10:00",
+          "title": "MATH",
+          "class": "6R3",
+          "room": null,
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Wed",
+          "start": "10:30",
+          "end": "11:00",
+          "title": "DUTY@ECO GARDEN",
+          "class": null,
+          "room": null,
+          "kind": "duty"
+        },
+        {
+          "cycle": null,
+          "day": "Wed",
+          "start": "11:30",
+          "end": "12:30",
+          "title": "MATH",
+          "class": "5R1,5R2",
+          "room": "A3-04,J4-05",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Wed",
+          "start": "12:30",
+          "end": "13:30",
+          "title": "SCI",
+          "class": "6C,6I",
+          "room": "J5-01B,J5-02",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Thu",
+          "start": "11:00",
+          "end": "12:00",
+          "title": "MATH",
+          "class": "6R3",
+          "room": null,
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Thu",
+          "start": "12:30",
+          "end": "13:30",
+          "title": "MATH",
+          "class": "5R1,5R2",
+          "room": "A3-04,J4-05",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Fri",
+          "start": "09:00",
+          "end": "10:00",
+          "title": "PLT MA2",
+          "class": "PLT MA2",
+          "room": "MEET RM 1",
+          "kind": "school"
+        },
+        {
+          "cycle": null,
+          "day": "Fri",
+          "start": "10:30",
+          "end": "11:30",
+          "title": "MATH",
+          "class": "5R1,5R2",
+          "room": "A3-04,J4-05",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Fri",
+          "start": "11:30",
+          "end": "12:30",
+          "title": "SCI",
+          "class": "6C,6I",
+          "room": "J5-01B,J5-02",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Fri",
+          "start": "12:30",
+          "end": "13:30",
+          "title": "MATH",
+          "class": "6R3",
+          "room": null,
+          "kind": "lesson"
+        }
+      ]
+    }
+  ]
+}
