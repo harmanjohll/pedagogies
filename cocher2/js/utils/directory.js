@@ -14,8 +14,10 @@
  *
  *   backend  — the school published staff.json into its Drive folder. Canonical
  *              entries with real clock times, so availability works properly.
+ *   local    — someone loaded the school's staff timetable into THIS browser.
+ *              Same file, same shape; it just has not been published yet.
  *   bty-csv  — Beatty's existing timetable CSV, unchanged, still exact.
- *   none     — nothing published yet. Say so, and say what would fix it.
+ *   none     — nothing anywhere. Say so, and say what would fix it.
  *
  * The `reason` on an empty directory is the point. "No staff found" is a dead
  * end; "your school hasn't published a staff timetable yet" is something an
@@ -28,6 +30,7 @@ import { loadPack, schoolName, cycleForDate } from './school.js';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const BTY_CSV_URL = './btyrelief/BTYTT_2026Sem2_v1.csv';
+const LOCAL_ROSTER_KEY = 'cocher2_school_roster';
 
 let _cache = null;      // { schoolId, dir }
 
@@ -81,18 +84,84 @@ async function buildDirectory(schoolId) {
     if (teachers.length) return { ...base, source: 'backend', teachers };
   } catch { /* fall through to the next source */ }
 
-  // 2. Beatty's own CSV, still exact for the school it was written for.
+  // 2. A roster loaded into this browser. Waiting on a Drive folder should not
+  //     be the thing standing between a school and a working colleague list —
+  //     one person can load the file and have it work today, on their machine.
+  const local = readLocalRoster(schoolId);
+  if (local.length) return { ...base, source: 'local', teachers: local };
+
+  // 3. Beatty's own CSV, still exact for the school it was written for.
   if (schoolId === 'bty') {
     const teachers = await loadBeattyCsv();
     if (teachers.length) return { ...base, source: 'bty-csv', teachers };
   }
 
-  // 3. Nothing published. Say what would fix it.
+  // 4. Nothing anywhere. Say what would fix it.
   return {
     ...base,
     source: 'none',
-    reason: `${name || 'Your school'} has not published a staff timetable yet. Once an administrator adds one, everyone here can look up a colleague's free periods — nobody else has to do anything.`,
+    reason: `${name || 'Your school'} has not published a staff timetable yet, so there is nobody to list. Load it from Admin \u2192 Find a Teacher and it works straight away on this device; publish it to the school's folder and it works for everyone.`,
   };
+}
+
+/* ── A roster held in this browser ───────────────────────────────────
+ * Same shape as the published staff.json documented in backend/README.md:
+ *   { schoolId, teachers: [{ name, email, department, entries: [...] }] }
+ * Stored per school id, so loading Park View's roster can never surface it to
+ * a teacher from somewhere else.
+ */
+function readLocalRoster(schoolId) {
+  try {
+    const all = JSON.parse(localStorage.getItem(LOCAL_ROSTER_KEY) || '{}');
+    return normaliseTeachers(all?.[schoolId]?.teachers);
+  } catch { return []; }
+}
+
+function normaliseTeachers(list) {
+  return (Array.isArray(list) ? list : [])
+    .map(t => ({
+      name: String(t?.name || '').trim(),
+      email: String(t?.email || '').trim().toLowerCase(),
+      department: String(t?.department || t?.dept || '').trim(),
+      entries: Array.isArray(t?.entries) ? t.entries : [],
+    }))
+    .filter(t => t.name)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Load a staff timetable into this browser for the given school.
+ * Returns { ok, count, error } — never throws, because this is driven by a
+ * file a human picked and the failure has to be explainable, not silent.
+ */
+export function importSchoolRoster(doc, schoolId) {
+  if (!schoolId) return { ok: false, error: 'Co-Cher does not know which school you are in yet.' };
+  const teachers = normaliseTeachers(doc?.teachers);
+  if (!teachers.length) {
+    return { ok: false, error: 'That file has no teachers in it. Expected a staff timetable with a "teachers" list, each with a name and their entries.' };
+  }
+  if (doc?.schoolId && String(doc.schoolId).toLowerCase() !== String(schoolId).toLowerCase()) {
+    return { ok: false, error: `That roster is for "${doc.schoolId}", not your school. Loading it would show you another school's staff.` };
+  }
+  try {
+    const all = JSON.parse(localStorage.getItem(LOCAL_ROSTER_KEY) || '{}');
+    all[schoolId] = { teachers, loadedAt: Date.now() };
+    localStorage.setItem(LOCAL_ROSTER_KEY, JSON.stringify(all));
+  } catch {
+    return { ok: false, error: 'That roster is too large to store in this browser.' };
+  }
+  resetDirectory();
+  return { ok: true, count: teachers.length };
+}
+
+/** Forget the locally loaded roster for a school. */
+export function clearSchoolRoster(schoolId) {
+  try {
+    const all = JSON.parse(localStorage.getItem(LOCAL_ROSTER_KEY) || '{}');
+    delete all[schoolId];
+    localStorage.setItem(LOCAL_ROSTER_KEY, JSON.stringify(all));
+  } catch { /* nothing to clear */ }
+  resetDirectory();
 }
 
 /** Beatty's staff timetable CSV → directory rows, with the raw row kept. */

@@ -12,7 +12,36 @@ import { sendChat } from '../api.js';
 import { getCurrentUser } from '../components/login.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
 import { openStaffPicker, loadStaffDirectory, renderRecipientChips, ALL_STAFF_EMAIL } from '../components/staff-picker.js';
-import { loadDirectory, availabilityFromEntries, departmentsOf } from '../utils/directory.js';
+import { loadDirectory, availabilityFromEntries, departmentsOf, importSchoolRoster, clearSchoolRoster } from '../utils/directory.js';
+import { isPrimary, isJC, levelFromTop, exampleLevel } from '../utils/vocabulary.js';
+
+/* ── Examples that belong to THIS school ─────────────────────────────
+ * Every placeholder in the one-stop was written for a secondary school:
+ * "4A, 4B Pure Chemistry", "NUS Science Faculty", "HOD Mathematics". To a
+ * primary teacher those are someone else's forms. Examples are drawn from the
+ * teacher's OWN class codes where Co-Cher knows them, and from the school's
+ * stage otherwise — a placeholder is a small thing, but a form full of another
+ * school's vocabulary tells you the tool was not built for you. */
+function adminEg() {
+  const codes = (Store.getClasses() || []).map(c => c.name).filter(Boolean);
+  const two = codes.slice(0, 2).join(', ');
+  const primary = isPrimary(), jc = isJC();
+  return {
+    classes: two || (primary ? '5A, 5B' : jc ? '25S03, 25S04' : '4A, 4B'),
+    someClasses: two || (primary ? '5A and 5B' : jc ? '25S03 and 25S04' : '4A and 4B'),
+    level: exampleLevel(),
+    venue: primary ? 'Science Centre Singapore' : 'National University of Singapore',
+    tripVenue: primary ? 'Science Centre Singapore' : 'NUS Science Faculty',
+    bookingVenue: primary ? 'Science Centre Singapore' : 'NUS Mathematics Dept',
+    headcount: primary ? '30' : '32',
+    passengers: primary ? '35' : '37',
+    approver: primary ? 'HOD Mathematics' : jc ? 'Head of Department (Mathematics)' : 'HOD Mathematics',
+    budgetCode: primary ? 'PS-MATH-2026' : jc ? 'JC-MATH-2026' : 'SC-MATH-2026',
+    // Co-Cher 2 works in clock times, not period numbers — say it that way.
+    slots: '9:00 &ndash; 10:30',
+    event: primary ? 'Science Buddies Day' : 'Math Olympiad',
+  };
+}
 import { openRamsEditor } from '../components/rams-editor.js';
 import { renderAdminWorkflow, bindAdminWorkflowClicks } from '../components/admin-workflow.js';
 import { ensureCalendar, getTTPeriodKey, getWeekTypeForDate, periodCol, periodsForDay, periodStartMin, periodEndMin, fmtClockShort, PERIOD_LEN_MIN } from './dashboard.js';
@@ -113,7 +142,10 @@ function buildFormURL(baseUrl, event, task) {
 }
 
 /* ── Admin task templates (checked by default) ── */
-const EVENT_TASKS = [
+/* Built per call, not frozen at module load: the placeholders inside quote the
+ * teacher's own classes and their school's stage, neither of which exists yet
+ * when this module is first evaluated. */
+const eventTasks = () => [
   {
     key: 'rams',
     label: 'Risk Assessment (RAMS)',
@@ -121,7 +153,7 @@ const EVENT_TASKS = [
     icon: '🛡️',
     fields: [
       { id: 'activity_desc', label: 'Activity Description', type: 'textarea', placeholder: 'Describe the out-of-school activity...' },
-      { id: 'venue', label: 'Venue', type: 'text', placeholder: 'e.g. National University of Singapore' },
+      { id: 'venue', label: 'Venue', type: 'text', placeholder: `e.g. ${adminEg().venue}` },
       { id: 'hazards', label: 'Identified Hazards', type: 'textarea', placeholder: 'List potential hazards (travel, venue, activity-specific)...' },
       { id: 'mitigations', label: 'Control Measures', type: 'textarea', placeholder: 'Mitigation steps for each hazard...' },
       { id: 'emergency_plan', label: 'Emergency Plan', type: 'textarea', placeholder: 'Emergency contacts, nearest hospital, evacuation plan...' },
@@ -137,11 +169,11 @@ const EVENT_TASKS = [
     fields: [
       { id: 'teacher_ic', label: 'Teacher-in-Charge', type: 'text', placeholder: 'e.g. Ms Tan Wei Ling' },
       { id: 'pickup_point', label: 'Pick-up Point', type: 'text', placeholder: 'e.g. School Main Gate' },
-      { id: 'destination', label: 'Destination', type: 'text', placeholder: 'e.g. Singapore Science Centre' },
+      { id: 'destination', label: 'Destination', type: 'text', placeholder: 'e.g. Science Centre Singapore' },
       { id: 'departure_time', label: 'Departure Time', type: 'text', placeholder: 'e.g. 8:00 AM' },
       { id: 'return_time', label: 'Expected Return', type: 'text', placeholder: 'e.g. 1:00 PM' },
       { id: 'return_to', label: 'Return To', type: 'text', placeholder: 'e.g. School' },
-      { id: 'num_passengers', label: 'Number of Passengers (incl. teachers)', type: 'text', placeholder: 'e.g. 37' },
+      { id: 'num_passengers', label: 'Number of Passengers (incl. teachers)', type: 'text', placeholder: `e.g. ${adminEg().passengers}` },
       { id: 'num_buses', label: 'Number of Buses', type: 'text', placeholder: 'e.g. 2' },
       { id: 'bus_company', label: 'Bus Company', type: 'text', placeholder: 'e.g. SBS Transit Charter' },
       { id: 'special_needs', label: 'Special Requirements', type: 'textarea', placeholder: 'Wheelchair access, extra luggage space, etc.' }
@@ -153,8 +185,8 @@ const EVENT_TASKS = [
     desc: 'Prepare the list of participating students with emergency contacts.',
     icon: '📋',
     fields: [
-      { id: 'participating_classes', label: 'Participating Classes', type: 'text', placeholder: 'e.g. 4A, 4B' },
-      { id: 'total_students', label: 'Total Students', type: 'text', placeholder: 'e.g. 35' },
+      { id: 'participating_classes', label: 'Participating Classes', type: 'text', placeholder: `e.g. ${adminEg().classes}` },
+      { id: 'total_students', label: 'Total Students', type: 'text', placeholder: `e.g. ${adminEg().headcount}` },
       { id: 'teacher_ic', label: 'Teacher-in-Charge', type: 'text', placeholder: 'e.g. Ms Tan Wei Ling' },
       { id: 'accompanying_teachers', label: 'Accompanying Teachers', type: 'textarea', placeholder: 'List all accompanying teachers...' }
     ]
@@ -165,7 +197,7 @@ const EVENT_TASKS = [
     desc: 'Notify parents via Parents Gateway about the activity.',
     icon: '👨‍👩‍👧',
     fields: [
-      { id: 'pg_subject', label: 'PG Subject Line', type: 'text', placeholder: 'e.g. Math Olympiad — 15 Mar 2026' },
+      { id: 'pg_subject', label: 'PG Subject Line', type: 'text', placeholder: `e.g. ${adminEg().event} — 15 Mar 2026` },
       { id: 'pg_message', label: 'Message to Parents', type: 'textarea', placeholder: 'Draft the Parents Gateway notification...' },
       { id: 'consent_required', label: 'Consent Required?', type: 'select', options: ['Yes', 'No'] },
       { id: 'consent_deadline', label: 'Consent Deadline', type: 'text', placeholder: 'e.g. 10 Mar 2026' },
@@ -178,9 +210,9 @@ const EVENT_TASKS = [
     desc: 'Notify affected teachers about students leaving lessons early.',
     icon: '👩‍🏫',
     fields: [
-      { id: 'affected_periods', label: 'Affected Periods', type: 'text', placeholder: 'e.g. Periods 3–6' },
+      { id: 'affected_periods', label: 'Affected Periods', type: 'text', placeholder: `e.g. ${adminEg().slots}` },
       { id: 'teacher_message', label: 'Message to Teachers', type: 'textarea', placeholder: 'Draft notification to affected subject teachers...' },
-      { id: 'classes_affected', label: 'Classes Affected', type: 'text', placeholder: 'e.g. 4A, 4B Pure Chemistry' },
+      { id: 'classes_affected', label: 'Classes Affected', type: 'text', placeholder: `e.g. ${adminEg().classes}` },
       { id: 'notification_channel', label: 'Channel', type: 'select', options: ['MS Teams', 'Email', 'Staff Portal', 'WhatsApp Group', 'Hardcopy'] }
     ]
   },
@@ -191,11 +223,11 @@ const EVENT_TASKS = [
     icon: '💰',
     externalLink: { url: 'https://form.gov.sg/6957392872041c1d962c3ab1', label: 'Open AOR Form' },
     fields: [
-      { id: 'budget_code', label: 'Budget Code', type: 'text', placeholder: 'e.g. SC-MATH-2026' },
+      { id: 'budget_code', label: 'Budget Code', type: 'text', placeholder: `e.g. ${adminEg().budgetCode}` },
       { id: 'estimated_cost', label: 'Estimated Total Cost', type: 'text', placeholder: 'e.g. $850.00' },
       { id: 'cost_breakdown', label: 'Cost Breakdown', type: 'textarea', placeholder: 'Bus: $500\nVenue: $200\nMaterials: $150' },
       { id: 'funding_source', label: 'Funding Source', type: 'select', options: ['School Budget', 'Department Budget', 'MOE Grant', 'Student Fee', 'External Sponsor'] },
-      { id: 'approver', label: 'Approving Officer', type: 'text', placeholder: 'e.g. HOD Mathematics' }
+      { id: 'approver', label: 'Approving Officer', type: 'text', placeholder: `e.g. ${adminEg().approver}` }
     ]
   },
   {
@@ -204,7 +236,7 @@ const EVENT_TASKS = [
     desc: 'Confirm venue reservation and any on-site arrangements.',
     icon: '🏛️',
     fields: [
-      { id: 'venue_name', label: 'Venue', type: 'text', placeholder: 'e.g. NUS Mathematics Dept' },
+      { id: 'venue_name', label: 'Venue', type: 'text', placeholder: `e.g. ${adminEg().bookingVenue}` },
       { id: 'venue_contact', label: 'Venue Contact', type: 'text', placeholder: 'Name and number of venue coordinator' },
       { id: 'venue_address', label: 'Address', type: 'text', placeholder: 'Full address for bus driver' },
       { id: 'venue_time', label: 'Booked Time Slot', type: 'text', placeholder: 'e.g. 9:00 AM – 12:30 PM' },
@@ -514,9 +546,20 @@ function ftRenderResult(el, a, dateObj) {
 }
 
 async function renderFindTeacher(container) {
-  const deptSel = container.querySelector('#ft-dept');
-  const teacherSel = container.querySelector('#ft-teacher');
-  const dateSel = container.querySelector('#ft-date');
+  // Loading or removing a roster re-runs this whole function against the same
+  // DOM. Swapping each control for a clone drops the previous pass's listeners
+  // outright, so a second load can never fire the handler twice.
+  const fresh = (sel) => {
+    const el = container.querySelector(sel);
+    if (!el) return null;
+    const clone = el.cloneNode(true);
+    clone.disabled = false;
+    el.replaceWith(clone);
+    return clone;
+  };
+  const deptSel = fresh('#ft-dept');
+  const teacherSel = fresh('#ft-teacher');
+  const dateSel = fresh('#ft-date');
   const result = container.querySelector('#ft-result');
   if (!deptSel || !teacherSel || !result) return;
 
@@ -533,14 +576,21 @@ async function renderFindTeacher(container) {
   if (dir.source === 'bty-csv') { try { await ensureCalendar(); } catch { /* calendar optional */ } }
 
   if (!dir.teachers.length) {
-    deptSel.innerHTML = '<option value="">Nothing published yet</option>';
+    deptSel.innerHTML = '<option value="">Nothing loaded yet</option>';
     deptSel.disabled = true;
     teacherSel.innerHTML = '<option value="">&mdash;</option>';
     teacherSel.disabled = true;
+    // An empty list has to come with the thing that fills it, or the teacher is
+    // just told "no" by a dropdown that will never change on its own.
     result.innerHTML = `<div class="ft-panel">
       <p class="ft-line ft-muted">${esc(dir.reason || 'No staff timetable is available.')}</p>
-      <p class="ft-line ft-muted">${navigator.onLine ? 'You can still import your own timetable from Settings &rarr; My Timetable.' : 'You appear to be offline &mdash; this may fill in once you reconnect.'}</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+        <button class="btn btn-secondary btn-sm" id="ft-load">Load staff timetable&hellip;</button>
+        <input type="file" id="ft-file" accept="application/json,.json" style="display:none;" />
+        <span style="font-size:0.6875rem;color:var(--ink-faint);">A staff timetable file (.json) from your school administrator.</span>
+      </div>
     </div>`;
+    wireRosterLoad(container, result);
     return;
   }
 
@@ -558,6 +608,7 @@ async function renderFindTeacher(container) {
   };
 
   const depts = departmentsOf(dir);
+  container.querySelector('#ft-local-note')?.remove();
   const hasDepts = depts.length > 1 || (depts.length === 1 && depts[0] !== 'Unassigned');
   const fillTeachers = (dept) => {
     const inDept = dir.teachers
@@ -590,6 +641,42 @@ async function renderFindTeacher(container) {
 
   teacherSel.addEventListener('change', renderSelected);
   dateSel?.addEventListener('change', renderSelected);
+
+  // A locally loaded roster is this device only — say so, and offer the undo.
+  if (dir.source === 'local') {
+    const note = document.createElement('p');
+    note.id = 'ft-local-note';
+    note.className = 'ft-line ft-muted';
+    note.style.cssText = 'margin-top:10px;font-size:0.6875rem;';
+    note.innerHTML = `${dir.teachers.length} colleagues loaded on this device. `
+      + `<button class="btn btn-ghost btn-sm" id="ft-clear" style="font-size:0.6875rem;padding:2px 8px;">Remove</button>`;
+    container.querySelector('#ft-selectors')?.after(note);
+    note.querySelector('#ft-clear')?.addEventListener('click', () => {
+      clearSchoolRoster(dir.schoolId);
+      showToast('Staff timetable removed from this device.', 'success');
+      renderFindTeacher(container);
+    });
+  }
+}
+
+/* Read a staff-timetable file the teacher picked, and say plainly what happened. */
+function wireRosterLoad(container, result) {
+  const btn = result.querySelector('#ft-load');
+  const file = result.querySelector('#ft-file');
+  if (!btn || !file) return;
+  btn.addEventListener('click', () => file.click());
+  file.addEventListener('change', async () => {
+    const f = file.files?.[0];
+    if (!f) return;
+    let doc = null;
+    try { doc = JSON.parse(await f.text()); }
+    catch { showToast('That file is not valid JSON.', 'error'); file.value = ''; return; }
+    const res = importSchoolRoster(doc, getCurrentUser()?.schoolId);
+    file.value = '';
+    if (!res.ok) { showToast(res.error, 'error'); return; }
+    showToast(`${res.count} colleagues loaded.`, 'success');
+    renderFindTeacher(container);
+  });
 }
 
 /* ── Events list ── */
@@ -636,7 +723,7 @@ function renderEventsList(el, events) {
           </div>
           <div style="display:flex;gap:var(--sp-1);">
             ${enabledTasks.slice(0, 4).map(t => {
-              const tmpl = EVENT_TASKS.find(et => et.key === t.key);
+              const tmpl = eventTasks().find(et => et.key === t.key);
               return `<span title="${tmpl?.label || t.key}" style="font-size:1.1rem;">${tmpl?.icon || '📌'}</span>`;
             }).join('')}
             ${enabledTasks.length > 4 ? `<span style="font-size:0.75rem;color:var(--ink-muted);align-self:center;">+${enabledTasks.length - 4}</span>` : ''}
@@ -671,7 +758,7 @@ function showNewEventModal(container) {
       ` : ''}
       <div class="input-group">
         <label class="input-label">Event Name</label>
-        <input class="input" id="event-name" placeholder="e.g. Math Olympiad 2026" />
+        <input class="input" id="event-name" placeholder="e.g. ${adminEg().event} 2026" />
       </div>
       <div class="input-group">
         <label class="input-label">Date</label>
@@ -693,14 +780,14 @@ function showNewEventModal(container) {
         <label class="input-label">Describe the Event</label>
         <textarea class="input" id="event-description" rows="5" placeholder="Tell us the key details and Co-Cher will draft all event documents for you.
 
-E.g. 'Taking 4A and 4B Pure Chemistry students (32 students) to NUS Science Faculty for a lab tour on 20 Mar 2026. Departing school at 8am, returning by 1pm. 2 teachers accompanying. Budget of $500 for bus. Need parent consent by 15 Mar.'"></textarea>
+E.g. 'Taking ${adminEg().someClasses} (${adminEg().headcount} pupils) to ${adminEg().tripVenue} on 20 Mar 2026. Departing school at 8am, returning by 1pm. 2 teachers accompanying. Budget of $500 for bus. Need parent consent by 15 Mar.'"></textarea>
         <div style="font-size:0.6875rem;color:var(--ink-faint);margin-top:4px;">The more detail you provide, the better the AI drafts will be. Include dates, venues, student numbers, costs, and any special needs.</div>
       </div>
       <div class="input-group">
         <label class="input-label">Which documents do you need?</label>
         <p style="font-size:0.75rem;color:var(--ink-muted);margin-bottom:var(--sp-2);">Select the tasks you need. The AI will draft content for each.</p>
         <div style="display:flex;flex-direction:column;gap:var(--sp-2);" id="task-checklist">
-          ${EVENT_TASKS.map(t => `
+          ${eventTasks().map(t => `
             <label style="display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);background:var(--bg-subtle);border-radius:var(--radius-md);cursor:pointer;transition:background 0.15s;">
               <input type="checkbox" value="${t.key}" checked class="event-task-check" />
               <span style="font-size:1.1rem;">${t.icon}</span>
@@ -746,7 +833,7 @@ E.g. 'Taking 4A and 4B Pure Chemistry students (32 students) to NUS Science Facu
     const eventType = backdrop.querySelector('#event-type').value;
     const checks = [...backdrop.querySelectorAll('.event-task-check')];
     const enabledKeys = checks.filter(c => c.checked).map(c => c.value);
-    const enabledTasks = EVENT_TASKS.filter(t => enabledKeys.includes(t.key));
+    const enabledTasks = eventTasks().filter(t => enabledKeys.includes(t.key));
 
     // Disable buttons, show loading
     const aiBtn = backdrop.querySelector('[data-action="create-ai"]');
@@ -802,7 +889,7 @@ function createEventFromModal(backdrop, container, close, aiData, nameOverride, 
   }
 
   const currentUser = getCurrentUser();
-  const tasks = EVENT_TASKS.map(t => {
+  const tasks = eventTasks().map(t => {
     const enabled = enabledKeys.includes(t.key);
     const data = {};
     // Pre-fill teacher-in-charge from current user
@@ -882,7 +969,7 @@ IMPORTANT: Respond ONLY with valid JSON. No markdown, no explanation. The JSON s
   ...
 }
 
-For select fields, use one of the provided options exactly. For text/textarea fields, provide practical, realistic content based on the event description. If information is missing from the description, make reasonable assumptions for a Singapore school context and use [PLACEHOLDER] markers where the teacher needs to fill in specific details.`
+For select fields, use one of the provided options exactly. For text/textarea fields, provide practical, realistic content based on the event description. If information is missing from the description, make reasonable assumptions for a Singapore school context and use [PLACEHOLDER] markers where the teacher needs to fill in specific details. Write for the stage of schooling described in this system prompt — a primary school's parent letter, consent form and risk assessment differ from a secondary school's in reading level, supervision ratios and what parents need to be told.`
   }];
 
   const response = await sendChat(messages, {
@@ -971,7 +1058,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
     <!-- Status Board -->
     <div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-6);flex-wrap:wrap;overflow-x:auto;" id="status-board">
       ${enabledTasks.map(task => {
-        const tmpl = EVENT_TASKS.find(et => et.key === task.key);
+        const tmpl = eventTasks().find(et => et.key === task.key);
         if (!tmpl) return '';
         const approval = getApprovalStyle(task.approvalStatus || 'not_started');
         return `
@@ -989,7 +1076,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
 
     <div style="display:flex;flex-direction:column;gap:var(--sp-4);" id="task-panels">
       ${enabledTasks.map(task => {
-        const tmpl = EVENT_TASKS.find(et => et.key === task.key);
+        const tmpl = eventTasks().find(et => et.key === task.key);
         if (!tmpl) return '';
         const isComplete = task.status === 'completed';
         const approval = getApprovalStyle(task.approvalStatus || 'not_started');
@@ -1075,7 +1162,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
         </button>
         <div id="add-task-menu" style="display:none;position:absolute;top:100%;left:0;margin-top:var(--sp-2);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-card-hover);min-width:240px;z-index:20;overflow:hidden;">
           ${disabledTasks.map(t => {
-            const tmpl = EVENT_TASKS.find(et => et.key === t.key);
+            const tmpl = eventTasks().find(et => et.key === t.key);
             if (!tmpl) return '';
             return `
               <button type="button" class="add-task-item" data-task-key="${t.key}" style="display:flex;align-items:center;gap:var(--sp-2);width:100%;padding:var(--sp-2) var(--sp-3);background:none;border:none;text-align:left;cursor:pointer;font-size:0.8125rem;color:var(--ink);" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='none'">
@@ -1111,7 +1198,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const key = btn.dataset.taskKey;
-      const tmpl = EVENT_TASKS.find(et => et.key === key);
+      const tmpl = eventTasks().find(et => et.key === key);
       const ok = await confirmDialog({
         title: 'Remove Task',
         message: `Remove "${tmpl?.label || key}" from this event? You can add it back later.`
@@ -1145,7 +1232,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
         task.enabled = true;
         ev.updatedAt = Date.now();
         Store.set('adminEvents', [...events]);
-        showToast(`"${EVENT_TASKS.find(et => et.key === key)?.label || key}" added back to event.`, 'success');
+        showToast(`"${eventTasks().find(et => et.key === key)?.label || key}" added back to event.`, 'success');
         showEventDetail(pageContainer, ev);
       }
     });
@@ -1214,7 +1301,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
     btn.addEventListener('click', () => {
       const key = btn.dataset.taskKey;
       const recipientType = key === 'parent_notification' ? 'parent' : 'teacher';
-      const tmpl = EVENT_TASKS.find(et => et.key === key);
+      const tmpl = eventTasks().find(et => et.key === key);
       showNotifyModal(ev.name, tmpl?.label || key, recipientType, ev);
     });
   });
@@ -1224,7 +1311,7 @@ function showEventDetail(pageContainer, ev, opts = {}) {
     btn.addEventListener('click', () => {
       const key = btn.dataset.taskKey;
       const recipientType = key === 'parent_notification' ? 'parent' : 'teacher';
-      const tmpl = EVENT_TASKS.find(et => et.key === key);
+      const tmpl = eventTasks().find(et => et.key === key);
       showNotifyModal(ev.name, tmpl?.label || key, recipientType, ev);
     });
   });

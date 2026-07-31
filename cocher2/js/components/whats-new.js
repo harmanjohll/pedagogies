@@ -17,6 +17,10 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.6', items: [
+    { icon: '\u{1F465}', title: 'A colleague list you can actually fill', text: 'Find a Teacher no longer waits on anything: load your school\u2019s staff timetable and the dropdown works on your device straight away. Publish the same file to the school\u2019s folder and it works for everyone.' },
+    { icon: '\u{1F4CB}', title: 'Admin forms in your school\u2019s words', text: 'The one-stop\u2019s examples used to be another school\u2019s \u2014 \u201c4A, 4B Pure Chemistry\u201d, \u201cNUS Science Faculty\u201d. They now quote your own classes and your own level, and the drafted letters and risk assessments are written for the right stage of schooling.' },
+  ] },
   { version: 'v1.5', items: [
     { icon: '\u{1F393}', title: 'Co-Cher knows what level you teach', text: 'Every level picker, sample class and AI prompt now uses YOUR school\u2019s levels. A primary teacher is offered Primary 1\u20136, not Sec 1\u2013JC 2, and the sample lessons that come with Co-Cher are primary lessons \u2014 bar models, the celery experiment, personal recount \u2014 not O-Level chemistry.' },
     { icon: '\u{1F465}', title: 'Find a Teacher works at any school', text: 'Looking up a colleague\u2019s free periods no longer needs one particular school\u2019s timetable file. It reads whatever your school has published, using real clock times \u2014 and if your school hasn\u2019t published anything yet, it says so plainly instead of loading forever.' },
