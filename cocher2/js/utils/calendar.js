@@ -5,14 +5,26 @@
  * for any given date, replacing the fragile math-based calculation.
  */
 
+import { getCurrentUser } from '../components/login.js';
+
 let _calCache = null;
+let _calCacheSchool = null;
 
 /**
  * Load and parse CalendarReference.csv.
  * Returns array of { monday: Date, type: 'Odd'|'Even'|'N.A.' }
+ *
+ * This file IS Beatty's calendar — its Odd/Even weeks, its term breaks. Every
+ * other school's week cycle comes from its own pack (school.js cycleForDate),
+ * so this is scoped rather than fetched for everyone: a 404 that silently
+ * yields "no week type" is indistinguishable from a real answer, and cached
+ * across a school switch it would be someone else's calendar.
  */
 export async function loadCalendarReference() {
-  if (_calCache) return _calCache;
+  const schoolId = getCurrentUser()?.schoolId ?? 'bty';   // legacy users have no schoolId
+  if (_calCache && _calCacheSchool === schoolId) return _calCache;
+  _calCacheSchool = schoolId;
+  if (schoolId !== 'bty') { _calCache = []; return _calCache; }
   try {
     const res = await fetch('./btyrelief/CalendarReference.csv');
     const text = await res.text();

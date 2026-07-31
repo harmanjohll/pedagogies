@@ -10,6 +10,12 @@ import { getPreferredName, setPreferredName, getCurrentUser } from './login.js';
 import { PEDAGOGICAL_PRIORITIES } from '../utils/priorities.js';
 
 export function renderWelcome(onComplete) {
+  /* Whose app this is being improved for. Co-Cher 1 said "BTY teachers" because
+   * Beatty was the only school; saying it to a Park View teacher is simply
+   * false. Their own school's name when we know it, nobody else's when we don't. */
+  const school = getCurrentUser()?.schoolName || '';
+  const audience = school ? `teachers at ${school}` : 'teachers like you';
+
   const overlay = document.createElement('div');
   overlay.className = 'welcome-overlay';
   overlay.innerHTML = `
@@ -132,7 +138,7 @@ export function renderWelcome(onComplete) {
         ">
           &#128202; Co-Cher records which features you use (your name, school email, pages visited,
           and AI actions — never lesson content or your API key) to a private Google Sheet, so the
-          app can improve for BTY teachers. Turn this off anytime in Settings &rarr; Usage Analytics.
+          app can improve for ${audience}. Turn this off anytime in Settings &rarr; Usage Analytics.
         </div>
 
         <p id="welcome-error" style="

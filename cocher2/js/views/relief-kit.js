@@ -11,7 +11,7 @@ import { sendChat } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { md, escapeHtml } from '../utils/markdown.js';
 import { trackEvent } from '../utils/analytics.js';
-import { exampleLevel } from '../utils/vocabulary.js';
+import { exampleLevel, exampleClassCode, defaultLevel } from '../utils/vocabulary.js';
 import { loadTT, findTeacherRow } from './dashboard.js';
 import { getCurrentUser } from '../components/login.js';
 import { saveArtifact, savedArtifactsHTML, wireSavedArtifacts, consumeOpenArtifact, getArtifact, listArtifacts } from '../utils/library.js';
@@ -111,7 +111,7 @@ export function render(container) {
             </div>
             <div>
               <label class="rk-label" for="rk-class">Class</label>
-              <input id="rk-class" class="input" type="text" value="${escapeHtml(slot ? slot.classCode : className)}" placeholder="e.g. 3E2" style="width:100%;box-sizing:border-box;">
+              <input id="rk-class" class="input" type="text" value="${escapeHtml(slot ? slot.classCode : className)}" placeholder="e.g. ${escapeHtml(exampleClassCode())}" style="width:100%;box-sizing:border-box;">
             </div>
             <div>
               <label class="rk-label" for="rk-subject">Subject</label>
@@ -223,7 +223,7 @@ export function render(container) {
 
 Class: ${className || 'Not specified'}
 Subject: ${subject}
-Level: ${level || 'Secondary'}
+Level: ${level || defaultLevel() || 'unspecified'}
 Topic students are currently on: ${topic}
 ${slotLine}
 Materials: ${MATERIALS[materials].brief}
