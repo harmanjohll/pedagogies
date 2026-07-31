@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.3', items: [
+    { icon: '\u{1F3EB}', title: 'Your school can set you up in one tap', text: 'When your school publishes its timetable, Co-Cher offers it to you on sign-in \u2014 find your name in the list, tap once, and your whole week is there. No file to hunt for, no retyping. If your school hasn\u2019t published one, nothing changes and you import your own.' },
+  ] },
   { version: 'v1.2', items: [
     { icon: '\u{1F3A8}', title: 'A look of its own \u2014 and of your school', text: 'Co-Cher 2 has its own identity now, deliberately neutral rather than any one school\u2019s colours. Your school\u2019s own accent colour tints the app, and its name sits under the Co-Cher 2 wordmark, so you can see at a glance whose setup you\u2019re running.' },
   ] },

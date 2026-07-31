@@ -24,6 +24,8 @@
  * blocks sign-in — which is precisely the failure that could brick Co-Cher 1.
  */
 
+import { fetchSchoolIndex, fetchSchoolConfig, isBackendConfigured } from './backend.js';
+
 const REGISTRY_URL = './schools/registry.json';
 const PACK_URL = (file) => `./schools/${file}`;
 
@@ -43,9 +45,23 @@ export async function loadRegistry() {
   return _registry;
 }
 
-/** Every school in the registry: [{ id, name, domains, pack }]. */
+/**
+ * Every school Co-Cher knows about: the packs bundled with this build, PLUS
+ * whatever the backend lists. Backend entries win on id, so a school can update
+ * its own details without a code change — which is the whole point of putting
+ * schools in Drive rather than in the repo.
+ *
+ * Bundled packs remain the floor: with no backend configured, or with it
+ * unreachable, the committed schools still resolve.
+ */
 export async function listSchools() {
-  return (await loadRegistry()).schools;
+  const bundled = (await loadRegistry()).schools;
+  if (!isBackendConfigured()) return bundled;
+  const remote = await fetchSchoolIndex();
+  if (!remote.length) return bundled;
+  const byId = new Map(bundled.map(s => [s.id, s]));
+  remote.forEach(r => byId.set(r.id, { ...(byId.get(r.id) || {}), ...r, remote: true }));
+  return [...byId.values()];
 }
 
 /**
@@ -68,12 +84,16 @@ export async function loadPack(id) {
   if (!id) return null;
   if (_packs.has(id)) return _packs.get(id);
   const entry = (await listSchools()).find(s => s.id === id);
-  if (!entry) { _packs.set(id, null); return null; }
+  if (!entry && !isBackendConfigured()) { _packs.set(id, null); return null; }
   let pack = null;
   try {
-    const res = await fetch(PACK_URL(entry.pack || `${id}.json`));
+    const res = await fetch(PACK_URL(entry?.pack || `${id}.json`));
     pack = await res.json();
   } catch { pack = null; }
+  // The backend's copy is authoritative when reachable — an admin who edits
+  // their school.json in Drive should see it take effect without a deploy.
+  const remote = await fetchSchoolConfig(id);
+  if (remote && !remote.error) pack = { ...(pack || {}), ...remote };
   _packs.set(id, pack);
   return pack;
 }

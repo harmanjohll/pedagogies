@@ -8,6 +8,7 @@ import { registerRoute, initRouter } from './router.js';
 import { renderCardView } from './utils/takehome-card.js';
 import { renderSidebar } from './components/sidebar.js';
 import { applySchoolTheme, paintSchoolLabel } from './utils/school-theme.js';
+import { maybeClaimTimetable } from './components/claim-timetable.js';
 import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
 import { renderLogin, isLoggedIn } from './components/login.js';
 import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedCCAIfNeeded, seedExemplarsIfNeeded, seedPortalDemosIfNeeded, seedShowcaseLessonsIfNeeded } from './seed-data.js';
@@ -174,6 +175,10 @@ function init() {
       setTimeout(() => startTour('main'), 350);
     }
   });
+
+  // If the school published a staff timetable and this teacher hasn't got one
+  // yet, offer it — one tap, once. Silent when there's nothing to offer.
+  maybeClaimTimetable();
 
   // One-time "what's new" for RETURNING users after a version bump. For genuine
   // first-run users this records the current version silently and shows nothing,
