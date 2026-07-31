@@ -139,6 +139,7 @@ function buildNavItems() {
     { id: '/knowledge', icon: 'knowledge', label: 'Knowledge Bases', section: 'Growth' },
     { id: '/my-growth', icon: 'myGrowth', label: 'My Learning' },
     { id: '/library', icon: 'knowledge', label: 'Library' },
+  { id: '/my-timetable', icon: 'calendar', label: 'My Timetable' },
     { id: '/autopilot', icon: 'autopilot', label: 'Auto-Lesson (Co-Cher+, beta)', section: SANDBOX_SECTION_KEY, sectionDisplay: SANDBOX_LABEL },
     { id: '/math-sandbox', icon: 'mathSandbox', label: 'Math Sandbox (beta)' },
     { id: '/report-comments', icon: 'modelResponse', label: 'Report Comments (beta)' },

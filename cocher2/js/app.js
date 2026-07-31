@@ -20,6 +20,7 @@ import { renderList as renderLessonsList, renderDetail as renderLessonDetail } f
 import { render as renderKnowledgeBase } from './views/knowledge-base.js';
 import { render as renderPdPortfolio, renderDetail as renderPdFolderDetail } from './views/pd-portfolio.js';
 import { render as renderLibrary } from './views/library.js';
+import { render as renderMyTimetable } from './views/my-timetable.js';
 import { render as renderAdmin } from './views/admin.js';
 import { render as renderSimulations } from './views/simulations.js';
 import { render as renderLessonRehearsal } from './views/lesson-rehearsal.js';
@@ -117,6 +118,7 @@ function init() {
   registerRoute('/knowledge', renderKnowledgeBase);
   registerRoute('/my-growth', renderPdPortfolio);
   registerRoute('/library', renderLibrary);
+  registerRoute('/my-timetable', renderMyTimetable);
   registerRoute('/my-growth/:id', renderPdFolderDetail);
   registerRoute('/admin', renderAdmin);
   registerRoute('/simulations', renderSimulations);
