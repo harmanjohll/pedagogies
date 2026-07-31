@@ -7,6 +7,22 @@
         "btyss.moe.edu.sg"
       ],
       "pack": "bty.json"
+    },
+    {
+      "id": "pvps",
+      "name": "Park View Primary School",
+      "domains": [
+        "pvps.moe.edu.sg"
+      ],
+      "pack": "pvps.json"
+    },
+    {
+      "id": "sajc",
+      "name": "St Andrew's Junior College",
+      "domains": [
+        "sajc.moe.edu.sg"
+      ],
+      "pack": "sajc.json"
     }
   ]
 }

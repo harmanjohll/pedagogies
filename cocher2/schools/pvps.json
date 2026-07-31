@@ -1,0 +1,49 @@
+{
+  "id": "pvps",
+  "name": "Park View Primary School",
+  "shortName": "Park View",
+  "domains": [
+    "pvps.moe.edu.sg"
+  ],
+  "values": "Respect, Responsibility, Resilience, Integrity, Care",
+  "contacts": {
+    "allStaff": ""
+  },
+  "calendar": {
+    "cycle": "none",
+    "weeks": []
+  },
+  "slotMinutes": 30,
+  "levels": [
+    "Primary 1",
+    "Primary 2",
+    "Primary 3",
+    "Primary 4",
+    "Primary 5",
+    "Primary 6"
+  ],
+  "streams": [],
+  "departments": [
+    "English",
+    "Mathematics",
+    "Science",
+    "Mother Tongue",
+    "PE & CCA",
+    "Aesthetics"
+  ],
+  "subjects": [
+    "English",
+    "Mathematics",
+    "Science",
+    "Chinese",
+    "Malay",
+    "Tamil",
+    "Art",
+    "Music",
+    "PE",
+    "Social Studies",
+    "CCE"
+  ],
+  "cca": [],
+  "frameworks": []
+}
