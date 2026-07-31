@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.4', items: [
+    { icon: '\u{1F3AF}', title: 'Co-Cher speaks your school\u2019s language', text: 'Lesson design now draws on your school\u2019s OWN teaching approaches, quoted word-for-word from what your school has published \u2014 its vision, values, named subject approaches and frameworks. Where your school hasn\u2019t defined something, Co-Cher says so rather than inventing it.' },
+  ] },
   { version: 'v1.3', items: [
     { icon: '\u{1F3EB}', title: 'Your school can set you up in one tap', text: 'When your school publishes its timetable, Co-Cher offers it to you on sign-in \u2014 find your name in the list, tap once, and your whole week is there. No file to hunt for, no retyping. If your school hasn\u2019t published one, nothing changes and you import your own.' },
   ] },

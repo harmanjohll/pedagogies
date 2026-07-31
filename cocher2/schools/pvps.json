@@ -5,15 +5,48 @@
   "domains": [
     "pvps.moe.edu.sg"
   ],
-  "values": "Respect, Responsibility, Resilience, Integrity, Care",
-  "contacts": {
-    "allStaff": ""
+  "identity": {
+    "vision": "Leaders of Character, championing Service & Excellence",
+    "mission": "To nurture future-ready students, anchored on values",
+    "motto": "AMBITIO VIA VIRTUS",
+    "mottoGloss": "Ambition through All the Excellent Qualities of Man",
+    "philosophy": "Every Child Matters",
+    "valuesAcronym": "R3ICH",
+    "valuesNote": "The school's values are aligned with the CCE Core values (R3ICH), in tandem with MOE's direction of providing students with Student-Centric Values-Driven Education.",
+    "crest": [
+      {
+        "element": "The Torch",
+        "meaning": "leadership"
+      },
+      {
+        "element": "The Book",
+        "meaning": "knowledge"
+      },
+      {
+        "element": "The Laurel Garland of Olive Leaves",
+        "meaning": "success and glory which binds all the attributes in the badge"
+      },
+      {
+        "element": "The Four Rings",
+        "meaning": "racial harmony among races"
+      }
+    ],
+    "foundedNote": "The Guzheng Ensemble page states it has existed 'since the school started in 1997'.",
+    "source": "https://www.parkviewpri.moe.edu.sg/school-vision-mission-and-values/"
   },
+  "values": [
+    "Respect for All",
+    "Responsibility in Actions",
+    "Resilience in Adversity",
+    "Integrity Our Core",
+    "Care for Community",
+    "Harmony in Diversity"
+  ],
+  "slotMinutes": 30,
   "calendar": {
     "cycle": "none",
     "weeks": []
   },
-  "slotMinutes": 30,
   "levels": [
     "Primary 1",
     "Primary 2",
@@ -22,31 +55,334 @@
     "Primary 5",
     "Primary 6"
   ],
+  "levelBands": {
+    "lower": [
+      "Primary 1",
+      "Primary 2",
+      "Primary 3"
+    ],
+    "upper": [
+      "Primary 4",
+      "Primary 5",
+      "Primary 6"
+    ]
+  },
   "streams": [],
   "departments": [
     "English",
     "Mathematics",
     "Science",
     "Mother Tongue",
-    "PE & CCA",
-    "Aesthetics"
+    "Aesthetics",
+    "Physical & Health Education",
+    "ICT",
+    "Character & Citizenship Education"
   ],
   "subjects": [
     "English",
     "Mathematics",
     "Science",
-    "Chinese",
-    "Malay",
-    "Tamil",
+    "Chinese Language",
+    "Malay Language",
+    "Tamil Language",
+    "Social Studies",
     "Art",
     "Music",
-    "PE",
-    "Social Studies",
-    "CCE"
+    "Physical & Health Education",
+    "ICT",
+    "Character & Citizenship Education"
   ],
-  "cca": [],
-  "frameworks": [],
+  "teachingApproaches": [
+    {
+      "subject": "Mathematics",
+      "name": "The STAR approach",
+      "verbatim": "The Mathematics Department adopts the STAR approach, a structured 4-phase process designed to equip students with essential problem-solving skills and confidence in tackling real-world mathematical challenges. It provides a systematic framework to guide students in understanding, strategizing, solving, and reflecting on problems effectively.",
+      "grounding": "George Polya's problem-solving technique; Singapore Mathematics Framework",
+      "unresolved": "The letter-by-letter expansion of S-T-A-R is not published on the site. Do not invent it.",
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/mathematics/"
+    },
+    {
+      "subject": "Science",
+      "name": "3-pronged approach: Supporting, Enriching, Stretching",
+      "verbatim": "Science Department programmes are planned using a 3-pronged approach of 'Supporting', 'Enriching' and 'Stretching' each student in the journey of learning Science, with customised programmes planned, implemented and reviewed to ensure effectiveness and relevance for different profile of students.",
+      "inquiry": "Students will collect and use evidence to address scientifically oriented questions, formulate explanations from evidence to address the questions and evaluate their explanations.",
+      "processSkills": [
+        "observing",
+        "comparing",
+        "classifying",
+        "analysing",
+        "inferring",
+        "evaluating",
+        "investigating"
+      ],
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/science/"
+    },
+    {
+      "subject": "Mother Tongue",
+      "name": "3-prong approach: Support, Enrich and Stretch",
+      "verbatim": "The acquisition of language skills to as high a level as the student is able to forms the core of the Mother Tongue Department's Teaching and Learning Framework, with a 3-prong approach – Support, Enrich and Stretch adopted in achieving this goal.",
+      "strategies": "Cooperative Learning strategies and ICT in engaging students in their learning.",
+      "aim": "Nurture students to be confident users and lifelong learners of the Mother Tongue language.",
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/Mother-Tongue/"
+    },
+    {
+      "subject": "English",
+      "name": "STELLAR",
+      "verbatim": "At the heart of the STELLAR programme is the belief that enjoyment is a fundamental aspect of shared reading and writing experiences. At PVPS, the school uses enjoyment to drive learning, so that children are motivated and want to read and learn.",
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/english/"
+    },
+    {
+      "subject": "Art",
+      "name": "Modular art activities",
+      "verbatim": "Park View Primary nurtures students' love for art through hands-on activities, excursions, and exhibitions. Through modular art activities, students are equipped with a range of art making techniques and skills. Students learn best through hands-on participation in various arts forms.",
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/aesthetics/art/"
+    },
+    {
+      "subject": "Music",
+      "name": "Modular music and dance activities",
+      "verbatim": "Through modular music and dance activities, students are equipped with a sense of musicality, psychomotor skills, instrumental techniques and skills.",
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/Aesthetics/Music/"
+    },
+    {
+      "subject": "Physical & Health Education",
+      "name": "Fundamental Movement Skills (FMS)",
+      "verbatim": "Enable and encourage students to be active after leaving school, with a greater focus on building a strong foundation in fundamental movement skills (FMS) and broad-based development through a range of enjoyable and varied physical activities.",
+      "values": "Inculcate values of Respect, Discipline and Perseverance.",
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/physical-n-health-education/"
+    },
+    {
+      "subject": "ICT",
+      "name": "MOE Baseline ICT Standards (New Media Literacies)",
+      "verbatim": "From Primary 1 to Primary 6, students receive training to gradually build their Basic ICT skills in accordance with the MOE Baseline ICT Standards (New Media Literacies), to prepare them as Future-Ready Digital Learners.",
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/information-n-communication-technology-ict/"
+    },
+    {
+      "subject": "Character & Citizenship Education",
+      "name": "CCE",
+      "verbatim": "Character and Citizenship Education (CCE) aims to inculcate values and build social and emotional competencies in students, to develop them into good individuals and useful citizens in a fast changing and globalised world.",
+      "ftgp": "Form Teachers conduct explicit teaching of Social and Emotional competencies to equip pupils with self-awareness, social awareness, self-management, relationship management and responsible decision-making skills. One period for lower primary and two periods for upper primary per week.",
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/cce/"
+    },
+    {
+      "subject": "Social Studies",
+      "name": "Young Nation Series",
+      "verbatim": "The school has sought to make Social Studies (SS) and National Education (NE) more pervasive in the school by building a vibrant and lively school environment.",
+      "levelBadges": {
+        "Primary 1": "Young Nation Seeker",
+        "Primary 2": "Young Nation Adventurer",
+        "Primary 3": "Young Nation Explorer",
+        "Primary 4": "Young Nation Builder",
+        "Primary 5": "Young Nation Traveller",
+        "Primary 6": "Young Nation Voyager"
+      },
+      "note": "Tasks scheduled to be done by EL teachers during SS lessons on a monthly basis.",
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/cce/citizenship/young-nation-series/"
+    }
+  ],
+  "frameworks": [
+    {
+      "id": "fw_pvps_ask",
+      "name": "ASK approach (Student Leadership)",
+      "purpose": "metacognition",
+      "guidance": "PVPS adopts a whole-school approach to student leadership using a 3-tier ASK approach. Design principles: differentiated training, a student-centric focus, emphasis on core values, and a developmental and spiral curriculum. NOTE: the expansion of the letters A-S-K is not published on the school site.",
+      "stages": [
+        {
+          "key": "1",
+          "label": "Leadership for All",
+          "prompt": "Embedding leadership qualities across the entire student body, ensuring that every student is exposed to leadership principles and practices through class duties and projects.",
+          "studentPrompt": "How am I leading in my own class duties and projects?"
+        },
+        {
+          "key": "2",
+          "label": "Leadership for the Student Leadership Council",
+          "prompt": "Leadership development for students serving on the Council.",
+          "studentPrompt": "How do I serve the school through my Council role?"
+        },
+        {
+          "key": "3",
+          "label": "Leadership for Key Leaders",
+          "prompt": "Leadership development for Key Leaders who lead each SLC and champion its cause.",
+          "studentPrompt": "What cause am I championing, and who am I bringing with me?"
+        }
+      ],
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/cce/student-leadership/"
+    },
+    {
+      "id": "fw_pvps_sense_think_act",
+      "name": "Sense-Think-Act (Cyber Wellness)",
+      "purpose": "metacognition",
+      "guidance": "PVPS adapts MOE's Sense-Think-Act framework to develop pupils' instinct to protect and empower them to take responsibility for their well-being in cyberspace. Anchored on two principles: 'Respect for Self and Others' and 'Safe and Responsible Use'. Delivered via Form Teacher Guidance Periods.",
+      "stages": [
+        {
+          "key": "S",
+          "label": "Sense",
+          "prompt": "Identify the possible risks.",
+          "studentPrompt": "What are the possible risks here?"
+        },
+        {
+          "key": "T",
+          "label": "Think",
+          "prompt": "Analyse, evaluate and reflect on the online situation they are facing based on the two principles.",
+          "studentPrompt": "What would respect for self and others mean right now?"
+        },
+        {
+          "key": "A",
+          "label": "Act",
+          "prompt": "Translate his/her understanding into actions that will keep him/her safe while online.",
+          "studentPrompt": "What will I actually do to keep myself safe?"
+        }
+      ],
+      "source": "https://www.parkviewpri.moe.edu.sg/curriculum/ict/cyberwellness/"
+    }
+  ],
+  "programmes": {
+    "umbrella": {
+      "name": "The Park View Experience",
+      "verbatim": "The Park View Experience provides a comprehensive and enriching educational journey through innovative academic initiatives and enriching extracurricular activities."
+    },
+    "alp": {
+      "name": "Innovation through Service and Leadership (iSL)",
+      "verbatim": "The ALP focuses on the area of innovation and enterprise, and aims to educate students to demonstrate school values and 21CC and connect them to real life experiences, and to develop the sense of purpose and a growth mindset which students can apply to real life problem-solving.",
+      "source": "https://www.parkviewpri.moe.edu.sg/park-view-experience/applied-learning-programme-alp/"
+    },
+    "llp": {
+      "name": "Sports Experiential Programme",
+      "domains": [
+        "Sports Skills & Development",
+        "Sports Psychology",
+        "Sports Values",
+        "Sports Safety Management",
+        "Outdoor Adventures",
+        "Physical Health"
+      ],
+      "source": "https://www.parkviewpri.moe.edu.sg/learning-for-life-programme/"
+    },
+    "pal": {
+      "name": "Play@ParkView",
+      "verbatim": "Play@ParkView is Park View Primary's unique implementation of the Programme for Active Learning (PAL). A non-academic programme built into the curriculum for all Primary 1 and 2 students, across Visual Arts, Creative Movements (Performing Arts), Sports & Games, and Outdoor Education.",
+      "source": "https://www.parkviewpri.moe.edu.sg/programme-for-active-learning/"
+    },
+    "via": [
+      {
+        "level": "Primary 1-6",
+        "name": "Project Shine!",
+        "detail": "A school-wide effort to introduce daily routinised cleaning and termly cleaning of the classrooms and school compound respectively."
+      },
+      {
+        "level": "Primary 2",
+        "name": "CARE",
+        "detail": "Contribute, Appreciate, Respect and Engage. Pupils are taught to apply their values at home as part of their journey in becoming supportive family members who play a part in strengthening family ties."
+      },
+      {
+        "level": "Primary 3",
+        "name": "Adopt a Plot"
+      },
+      {
+        "level": "Primary 4",
+        "name": "PRIDE (Pasir Ris)"
+      },
+      {
+        "level": "Primary 5",
+        "name": "One Love Many Lives (Senior Citizens Homes)"
+      },
+      {
+        "level": "Primary 6",
+        "name": "Park View in Action (Batam, Indonesia)"
+      }
+    ],
+    "haf": {
+      "name": "Holistic Awards Framework (HAF)",
+      "verbatim": "An approach to recognising pupils for their efforts, contributions and achievements in five domains: Cognitive, Aesthetics, Physical, Social & Moral, and Leadership.",
+      "domains": [
+        "Cognitive",
+        "Aesthetics",
+        "Physical",
+        "Social & Moral",
+        "Leadership"
+      ]
+    },
+    "discipline": {
+      "verbatim": "A restorative approach that focuses on restoring and strengthening relationships in conflict management, using principles of restitution, accountability and resolution, as an alternative to punitive punishment."
+    },
+    "assessment": {
+      "verbatim": "Teachers use a range of formative assessment techniques such as questioning, giving feedback and peer and self-assessment. Bite-size forms of assessment such as topical reviews, listening tasks and performance tasks are used to provide students with opportunities to experience success and build confidence."
+    },
+    "aiPolicy": {
+      "verbatim": "If the use of AI is permitted in weighted assessments and homework, students should acknowledge the use of AI as required and practice academic integrity and be responsible for their own learning when using AI."
+    }
+  },
+  "cca": [
+    {
+      "name": "Football",
+      "category": "sports"
+    },
+    {
+      "name": "Netball",
+      "category": "sports"
+    },
+    {
+      "name": "Volleyball",
+      "category": "sports"
+    },
+    {
+      "name": "Wushu",
+      "category": "sports"
+    },
+    {
+      "name": "Creative Dance",
+      "category": "performing"
+    },
+    {
+      "name": "Show Choir",
+      "category": "performing"
+    },
+    {
+      "name": "Guzheng",
+      "category": "performing"
+    },
+    {
+      "name": "Info Comm Club",
+      "category": "clubs"
+    },
+    {
+      "name": "Environment Club",
+      "category": "clubs"
+    },
+    {
+      "name": "Art & Craft Club",
+      "category": "clubs"
+    },
+    {
+      "name": "Drama Club",
+      "category": "clubs"
+    },
+    {
+      "name": "Scouts",
+      "category": "uniformed"
+    }
+  ],
+  "contacts": {
+    "allStaff": "",
+    "office": "pvps@moe.edu.sg",
+    "phone": "6585 1421",
+    "address": "60 Pasir Ris Drive 1, Singapore 519524"
+  },
   "theme": {
-    "accent": "#0E7C86"
-  }
+    "accent": "#0E7C86",
+    "provisional": true,
+    "note": "PLACEHOLDER. The school does not publish its colours; five dedicated searches found none. Replace once confirmed from the crest or the school."
+  },
+  "sourceNote": "Compiled from parkviewpri.moe.edu.sg. Quoted fields are the school's own wording; see each source URL.",
+  "needsConfirmation": [
+    "School colours (accent is a placeholder)",
+    "STAR — the expansion of S-T-A-R is not published",
+    "ASK — the expansion of A-S-K is not published",
+    "PRIDE (P4 VIA) — expansion not published",
+    "SLC — the site uses both 'Service Learning Council' and 'Student Leadership Council'",
+    "Staff names — only the Principal and Head of Aesthetics surfaced; no HODs, form teachers or subject teachers",
+    "School start and recess times (dismissal 1.30-2.00 pm is published)",
+    "Term dates — the school calendar page publishes none",
+    "Uniformed groups beyond Scouts; Basketball unconfirmed",
+    "Class naming conventions"
+  ]
 }
