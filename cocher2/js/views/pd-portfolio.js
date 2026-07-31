@@ -84,7 +84,7 @@ function renderPracticeSection() {
   const goal = Store.getPracticeGoal();
   const last = log[log.length - 1];
   return `
-    <div class="card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #FFE200);">
+    <div class="card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #F2B441);">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-2);">
         <h3 style="font-family:var(--font-serif, Georgia, serif);font-size:1.125rem;font-weight:600;color:var(--ink);">My Practice</h3>
         <span class="badge badge-gray">${log.length} entr${log.length === 1 ? 'y' : 'ies'}${last ? ` &middot; last ${fmtDate(last.createdAt)}` : ''}</span>
@@ -92,7 +92,7 @@ function renderPracticeSection() {
       <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-3);line-height:1.5;">Every lesson reflection, rehearsal debrief and capture feeds this record of your teaching practice.</p>
 
       ${goal ? `
-        <div style="background:var(--marker-wash, #FFF9C9);border-left:3px solid var(--marker, #FFE200);border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3);">
+        <div style="background:var(--marker-wash, #FFF9C9);border-left:3px solid var(--marker, #F2B441);border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3);">
           <div style="font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-muted);margin-bottom:2px;">Current practice goal &middot; set ${fmtDate(goal.createdAt)}</div>
           <div style="font-family:var(--font-serif, Georgia, serif);font-size:0.9375rem;color:var(--ink);line-height:1.6;">${esc(goal.text)}</div>
           <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-2);">
@@ -197,7 +197,7 @@ function renderIdeologyMirror() {
       <div style="display:flex;align-items:center;gap:var(--sp-2);font-size:0.6875rem;">
         <span style="width:132px;flex-shrink:0;color:var(--ink-secondary);${isEspoused ? 'font-weight:700;' : ''}">${IDEOLOGY_META[id].label}${isEspoused ? ' <span style="background:var(--marker-wash,#FFF6BF);padding:0 4px;border-radius:3px;">aspires</span>' : ''}</span>
         <div style="flex:1;height:10px;border-radius:5px;background:var(--bg-subtle);overflow:hidden;">
-          <div style="width:${pct}%;height:100%;background:${isEnacted ? 'var(--brand-navy,#000C53)' : 'var(--border)'};"></div>
+          <div style="width:${pct}%;height:100%;background:${isEnacted ? 'var(--brand-navy,#16323A)' : 'var(--border)'};"></div>
         </div>
         <span style="width:32px;text-align:right;color:var(--ink-muted);">${pct}%</span>
       </div>`;
@@ -292,7 +292,7 @@ function renderPracticeStorySection() {
   // Warm empty state — nothing to compose yet, and never a crash.
   if (log.length === 0 && reflected.length === 0) {
     return `
-      <div class="card practice-story-card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #FFE200);">
+      <div class="card practice-story-card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #F2B441);">
         <h3 style="font-family:var(--font-serif, Georgia, serif);font-size:1.125rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-2);">My Practice Story</h3>
         <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.6;">Your practice story starts with your first reflection. Teach a lesson, jot a line on what worked over in <a href="#/lessons" style="color:var(--accent);">Lessons</a>, and it will gather here into a term-long narrative — assembled from your own words, nothing auto-written.</p>
       </div>`;
@@ -360,7 +360,7 @@ function renderPracticeStorySection() {
     </div>`).join('');
 
   return `
-    <div class="card practice-story-card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #FFE200);">
+    <div class="card practice-story-card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #F2B441);">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-2);">
         <h3 style="font-family:var(--font-serif, Georgia, serif);font-size:1.125rem;font-weight:600;color:var(--ink);">My Practice Story</h3>
         <span class="badge badge-gray">review</span>

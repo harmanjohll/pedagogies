@@ -810,7 +810,7 @@ export function renderDetail(container, { id }) {
         if (!pw) { showToast('Pop-up blocked — allow pop-ups for this site to print.', 'danger'); return; }
         pw.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(fc.name)} — ${title} Trends</title>
           <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.7;font-size:14px}
-          h1{font-size:18px;border-bottom:2px solid #000c53;padding-bottom:8px;color:#000c53}
+          h1{font-size:18px;border-bottom:2px solid #16323A;padding-bottom:8px;color:#16323A}
           table{width:100%;border-collapse:collapse;margin:16px 0}th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0}th{font-weight:600;background:#f1f5f9}
           @media print{body{margin:0;padding:16px}}</style></head>
           <body>
@@ -902,7 +902,7 @@ function renderPortraitCard(p) {
     : 'Not enough lesson reflections yet to read an engagement trend.';
 
   return `
-    <div class="card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #FFE200);">
+    <div class="card" style="margin-bottom:var(--sp-6);border-left:3px solid var(--marker, #F2B441);">
       <h3 style="font-family:var(--font-serif, Georgia, serif);font-size:1.125rem;font-weight:600;color:var(--ink);margin-bottom:var(--sp-1);">Class Portrait</h3>
       <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);">Who this class is right now — so every lesson starts from the learners.</p>
       ${total === 0 ? `

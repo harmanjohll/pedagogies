@@ -125,7 +125,7 @@ function cardInner(model, { qrSVG } = {}) {
 }
 
 const CARD_CSS = `
-  :root { --navy:#000C53; --yellow:#FFE200; --red:#e11d48; --ink:#0f172a; --muted:#475569; --line:#e2e8f0; }
+  :root { --navy:#16323A; --yellow:#F2B441; --red:#e11d48; --ink:#0f172a; --muted:#475569; --line:#e2e8f0; }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: Georgia, "Times New Roman", serif; background:#eef1f6; color:var(--ink); -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .thc-card { position:relative; background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 12px 40px rgba(2,6,23,.16); border:1px solid var(--line); }

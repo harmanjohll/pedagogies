@@ -7,11 +7,19 @@
 /* ═══════════ Custom Properties ═══════════ */
 
 :root {
-  /* Brand */
-  --brand-navy: #000C53;
-  --brand-gold: #FFE200;
-  --brand-yellow: #FFE200;
-  --brand-gradient: linear-gradient(135deg, #000C53 0%, #1a2980 45%, #26d0ce 100%);
+  /* ── Co-Cher 2 brand ──
+   * Deliberately school-NEUTRAL. Co-Cher 1 wore one school's navy and yellow;
+   * a product serving many schools cannot. The base is a restrained
+   * graphite-teal, and each school tints --accent from its own pack
+   * (see utils/school-theme.js), so a teacher's Co-Cher looks like THEIR
+   * school without the product itself belonging to any one of them. */
+  --brand-navy: #16323A;
+  --brand-gold: #F2B441;
+  --brand-yellow: #F2B441;
+  --brand-gradient: linear-gradient(135deg, #16323A 0%, #1F5C63 45%, #2AA79B 100%);
+  --cc2-primary: #16323A;
+  --cc2-accent: #2AA79B;
+  --cc2-highlight: #F2B441;
 
   /* ── STAFFROOM DESK (default theme, v4) ──
    * Colour is direction-for-use, not decoration:
@@ -20,7 +28,7 @@
    *   growth green   = progress & achievement   (completed stages, achieved goals)
    *   accent (palette-controlled) = interactive (links, focus, selection)
    * The pre-v4 look lives under .theme-classic (Settings → Appearance → Classic). */
-  --marker: #FFE200;
+  --marker: #F2B441;
   --marker-wash: #FFF6BF;
   --marker-ink: #7a6300;
   --redpen: #C94F4F;

@@ -586,7 +586,7 @@ const COMPONENT_META_SETTINGS = {
 };
 
 /* ── Teacher identity palettes (Appearance → Your Identity) ── */
-const MONOGRAM_COLOURS = ['#000C53', '#4361ee', '#059669', '#CB1B45', '#7c3aed', '#ea580c', '#0d9488', '#475569'];
+const MONOGRAM_COLOURS = ['#16323A', '#4361ee', '#059669', '#CB1B45', '#7c3aed', '#ea580c', '#0d9488', '#475569'];
 const ACCENT_SWATCHES  = ['#4361ee', '#059669', '#CB1B45', '#7c3aed', '#ea580c', '#0d9488', '#d97706', '#db2777'];
 
 function deriveInitials() {
@@ -902,7 +902,7 @@ export function render(container) {
         <div class="card" style="margin-bottom: var(--sp-6);">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3);">
             <h3 style="font-size: 1rem; font-weight: 600; margin: 0; color: var(--ink);">About Co-Cher</h3>
-            <span style="font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--brand-navy, #000C53); color: var(--brand-yellow, #FFE200);">${APP_VERSION}</span>
+            <span style="font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--brand-navy, #16323A); color: var(--brand-yellow, #F2B441);">${APP_VERSION}</span>
           </div>
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-3); line-height: 1.7; font-style: italic;">
             Dear Cher,
@@ -945,7 +945,7 @@ export function render(container) {
             One nudge per conversation, always skippable.
           </p>
           <label style="display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.8125rem; color: var(--ink);">
-            <input type="checkbox" id="vigilance-toggle" ${isVigilanceEnabled() ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: var(--brand-navy, #000C53);" />
+            <input type="checkbox" id="vigilance-toggle" ${isVigilanceEnabled() ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: var(--brand-navy, #16323A);" />
             Ask about my class before generating from vague prompts
           </label>
         </div>
@@ -1200,7 +1200,7 @@ export function render(container) {
             to a private Google Sheet that helps improve the app for BTY teachers.
           </p>
           <label style="display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.8125rem; color: var(--ink);">
-            <input type="checkbox" id="analytics-toggle" ${analyticsEnabled() ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: var(--brand-navy, #000C53);" />
+            <input type="checkbox" id="analytics-toggle" ${analyticsEnabled() ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: var(--brand-navy, #16323A);" />
             Share my feature usage to help improve Co-Cher
           </label>
         </div>

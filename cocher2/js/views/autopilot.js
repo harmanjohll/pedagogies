@@ -796,7 +796,7 @@ export function render(container) {
             <button id="ap-stop-btn" class="btn btn-ghost" style="display:none;color:#ef4444;">Stop</button>
           </div>
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--ink-muted);margin-top:8px;cursor:pointer;">
-            <input type="checkbox" id="ap-checkpoint" checked style="width:14px;height:14px;accent-color:var(--brand-navy,#000C53);" />
+            <input type="checkbox" id="ap-checkpoint" checked style="width:14px;height:14px;accent-color:var(--brand-navy,#16323A);" />
             Pause after each step so I can review before continuing (recommended)
           </label>
 

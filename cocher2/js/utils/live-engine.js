@@ -41,7 +41,7 @@ export const LIVE_ENGINE_CSS = String.raw`
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; -webkit-font-smoothing:antialiased; }
   .live-root.presenter{ background:#070b24; color:#eaf0ff; }
   .live-root.audience{ background:#f4f5f7; color:#0f172a; }
-  .live-root{ --lv-navy:#000C53; --lv-yellow:#FFE200; --lv-red:#e11d48; --lv-green:#16a34a; }
+  .live-root{ --lv-navy:#16323A; --lv-yellow:#F2B441; --lv-red:#e11d48; --lv-green:#16a34a; }
   .live-root button{ font:inherit; cursor:pointer; }
   .live-root .lv-landing{ flex:1; display:flex; align-items:center; justify-content:center; padding:24px;
     background:radial-gradient(1200px 600px at 50% -10%,#10206b,#060a22); color:#fff; }

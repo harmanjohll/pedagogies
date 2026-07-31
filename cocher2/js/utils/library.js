@@ -192,7 +192,7 @@ export async function openArtifactWindow(id) {
     <title>${escapeHtml(meta.title)}</title>
     <style>
       body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; max-width: 820px; margin: 0 auto; padding: 28px 20px 60px; color: #0f172a; line-height: 1.6; }
-      .hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; border-bottom: 3px solid #000C53; padding-bottom: 10px; margin-bottom: 18px; }
+      .hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; border-bottom: 3px solid #16323A; padding-bottom: 10px; margin-bottom: 18px; }
       .hd h1 { font-size: 1.4rem; margin: 0; }
       .hd .k { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${k.color}; }
       .toolbar { position: sticky; top: 0; background: #fff; padding: 8px 0; text-align: right; }

@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.2', items: [
+    { icon: '\u{1F3A8}', title: 'A look of its own \u2014 and of your school', text: 'Co-Cher 2 has its own identity now, deliberately neutral rather than any one school\u2019s colours. Your school\u2019s own accent colour tints the app, and its name sits under the Co-Cher 2 wordmark, so you can see at a glance whose setup you\u2019re running.' },
+  ] },
   { version: 'v1.1', items: [
     { icon: '\u{1F511}', title: 'Sign in from any school', text: 'Co-Cher no longer checks you against one school\u2019s staff list. Your email address tells it which school you\u2019re at, and if your school isn\u2019t set up yet you simply pick it from a list \u2014 or carry on without one. Colleague lists (Find a Teacher, the staff picker) now only ever show people from your own school.' },
   ] },

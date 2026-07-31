@@ -363,5 +363,8 @@
     ]
   },
   "slotMinutes": 35,
-  "joinCode": ""
+  "joinCode": "",
+  "theme": {
+    "accent": "#1D3FA8"
+  }
 }

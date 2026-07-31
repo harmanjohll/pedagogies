@@ -15,9 +15,9 @@ function esc(s) { const d = document.createElement('div'); d.textContent = s; re
  * their keywords match so "new lesson" jumps straight to creating one. */
 function getQuickActions() {
   return [
-    { type: 'action', icon: '&#43;', color: '#000C53', title: 'New lesson', subtitle: 'Start a fresh lesson in the planner',
+    { type: 'action', icon: '&#43;', color: '#16323A', title: 'New lesson', subtitle: 'Start a fresh lesson in the planner',
       searchText: 'new lesson create plan design action', action: () => navigate('/lesson-planner') },
-    { type: 'action', icon: '&#43;', color: '#000C53', title: 'New class', subtitle: 'Add a class and students',
+    { type: 'action', icon: '&#43;', color: '#16323A', title: 'New class', subtitle: 'Add a class and students',
       searchText: 'new class add students action', action: () => navigate('/classes') },
     { type: 'action', icon: '&#9654;', color: '#8b5cf6', title: 'Rehearse a lesson', subtitle: 'Practise against AI student personas',
       searchText: 'rehearse rehearsal practice deliver action', action: () => navigate('/lesson-rehearsal') },

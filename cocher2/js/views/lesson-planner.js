@@ -287,7 +287,7 @@ function isEEEEnabled(toolKey) {
 let activeComponentTab = null;  // null = show all (auto-select first)
 
 const COMPONENT_META = {
-  lisc:            { label: 'LI / SC',                 color: 'var(--brand-navy, #000c53)', icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>', order: 0 },
+  lisc:            { label: 'LI / SC',                 color: 'var(--brand-navy, #16323A)', icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>', order: 0 },
   timeline:        { label: 'Timeline / Pacing',       color: 'var(--accent)',      icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', order: 1 },
   grouping:        { label: 'Student Groups',          color: 'var(--e21cc-cci)',   icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', order: 2 },
   seatPlan:        { label: 'Seating Plan',            color: 'var(--e21cc-cgc)',   icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>', order: 3 },
@@ -918,7 +918,7 @@ export function renderNew(container) {
 /* ── AI Tool definitions for compact toolbar ── */
 const AI_TOOLS = [
   // Core tools (always visible)
-  { id: 'ai-lisc-btn', label: 'LI / SC', icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>', color: 'var(--brand-navy, #000c53)', cat: 'planning', eee: 'lisc' },
+  { id: 'ai-lisc-btn', label: 'LI / SC', icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>', color: 'var(--brand-navy, #16323A)', cat: 'planning', eee: 'lisc' },
   { id: 'ai-review-btn', label: 'Review', icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M8 11l2 2 4-4"/>', color: '', cat: 'planning', eee: 'review' },
   { id: 'ai-rubric-btn', label: 'Rubric', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>', color: '', cat: 'assess', eee: 'rubric' },
   { id: 'ai-group-btn', label: 'Grouping', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', color: '', cat: 'planning', eee: 'grouping' },
@@ -1981,7 +1981,7 @@ export function render(container) {
       .filter(k => lessonComponents[k]?.content)
       .sort((a, b) => (COMPONENT_META[a]?.order || 99) - (COMPONENT_META[b]?.order || 99));
     const componentsHtml = compKeys.length > 0
-      ? `<hr style="margin:32px 0;border-top:2px solid #000c53;"><h2>Lesson Components</h2>` +
+      ? `<hr style="margin:32px 0;border-top:2px solid #16323A;"><h2>Lesson Components</h2>` +
         compKeys.map(key => {
           const m = COMPONENT_META[key] || { label: key };
           return `<h3>${m.label}</h3>${mdStatic(lessonComponents[key].content)}`;
@@ -1990,7 +1990,7 @@ export function render(container) {
 
     printWin.document.write(`<!DOCTYPE html><html><head><title>Lesson Plan — Co-Cher</title>
       <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 24px;color:#1e293b;line-height:1.7;font-size:14px}
-      h1{font-size:18px;border-bottom:2px solid #000c53;padding-bottom:8px;color:#000c53}
+      h1{font-size:18px;border-bottom:2px solid #16323A;padding-bottom:8px;color:#16323A}
       h2,h3,h4{margin:16px 0 8px}strong{font-weight:600}ul,ol{padding-left:20px}
       hr{border:none;border-top:1px solid #e2e8f0;margin:20px 0}
       table{width:100%;border-collapse:collapse;margin:12px 0}th,td{text-align:left;padding:6px 10px;border-bottom:1px solid #e2e8f0}th{font-weight:600;background:#f1f5f9}
@@ -2069,12 +2069,12 @@ export function render(container) {
       <style>
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:system-ui,-apple-system,sans-serif;max-width:750px;margin:0 auto;padding:20px 24px;color:#1e293b;line-height:1.6;font-size:13px}
-        .snap-header{border-bottom:3px solid #000c53;padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end}
-        .snap-header h1{font-size:17px;color:#000c53;margin:0}
+        .snap-header{border-bottom:3px solid #16323A;padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end}
+        .snap-header h1{font-size:17px;color:#16323A;margin:0}
         .snap-header .meta{font-size:11px;color:#64748b;text-align:right}
         .snap-section{margin-bottom:14px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:6px;break-inside:avoid}
-        .snap-section h3{font-size:12px;text-transform:uppercase;letter-spacing:0.03em;color:#000c53;margin:0 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}
-        .snap-lisc{background:#f0f4ff;border-color:#000c53}
+        .snap-section h3{font-size:12px;text-transform:uppercase;letter-spacing:0.03em;color:#16323A;margin:0 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}
+        .snap-lisc{background:#f0f4ff;border-color:#16323A}
         table{width:100%;border-collapse:collapse;margin:6px 0;font-size:12px}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid #e2e8f0}th{font-weight:600;background:#f8fafc}
         strong{font-weight:600}ul,ol{padding-left:18px;margin:4px 0}li{margin:2px 0}
         a{color:#4361ee;text-decoration:none}
@@ -5631,7 +5631,7 @@ function exportToWord() {
   const htmlContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8"><title>${esc(title)}</title>
 <style>body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.6;color:#1e293b;max-width:700px;margin:0 auto;padding:24px}
-h1{font-size:16pt;color:#000C53;border-bottom:2px solid #000C53;padding-bottom:6px}
+h1{font-size:16pt;color:#16323A;border-bottom:2px solid #16323A;padding-bottom:6px}
 h2{font-size:13pt;margin-top:18px}h3{font-size:11pt;margin-top:14px}
 table{border-collapse:collapse;width:100%;margin:10px 0}th,td{border:1px solid #ccc;padding:4px 8px;text-align:left;font-size:10pt}
 th{background:#f1f5f9;font-weight:bold}

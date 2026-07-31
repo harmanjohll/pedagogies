@@ -7,6 +7,7 @@
 import { registerRoute, initRouter } from './router.js';
 import { renderCardView } from './utils/takehome-card.js';
 import { renderSidebar } from './components/sidebar.js';
+import { applySchoolTheme, paintSchoolLabel } from './utils/school-theme.js';
 import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
 import { renderLogin, isLoggedIn } from './components/login.js';
 import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedCCAIfNeeded, seedExemplarsIfNeeded, seedPortalDemosIfNeeded, seedShowcaseLessonsIfNeeded } from './seed-data.js';
@@ -86,6 +87,11 @@ function init() {
   // stack a new listener on every state change.
   const sidebarEl = document.getElementById('sidebar');
   renderSidebar(sidebarEl);
+
+  // Tint from the school's own pack, and name the school under the wordmark —
+  // both no-ops when the teacher has no school.
+  applySchoolTheme();
+  paintSchoolLabel();
 
   // Mobile sidebar toggle
   const overlay = document.getElementById('sidebar-overlay');

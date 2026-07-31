@@ -17,13 +17,13 @@ export function renderWelcome(onComplete) {
       <div style="margin-bottom: 28px;">
         <div style="
           width: 56px; height: 56px;
-          background: linear-gradient(135deg, #000C53, #26d0ce);
+          background: linear-gradient(135deg, #16323A, #26d0ce);
           border-radius: 16px; margin: 0 auto 20px;
           display: flex; align-items: center; justify-content: center;
           color: #fff; font-weight: 700; font-size: 1.25rem;
           box-shadow: 0 4px 16px rgba(0,12,83,0.3);
         ">C</div>
-        <h1 style="font-size: 2rem; font-weight: 700; color: var(--ink, #000C53); margin: 0 0 6px; letter-spacing: -0.02em;">
+        <h1 style="font-size: 2rem; font-weight: 700; color: var(--ink, #16323A); margin: 0 0 6px; letter-spacing: -0.02em;">
           Co-Cher
         </h1>
         <p style="color: var(--ink-muted, #64748b); font-size: 0.9375rem; margin: 0 0 16px;">
@@ -142,14 +142,14 @@ export function renderWelcome(onComplete) {
 
         <button id="welcome-start" style="
           width: 100%; padding: 14px;
-          background: #000C53; color: #FFE200;
+          background: #16323A; color: #F2B441;
           border: none; border-radius: 14px;
           font-weight: 600; font-size: 1rem; cursor: pointer;
           transition: background 0.2s, transform 0.1s;
           font-family: inherit;
         "
         onmouseenter="this.style.background='#1a2980'; this.style.transform='translateY(-1px)';"
-        onmouseleave="this.style.background='#000C53'; this.style.transform='translateY(0)';"
+        onmouseleave="this.style.background='#16323A'; this.style.transform='translateY(0)';"
         onmousedown="this.style.transform='translateY(0)';"
         >
           Enter Co-Cher

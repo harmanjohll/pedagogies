@@ -2324,7 +2324,7 @@ export function render(container) {
     const gridColor = isDark ? 'rgba(107,114,128,0.5)' : 'rgba(209,213,219,1)';
     const labelColor = isDark ? '#9ca3af' : '#4b5563';
     const datasetBG = isDark ? 'rgba(255,226,0,0.3)' : 'rgba(0,12,83,0.2)';
-    const datasetBorder = isDark ? '#FFE200' : '#000C53';
+    const datasetBorder = isDark ? '#F2B441' : '#16323A';
 
     const externalTooltip = (context) => {
       const { chart, tooltip } = context;
