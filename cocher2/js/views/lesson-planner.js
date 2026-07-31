@@ -28,6 +28,7 @@ import { ATTACH_ACCEPT, isAcceptedAttachment, buildAttachment, toMultimodalMessa
 import { priorityLabel, getPriorities } from '../utils/priorities.js';
 import { openLiveSession } from '../components/live-launch.js';
 import { listArtifacts, getArtifact, artifactContextText, artifactKind, openArtifactWindow } from '../utils/library.js';
+import { levelOptions, subjectOptions, defaultLevel, exampleLevel } from '../utils/vocabulary.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
@@ -784,7 +785,7 @@ function buildQuickPrompts(classes) {
     : [...new Set(classes.map(c => c.level).filter(Boolean))];
 
   const subj = subjects[0] || '[subject]';
-  const level = levels[0] || '[level e.g. Sec 3]';
+  const level = levels[0] || `[level e.g. ${exampleLevel()}]`;
   const hasSub = subjects.length > 0;
 
   // Subject-specific prompts — each with label, desc (card hint), and prompt (full editable text)
@@ -2372,14 +2373,14 @@ export function render(container) {
             <label class="input-label">Subject</label>
             <select class="input" id="vocab-subject">
               <option value="${cls.subject || ''}">${cls.subject || 'General'}</option>
-              ${['English','Chinese','Malay','Tamil','History','Social Studies','Geography','Science','Mathematics','CCE','General Paper'].filter(s => s !== cls.subject).map(s => `<option value="${s}">${s}</option>`).join('')}
+              ${subjectOptions({ exclude: cls.subject })}
             </select>
           </div>
           <div class="input-group">
             <label class="input-label">Level</label>
             <select class="input" id="vocab-level">
               <option value="${cls.level || 'Secondary'}">${cls.level || 'Secondary'}</option>
-              ${['Sec 1','Sec 2','Sec 3','Sec 4','Sec 5','JC 1','JC 2'].filter(l => l !== cls.level).map(l => `<option value="${l}">${l}</option>`).join('')}
+              ${levelOptions({ exclude: cls.level })}
             </select>
           </div>
         </div>
@@ -2472,7 +2473,7 @@ export function render(container) {
             <label class="input-label">Level</label>
             <select class="input" id="mr-level">
               <option value="${cls.level || 'Secondary'}">${cls.level || 'Secondary'}</option>
-              ${['Sec 1','Sec 2','Sec 3','Sec 4','Sec 5','JC 1','JC 2'].filter(l => l !== cls.level).map(l => `<option value="${l}">${l}</option>`).join('')}
+              ${levelOptions({ exclude: cls.level })}
             </select>
           </div>
         </div>

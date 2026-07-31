@@ -10,6 +10,7 @@ import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { renderMd, processLatex } from '../utils/latex.js';
 import { trackEvent } from '../utils/analytics.js';
+import { levelOptions, levelFromTop } from '../utils/vocabulary.js';
 
 /* ── Subject-specific system prompts ── */
 const SUBJECT_PROMPTS = {
@@ -240,12 +241,7 @@ export function render(container) {
             <div>
               <label for="ms-level">Level</label>
               <select id="ms-level" class="input" style="width:100%;box-sizing:border-box;">
-                <option ${currentLevel === 'Sec 1' ? 'selected' : ''}>Sec 1</option>
-                <option ${currentLevel === 'Sec 2' ? 'selected' : ''}>Sec 2</option>
-                <option ${currentLevel === 'Sec 3' ? 'selected' : ''}>Sec 3</option>
-                <option ${currentLevel === 'Sec 4' ? 'selected' : ''}>Sec 4</option>
-                <option ${currentLevel === 'JC 1' ? 'selected' : ''}>JC 1</option>
-                <option ${currentLevel === 'JC 2' || !currentLevel ? 'selected' : ''}>JC 2</option>
+                ${levelOptions({ selected: currentLevel || levelFromTop(0) })}
               </select>
             </div>
             <div class="full">

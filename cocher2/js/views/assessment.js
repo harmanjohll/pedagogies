@@ -14,6 +14,7 @@ import { sendChat, generateLISC, generateExitTicket } from '../api.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { processLatex, renderMd } from '../utils/latex.js';
 import { stripExpandMarkers } from '../utils/markdown.js';
+import { studentDescriptor, exampleLevel } from '../utils/vocabulary.js';
 import { openModal } from '../components/modals.js';
 import { isNarrow } from '../utils/viewport.js';
 
@@ -394,7 +395,7 @@ export function renderAoL(container) {
               </div>
               <div>
                 <label style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary);text-transform:uppercase;display:block;margin-bottom:4px;">Level</label>
-                <input type="text" id="aol-level" class="input" placeholder="e.g. Sec 4, JC1" style="width:100%;" />
+                <input type="text" id="aol-level" class="input" placeholder="e.g. ${exampleLevel()}" style="width:100%;" />
               </div>
             </div>
 
@@ -1807,7 +1808,7 @@ async function generateFrameworkOutput(container, btn) {
       .map(s => `${s.key ? `${s.key} = ` : ''}${s.label}: ${s.prompt || s.studentPrompt || ''}`.trim())
       .join('\n');
 
-    const prompt = `Generate a set of ${fw.name} self-reflection prompts for Singapore secondary students (age 13-17) based on the "${fw.name}" routine.
+    const prompt = `Generate a set of ${fw.name} self-reflection prompts for ${studentDescriptor()} based on the "${fw.name}" routine.
 
 ${fw.name} routine:
 ${stageLines}
@@ -1824,8 +1825,8 @@ For each ${fw.name} stage, provide:
 Make them concrete, empowering, and suitable for student self-reflection journals or exit tickets.`;
 
     const systemPrompt = fw.purpose === 'feedback'
-      ? `You are a metacognition specialist for Singapore secondary schools using the ${fw.name} routine. Generate empowering student self-reflection prompts that help learners process and act on feedback.`
-      : `You are a metacognition specialist for Singapore secondary schools using the ${fw.name} routine. Generate empowering student self-reflection prompts.`;
+      ? `You are a metacognition specialist for Singapore schools using the ${fw.name} routine. Generate empowering student self-reflection prompts that help learners process and act on feedback.`
+      : `You are a metacognition specialist for Singapore schools using the ${fw.name} routine. Generate empowering student self-reflection prompts.`;
 
     const text = await sendChat([{ role: 'user', content: prompt }], {
       trackLabel: `framework:${slugifyFramework(fw.name)}`,
@@ -2002,7 +2003,7 @@ function wireAaLEvents(container) {
     output.innerHTML = '<p style="color:var(--ink-muted);font-size:0.8125rem;">Generating prompts\u2026</p>';
 
     try {
-      const prompt = `Generate 5 metacognitive reflection prompts for Singapore secondary students.
+      const prompt = `Generate 5 metacognitive reflection prompts for ${studentDescriptor()}.
 Focus: ${domain} (${domain === 'planning' ? 'before learning' : domain === 'monitoring' ? 'during learning' : domain === 'evaluation' ? 'after learning' : domain === 'debugging' ? 'when stuck' : 'general'})
 ${subject ? `Subject context: ${subject}` : ''}
 ${contextStr ? `Additional context: ${contextStr}` : ''}

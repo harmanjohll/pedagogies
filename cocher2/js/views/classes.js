@@ -11,6 +11,7 @@ import { showToast } from '../components/toast.js';
 import { summarizeNotes, suggestGrouping, sendChat } from '../api.js';
 import { renderMd } from '../utils/latex.js';
 import { escapeHtml } from '../utils/markdown.js';
+import { levelOptions, levels, subjects } from '../utils/vocabulary.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
 import {
   SCHEMA_PRESETS, getSchemaForClass, getFieldValue, applyFieldUpdate,
@@ -286,16 +287,12 @@ function showAddClassModal() {
         <label class="input-label">Level</label>
         <select class="input" id="modal-class-level">
           <option value="">Select level...</option>
-          <option>Primary 1</option><option>Primary 2</option><option>Primary 3</option>
-          <option>Primary 4</option><option>Primary 5</option><option>Primary 6</option>
-          <option>Secondary 1</option><option>Secondary 2</option><option>Secondary 3</option>
-          <option>Secondary 4</option><option>Secondary 5</option>
-          <option>JC 1</option><option>JC 2</option>
+          ${levelOptions()}
         </select>
       </div>
       <div class="input-group">
         <label class="input-label">Subject</label>
-        <input class="input" id="modal-class-subject" placeholder="e.g. Science, English, Math" />
+        <input class="input" id="modal-class-subject" placeholder="e.g. ${subjects().slice(0, 3).join(', ')}" />
       </div>
     `,
     footer: `
@@ -1286,9 +1283,8 @@ function showEditClassModal(cls, onUpdate) {
         <label class="input-label">Level</label>
         <select class="input" id="edit-class-level">
           <option value="">Select level...</option>
-          ${['Primary 1','Primary 2','Primary 3','Primary 4','Primary 5','Primary 6','Secondary 1','Secondary 2','Secondary 3','Secondary 4','Secondary 5','JC 1','JC 2'].map(l =>
-            `<option ${cls.level === l ? 'selected' : ''}>${l}</option>`
-          ).join('')}
+          ${levelOptions({ selected: cls.level })}
+          ${cls.level && !levels().includes(cls.level) ? `<option selected>${escapeHtml(cls.level)}</option>` : ''}
         </select>
       </div>
       <div class="input-group">

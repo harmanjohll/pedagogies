@@ -13,20 +13,23 @@ import { escapeHtml } from '../utils/markdown.js';
 import { createFileUploadZone } from '../components/pdf-upload.js';
 import { printStimulusMaterial } from '../components/print-export.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
+import { levels, isPrimary, isJC } from '../utils/vocabulary.js';
 
 /* ── Constants ── */
 const STORAGE_KEY = 'cocher2_stimulus_library';
 
-const SUBJECTS = [
+/* Text-based subjects, minus the ones this stage of schooling does not run:
+ * General Paper is a JC subject, Geography and History start at secondary. */
+const SUBJECTS = () => [
   'English', 'Chinese', 'Malay', 'Tamil',
-  'History', 'Social Studies', 'Geography',
-  'GP', 'CCE', 'Other'
+  ...(isPrimary() ? [] : ['History', 'Geography']),
+  'Social Studies',
+  ...(isJC() ? ['GP'] : []),
+  'CCE', 'Other',
 ];
 
-const LEVELS = [
-  'Sec 1', 'Sec 2', 'Sec 3', 'Sec 4', 'Sec 5',
-  'JC 1', 'JC 2'
-];
+/* The school's own levels — a primary school runs none of Sec 1–JC 2. */
+const LEVELS = () => levels();
 
 const TYPES = [
   'Comprehension Passage',
@@ -509,14 +512,14 @@ export function render(container) {
                   <label class="sm-label">Subject</label>
                   <select id="sm-subject" class="sm-select">
                     <option value="">Select subject...</option>
-                    ${SUBJECTS.map(s => `<option value="${s}">${s}</option>`).join('')}
+                    ${SUBJECTS().map(s => `<option value="${s}">${s}</option>`).join('')}
                   </select>
                 </div>
                 <div class="sm-field">
                   <label class="sm-label">Level</label>
                   <select id="sm-level" class="sm-select">
                     <option value="">Select level...</option>
-                    ${LEVELS.map(l => `<option value="${l}">${l}</option>`).join('')}
+                    ${LEVELS().map(l => `<option value="${l}">${l}</option>`).join('')}
                   </select>
                 </div>
               </div>
@@ -580,14 +583,14 @@ export function render(container) {
                   <label class="sm-label">Subject</label>
                   <select id="sm-manual-subject" class="sm-select">
                     <option value="">Select...</option>
-                    ${SUBJECTS.map(s => `<option value="${s}">${s}</option>`).join('')}
+                    ${SUBJECTS().map(s => `<option value="${s}">${s}</option>`).join('')}
                   </select>
                 </div>
                 <div class="sm-field">
                   <label class="sm-label">Level</label>
                   <select id="sm-manual-level" class="sm-select">
                     <option value="">Select...</option>
-                    ${LEVELS.map(l => `<option value="${l}">${l}</option>`).join('')}
+                    ${LEVELS().map(l => `<option value="${l}">${l}</option>`).join('')}
                   </select>
                 </div>
                 <div class="sm-field">

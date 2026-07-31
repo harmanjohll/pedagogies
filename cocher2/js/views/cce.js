@@ -12,6 +12,7 @@ import { confirmDialog, openModal } from '../components/modals.js';
 import { navigate } from '../router.js';
 import { processLatex } from '../utils/latex.js';
 import { md as renderMarkdown, escapeHtml as escapeHTML } from '../utils/markdown.js';
+import { levels } from '../utils/vocabulary.js';
 
 /* ── Module-level state ── */
 
@@ -105,7 +106,7 @@ const NE_DISPOSITIONS = [
   'The Will to Act'
 ];
 
-const LEVELS = ['Sec 1', 'Sec 2', 'Sec 3', 'Sec 4', 'Sec 5', 'JC 1', 'JC 2'];
+const LEVELS = () => levels();
 
 const DISCUSSION_FORMATS = [
   'Four Corners',
@@ -513,7 +514,7 @@ export function render(container) {
               <div>
                 <label for="cce-level">Level</label>
                 <select id="cce-level" class="input" style="width:100%;box-sizing:border-box;">
-                  ${LEVELS.map(l => `<option value="${l}">${l}</option>`).join('')}
+                  ${LEVELS().map(l => `<option value="${l}">${l}</option>`).join('')}
                 </select>
               </div>
               <div>

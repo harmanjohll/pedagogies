@@ -9,6 +9,9 @@ import { renderCardView } from './utils/takehome-card.js';
 import { renderSidebar } from './components/sidebar.js';
 import { applySchoolTheme, paintSchoolLabel } from './utils/school-theme.js';
 import { maybeClaimTimetable } from './components/claim-timetable.js';
+import { seedDemoTimetable } from './utils/demo-timetables.js';
+import { primeVocabulary } from './utils/vocabulary.js';
+import { getCurrentUser } from './components/login.js';
 import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
 import { renderLogin, isLoggedIn } from './components/login.js';
 import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedCCAIfNeeded, seedExemplarsIfNeeded, seedPortalDemosIfNeeded, seedShowcaseLessonsIfNeeded } from './seed-data.js';
@@ -52,9 +55,27 @@ import { startTour, isTourComplete } from './components/spotlight-tour.js';
 import { maybeShowWhatsNew } from './components/whats-new.js';
 import { initKeyboardShortcuts } from './components/keyboard-shortcuts.js';
 
-function init() {
+/* Start loading the school's vocabulary as early as the teacher is known —
+ * during the welcome screen, not after it. init() awaits the same promise, so
+ * the work overlaps the first-run screens instead of delaying first paint.
+ * Idempotent: calling it again returns the in-flight (or settled) promise. */
+let _priming = null;
+const startPriming = () => (_priming ||= primeVocabulary().catch(() => {}));
+
+async function init() {
   const app = document.getElementById('app');
   if (!app) return;
+
+  // The school's own level/subject vocabulary, settled BEFORE anything paints
+  // or seeds. Every level picker and every sample class is built from it, and
+  // they are written synchronously, so this is what keeps a primary teacher
+  // from being offered "Sec 3 Chemistry".
+  //
+  // The fetch itself was started back at sign-in (see startPriming), so by here
+  // it has almost always resolved and this await costs nothing. The timeout is
+  // the floor, not the plan: a school pack that never arrives must fall back to
+  // the national defaults rather than hold up the app.
+  await Promise.race([startPriming(), new Promise(r => setTimeout(r, 2500))]);
 
   // Seed sample data on first run
   seedIfNeeded();
@@ -176,6 +197,16 @@ function init() {
     }
   });
 
+  // Demo accounts: seed here as well as at sign-in. Sign-in alone misses anyone
+  // who was ALREADY signed in when this shipped — they would sit on an empty
+  // timetable forever with no way to trigger it. Idempotent: a no-op once a
+  // timetable exists, and for every non-demo teacher.
+  seedDemoTimetable(getCurrentUser()?.email).then(seeded => {
+    if (seeded && location.hash.replace('#', '') === '/my-timetable') {
+      window.dispatchEvent(new HashChangeEvent('hashchange'));   // repaint if we're looking at it
+    }
+  });
+
   // If the school published a staff timetable and this teacher hasn't got one
   // yet, offer it — one tap, once. Silent when there's nothing to offer.
   maybeClaimTimetable();
@@ -211,8 +242,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function startApp() {
+    startPriming();                     // the teacher is known now — fetch their school's pack
     if (shouldShowWelcome()) {
-      renderWelcome(() => init());
+      renderWelcome(() => init());      // …while the welcome screen is on-screen
     } else {
       init();
     }

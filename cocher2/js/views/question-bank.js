@@ -10,6 +10,7 @@ import { sendChat } from '../api.js';
 import { Store } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { escapeHtml } from '../utils/markdown.js';
+import { levels, defaultLevel } from '../utils/vocabulary.js';
 import { trackEvent } from '../utils/analytics.js';
 import { saveArtifact, savedArtifactsHTML, wireSavedArtifacts, consumeOpenArtifact, getArtifact, listArtifacts } from '../utils/library.js';
 
@@ -27,7 +28,7 @@ const DIFF_MIXES = {
   accessible: 'Mostly Easy and Medium (confidence-building)',
   stretch: 'Mostly Medium and Hard (stretch and challenge)',
 };
-const LEVELS = ['Sec 1', 'Sec 2', 'Sec 3', 'Sec 4', 'Sec 5', 'JC 1', 'JC 2'];
+const LEVELS = () => levels();
 
 /* Coerce AI output into the blueprint vocabulary used in views/assessment.js */
 function normDifficulty(d) {
@@ -65,7 +66,7 @@ function parseJson(text, wantArray) {
 
 export function render(container) {
   let subject = '';
-  let level = 'Sec 3';
+  let level = defaultLevel();
   let topic = '';
   let count = 10;
   let blooms = new Set(['Remember', 'Understand', 'Apply', 'Analyse']);
@@ -109,7 +110,7 @@ export function render(container) {
             <div>
               <label class="qb-label" for="qb-level">Level</label>
               <select id="qb-level" class="input" style="width:100%;box-sizing:border-box;">
-                ${LEVELS.map(l => `<option ${l === level ? 'selected' : ''}>${l}</option>`).join('')}
+                ${LEVELS().map(l => `<option ${l === level ? 'selected' : ''}>${l}</option>`).join('')}
               </select>
             </div>
             <div>

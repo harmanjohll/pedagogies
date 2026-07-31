@@ -92,6 +92,24 @@
     "ICT",
     "Character & Citizenship Education"
   ],
+  "sampleClasses": [
+    {
+      "name": "5R1 Mathematics",
+      "level": "Primary 5",
+      "subject": "Mathematics"
+    },
+    {
+      "name": "5R1 Science",
+      "level": "Primary 5",
+      "subject": "Science"
+    },
+    {
+      "name": "5R2 English",
+      "level": "Primary 5",
+      "subject": "English"
+    }
+  ],
+  "sampleClassesNote": "Sample classes for a first run, using real class codes from the school’s published timetable so the demo data looks like this school. Not a roster — no pupils are named here.",
   "teachingApproaches": [
     {
       "subject": "Mathematics",

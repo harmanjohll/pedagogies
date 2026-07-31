@@ -187,6 +187,22 @@ export async function sendChat(messages, options = {}) {
     if (ctx) systemPrompt += `\n\n${ctx}`;
   } catch { /* no school, no pack, or offline — the prompt simply stays generic */ }
 
+  // WHO the learners are. Without this the model defaults to secondary, and a
+  // primary teacher gets O-Level command words, exam framing and reading levels
+  // their eleven-year-olds cannot use. Stated once here rather than patched
+  // into forty separate prompts.
+  try {
+    const { schoolStage, studentDescriptor, levels: schoolLevels } = await import('./utils/vocabulary.js');
+    const stage = schoolStage();
+    if (stage) {
+      systemPrompt += `\n\n[Learners] This teacher teaches ${studentDescriptor()}`
+        + ` — the school runs ${schoolLevels().join(', ')}. Pitch every example, text, question, `
+        + `instruction and reading level for that age group, and use those level names. `
+        + `Never assume a different stage of schooling, and never reference syllabuses, `
+        + `examinations or command words that do not apply to it.`;
+    }
+  } catch { /* vocabulary not primed — the prompt simply stays generic */ }
+
   const schoolProfile = Store.getSchoolProfile?.() || {};
   if (schoolProfile.values) {
     systemPrompt += `\n\nThe teacher's school values are: ${schoolProfile.values}. Where these values naturally align with the lesson content, weave them in subtly. Do NOT force or contrive connections — only reference school values when the context genuinely supports it.`;
@@ -1774,7 +1790,7 @@ Rules:
 - Keep total spoken words within the requested budget. Short, punchy turns (1-3 sentences each).
 - Style guide: 'murder mystery clip' = suspenseful investigative scene; 'news soundbite' = crisp news-report tone; 'dialogue' = natural conversation between two voices.
 - "text" is exactly what is spoken aloud: no headings, no markdown, no [bracketed effects], no speaker names inside the text.
-- Age-appropriate for Singapore secondary students and factually accurate on the topic.`
+- Age-appropriate for the learners described in this system prompt, and factually accurate on the topic.`
   });
   return normalizePodcastScript(parseJsonResponse(raw, 'audio script'), { topic, style, wordBudget, nSpeakers });
 }
