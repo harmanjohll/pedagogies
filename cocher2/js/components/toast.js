@@ -45,7 +45,7 @@ export function showActionToast(message, actionLabel, onAction, duration = 6000)
   msg.textContent = message;
   const btn = document.createElement('button');
   btn.textContent = actionLabel;
-  btn.style.cssText = 'background:none;border:none;color:var(--brand-yellow,#FFE200);font-weight:700;cursor:pointer;font-size:0.8125rem;padding:0;';
+  btn.style.cssText = 'background:none;border:none;color:var(--brand-yellow,#F2B441);font-weight:700;cursor:pointer;font-size:0.8125rem;padding:0;';
   let used = false;
   let removeTimer = null;
   const dismiss = () => {

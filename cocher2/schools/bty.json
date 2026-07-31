@@ -362,5 +362,8 @@
       "Process"
     ]
   },
-  "slotMinutes": 35
+  "slotMinutes": 35,
+  "theme": {
+    "accent": "#1D3FA8"
+  }
 }

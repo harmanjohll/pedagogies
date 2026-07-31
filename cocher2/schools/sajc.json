@@ -43,5 +43,8 @@
     "Project Work"
   ],
   "cca": [],
-  "frameworks": []
+  "frameworks": [],
+  "theme": {
+    "accent": "#7A1F3D"
+  }
 }

@@ -84,7 +84,7 @@ function renderLifecycleBreadcrumb({ stages, currentKey }) {
     const dotStyle = isDone
       ? 'background:var(--growth,#2c7a4b);color:#fff;'
       : isCurrent
-        ? 'background:var(--brand-navy,#000C53);color:var(--brand-yellow,#FFE200);box-shadow:0 0 0 3px rgba(0,12,83,0.12);'
+        ? 'background:var(--brand-navy,#16323A);color:var(--brand-yellow,#F2B441);box-shadow:0 0 0 3px rgba(0,12,83,0.12);'
         : 'background:var(--bg-subtle);color:var(--ink-faint);';
     const connector = i < stages.length - 1
       ? `<span style="width:20px;height:2px;background:${i < idx ? 'var(--growth,#2c7a4b)' : 'var(--border-light)'};margin:0 8px;border-radius:2px;"></span>`

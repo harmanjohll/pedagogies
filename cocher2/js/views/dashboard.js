@@ -1270,7 +1270,7 @@ function buildNextLessonCard(teacherRow, lessons, classes) {
     : (matchingClass ? 'No plan linked to this class yet.' : 'This class isn’t set up in Co-Cher yet.');
 
   return `
-    <div class="card next-lesson-card" style="margin-bottom:var(--sp-5);padding:var(--sp-4) var(--sp-5);border-left:4px solid var(--marker,#FFE200);background:var(--surface,#fff);">
+    <div class="card next-lesson-card" style="margin-bottom:var(--sp-5);padding:var(--sp-4) var(--sp-5);border-left:4px solid var(--marker,#F2B441);background:var(--surface,#fff);">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;">
         <div style="min-width:0;">
           <div style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-muted);margin-bottom:2px;">${whenKicker}</div>
@@ -1704,8 +1704,8 @@ function buildUpNextHero(lessons, classes, calm = false) {
    * highlighter-yellow spine and a serif title (navy CTA, yellow text).
    * calm=false (classic) emits the original markup byte-for-byte. */
   const cardStyle = calm
-    ? 'margin-bottom:var(--sp-5);padding:var(--sp-5);cursor:pointer;background:var(--surface,#fff);color:var(--ink);border:1px solid var(--border-light,#e5e7eb);border-left:4px solid var(--marker,#FFE200);'
-    : 'margin-bottom:var(--sp-5);padding:var(--sp-5);cursor:pointer;background:linear-gradient(135deg,var(--brand-navy,#000C53),#1e3a8a);color:#fff;border:none;';
+    ? 'margin-bottom:var(--sp-5);padding:var(--sp-5);cursor:pointer;background:var(--surface,#fff);color:var(--ink);border:1px solid var(--border-light,#e5e7eb);border-left:4px solid var(--marker,#F2B441);'
+    : 'margin-bottom:var(--sp-5);padding:var(--sp-5);cursor:pointer;background:linear-gradient(135deg,var(--brand-navy,#16323A),#1e3a8a);color:#fff;border:none;';
   const kickerStyle = calm
     ? 'font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-muted);margin-bottom:4px;'
     : 'font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;opacity:0.7;margin-bottom:4px;';
@@ -1713,8 +1713,8 @@ function buildUpNextHero(lessons, classes, calm = false) {
     ? 'font-size:0.8125rem;color:var(--ink-muted);margin-top:2px;'
     : 'font-size:0.8125rem;opacity:0.75;margin-top:2px;';
   const ctaStyle = calm
-    ? 'background:var(--brand-navy,#000C53);color:var(--brand-yellow,#FFE200);font-weight:700;border:none;'
-    : 'background:var(--brand-yellow,#FFE200);color:var(--brand-navy,#000C53);font-weight:700;border:none;';
+    ? 'background:var(--brand-navy,#16323A);color:var(--brand-yellow,#F2B441);font-weight:700;border:none;'
+    : 'background:var(--brand-yellow,#F2B441);color:var(--brand-navy,#16323A);font-weight:700;border:none;';
   const titlePlain = calm
     ? 'font-family:var(--font-serif, Georgia, serif);font-size:1.25rem;font-weight:600;'
     : 'font-size:1rem;font-weight:600;';
@@ -1861,11 +1861,11 @@ function buildCalmRibbon(teacherRow) {
     const isNow = period === p;
     const isPast = period !== null && p < period;
     const nowTag = isNow
-      ? '<span style="margin-left:4px;padding:0 4px;border-radius:3px;background:var(--brand-navy,#000C53);color:var(--brand-yellow,#FFE200);font-size:0.5rem;font-weight:700;vertical-align:1px;">NOW</span>'
+      ? '<span style="margin-left:4px;padding:0 4px;border-radius:3px;background:var(--brand-navy,#16323A);color:var(--brand-yellow,#F2B441);font-size:0.5rem;font-weight:700;vertical-align:1px;">NOW</span>'
       : '';
     // Subtle accent underline on class-bearing, non-current cells.
     const accentBar = (useAccent && hasClass && !isNow) ? `border-bottom:2px solid ${accent.trim()};` : '';
-    cells.push(`<div style="flex:0 0 auto;min-width:64px;padding:6px 10px;border:1px solid ${isNow ? 'var(--marker,#FFE200)' : 'var(--border-light,#e5e7eb)'};border-radius:8px;background:${isNow ? 'var(--marker-wash,#FFF9C9)' : 'var(--surface,#fff)'};text-align:center;${accentBar}${isPast ? 'opacity:0.45;' : ''}">
+    cells.push(`<div style="flex:0 0 auto;min-width:64px;padding:6px 10px;border:1px solid ${isNow ? 'var(--marker,#F2B441)' : 'var(--border-light,#e5e7eb)'};border-radius:8px;background:${isNow ? 'var(--marker-wash,#FFF9C9)' : 'var(--surface,#fff)'};text-align:center;${accentBar}${isPast ? 'opacity:0.45;' : ''}">
       <div style="font-size:0.625rem;font-weight:700;color:var(--ink-muted);letter-spacing:0.04em;">P${p}${nowTag}</div>
       <div style="font-size:0.75rem;font-weight:${hasClass ? '600' : '400'};color:${hasClass ? 'var(--ink)' : 'var(--ink-faint)'};white-space:nowrap;">${hasClass ? escapeHtml(classCode) : 'Free'}</div>
     </div>`);
@@ -2309,7 +2309,7 @@ export function render(container) {
         <div class="calm-panel-label">Worth a <span class="calm-hl">look</span></div>
         ${worthItems.map(t => `
           <div style="display:flex;gap:var(--sp-2);padding:var(--sp-2) 0;font-size:0.8125rem;color:var(--ink-secondary);line-height:1.5;">
-            <span style="width:7px;height:7px;border-radius:50%;background:var(--marker,#FFE200);border:1px solid var(--border,#d1d5db);margin-top:6px;flex-shrink:0;"></span>
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--marker,#F2B441);border:1px solid var(--border,#d1d5db);margin-top:6px;flex-shrink:0;"></span>
             <span>${t}</span>
           </div>`).join('')}
       </div>`;

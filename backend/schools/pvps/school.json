@@ -46,5 +46,8 @@
   ],
   "cca": [],
   "frameworks": [],
-  "joinCode": ""
+  "joinCode": "",
+  "theme": {
+    "accent": "#0E7C86"
+  }
 }

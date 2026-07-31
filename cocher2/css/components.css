@@ -1478,8 +1478,8 @@ body.journey-minimal .lifecycle-stepper .lifecycle-min-toggle { opacity: 0.7; }
 .md-choice-opt:hover { border-color: var(--marker-ink, #7a6300); background: var(--marker-wash, #FFF6BF); }
 .md-choice-opt.chosen {
   border-color: var(--marker-ink, #7a6300);
-  background: var(--marker, #FFE200);
-  color: #000C53;
+  background: var(--marker, #F2B441);
+  color: #16323A;
   font-weight: 600;
 }
 

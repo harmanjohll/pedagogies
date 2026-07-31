@@ -288,8 +288,8 @@ export function renderSidebar(container) {
     <a class="sidebar-brand" href="#/" style="text-decoration:none;cursor:pointer;">
       <div class="sidebar-brand-icon">C</div>
       <div class="sidebar-brand-text">
-        <div class="sidebar-brand-name serif-voice">Co-Cher</div>
-        <div class="sidebar-brand-tagline">Your Co-Teaching Assistant</div>
+        <div class="sidebar-brand-name serif-voice">Co-Cher <span style="font-size:0.62em;font-weight:800;letter-spacing:0.06em;vertical-align:super;opacity:0.75;">2</span></div>
+        <div class="sidebar-brand-tagline" id="sidebar-school">Your Co-Teaching Assistant</div>
       </div>
     </a>
 
@@ -308,7 +308,7 @@ export function renderSidebar(container) {
         <span class="sidebar-item-icon">${ICONS.settings}</span>
         <span class="sidebar-item-label">Settings</span>
       </button>
-      <div class="sidebar-version" title="Previous versions are linked in Settings &rarr; About">Co-Cher ${APP_VERSION}</div>
+      <div class="sidebar-version" title="Previous versions are linked in Settings &rarr; About">Co-Cher 2 &middot; ${APP_VERSION}</div>
     </div>
   `;
 
