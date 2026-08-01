@@ -619,7 +619,7 @@ async function renderFindTeacher(container) {
         <button class="btn btn-ghost btn-sm" id="ft-paste">Paste a staff list instead</button>
       </div>
       <div id="ft-paste-box" style="display:none;margin-top:10px;">
-        <textarea class="input" id="ft-paste-text" rows="7" placeholder="Paste your school's staff page — one name per line.&#10;&#10;Mathematics:&#10;Mdm Adeline Ang&#10;Mr Tan Wei Ming&#10;&#10;Science:&#10;Ms Jamie Lie&#10;&#10;Names only is fine. Co-Cher will list your colleagues, and say plainly that it does not know their timetables." style="width:100%;box-sizing:border-box;font-size:0.8125rem;"></textarea>
+        <textarea class="input" id="ft-paste-text" rows="7" placeholder="Paste your school's staff page — one name per line.&#10;&#10;Mathematics:&#10;Mdm Lim Hui Shan&#10;Mr Rajan Kumar&#10;&#10;Science:&#10;Ms Nadia Ismail&#10;&#10;Names only is fine. Co-Cher will list your colleagues, and say plainly that it does not know their timetables." style="width:100%;box-sizing:border-box;font-size:0.8125rem;"></textarea>
         <div style="display:flex;gap:8px;margin-top:6px;">
           <button class="btn btn-primary btn-sm" id="ft-paste-go">Add these colleagues</button>
           <span style="font-size:0.6875rem;color:var(--ink-faint);align-self:center;">No email addresses are guessed, and no timetables are invented.</span>

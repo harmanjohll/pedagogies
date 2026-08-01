@@ -163,8 +163,8 @@ export function importSchoolRoster(doc, schoolId) {
  * they teach" has to stay distinguishable from "they are free".
  *
  * Accepts, one per line:
- *   Mdm Adeline Ang            → under the most recent heading
- *   Adeline Ang, Mathematics   → explicit department
+ *   Mdm Lim Hui Shan           → under the most recent heading
+ *   Lim Hui Shan, Mathematics  → explicit department
  *   == Mathematics ==          → a heading (any line ending in ':' works too)
  */
 export function parseStaffList(text) {

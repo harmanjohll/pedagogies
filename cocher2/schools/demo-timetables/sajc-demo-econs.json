@@ -1,0 +1,260 @@
+{
+  "schoolId": "sajc",
+  "teacher": {
+    "name": "Priya Segaran",
+    "email": "demo.econs@sajc.moe.edu.sg"
+  },
+  "note": "INVENTED demo data. Not any real teacher's timetable — the entries are written to exercise the app (real clock times, week cycles, the four entry kinds), not to describe anyone's actual week.",
+  "entries": [
+    {
+      "cycle": "Odd",
+      "day": "Mon",
+      "start": "08:00",
+      "end": "08:30",
+      "title": "ASSEMBLY",
+      "class": null,
+      "room": null,
+      "kind": "school"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Mon",
+      "start": "08:30",
+      "end": "10:00",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A01-EAM",
+      "room": "D201",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Mon",
+      "start": "10:30",
+      "end": "12:00",
+      "title": "H2 ECONOMICS — LECTURE",
+      "class": "J2 ECONS",
+      "room": "LT1",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Mon",
+      "start": "14:00",
+      "end": "15:30",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A02-EBM",
+      "room": "D202",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Mon",
+      "start": "08:30",
+      "end": "10:00",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A02-EBM",
+      "room": "D202",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Mon",
+      "start": "10:30",
+      "end": "12:00",
+      "title": "DEPARTMENT MEETING — ECONOMICS",
+      "class": null,
+      "room": "STAFF RM 2",
+      "kind": "pd"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Tue",
+      "start": "09:00",
+      "end": "10:30",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A01-EAM",
+      "room": "D201",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Tue",
+      "start": "11:00",
+      "end": "12:00",
+      "title": "CONSULTATION — J2 ECONOMICS",
+      "class": null,
+      "room": "D201",
+      "kind": "pd"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Tue",
+      "start": "13:30",
+      "end": "15:00",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A03-ECM",
+      "room": "D203",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Tue",
+      "start": "09:00",
+      "end": "10:30",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A03-ECM",
+      "room": "D203",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Tue",
+      "start": "13:30",
+      "end": "15:00",
+      "title": "H2 ECONOMICS — LECTURE",
+      "class": "J2 ECONS",
+      "room": "LT1",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Wed",
+      "start": "08:00",
+      "end": "09:30",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A02-EBM",
+      "room": "D202",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Wed",
+      "start": "10:00",
+      "end": "11:30",
+      "title": "CIVICS TUTORIAL",
+      "class": "25A01-EAM",
+      "room": "D201",
+      "kind": "school"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Wed",
+      "start": "14:00",
+      "end": "16:00",
+      "title": "PD — ASSESSMENT LITERACY",
+      "class": null,
+      "room": "SEMINAR RM",
+      "kind": "pd"
+    },
+    {
+      "cycle": "Even",
+      "day": "Wed",
+      "start": "08:00",
+      "end": "09:30",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A01-EAM",
+      "room": "D201",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Wed",
+      "start": "14:00",
+      "end": "16:00",
+      "title": "PD — ASSESSMENT LITERACY",
+      "class": null,
+      "room": "SEMINAR RM",
+      "kind": "pd"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Thu",
+      "start": "09:00",
+      "end": "10:30",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A03-ECM",
+      "room": "D203",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Thu",
+      "start": "11:00",
+      "end": "12:30",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A01-EAM",
+      "room": "D201",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Thu",
+      "start": "09:00",
+      "end": "10:30",
+      "title": "H2 ECONOMICS — LECTURE",
+      "class": "J2 ECONS",
+      "room": "LT1",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Thu",
+      "start": "11:00",
+      "end": "12:30",
+      "title": "CONSULTATION — J1 ECONOMICS",
+      "class": null,
+      "room": "D201",
+      "kind": "pd"
+    },
+    {
+      "cycle": null,
+      "day": "Fri",
+      "start": "07:35",
+      "end": "08:30",
+      "title": "STAFF MEETING",
+      "class": null,
+      "room": "HALL",
+      "kind": "pd"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Fri",
+      "start": "08:30",
+      "end": "10:00",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A02-EBM",
+      "room": "D202",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Odd",
+      "day": "Fri",
+      "start": "10:30",
+      "end": "12:00",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A03-ECM",
+      "room": "D203",
+      "kind": "lesson"
+    },
+    {
+      "cycle": "Even",
+      "day": "Fri",
+      "start": "08:30",
+      "end": "10:00",
+      "title": "H2 ECONOMICS — TUTORIAL",
+      "class": "25A01-EAM",
+      "room": "D201",
+      "kind": "lesson"
+    },
+    {
+      "cycle": null,
+      "day": "Fri",
+      "start": "14:00",
+      "end": "16:00",
+      "title": "CCA — DEBATE SOCIETY",
+      "class": null,
+      "room": "D205",
+      "kind": "school"
+    }
+  ]
+}

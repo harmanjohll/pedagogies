@@ -17,6 +17,10 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.8', items: [
+    { icon: '\u{1F512}', title: 'The demo accounts no longer carry anyone\u2019s real week', text: 'The sample timetables shipped with Co-Cher were real teachers\u2019 actual timetables \u2014 their duty posts, their rooms, their Tuesday mornings \u2014 with the source file named alongside. They have been replaced with invented ones. A weekly pattern identifies a person even under a different name, so the entries had to go, not just the labels.' },
+    { icon: '\u{1F4C5}', title: 'Your timetable is ready the moment you sign in', text: 'Open My Timetable quickly enough and it used to say \u201cNo timetable yet\u201d and stay that way until you navigated off and back. Sign-in now waits for the timetable before letting you through.' },
+  ] },
   { version: 'v1.7', items: [
     { icon: '\u{1F5D3}', title: 'Your timetable is on the dashboard', text: 'Today\u2019s lessons now show on the dashboard for every school, not just the one Co-Cher was originally built for \u2014 read from your own imported timetable, with the current lesson marked. The sidebar\u2019s My Timetable link also stopped printing a stray word before its name.' },
     { icon: '\u{1F3EB}', title: 'Settings shows what Co-Cher knows about your school', text: 'Your school\u2019s motto, vision, mission, values, levels and named teaching approaches now appear in Settings, quoted from your school\u2019s own material \u2014 along with an honest list of what Co-Cher could not confirm and has left blank rather than invented.' },

@@ -45,10 +45,9 @@ No pupils are named — this is configuration, not a roster.
 ```json
 { "schoolId": "pvps",
   "teachers": [
-    { "name": "Jamie Lie", "email": "jamie_lie@pvps.moe.edu.sg",
-      "source": "PVPS_Timetable_Teacher.xlsx",
-      "entries": [ { "cycle": null, "day": "Mon", "start": "07:30", "end": "08:30",
-                     "title": "MATH", "class": "6R3", "room": null, "kind": "lesson" } ] } ] }
+    { "name": "Aisyah Rahman", "email": "demo.teacher@pvps.moe.edu.sg",
+      "entries": [ { "cycle": null, "day": "Mon", "start": "08:00", "end": "09:00",
+                     "title": "MATH", "class": "5R1", "room": "A1-02", "kind": "lesson" } ] } ] }
 ```
 
 `entries` are canonical: **real clock times, not period numbers.** That is what

@@ -6,7 +6,7 @@
  * A school publishes staff.json once (admin drops it in their Drive folder).
  * Every teacher on that domain signs in, and the only thing they have to do is
  * tap their own name — because an email address will not match a timetable's
- * name column ("ADELINE ANG", "SNG YIN HUI JOAN"), and guessing that mapping is
+ * name column ("LIM HUI SHAN", "SEGARAN PRIYA"), and guessing that mapping is
  * exactly the kind of silent wrongness that would put a teacher in someone
  * else's week.
  *
