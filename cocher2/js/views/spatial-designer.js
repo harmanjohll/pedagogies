@@ -17,15 +17,21 @@ import { openModal, confirmDialog } from '../components/modals.js';
 import { sendChat } from '../api.js';
 import { navigate } from '../router.js';
 import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
-import { getCurrentUser } from '../components/login.js';
+import { getCurrentUser, getPreferredName } from '../components/login.js';
+import { nowNext, rangeLabel } from '../utils/timetable.js';
 import { escapeHtml } from '../utils/markdown.js';
 import { isTouch, isNarrow } from '../utils/viewport.js';
 
 /* ═══════════ Timetable (TT) Awareness ═══════════ */
 let _ttData = null;
 
+/* Beatty's staff timetable CSV — the school it was written for, and no other.
+ * A Park View teacher's period context comes from their own uploaded timetable
+ * (utils/timetable.js), so this fetch is scoped rather than run for everyone:
+ * another school's CSV would either 404 or, worse, match a name by accident. */
 async function loadTimetable() {
   if (_ttData) return _ttData;
+  if (getCurrentUser()?.schoolId !== 'bty') { _ttData = []; return _ttData; }
   try {
     const [res] = await Promise.all([
       fetch('./btyrelief/BTYTT_2026Sem2_v1.csv'),
@@ -1062,23 +1068,44 @@ export function render(container) {
       if (!user?.email) return;
       const ttData = await loadTimetable();
       const teacherRow = getTTForTeacher(ttData, user.email);
-      if (!teacherRow) return;
 
-      const slot = getCurrentSlot(teacherRow);
+      /* Two sources, one banner. Beatty reads its own CSV's period columns;
+       * every other school reads the teacher's own timetable, which stores real
+       * clock times rather than period numbers. Neither is the "fallback" —
+       * they are simply what each school has. */
+      let slot = teacherRow ? getCurrentSlot(teacherRow) : null;
+      let teacherName = teacherRow?.['NAME'] || '';
+      let dept = teacherRow?.['DEPARTMENT'] || '';
+      let subject = teacherRow?.['SUBJECT'] || '';
+
+      if (!teacherRow) {
+        const { current } = await nowNext();
+        if (!current) return;                       // no timetable, or nothing on now
+        teacherName = getPreferredName() || user.name || '';
+        slot = {
+          weekType: '', dayStr: '', period: '',
+          when: rangeLabel(current),
+          classCode: current.class || current.title || '',
+          room: current.room || '',
+          free: current.kind !== 'lesson',
+          freeLabel: current.title || 'Not teaching',
+        };
+        subject = current.title || '';
+      }
+
       const banner = container.querySelector('#tt-context-banner');
       const textEl = container.querySelector('#tt-context-text');
       if (!banner || !textEl) return;
 
-      const teacherName = teacherRow['NAME'] || '';
-      const dept = teacherRow['DEPARTMENT'] || '';
-      const subject = teacherRow['SUBJECT'] || '';
+      /* "Odd Week · Mon P3" at Beatty, "10:30–11:30" everywhere else. */
+      const whenLabel = slot?.when || (slot ? `${slot.weekType} Week &middot; ${slot.dayStr} P${slot.period}` : '');
 
       if (slot?.free) {
-        textEl.innerHTML = `<strong>${teacherName}</strong> &middot; ${dept}<br/>
-          ${slot.weekType} Week &middot; ${slot.dayStr} P${slot.period} | <span style="color:var(--success,#22c55e);font-weight:600;">Free period</span>`;
+        textEl.innerHTML = `<strong>${escapeHtml(teacherName)}</strong>${dept ? ` &middot; ${escapeHtml(dept)}` : ''}<br/>
+          ${whenLabel} | <span style="color:var(--success,#22c55e);font-weight:600;">${escapeHtml(slot.freeLabel || 'Free period')}</span>`;
       } else if (slot) {
-        textEl.innerHTML = `<strong>${teacherName}</strong> &middot; ${dept}<br/>
-          ${slot.weekType} Week &middot; ${slot.dayStr} P${slot.period} | <strong>${slot.classCode}</strong> in <strong>${slot.room}</strong>`;
+        textEl.innerHTML = `<strong>${escapeHtml(teacherName)}</strong>${dept ? ` &middot; ${escapeHtml(dept)}` : ''}<br/>
+          ${whenLabel} | <strong>${escapeHtml(slot.classCode)}</strong>${slot.room ? ` in <strong>${escapeHtml(slot.room)}</strong>` : ''}`;
 
         // Auto-suggest venue based on room name
         const room = (slot.room || '').toLowerCase();
@@ -1122,7 +1149,7 @@ export function render(container) {
       } else {
         // Weekend / non-teaching week / outside timetabled hours — the banner
         // still shows, so give it an honest body instead of a blank line.
-        textEl.innerHTML = `<strong>${teacherName}</strong>${dept ? ` &middot; ${dept}` : ''}<br/>
+        textEl.innerHTML = `<strong>${escapeHtml(teacherName)}</strong>${dept ? ` &middot; ${escapeHtml(dept)}` : ''}<br/>
           <span style="color:var(--ink-muted);">No lesson right now</span>`;
       }
       banner.style.display = '';

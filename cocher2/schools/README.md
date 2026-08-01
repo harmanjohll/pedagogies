@@ -102,7 +102,21 @@ leave out what you don't have yet and the app falls back to sensible defaults.
 | `streams` | `["G1","G2","G3"]` | Or `["Express","NA","NT"]`, or `["IP"]`, or `[]`. |
 | `departments` | `["Science", …]` | Used for grouping colleagues. |
 | `subjects` | `["Chemistry", …]` | Offered subjects — narrows AI suggestions and pickers. |
-| `cca` | `[{ "name": "…", "category": "sports" }]` | Categories: `sports`, `performing`, `uniformed`, `clubs`. |
+| `cca` | `[{ "name": "…", "category": "sports" }]` | Categories: `sports`, `performing`, `uniformed`, `clubs`. Seeds My CCA with your school's own list. |
+| `sampleClasses` | `[{ "name": "5R1 Mathematics", "level": "Primary 5", "subject": "Mathematics" }]` | Real class codes for first-run samples and placeholder text. |
+| `identity` | `{ "vision": "…", "mission": "…", "motto": "…" }` | Shown in Settings so a teacher can see what Co-Cher knows about their school. |
+
+### `adminTools` — your school's own forms and links
+Optional. Each entry becomes a card in Admin One-Stop.
+
+```json
+{ "label": "Bus Booking", "desc": "Open the school bus booking form.",
+  "icon": "🚌", "href": "https://form.gov.sg/…" }
+```
+
+Only your school's teachers see them. Co-Cher never shows another school's forms
+to you — an approval request submitted to the wrong school's inbox is worse than
+no link at all — so a pack that lists none simply shows the universal tools.
 
 ### `frameworks` — your school's own learner routines
 Optional, and the reason a pack is more than settings. If your school has its own

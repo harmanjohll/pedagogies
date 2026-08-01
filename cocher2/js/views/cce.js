@@ -12,7 +12,7 @@ import { confirmDialog, openModal } from '../components/modals.js';
 import { navigate } from '../router.js';
 import { processLatex } from '../utils/latex.js';
 import { md as renderMarkdown, escapeHtml as escapeHTML } from '../utils/markdown.js';
-import { levels } from '../utils/vocabulary.js';
+import { levels, schoolStage, packValues } from '../utils/vocabulary.js';
 
 /* ── Module-level state ── */
 
@@ -41,7 +41,10 @@ const CONTENT_AREAS = [
     color: '#8b5cf6',
     icon: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>`,
     themes: ['Human Development', 'Interpersonal Relationships', 'Sexual Health', 'Sexual Behaviour', 'Culture, Society & Law'],
-    programmes: ['Growing Years Series (Sec)', 'eTeens Programme (Sec 3, with HPB)'],
+    programmes: [
+      { name: 'Growing Years Series', stages: ['primary', 'secondary'] },
+      { name: 'eTeens Programme (Sec 3, with HPB)', stages: ['secondary'] },
+    ],
     description: 'Sexuality Education enables students to understand physiological, social, and emotional changes, develop healthy relationships, and make wise, informed, responsible decisions. Covers five themes: Human Development, Interpersonal Relationships, Sexual Health, Sexual Behaviour, and Culture/Society/Law. Premised on the family as the basic unit of society.',
     topics: ['Human development & puberty', 'Healthy relationships & boundaries', 'Respect for self and others', 'Online safety in relationships', 'Informed decision-making']
   },
@@ -63,7 +66,7 @@ const CONTENT_AREAS = [
     themes: ['Who am I? (Discovering Purpose)', 'Where do I want to go? (Exploring Opportunities)', 'How do I get there? (Staying Relevant)'],
     framework: 'Three guiding questions: "Who am I?", "Where do I want to go?", "How do I get there?" — tied to Big Idea of Identity.',
     description: 'Education & Career Guidance helps students develop a sense of purpose in life, navigate education and career pathways purposefully, and embrace lifelong learning. Built around three guiding questions: "Who am I?" (self-awareness), "Where do I want to go?" (exploration), and "How do I get there?" (adaptability). Develops growth mindset, self-directedness, and appreciation for all occupations.',
-    topics: ['Self-awareness (strengths, interests, values)', 'Career exploration & industry awareness', 'MySkillsFuture portal', 'Post-secondary pathways', 'Sense of purpose & lifelong learning']
+    topics: ['Self-awareness (strengths, interests, values)', 'Career exploration & industry awareness', 'MySkillsFuture portal', 'Next-stage education pathways', 'Sense of purpose & lifelong learning']
   },
   {
     id: 'CW',
@@ -90,6 +93,18 @@ const CONTENT_AREAS = [
 const BIG_IDEAS = ['Identity', 'Relationships', 'Choices'];
 
 const R3ICH_VALUES = ['Respect', 'Responsibility', 'Resilience', 'Integrity', 'Care', 'Harmony'];
+
+/* The school's own wording where its pack has it — Park View writes "Respect
+ * for All" where the national framework says "Respect". A teacher should read
+ * their own school's values on this page, not a paraphrase of them. */
+const cceValues = () => { const own = packValues(); return own.length ? own : R3ICH_VALUES; };
+const valuesLabel = () => (packValues().length ? 'Core Values' : 'Core Values (R3ICH)');
+
+/* Entries may carry `stages` — a Sec 3 HPB programme is not a P4 teacher's
+ * business. A plain string applies everywhere. */
+const forStage = (list) => (list || [])
+  .filter(x => typeof x === 'string' || !x.stages || x.stages.includes(schoolStage() || 'secondary'))
+  .map(x => (typeof x === 'string' ? x : x.name));
 
 const SEL_COMPETENCIES = [
   'Self-Awareness',
@@ -226,7 +241,7 @@ export function cceContextBlock(areaKey) {
     `[CCE Lesson — ${label}]`,
     'This is a Character & Citizenship Education (CCE2021, Singapore) lesson. Design it against the CCE2021 framework:',
     `- Big Ideas: ${BIG_IDEAS.join(', ')}`,
-    `- Core Values (R3ICH): ${R3ICH_VALUES.join(', ')}`,
+    `- ${valuesLabel()}: ${cceValues().join(', ')}`,
     `- SEL Competencies: ${SEL_COMPETENCIES.join(', ')}`,
     `- NE Citizenship Dispositions: ${NE_DISPOSITIONS.join(', ')}`
   ];
@@ -697,12 +712,12 @@ export function render(container) {
             ${area.programmes ? `
               <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">Key Programmes</div>
               <div class="cce-tag-row">
-                ${area.programmes.map(p => `<span class="cce-tag" style="border-color:${area.color}44;color:${area.color};">${p}</span>`).join('')}
+                ${forStage(area.programmes).map(p => `<span class="cce-tag" style="border-color:${area.color}44;color:${area.color};">${p}</span>`).join('')}
               </div>
             ` : ''}
-            <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">Core Values (R3ICH)</div>
+            <div style="font-size:0.75rem;font-weight:600;color:var(--ink-secondary,#666);margin:10px 0 4px;">${valuesLabel()}</div>
             <div class="cce-tag-row">
-              ${R3ICH_VALUES.map(v => `<span class="cce-tag">${v}</span>`).join('')}
+              ${cceValues().map(v => `<span class="cce-tag">${escapeHTML(v)}</span>`).join('')}
             </div>
           </div>
 

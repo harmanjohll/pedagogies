@@ -10,7 +10,7 @@ import { showToast } from '../components/toast.js';
 import { openModal } from '../components/modals.js';
 import { createFileUploadZone } from '../components/pdf-upload.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
-import { exampleLevel } from '../utils/vocabulary.js';
+import { exampleLevel, exampleClass, subjects } from '../utils/vocabulary.js';
 
 const FRAMEWORKS = [
   {
@@ -525,7 +525,7 @@ function showUploadModal(container, defaultCategory = null) {
     body: `
       <div class="input-group">
         <label class="input-label">Title</label>
-        <input class="input" id="upload-title" placeholder="e.g. 4A Chemistry Scheme of Work 2026" />
+        <input class="input" id="upload-title" placeholder="e.g. ${exampleClass()} Scheme of Work" />
       </div>
       <div class="input-group">
         <label class="input-label">Category</label>
@@ -535,7 +535,7 @@ function showUploadModal(container, defaultCategory = null) {
       </div>
       <div class="input-group">
         <label class="input-label">Subject (optional)</label>
-        <input class="input" id="upload-subject" placeholder="e.g. Pure Chemistry" />
+        <input class="input" id="upload-subject" placeholder="e.g. ${subjects()[0] || 'your subject'}" />
       </div>
       <div class="input-group">
         <label class="input-label">Link to Class (optional)</label>

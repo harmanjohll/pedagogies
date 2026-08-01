@@ -9,6 +9,7 @@ import { trackEvent } from './utils/analytics.js';
 import { getPreferredName } from './components/login.js';
 import { SCHEMA_PRESETS } from './utils/tracking.js';
 import { TEACHING_AREAS, actionsForArea, TEACHING_ACTION_OTHER } from './utils/stp.js';
+import { schoolStage, defaultLevel } from './utils/vocabulary.js';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -391,7 +392,7 @@ Be encouraging, specific, and practical. Speak as a fellow educator.`,
 export async function generateRubric(lessonTopic, level, subject) {
   const messages = [{
     role: 'user',
-    content: `Create an assessment rubric for: ${lessonTopic}\nLevel: ${level || 'Secondary'}\nSubject: ${subject || 'General'}`
+    content: `Create an assessment rubric for: ${lessonTopic}\nLevel: ${level || defaultLevel() || 'unspecified'}\nSubject: ${subject || 'General'}`
   }];
 
   return sendChat(messages, {
@@ -529,7 +530,7 @@ export function groupingToMarkdown(result, options = {}) {
 export async function generateExitTicket(planText, subject, level) {
   const messages = [{
     role: 'user',
-    content: `Generate exit ticket questions for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+    content: `Generate exit ticket questions for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   return sendChat(messages, {
@@ -927,11 +928,29 @@ Return STRICT JSON only (no markdown, no commentary), one entry per segment in o
   return byIndex;
 }
 
+/* Channels worth naming, by who is watching. The one list Co-Cher 1 shipped was
+ * a secondary/JC list — Organic Chemistry Tutor and 3Blue1Brown are no use to a
+ * P4 class, and a teacher who gets those back stops trusting the suggestions. */
+function ytChannels() {
+  switch (schoolStage()) {
+    case 'primary':
+      return 'TED-Ed, Crash Course Kids, SciShow Kids, National Geographic Kids, Khan Academy, '
+        + 'Free School, Numberock, Art for Kids Hub, Peekaboo Kidz, Homeschool Pop';
+    case 'junior-college':
+      return '3Blue1Brown, Veritasium, CrashCourse, Khan Academy, The Organic Chemistry Tutor, '
+        + 'MIT OpenCourseWare, Numberphile, Mathologer, Physics Girl, TED-Ed';
+    default:
+      return 'CrashCourse, Veritasium, 3Blue1Brown, TED-Ed, Khan Academy, Professor Dave Explains, '
+        + 'The Organic Chemistry Tutor, Kurzgesagt, MinutePhysics, SmarterEveryDay, Numberphile, '
+        + 'Tyler DeWitt, Bozeman Science, Amoeba Sisters, Physics Girl';
+  }
+}
+
 /* ── YouTube Recommendations ── */
 export async function suggestYouTubeVideos(planText, subject, level) {
   const messages = [{
     role: 'user',
-    content: `Suggest YouTube videos that would support this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+    content: `Suggest YouTube videos that would support this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   return sendChat(messages, {
@@ -949,8 +968,8 @@ Guidelines:
   Replace spaces with + signs in the search query. Keep queries SHORT (max 8 words).
 - Use specific search queries that will find the exact video (include channel name in query)
 - Categorise videos into: "Show in Class" (3-4), "Flipped Learning" (2-3), "Teacher Prep" (1-2)
-- Prefer well-known educational channels: CrashCourse, Veritasium, 3Blue1Brown, TED-Ed, Khan Academy, Professor Dave Explains, Organic Chemistry Tutor, Kurzgesagt, MinutePhysics, SmarterEveryDay, Mathologer, Numberphile, Tyler DeWitt, Bozeman Science, Amoeba Sisters, Stated Clearly, Science ABC, Physics Girl, Mr Thong (SG), SLS resources
-- Consider Singapore curriculum alignment (O-Level, N-Level, IP) where relevant
+- Prefer well-known educational channels: ${ytChannels()}, and SLS resources
+- Align with the Singapore national curriculum for the levels named under [Learners] below
 - Include estimated duration if known
 
 Format EXACTLY like this:
@@ -1015,7 +1034,7 @@ export async function suggestSimulations(planText, subject, level) {
 
   const messages = [{
     role: 'user',
-    content: `Suggest simulation models that would support this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+    content: `Suggest simulation models that would support this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   // Build a lookup for post-processing built-in sim links
@@ -1088,7 +1107,7 @@ No ready-made simulation matches this specific topic. You can build one:
 export async function generateWorksheet(planText, subject, level) {
   const messages = [{
     role: 'user',
-    content: `Generate a student worksheet/handout for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+    content: `Generate a student worksheet/handout for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   return sendChat(messages, {
@@ -1104,7 +1123,7 @@ Guidelines:
 - One bonus/extension question for advanced students (ONE line)
 - End EACH section with an expansion marker line: [EXPAND: Details|<section-slug>] where <section-slug> is the section heading in kebab-case (e.g. "### Apply and Analyse" → apply-and-analyse). These are buttons the teacher clicks to expand that section (fuller item stems, answer guidance) on demand — keep the syntax exactly and do NOT write the expanded content yourself
 - No answer keys, no model responses, no long stimulus passages inline
-- Align with Singapore O/N-Level or IP curriculum where possible; instructions student-friendly
+- Align with the Singapore national curriculum for the levels named under [Learners] below; instructions student-friendly
 
 Clean printable markdown. The whole worksheet must end complete — never truncated.`,
     temperature: 0.6,
@@ -1116,7 +1135,7 @@ Clean printable markdown. The whole worksheet must end complete — never trunca
 export async function generateDiscussionPrompts(planText, subject, level) {
   const messages = [{
     role: 'user',
-    content: `Generate discussion prompts and thinking questions for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+    content: `Generate discussion prompts and thinking questions for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   return sendChat(messages, {
@@ -1152,7 +1171,7 @@ Rules: no facilitator notes, expected responses, or tips inline — the [EXPAND:
 export async function suggestExternalResources(planText, subject, level) {
   const messages = [{
     role: 'user',
-    content: `Suggest external educational resources for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+    content: `Suggest external educational resources for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   return sendChat(messages, {
@@ -1201,7 +1220,7 @@ Include 6-10 resources total. Prioritise free and curriculum-aligned options.`,
 export async function generateLISC(planText, subject, level) {
   const messages = [{
     role: 'user',
-    content: `Generate Learning Intentions and Success Criteria for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+    content: `Generate Learning Intentions and Success Criteria for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   return sendChat(messages, {
@@ -1265,7 +1284,7 @@ Generate 1 primary Learning Intention (extension LI only for double periods). 3-
 export async function generateStimulusMaterial(planText, subject, level) {
   const messages = [{
     role: 'user',
-    content: `Generate stimulus material for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+    content: `Generate stimulus material for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   return sendChat(messages, {
@@ -1313,7 +1332,7 @@ Create material that is culturally relevant to Singapore where possible. Use Mar
 export async function generateVocabulary(planText, subject, level) {
   const messages = [{
     role: 'user',
-    content: `Generate vocabulary support materials for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+    content: `Generate vocabulary support materials for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   return sendChat(messages, {
@@ -1366,7 +1385,7 @@ Generate 8-15 flashcard entries matching the vocabulary wall terms.`,
 export async function generateModelResponse(planText, subject, level) {
   const messages = [{
     role: 'user',
-    content: `Generate an annotated model response for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || 'Secondary'}`
+    content: `Generate an annotated model response for this lesson:\n\n${planText}\n\nSubject: ${subject || 'General'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   return sendChat(messages, {
@@ -1417,7 +1436,7 @@ Adapt the format to the subject: essay structure for Languages/Humanities, worke
 export async function generateSourceAnalysis(planText, subject, level) {
   const messages = [{
     role: 'user',
-    content: `Generate source-based questions for this lesson:\n\n${planText}\n\nSubject: ${subject || 'History'}\nLevel: ${level || 'Secondary'}`
+    content: `Generate source-based questions for this lesson:\n\n${planText}\n\nSubject: ${subject || 'History'}\nLevel: ${level || defaultLevel() || 'unspecified'}`
   }];
 
   return sendChat(messages, {

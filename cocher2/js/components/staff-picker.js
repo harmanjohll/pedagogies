@@ -10,8 +10,13 @@
 
 import { openModal } from './modals.js';
 import { loadDirectory } from '../utils/directory.js';
+import { allStaffEmail } from '../utils/vocabulary.js';
 
-const ALL_STAFF_EMAIL = 'BTYSS_all_staff@btyss.moe.edu.sg';
+/* The school's own all-staff alias, from its pack. Co-Cher 1 hardcoded
+ * Beatty's; sending a Park View notification there would mail the wrong
+ * staffroom, so a school that has not published one simply does not get the
+ * option. '' is a truthful answer here — a plausible-looking guess is not. */
+const ALL_STAFF_EMAIL = () => allStaffEmail();
 
 /**
  * The full staff directory: [{ name, email, department }].
@@ -39,11 +44,11 @@ export async function openStaffPicker(opts = {}) {
   const departments = [...new Set(staff.map(s => s.department).filter(Boolean))].sort();
   // The all-staff alias is one school's mailing list, not a universal address.
   // Offer it only where it exists, rather than sending another school's mail to it.
-  const showAllStaff = (opts.showAllStaff ?? true) && dir.source === 'bty-csv';
+  const showAllStaff = (opts.showAllStaff ?? true) && !!ALL_STAFF_EMAIL();
   const emptyReason = dir.reason || 'No staff found.';
 
   let selected = new Set(preSelected.map(e => e.toLowerCase()));
-  let allStaffSelected = selected.has(ALL_STAFF_EMAIL.toLowerCase());
+  let allStaffSelected = selected.has(ALL_STAFF_EMAIL().toLowerCase());
   let searchQuery = '';
   let activeDept = '';
 
@@ -77,7 +82,7 @@ export async function openStaffPicker(opts = {}) {
           <input type="checkbox" class="sp-all-staff" ${allStaffSelected ? 'checked' : ''} />
           <div>
             <div style="font-size:0.8125rem;font-weight:600;color:var(--ink);">All Staff</div>
-            <div style="font-size:0.6875rem;color:var(--ink-muted);">${ALL_STAFF_EMAIL}</div>
+            <div style="font-size:0.6875rem;color:var(--ink-muted);">${ALL_STAFF_EMAIL()}</div>
           </div>
         </label>
       ` : ''}
@@ -131,9 +136,9 @@ export async function openStaffPicker(opts = {}) {
         allStaffSelected = allStaffCheck.checked;
         if (allStaffSelected) {
           selected.clear();
-          selected.add(ALL_STAFF_EMAIL.toLowerCase());
+          selected.add(ALL_STAFF_EMAIL().toLowerCase());
         } else {
-          selected.delete(ALL_STAFF_EMAIL.toLowerCase());
+          selected.delete(ALL_STAFF_EMAIL().toLowerCase());
         }
         renderContent();
       });
@@ -149,7 +154,7 @@ export async function openStaffPicker(opts = {}) {
           selected.delete(email);
         }
         allStaffSelected = false;
-        selected.delete(ALL_STAFF_EMAIL.toLowerCase());
+        selected.delete(ALL_STAFF_EMAIL().toLowerCase());
         renderContent();
       });
     });
@@ -158,7 +163,7 @@ export async function openStaffPicker(opts = {}) {
     container.querySelector('.sp-select-all')?.addEventListener('click', () => {
       filtered.forEach(s => selected.add(s.email));
       allStaffSelected = false;
-      selected.delete(ALL_STAFF_EMAIL.toLowerCase());
+      selected.delete(ALL_STAFF_EMAIL().toLowerCase());
       renderContent();
     });
     container.querySelector('.sp-deselect-all')?.addEventListener('click', () => {
@@ -182,8 +187,8 @@ export async function openStaffPicker(opts = {}) {
   backdrop.querySelector('[data-action="cancel"]').addEventListener('click', close);
   backdrop.querySelector('[data-action="confirm"]').addEventListener('click', () => {
     const result = allStaffSelected
-      ? [ALL_STAFF_EMAIL]
-      : [...selected].filter(e => e !== ALL_STAFF_EMAIL.toLowerCase());
+      ? [ALL_STAFF_EMAIL()]
+      : [...selected].filter(e => e !== ALL_STAFF_EMAIL().toLowerCase());
     if (onSelect) onSelect(result);
     close();
   });
@@ -200,7 +205,7 @@ export function renderRecipientChips(emails, staffList) {
   if (!emails || emails.length === 0) return '';
 
   return emails.map(email => {
-    const isAllStaff = email.toLowerCase() === ALL_STAFF_EMAIL.toLowerCase();
+    const isAllStaff = !!ALL_STAFF_EMAIL() && email.toLowerCase() === ALL_STAFF_EMAIL().toLowerCase();
     const staff = staffList?.find(s => s.email === email);
     const label = isAllStaff ? 'All Staff' : (staff?.name || email);
 

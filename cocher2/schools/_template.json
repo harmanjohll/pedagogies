@@ -46,5 +46,12 @@
   "departments": [],
   "subjects": [],
   "cca": [],
-  "frameworks": []
+  "frameworks": [],
+  "adminTools": [],
+  "sampleClasses": [],
+  "identity": {
+    "vision": "",
+    "mission": "",
+    "motto": ""
+  }
 }

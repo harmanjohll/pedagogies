@@ -13,7 +13,7 @@ import { getCurrentUser } from '../components/login.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
 import { openStaffPicker, loadStaffDirectory, renderRecipientChips, ALL_STAFF_EMAIL } from '../components/staff-picker.js';
 import { loadDirectory, availabilityFromEntries, departmentsOf, importSchoolRoster, clearSchoolRoster, parseStaffList } from '../utils/directory.js';
-import { isPrimary, isJC, levelFromTop, exampleLevel } from '../utils/vocabulary.js';
+import { isPrimary, isJC, levelFromTop, exampleLevel, packAdminTools } from '../utils/vocabulary.js';
 
 /* ── Examples that belong to THIS school ─────────────────────────────
  * Every placeholder in the one-stop was written for a secondary school:
@@ -257,16 +257,35 @@ const eventTasks = () => [
   }
 ];
 
-/* ── Standalone admin tools ── */
+/* ── Standalone admin tools ──
+ * `only` names the school a tool belongs to. Co-Cher 1 could list Beatty's AOR
+ * and bus-booking forms unconditionally because Beatty was the only school; in
+ * Co-Cher 2 that would send a Park View teacher's approval request into another
+ * school's inbox. A school's own forms come from its pack (`adminTools`), and a
+ * school that has published none simply sees the tools that belong to everyone. */
 const ADMIN_TOOLS = [
-  { key: 'aor_form', label: 'AOR Form', desc: 'Open the official Approval of Request form. Remember to attach quotations separately.', icon: '💰', href: 'https://form.gov.sg/6957392872041c1d962c3ab1' },
-  { key: 'bus_form', label: 'Bus Booking', desc: 'Open the official bus booking form.', icon: '🚌', href: 'https://form.gov.sg/697319e97621e837dda7c331' },
-  { key: 'relief_timetable', label: 'Relief Timetable', desc: 'Plan teacher relief assignments when staff are away.', icon: '🔄', href: 'btyrelief/relief.html' },
-  { key: 'org_chart', label: 'Org Chart', desc: 'View and edit the school organisational chart.', icon: '🏢', href: 'btyrelief/orgstruc.html' },
+  { key: 'aor_form', only: 'bty', label: 'AOR Form', desc: 'Open the official Approval of Request form. Remember to attach quotations separately.', icon: '💰', href: 'https://form.gov.sg/6957392872041c1d962c3ab1' },
+  { key: 'bus_form', only: 'bty', label: 'Bus Booking', desc: 'Open the official bus booking form.', icon: '🚌', href: 'https://form.gov.sg/697319e97621e837dda7c331' },
+  { key: 'relief_timetable', only: 'bty', label: 'Relief Timetable', desc: 'Plan teacher relief assignments when staff are away.', icon: '🔄', href: 'btyrelief/relief.html' },
+  { key: 'org_chart', only: 'bty', label: 'Org Chart', desc: 'View and edit the school organisational chart.', icon: '🏢', href: 'btyrelief/orgstruc.html' },
   { key: 'framework', label: 'Framework Builder', desc: 'Create cycle-arrow diagrams for frameworks and processes.', icon: '🔃', href: 'btyrelief/framework.html' },
   { key: 'inventory', label: 'Resource Inventory', desc: 'Track department resources, equipment, and consumables.', icon: '📦' },
   { key: 'calendar', label: 'Department Calendar', desc: 'View and plan department events, deadlines, and milestones.', icon: '📅' }
 ];
+
+/* The tools this teacher's school actually has: the universal ones, the ones
+ * that belong to their school, plus anything their pack publishes. */
+function adminTools() {
+  const id = getCurrentUser()?.schoolId || '';
+  const own = packAdminTools().map((t, i) => ({
+    key: `pack_${i}`,
+    label: String(t?.label || '').trim(),
+    desc: String(t?.desc || '').trim(),
+    icon: t?.icon || '🔗',
+    href: String(t?.href || '').trim(),
+  })).filter(t => t.label && t.href);
+  return [...own, ...ADMIN_TOOLS.filter(t => !t.only || t.only === id)];
+}
 
 /* ── In-app iframe overlay for admin tools ── */
 function openAdminOverlay(title, href) {
@@ -417,7 +436,8 @@ export function render(container) {
 
 /* ── Quick tools cards ── */
 function renderQuickTools(el) {
-  el.innerHTML = ADMIN_TOOLS.map(tool => `
+  const tools = adminTools();
+  el.innerHTML = tools.map(tool => `
     <div class="action-card" data-tool="${tool.key}">
       <div class="action-card-icon" style="background:var(--accent-light);color:var(--accent);font-size:1.5rem;">${tool.icon}</div>
       <div class="action-card-title">${tool.label}</div>
@@ -428,7 +448,7 @@ function renderQuickTools(el) {
   el.addEventListener('click', e => {
     const card = e.target.closest('[data-tool]');
     if (!card) return;
-    const tool = ADMIN_TOOLS.find(t => t.key === card.dataset.tool);
+    const tool = tools.find(t => t.key === card.dataset.tool);
     if (tool?.href) {
       openAdminOverlay(tool.label, tool.href);
     } else {
@@ -1701,7 +1721,10 @@ Regards,
 function showNotifyModal(eventName, taskLabel, recipientType, event) {
   const templates = NOTIFICATION_TEMPLATES[recipientType] || [];
   const user = getCurrentUser();
-  let selectedEmails = recipientType === 'teacher' ? [ALL_STAFF_EMAIL] : [];
+  /* Pre-select the all-staff alias only where the school has published one.
+   * An empty pre-selection is honest; another school's address is not. */
+  const allStaff = ALL_STAFF_EMAIL();
+  let selectedEmails = (recipientType === 'teacher' && allStaff) ? [allStaff] : [];
 
   const { backdrop, close } = openModal({
     title: `Notify — ${taskLabel}`,
@@ -1729,7 +1752,7 @@ function showNotifyModal(eventName, taskLabel, recipientType, event) {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             Choose Recipients
           </button>
-          <button class="btn btn-ghost btn-sm" id="all-staff-quick" style="font-size:0.75rem;">All Staff</button>
+          ${allStaff ? `<button class="btn btn-ghost btn-sm" id="all-staff-quick" style="font-size:0.75rem;">All Staff</button>` : ''}
         </div>
         <div id="recipient-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:var(--sp-2);"></div>
         <input class="input" id="notify-emails" placeholder="Or type emails manually (comma-separated)" style="font-size:0.8125rem;" />
@@ -1797,9 +1820,9 @@ function showNotifyModal(eventName, taskLabel, recipientType, event) {
     });
   });
 
-  // All Staff quick button
-  backdrop.querySelector('#all-staff-quick').addEventListener('click', () => {
-    selectedEmails = [ALL_STAFF_EMAIL];
+  // All Staff quick button — absent at a school with no published alias
+  backdrop.querySelector('#all-staff-quick')?.addEventListener('click', () => {
+    selectedEmails = [allStaff];
     updateChips();
     showToast('All staff selected');
   });

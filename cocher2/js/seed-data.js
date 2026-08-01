@@ -7,7 +7,7 @@
 
 import { Store, generateId } from './state.js';
 import { compileDeckHTML, saveDeckMaterial, deleteDeckMaterial, listDeckMeta } from './utils/deck.js';
-import { isPrimary, schoolStage, sampleClasses } from './utils/vocabulary.js';
+import { isPrimary, schoolStage, sampleClasses, packCCAs } from './utils/vocabulary.js';
 import { primaryChatExemplars, primaryLifecycleExemplars, primaryShowcaseLessons, PRIMARY_REHEARSED } from './seed-primary.js';
 
 /* Seed keys carry the school STAGE. A primary teacher and a secondary teacher
@@ -15,6 +15,11 @@ import { primaryChatExemplars, primaryLifecycleExemplars, primaryShowcaseLessons
  * seeded FOR THIS KIND OF SCHOOL". Each seeder still checks for existing data
  * before writing, so a stage change can never duplicate a teacher's classes. */
 const stageTag = () => schoolStage() || 'default';
+
+/* The school's own CCAs, in the shape My CCA stores. Empty when the pack does
+ * not list any, which is when the generic sample list still earns its place. */
+const schoolCCAs = () => asCCARecords(packCCAs());
+
 const SEED_KEY = () => `cocher2_seeded_${stageTag()}`;
 
 /* ── Student name pools ── */
@@ -1282,37 +1287,60 @@ export function seedPdIfNeeded() {
   localStorage.setItem(PD_SEED_KEY, '1');
 }
 
+/* The stand-in list, for a school whose pack names no CCAs. Kept by name so an
+ * install still carrying it, untouched, can be lifted to the school's own. */
+const GENERIC_CCAS = [
+  { name: 'Basketball', category: 'sports' },
+  { name: 'Track & Field', category: 'sports' },
+  { name: 'Badminton', category: 'sports' },
+  { name: 'Concert Band', category: 'performing' },
+  { name: 'Chinese Dance', category: 'performing' },
+  { name: 'Drama Club', category: 'performing' },
+  { name: 'National Cadet Corps (NCC)', category: 'uniformed' },
+  { name: 'Girl Guides', category: 'uniformed' },
+  { name: 'St John Brigade', category: 'uniformed' },
+  { name: 'Scouts', category: 'uniformed' },
+  { name: 'Robotics Club', category: 'clubs' },
+  { name: 'Debate Society', category: 'clubs' },
+  { name: 'Environmental Club', category: 'clubs' },
+];
+const GENERIC_CCA_NAMES = new Set(GENERIC_CCAS.map(c => c.name));
+
+/* Still exactly what we put there — no additions, no renames, nothing removed.
+ * Anything else is the teacher's own list and is never overwritten. */
+const isUntouchedGenericCCAs = (list) =>
+  list.length === GENERIC_CCAS.length && list.every(c => GENERIC_CCA_NAMES.has(c?.name));
+
+const asCCARecords = (list) => list.map((c, i) => ({
+  id: generateId(),
+  name: typeof c === 'string' ? c.trim() : String(c?.name || '').trim(),
+  category: (typeof c === 'object' && c?.category) ? c.category : 'clubs',
+  createdAt: Date.now() - 86400000 * (30 - Math.min(i, 29)),
+})).filter(c => c.name);
+
 export function seedCCAIfNeeded() {
-  const CCA_SEED_KEY = 'cocher2_cca_seeded_v4'; // v4: added Scouts
-  if (localStorage.getItem(CCA_SEED_KEY)) return;
-  const existing = JSON.parse(localStorage.getItem('cocher2_cca_list') || '[]');
-  if (existing.length >= 12) {
-    localStorage.setItem(CCA_SEED_KEY, '1');
+  // v5: seeded from the school's own pack where it lists CCAs. A Park View
+  // teacher opening My CCA should find Park View's CCAs, not a generic
+  // secondary list — the pack already carries them, verbatim.
+  const CCA_SEED_KEY = `cocher2_cca_seeded_v5_${stageTag()}`;
+  let existing = [];
+  try { existing = JSON.parse(localStorage.getItem('cocher2_cca_list') || '[]'); } catch { existing = []; }
+  if (!Array.isArray(existing)) existing = [];
+
+  const fromPack = schoolCCAs();
+
+  // A teacher's own list is theirs. The one case we write over is the generic
+  // sample, still untouched, at a school whose pack names its real CCAs.
+  if (existing.length && !(fromPack.length && isUntouchedGenericCCAs(existing))) {
+    try { localStorage.setItem(CCA_SEED_KEY, '1'); } catch { /* quota */ }
     return;
   }
+  // Empty and already seeded means they cleared it deliberately. Leave it empty.
+  if (!existing.length && localStorage.getItem(CCA_SEED_KEY)) return;
 
-  const sampleCCAs = [
-    // Physical Sports
-    { id: generateId(), name: 'Basketball', category: 'sports', createdAt: Date.now() - 86400000 * 30 },
-    { id: generateId(), name: 'Track & Field', category: 'sports', createdAt: Date.now() - 86400000 * 29 },
-    { id: generateId(), name: 'Badminton', category: 'sports', createdAt: Date.now() - 86400000 * 28 },
-    // Visual & Performing Arts
-    { id: generateId(), name: 'Concert Band', category: 'performing', createdAt: Date.now() - 86400000 * 27 },
-    { id: generateId(), name: 'Chinese Dance', category: 'performing', createdAt: Date.now() - 86400000 * 26 },
-    { id: generateId(), name: 'Drama Club', category: 'performing', createdAt: Date.now() - 86400000 * 25 },
-    // Uniformed Groups
-    { id: generateId(), name: 'National Cadet Corps (NCC)', category: 'uniformed', createdAt: Date.now() - 86400000 * 24 },
-    { id: generateId(), name: 'Girl Guides', category: 'uniformed', createdAt: Date.now() - 86400000 * 23 },
-    { id: generateId(), name: 'St John Brigade', category: 'uniformed', createdAt: Date.now() - 86400000 * 22 },
-    { id: generateId(), name: 'Scouts', category: 'uniformed', createdAt: Date.now() - 86400000 * 21.5 },
-    // Clubs & Societies
-    { id: generateId(), name: 'Robotics Club', category: 'clubs', createdAt: Date.now() - 86400000 * 21 },
-    { id: generateId(), name: 'Debate Society', category: 'clubs', createdAt: Date.now() - 86400000 * 20 },
-    { id: generateId(), name: 'Environmental Club', category: 'clubs', createdAt: Date.now() - 86400000 * 19 },
-  ];
-
-  localStorage.setItem('cocher2_cca_list', JSON.stringify(sampleCCAs));
-  localStorage.setItem(CCA_SEED_KEY, '1');
+  const seeded = fromPack.length ? fromPack : asCCARecords(GENERIC_CCAS);
+  localStorage.setItem('cocher2_cca_list', JSON.stringify(seeded));
+  try { localStorage.setItem(CCA_SEED_KEY, '1'); } catch { /* quota */ }
 }
 
 /* ══════════ Exemplar Lesson Plans ══════════ */
@@ -2515,10 +2543,18 @@ export function seedShowcaseLessonsIfNeeded() {
    Admin, Spatial layouts (for demo/testing)
    ══════════════════════════════════════════════════════ */
 
-const PORTAL_SEED_KEY = 'cocher2_portal_demos_seeded_v2';
+const PORTAL_SEED_KEY = () => `cocher2_portal_demos_seeded_v2_${stageTag()}`;
 
 export function seedPortalDemosIfNeeded() {
-  if (localStorage.getItem(PORTAL_SEED_KEY)) return;
+  if (localStorage.getItem('cocher2_portal_demos_seeded_v2') && !isPrimary()) return;   // pre-v1.5 flag
+  if (localStorage.getItem(PORTAL_SEED_KEY())) return;
+  // A primary teacher who already has the secondary demo events should get the
+  // primary ones instead — but only the SAMPLES go, never a real event.
+  if (isPrimary()) {
+    const evs = Store.get('adminEvents') || [];
+    const kept = evs.filter(e => !e.isSample || !/^Sec \d|Inter-School Basketball/.test(e.name || ''));
+    if (kept.length !== evs.length) Store.set('adminEvents', kept);
+  }
   const now = Date.now();
   const classes = Store.getClasses();
   const firstClassId = classes[0]?.id || null;
@@ -2637,7 +2673,11 @@ export function seedPortalDemosIfNeeded() {
   {
     const mkTask = (key, status, data) => ({ key, enabled: true, status, approvalStatus: status === 'completed' ? 'approved' : 'not_started', data: data || {} });
     const existingEvents = Store.get('adminEvents') || [];
-    const ADMIN_SEED_EVENTS = [
+    /* Admin events, per stage. A primary teacher planning a Sec 2 cohort camp is
+     * being shown someone else's school: the venues differ, the supervision
+     * ratios differ (MOE expects tighter ratios for younger pupils), and a
+     * P4 learning journey is not an O-Level fieldwork exercise. */
+    const SECONDARY_SEED_EVENTS = [
       {
         id: generateId(), name: 'Sec 3 Geography Fieldwork — Sungei Buloh', date: new Date(now - 4 * DAY).toISOString().slice(0, 10),
         eventType: 'Learning Journey', status: 'completed', isSample: true,
@@ -2664,11 +2704,8 @@ export function seedPortalDemosIfNeeded() {
         id: generateId(), name: 'Inter-School Basketball Championship 2026', date: new Date(now + 18 * DAY).toISOString().slice(0, 10),
         eventType: 'Competition', status: 'planning', isSample: true,
         tasks: [
-          mkTask('rams', 'pending', {}),
-          mkTask('bus_booking', 'pending', {}),
-          mkTask('student_list', 'pending', {}),
-          mkTask('parent_notification', 'pending', {}),
-          mkTask('aor', 'pending', {})
+          mkTask('rams', 'pending', {}), mkTask('bus_booking', 'pending', {}), mkTask('student_list', 'pending', {}),
+          mkTask('parent_notification', 'pending', {}), mkTask('aor', 'pending', {})
         ], createdAt: now - 1 * DAY, updatedAt: now - 1 * DAY
       },
       {
@@ -2677,12 +2714,54 @@ export function seedPortalDemosIfNeeded() {
         tasks: [
           mkTask('rams', 'completed', { activity_desc: 'Values-in-Action beach cleanup — collecting and sorting litter along a marked stretch of East Coast Park, with a short briefing on marine debris impact.', venue: 'East Coast Park, Area C (near McDonald\'s)', hazards: 'Sun exposure/heat, uneven sandy terrain, sharp debris (glass, metal), proximity to cycling path', mitigations: 'Sunscreen and hats reminder in PG notice, gloves and litter-pickers provided (no bare-hand contact), buddy system, staff:student 1:12, stay off the cycling path', emergency_plan: 'Nearest hospital: Changi General. First-aid kit on-site with a trained First Aider. Assembly point at the Area C shelter.', risk_level: 'Low' }),
           mkTask('bus_booking', 'completed', { teacher_ic: 'Mdm Farah', pickup_point: 'School Main Gate', destination: 'East Coast Park Area C', departure_time: '8:00 AM', return_time: '11:30 AM', return_to: 'School', num_passengers: '62', num_buses: '2' }),
-          mkTask('student_list', 'pending', {}),
-          mkTask('parent_notification', 'pending', {}),
-          mkTask('aor', 'pending', {})
+          mkTask('student_list', 'pending', {}), mkTask('parent_notification', 'pending', {}), mkTask('aor', 'pending', {})
         ], createdAt: now - 6 * DAY, updatedAt: now - 2 * DAY
       }
     ];
+
+    const PRIMARY_SEED_EVENTS = [
+      {
+        id: generateId(), name: 'P4 Learning Journey — Singapore Zoo', date: new Date(now - 4 * DAY).toISOString().slice(0, 10),
+        eventType: 'Learning Journey', status: 'completed', isSample: true,
+        tasks: [
+          mkTask('rams', 'completed', { activity_desc: 'Guided trail linking animal adaptations to the Science unit on living things, with a worksheet trail and a keeper talk.', venue: 'Singapore Zoo, Mandai', hazards: 'Heat and dehydration, pupils separating from the group in crowds, uneven paths, allergies at the animal-contact area', mitigations: 'Staff:pupil 1:10 with parent volunteers, group T-shirts and name tags with the school number, hourly headcount at trail markers, hydration stop every 30 min, no bare-hand animal contact without the keeper', emergency_plan: 'Nearest hospital: Khoo Teck Puat. Assembly point at the main entrance plaza. Teacher-IC holds all emergency contacts and the pupil medical list.', risk_level: 'Medium' }),
+          mkTask('bus_booking', 'completed', { teacher_ic: 'Mdm Adeline Ang', pickup_point: 'School Bus Bay', destination: 'Singapore Zoo, Mandai', departure_time: '8:00 AM', return_time: '1:30 PM', return_to: 'School', num_passengers: '120', num_buses: '3' }),
+          mkTask('student_list', 'completed', { teacher_ic: 'Mdm Adeline Ang' }),
+          mkTask('parent_notification', 'completed', {}),
+          mkTask('aor', 'completed', { estimated_cost: '$1,140', cost_breakdown: 'Bus charter $720 + admission at school rate $420', budget_code: 'PS-SCI-2026-007' })
+        ], createdAt: now - 25 * DAY, updatedAt: now - 4 * DAY
+      },
+      {
+        id: generateId(), name: 'P5 Camp — Confidence & Teamwork', date: new Date(now + 30 * DAY).toISOString().slice(0, 10),
+        eventType: 'Camp', status: 'in_progress', isSample: true,
+        tasks: [
+          mkTask('rams', 'completed', { activity_desc: '3-day 2-night residential camp building independence and teamwork — low elements, night walk, cooking challenge.', venue: 'MOE Changi Coast Outdoor Adventure Learning Centre', hazards: 'Low-element falls, night-time disorientation, homesickness, food allergies, heat', mitigations: 'Centre-certified instructors, helmets and harnesses on all elements, staff:pupil 1:10 plus night duty roster, allergy list held by every group leader, buddy system after dark', emergency_plan: 'Centre medic on site; nearest hospital Changi General. Parents contactable through the Teacher-IC line, which stays open overnight.', risk_level: 'Medium' }),
+          mkTask('venue_booking', 'completed', {}),
+          mkTask('bus_booking', 'pending', {}),
+          mkTask('parent_notification', 'pending', {}),
+          mkTask('aor', 'pending', {})
+        ], createdAt: now - 8 * DAY, updatedAt: now - 2 * DAY
+      },
+      {
+        id: generateId(), name: 'National Schools Games — Junior Badminton', date: new Date(now + 18 * DAY).toISOString().slice(0, 10),
+        eventType: 'Competition', status: 'planning', isSample: true,
+        tasks: [
+          mkTask('rams', 'pending', {}), mkTask('bus_booking', 'pending', {}), mkTask('student_list', 'pending', {}),
+          mkTask('parent_notification', 'pending', {}), mkTask('aor', 'pending', {})
+        ], createdAt: now - 1 * DAY, updatedAt: now - 1 * DAY
+      },
+      {
+        id: generateId(), name: 'P6 VIA — Sharing with the Seniors, Pasir Ris', date: new Date(now + 10 * DAY).toISOString().slice(0, 10),
+        eventType: 'Community Service', status: 'in_progress', isSample: true,
+        tasks: [
+          mkTask('rams', 'completed', { activity_desc: 'Values-in-Action visit to a nearby senior activity centre — pupils lead simple games, teach a short phone-basics session, and present handmade cards. Prepared in FTGP the week before.', venue: 'Senior Activity Centre, Pasir Ris (walking distance)', hazards: 'Road crossings on the walk over, heat, pupils unsure how to interact with frail seniors, infection control', mitigations: 'Route walked and risk-assessed beforehand, staff:pupil 1:10 with adults at front and rear of the crocodile line, hand sanitiser on arrival and departure, pupils briefed and rehearsed in FTGP, any pupil unwell stays back', emergency_plan: 'Nearest hospital: Changi General. First-aid kit carried by the Teacher-IC. Centre staff hold the emergency line; school office informed of departure and return times.', risk_level: 'Low' }),
+          mkTask('bus_booking', 'completed', { teacher_ic: 'Mdm Adeline Ang', pickup_point: 'School Main Gate (walking &mdash; no bus needed)', destination: 'Senior Activity Centre, Pasir Ris', departure_time: '8:30 AM', return_time: '10:30 AM', return_to: 'School', num_passengers: '40', num_buses: '0' }),
+          mkTask('student_list', 'pending', {}), mkTask('parent_notification', 'pending', {}), mkTask('aor', 'pending', {})
+        ], createdAt: now - 6 * DAY, updatedAt: now - 2 * DAY
+      }
+    ];
+
+    const ADMIN_SEED_EVENTS = isPrimary() ? PRIMARY_SEED_EVENTS : SECONDARY_SEED_EVENTS;
     const existingEventNames = new Set(existingEvents.map(e => e.name));
     const newEvents = ADMIN_SEED_EVENTS.filter(e => !existingEventNames.has(e.name));
     if (newEvents.length > 0) {
@@ -2705,5 +2784,5 @@ export function seedPortalDemosIfNeeded() {
       items: Array.from({ length: 30 }, (_, i) => ({ id: 'desk_rect', iid: `seed_exam_${String(i + 1).padStart(2, '0')}`, x: 80 + (i % 6) * 110, y: 120 + Math.floor(i / 6) * 90, r: 0 })) });
   }
 
-  localStorage.setItem(PORTAL_SEED_KEY, '1');
+  localStorage.setItem(PORTAL_SEED_KEY(), '1');
 }

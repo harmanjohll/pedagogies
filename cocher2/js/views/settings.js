@@ -10,6 +10,69 @@ import { showToast } from '../components/toast.js';
 import { confirmDialog, openModal } from '../components/modals.js';
 import { extractText, fileExt } from '../utils/doc-extract.js';
 import { getCurrentUser, clearCurrentUser, getPreferredName, setPreferredName, guessFirstName } from '../components/login.js';
+import { loadPack } from '../utils/school.js';
+import { exampleClass } from '../utils/vocabulary.js';
+
+/**
+ * Show the teacher what Co-Cher actually holds about their school, straight
+ * from the pack — and, just as importantly, what it does NOT hold. A teacher
+ * asked to trust that lesson plans reflect their school's approaches deserves
+ * to see the source, not take it on faith.
+ *
+ * Also seeds the free-text profile fields the first time, so a PVPS teacher is
+ * not typing their own school's name into an empty box that already knows it.
+ */
+async function paintSchoolPack(container) {
+  const el = container.querySelector('#school-pack-panel');
+  if (!el) return;
+  const id = getCurrentUser()?.schoolId;
+  if (!id) return;
+  let p = null;
+  try { p = await loadPack(id); } catch { return; }
+  if (!p) return;
+
+  const idn = p.identity || {};
+  const nameEl = container.querySelector('#school-name-setting');
+  const valEl = container.querySelector('#school-values-setting');
+  if (nameEl && !nameEl.value && p.name) nameEl.value = p.name;
+  if (valEl && !valEl.value && Array.isArray(p.values) && p.values.length) valEl.value = p.values.join(', ');
+  if (nameEl) nameEl.placeholder = p.name || nameEl.placeholder;
+  if (valEl && Array.isArray(p.values) && p.values.length) valEl.placeholder = p.values.join(', ');
+
+  const row = (label, value) => value
+    ? `<div style="margin-bottom:6px;"><span style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;color:var(--ink-faint);">${label}</span>
+       <div style="font-size:0.8125rem;color:var(--ink);line-height:1.5;">${escapeHtml(value)}</div></div>` : '';
+
+  const approaches = Array.isArray(p.teachingApproaches) ? p.teachingApproaches : [];
+  const gaps = Array.isArray(p.needsConfirmation) ? p.needsConfirmation : [];
+
+  el.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--sp-3);margin-bottom:var(--sp-4);background:var(--bg-subtle);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:0.8125rem;font-weight:700;color:var(--ink);">${escapeHtml(p.name || 'Your school')}</span>
+        <span style="font-size:0.625rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--accent-light);color:var(--accent-dark, var(--accent));">FROM YOUR SCHOOL PACK</span>
+      </div>
+      ${row('Motto', idn.motto ? `${idn.motto}${idn.mottoGloss ? ` — ${idn.mottoGloss}` : ''}` : '')}
+      ${row('Vision', idn.vision)}
+      ${row('Mission', idn.mission)}
+      ${row(`Values${idn.valuesAcronym ? ` (${idn.valuesAcronym})` : ''}`, (p.values || []).join(' · '))}
+      ${row('Levels', (p.levels || []).join(', '))}
+      ${approaches.length ? `<div style="margin-top:8px;">
+        <span style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;color:var(--ink-faint);">Teaching &amp; learning approaches</span>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;">
+          ${approaches.map(a => `<span style="font-size:0.6875rem;padding:2px 8px;border-radius:999px;border:1px solid var(--border);color:var(--ink-secondary);">${escapeHtml(a.subject ? `${a.subject}: ${a.name}` : a.name)}</span>`).join('')}
+        </div>
+        <p style="font-size:0.6875rem;color:var(--ink-faint);margin-top:6px;line-height:1.5;">Quoted from your school's own published material and sent with every lesson-design request, in your school's words.</p>
+      </div>` : ''}
+      ${gaps.length ? `<details style="margin-top:10px;">
+        <summary style="font-size:0.6875rem;font-weight:700;color:var(--ink-muted);cursor:pointer;">${gaps.length} things Co-Cher could not confirm</summary>
+        <ul style="margin:6px 0 0 16px;padding:0;font-size:0.75rem;color:var(--ink-muted);line-height:1.6;">
+          ${gaps.map(g => `<li>${escapeHtml(typeof g === 'string' ? g : (g.item || g.note || ''))}</li>`).join('')}
+        </ul>
+        <p style="font-size:0.6875rem;color:var(--ink-faint);margin-top:6px;">Co-Cher leaves these blank rather than inventing them.</p>
+      </details>` : ''}
+    </div>`;
+}
 import { EEE_REGISTRY, getEEESelections, saveEEESelections, getEEESidebarSelections, saveEEESidebarSelections, getCustomLinks, saveCustomLinks, isVigilanceEnabled, setVigilanceEnabled } from './lesson-planner.js';
 import { startTour, resetTour } from '../components/spotlight-tour.js';
 import { trackEvent, analyticsEnabled, setAnalyticsEnabled } from '../utils/analytics.js';
@@ -595,6 +658,13 @@ function deriveInitials() {
 }
 
 export function render(container) {
+  /* The signed-in teacher's own school, for copy and placeholders. Co-Cher 1
+   * could hardcode "Beatty" everywhere; Co-Cher 2 must not tell a Park View
+   * teacher that their usage improves the app for someone else's school. */
+  const mySchool = getCurrentUser()?.schoolName || '';
+  const audience = mySchool ? `teachers at ${mySchool}` : 'teachers like you';
+  const schoolNamePlaceholder = mySchool ? mySchool : 'e.g. Park View Primary School';
+
   const apiKey = Store.get('apiKey') || '';
   const model = normalizeModel(Store.get('model') || 'gemini-2.5-flash');
   const darkMode = Store.get('darkMode');
@@ -887,9 +957,13 @@ export function render(container) {
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
             Your school's values will be woven naturally into lesson plans and activities when contextually appropriate.
           </p>
+          <!-- Filled after render from the school's own pack: a teacher should be
+               able to SEE what Co-Cher knows about their school, and where the
+               gaps are, rather than trusting that it knows anything at all. -->
+          <div id="school-pack-panel"></div>
           <div style="margin-bottom: var(--sp-4);">
             <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.03em;">School Name</label>
-            <input id="school-name-setting" class="input" type="text" placeholder="e.g. Beatty Secondary School" style="width: 100%; box-sizing: border-box;" value="${(Store.getSchoolProfile?.() || {}).name || ''}" />
+            <input id="school-name-setting" class="input" type="text" placeholder="${escapeHtml(schoolNamePlaceholder)}" style="width: 100%; box-sizing: border-box;" value="${(Store.getSchoolProfile?.() || {}).name || ''}" />
           </div>
           <div>
             <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--ink-secondary); margin-bottom: var(--sp-1); text-transform: uppercase; letter-spacing: 0.03em;">School Values</label>
@@ -1163,7 +1237,7 @@ export function render(container) {
             <code style="background: var(--bg-subtle); padding: 2px 4px; border-radius: 4px; font-size: 0.75rem;">CGC</code> (optional E21CC scores, 0-100).
           </p>
           <div style="display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap;">
-            <input class="input" type="text" id="csv-class-name" placeholder="Class name, e.g. 4A Pure Chemistry" style="flex: 1; min-width: 200px;" />
+            <input class="input" type="text" id="csv-class-name" placeholder="Class name, e.g. ${escapeHtml(exampleClass())}" style="flex: 1; min-width: 200px;" />
             <button class="btn btn-secondary btn-sm" id="csv-upload-btn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Upload CSV
@@ -1197,7 +1271,7 @@ export function render(container) {
           <p style="font-size: 0.8125rem; color: var(--ink-muted); margin-bottom: var(--sp-4); line-height: 1.5;">
             When enabled, Co-Cher records which features you use — your name, school email,
             pages visited, and AI actions (never lesson content, student data, or your API key) —
-            to a private Google Sheet that helps improve the app for BTY teachers.
+            to a private Google Sheet that helps improve the app for ${audience}.
           </p>
           <label style="display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.8125rem; color: var(--ink);">
             <input type="checkbox" id="analytics-toggle" ${analyticsEnabled() ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: var(--brand-navy, #16323A);" />
@@ -1713,6 +1787,9 @@ export function render(container) {
       window.location.reload();
     }
   });
+
+  // ── What Co-Cher knows about this school (async; never blocks the page) ──
+  paintSchoolPack(container).catch(() => {});
 
   // ── Pedagogy Frameworks ──
   wireFrameworkEvents(container);

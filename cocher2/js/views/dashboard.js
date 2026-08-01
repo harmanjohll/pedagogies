@@ -19,6 +19,7 @@ import { escapeHtml } from '../utils/markdown.js';
 import { lessonStage, lessonNextStep, LIFECYCLE_STAGES } from './lessons.js';
 import { getIdentity } from '../utils/identity.js';
 import { levelMeta, getPreset } from '../utils/tracking.js';
+import { entriesForDate, rangeLabel } from '../utils/timetable.js';
 import { isTouch } from '../utils/viewport.js';
 
 /* ── Visual identity helpers (A3) ──
@@ -2696,7 +2697,18 @@ export function render(container) {
         else nlEl.style.display = 'none';
       }
 
-      if (!teacherRow) return;
+      // No Beatty row does NOT mean no timetable. A teacher from any other
+      // school has their own imported one, and everything below that depends
+      // on Beatty's period columns is skipped for them — but the widgets that
+      // read canonical entries must still run.
+      if (!teacherRow) {
+        const ttEl = container.querySelector('#widget-timetable');
+        if (ttEl && !prefs.hiddenWidgets.includes('timetable')) {
+          const html = await buildTodayFromEntries();
+          if (html) ttEl.innerHTML = widgetWrap('timetable', getWidgetLabel('timetable', prefs), html, prefs);
+        }
+        return;
+      }
 
       // Status banner
       const banner = container.querySelector('#tt-status-banner');
@@ -2753,10 +2765,13 @@ export function render(container) {
         renderPrepChecklist();
       }
 
-      // My timetable widget
+      // My timetable widget. Beatty reads its period columns as it always has;
+      // every other school reads the canonical clock-time entries it imported.
+      // Without the second path this widget simply never appeared for them —
+      // the teacher had a timetable, and the dashboard acted as if they did not.
       const timetableEl = container.querySelector('#widget-timetable');
       if (timetableEl && !prefs.hiddenWidgets.includes('timetable')) {
-        const ttContent = buildMyTimetable(teacherRow);
+        const ttContent = teacherRow ? buildMyTimetable(teacherRow) : await buildTodayFromEntries();
         if (ttContent) {
           timetableEl.innerHTML = widgetWrap('timetable', getWidgetLabel('timetable', prefs), ttContent, prefs);
         }
@@ -2826,6 +2841,44 @@ function buildNotificationItems(classes, lessons, events) {
 }
 
 /* ── My Timetable: full day grid ── */
+/**
+ * Today, drawn from the teacher's own imported timetable — real clock times, so
+ * it works for a 30-minute primary day as readily as a 35-minute secondary one.
+ * Returns '' when they have no timetable at all, which leaves the widget out
+ * rather than showing an empty box.
+ */
+async function buildTodayFromEntries() {
+  let list = [];
+  try { list = await entriesForDate(new Date()); } catch { return ''; }
+  if (!list.length) {
+    const { hasTimetable } = await import('../utils/timetable.js');
+    if (!hasTimetable()) return '';
+    return noSchoolCard(isWeekendToday()
+      ? 'No school day today &mdash; your timetable resumes on the next school day.'
+      : 'Nothing timetabled today.');
+  }
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const toMin = (t) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? +m[1] * 60 + +m[2] : null; };
+  const rows = list.map(e => {
+    const s = toMin(e.start), en = toMin(e.end);
+    const isNow = s != null && en != null && mins >= s && mins < en;
+    const done = en != null && mins >= en;
+    const label = [e.class, e.title].filter(Boolean).join(' &middot; ') || e.title || 'Lesson';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;
+        ${isNow ? 'background:var(--accent-light);border:1px solid var(--accent);' : 'border:1px solid var(--border-light);'}
+        ${done && !isNow ? 'opacity:0.55;' : ''}margin-bottom:5px;">
+      <span style="font-variant-numeric:tabular-nums;font-size:0.75rem;font-weight:600;color:${isNow ? 'var(--accent-dark, var(--accent))' : 'var(--ink-muted)'};white-space:nowrap;">${escapeHtml(rangeLabel(e))}</span>
+      <span style="font-size:0.8125rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(label)}</span>
+      ${e.room ? `<span style="margin-left:auto;font-size:0.6875rem;color:var(--ink-faint);">${escapeHtml(e.room)}</span>` : ''}
+      ${isNow ? '<span style="margin-left:auto;font-size:0.625rem;font-weight:700;color:var(--accent-dark, var(--accent));">NOW</span>' : ''}
+    </div>`;
+  }).join('');
+  return `<div style="padding:2px 0;">${rows}
+    <a href="#/my-timetable" style="display:inline-block;margin-top:4px;font-size:0.75rem;color:var(--accent);text-decoration:none;">See the whole week &rarr;</a>
+  </div>`;
+}
+
 export function buildMyTimetable(teacherRow) {
   if (!teacherRow) return '';
   const pk = getTTPeriodKey();

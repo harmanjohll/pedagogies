@@ -27,7 +27,7 @@ const DEFAULT_SUBJECTS = [
   'Social Studies', 'Art', 'Music', 'Physical Education', 'Character & Citizenship Education',
 ];
 
-let _vocab = { levels: null, subjects: null, streams: [], bands: null, stage: null, sample: null, ready: false };
+let _vocab = { levels: null, subjects: null, streams: [], bands: null, stage: null, sample: null, cca: [], contacts: {}, values: null, identity: null, adminTools: [], ready: false };
 
 /**
  * Load the signed-in teacher's school vocabulary. Safe to call repeatedly, and
@@ -45,11 +45,16 @@ export async function primeVocabulary() {
     bands: p?.levelBands || null,
     stage: inferStage(p),
     sample: Array.isArray(p?.sampleClasses) && p.sampleClasses.length ? p.sampleClasses : null,
+    cca: Array.isArray(p?.cca) ? p.cca : [],
+    contacts: p?.contacts || {},
+    values: p?.values ?? null,
+    identity: p?.identity || null,
+    adminTools: Array.isArray(p?.adminTools) ? p.adminTools : [],
     ready: true,
   };
   return _vocab;
 }
-const emptyVocab = () => ({ levels: null, subjects: null, streams: [], bands: null, stage: null, sample: null });
+const emptyVocab = () => ({ levels: null, subjects: null, streams: [], bands: null, stage: null, sample: null, cca: [], contacts: {}, values: null, identity: null, adminTools: [] });
 
 /** True once primeVocabulary has run — pickers can paint before this. */
 export const vocabularyReady = () => _vocab.ready;
@@ -189,6 +194,55 @@ export function subjectOptions({ selected = '', exclude = '' } = {}) {
  * no view has to hardcode "e.g. Sec 3" again.
  */
 export const exampleLevel = () => levelFromTop(1) || defaultLevel() || 'your level';
+
+/**
+ * A class the teacher would recognise, for placeholder text. The school's own
+ * first sample class where its pack names one — "5R1 Mathematics" at Park View,
+ * where "e.g. 3E2" means nothing at all.
+ */
+export const exampleClass = () => sampleClasses()[0]?.name || `${exampleLevel()} class`;
+
+/** Just the code from that class — "5R1" out of "5R1 Mathematics". */
+export function exampleClassCode() {
+  const first = String(exampleClass()).trim().split(/\s+/)[0];
+  return first || 'your class';
+}
+
+/**
+ * The school's own CCAs, verbatim from its pack — `[{ name, category }]`, where
+ * category is one of My CCA's four keys. Empty when the pack lists none, which
+ * is the only case where a generic sample list still earns its place.
+ */
+export const packCCAs = () => (_vocab.cca || []).filter(c => c && (typeof c === 'string' || c.name));
+
+/**
+ * The school's own all-staff mailing list, or '' when it has not told us one.
+ * Empty is the right answer far more often than a guess: putting one school's
+ * alias in another school's notification would send real mail to strangers.
+ */
+export const allStaffEmail = () => String(_vocab.contacts?.allStaff || '').trim();
+
+/**
+ * The school's values, in the school's OWN words — Park View writes "Respect
+ * for All" where the national framework says "Respect". Empty when the pack
+ * names none, and the caller falls back to the national R3ICH values.
+ */
+export function packValues() {
+  const v = _vocab.values;
+  if (Array.isArray(v)) return v.map(x => String(x).trim()).filter(Boolean);
+  if (typeof v === 'string') return v.split(/[,;]/).map(x => x.trim()).filter(Boolean);
+  return [];
+}
+
+/** The school's vision / mission / motto, or {} — for copy that quotes them. */
+export const packIdentity = () => _vocab.identity || {};
+
+/**
+ * Admin tools the school publishes — `[{ label, desc, icon, href }]`. Its own
+ * booking forms, its own relief planner. Empty for a school that has published
+ * none, which is not a gap Co-Cher may fill with another school's links.
+ */
+export const packAdminTools = () => (_vocab.adminTools || []).filter(t => t && t.label && t.href);
 
 /** How the school describes a class group, for AI prompts and copy. */
 export function classNoun() {

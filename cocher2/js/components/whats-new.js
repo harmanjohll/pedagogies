@@ -17,6 +17,14 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.7', items: [
+    { icon: '\u{1F5D3}', title: 'Your timetable is on the dashboard', text: 'Today\u2019s lessons now show on the dashboard for every school, not just the one Co-Cher was originally built for \u2014 read from your own imported timetable, with the current lesson marked. The sidebar\u2019s My Timetable link also stopped printing a stray word before its name.' },
+    { icon: '\u{1F3EB}', title: 'Settings shows what Co-Cher knows about your school', text: 'Your school\u2019s motto, vision, mission, values, levels and named teaching approaches now appear in Settings, quoted from your school\u2019s own material \u2014 along with an honest list of what Co-Cher could not confirm and has left blank rather than invented.' },
+    { icon: '\u{1F4CB}', title: 'Admin events match your school', text: 'The one-stop\u2019s sample events were secondary \u2014 a Sec 2 cohort camp, a Sec 3 fieldwork trip. Primary schools now get primary ones: a P4 learning journey, a P5 camp, a P6 Values-in-Action visit, with the supervision ratios and venues that actually apply.' },
+    { icon: '\u{1F3D0}', title: 'My CCA opens on your school\u2019s CCAs', text: 'Not a generic list. Park View teachers find Football, Wushu, Show Choir, Guzheng, Scouts \u2014 the twelve their school actually runs. If you have already edited your CCA list, it is left exactly as you left it.' },
+    { icon: '\u{1F4EC}', title: 'Nothing addressed to another school', text: 'The all-staff address, the approval and bus-booking forms and the relief planner belonged to one school and were shown to everyone. They now appear only at the school they belong to, and your school\u2019s own forms can be added to its pack.' },
+    { icon: '\u{1F3AF}', title: 'Suggestions pitched at your learners', text: 'Video recommendations, worksheets and every other AI surface stop defaulting to \u201cSecondary\u201d. A primary teacher gets primary channels and primary reading levels; CCE quotes your school\u2019s own wording of the values.' },
+  ] },
   { version: 'v1.6', items: [
     { icon: '\u{1F465}', title: 'A colleague list you can actually fill', text: 'Find a Teacher no longer waits on anything: load your school\u2019s staff timetable and the dropdown works on your device straight away. Publish the same file to the school\u2019s folder and it works for everyone.' },
     { icon: '\u{1F4CB}', title: 'Admin forms in your school\u2019s words', text: 'The one-stop\u2019s examples used to be another school\u2019s \u2014 \u201c4A, 4B Pure Chemistry\u201d, \u201cNUS Science Faculty\u201d. They now quote your own classes and your own level, and the drafted letters and risk assessments are written for the right stage of schooling.' },
