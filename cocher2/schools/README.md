@@ -106,6 +106,24 @@ leave out what you don't have yet and the app falls back to sensible defaults.
 | `sampleClasses` | `[{ "name": "5R1 Mathematics", "level": "Primary 5", "subject": "Mathematics" }]` | Real class codes for first-run samples and placeholder text. |
 | `identity` | `{ "vision": "…", "mission": "…", "motto": "…" }` | Shown in Settings so a teacher can see what Co-Cher knows about their school. |
 
+### `staff` — who works here, without timetables
+
+Optional. Names off your school's own staff page, nothing more:
+
+```json
+{ "name": "Lim Hui Shan", "department": "Mathematics" }
+```
+
+Find a Teacher lists them, so a colleague can be looked up by name and
+department. It does **not** pretend to know their week: without `entries` they
+appear greyed out and cannot be selected, labelled "timetable not uploaded".
+That is deliberate — a name with no timetable must never be rendered as "free",
+because someone would knock on a door in the middle of a lesson.
+
+`email` is optional and is never guessed. Leave it out unless the school
+publishes it; an address Co-Cher invented would send real mail to a stranger.
+A published `staff.json` with real `entries` always wins over this list.
+
 ### `adminTools` — your school's own forms and links
 Optional. Each entry becomes a card in Admin One-Stop.
 

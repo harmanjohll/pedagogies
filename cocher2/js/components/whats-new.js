@@ -18,6 +18,7 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
   { version: 'v1.8', items: [
+    { icon: '\u{1F465}', title: 'Colleagues you have no timetable for are still listed', text: 'Find a Teacher used to show only the people whose week Co-Cher knew. Paste your school\u2019s staff page and everyone appears \u2014 but anyone without an uploaded timetable is greyed out and labelled, because listing them as selectable would promise an availability answer Co-Cher cannot give, and leaving them out would suggest they do not work here.' },
     { icon: '\u{1F512}', title: 'The demo accounts no longer carry anyone\u2019s real week', text: 'The sample timetables shipped with Co-Cher were real teachers\u2019 actual timetables \u2014 their duty posts, their rooms, their Tuesday mornings \u2014 with the source file named alongside. They have been replaced with invented ones. A weekly pattern identifies a person even under a different name, so the entries had to go, not just the labels.' },
     { icon: '\u{1F4C5}', title: 'Your timetable is ready the moment you sign in', text: 'Open My Timetable quickly enough and it used to say \u201cNo timetable yet\u201d and stay that way until you navigated off and back. Sign-in now waits for the timetable before letting you through.' },
   ] },

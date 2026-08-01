@@ -646,13 +646,47 @@ async function renderFindTeacher(container) {
   const depts = departmentsOf(dir);
   container.querySelector('#ft-local-note')?.remove();
   const hasDepts = depts.length > 1 || (depts.length === 1 && depts[0] !== 'Unassigned');
+  /* A colleague Co-Cher can answer for: their week is actually known. Beatty
+   * carries it as a CSV row; everyone else as canonical entries. */
+  const hasWeek = (t) => (dir.source === 'bty-csv' && t.row) || (t.entries || []).length > 0;
+
   const fillTeachers = (dept) => {
     const inDept = dir.teachers
       .map((t, i) => ({ t, i }))
       .filter(x => !dept || (x.t.department || 'Unassigned') === dept);
+    const known = inDept.filter(x => hasWeek(x.t));
+    const unknown = inDept.filter(x => !hasWeek(x.t));
+
+    // Colleagues whose timetable we do not have are LISTED but not selectable.
+    // Leaving them out would suggest they do not work here; letting them be
+    // picked would promise an availability answer Co-Cher cannot give. Named
+    // and greyed, with the reason on the label, is the only honest option.
+    const opt = (x, disabled) =>
+      `<option value="${x.i}"${disabled ? ' disabled' : ''}>${esc(x.t.name)}${disabled ? ' — timetable not uploaded' : ''}</option>`;
+
     teacherSel.disabled = false;
     teacherSel.innerHTML = `<option value="">Select a teacher&hellip;</option>`
-      + inDept.map(x => `<option value="${x.i}">${esc(x.t.name)}</option>`).join('');
+      + (known.length && unknown.length
+          ? `<optgroup label="Timetable loaded">${known.map(x => opt(x, false)).join('')}</optgroup>`
+            + `<optgroup label="Timetable not uploaded">${unknown.map(x => opt(x, true)).join('')}</optgroup>`
+          : known.map(x => opt(x, false)).join('') + unknown.map(x => opt(x, true)).join(''));
+
+    paintUnknownNote(unknown.length, inDept.length);
+  };
+
+  /* One line under the pickers, only when somebody is greyed out, saying what
+   * would un-grey them. A disabled option with no explanation just reads broken. */
+  const paintUnknownNote = (n, total) => {
+    container.querySelector('#ft-unknown-note')?.remove();
+    if (!n) return;
+    const note = document.createElement('p');
+    note.id = 'ft-unknown-note';
+    note.className = 'ft-line ft-muted';
+    note.style.cssText = 'margin-top:8px;font-size:0.6875rem;';
+    note.textContent = n === total
+      ? `Co-Cher knows who works here but has no timetables, so nobody can be checked for availability yet. Load a staff timetable and they become selectable.`
+      : `${n} of ${total} colleagues are greyed out: their timetable has not been uploaded, so Co-Cher cannot say when they are free. Load a staff timetable that includes their week.`;
+    container.querySelector('#ft-selectors')?.after(note);
   };
 
   if (hasDepts) {

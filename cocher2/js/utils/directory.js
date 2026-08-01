@@ -68,9 +68,11 @@ async function buildDirectory(schoolId) {
     return { ...base, source: 'none', reason: 'Co-Cher does not know which school you are in yet. Set it in Settings and your colleagues will appear here.' };
   }
 
+  let pack = null;
+  try { pack = await loadPack(schoolId); } catch { /* no pack — the later sources still work */ }
+
   // 1. A roster the school published for itself — the path every school can use.
   try {
-    const pack = await loadPack(schoolId);
     const staff = await fetchSchoolStaff(schoolId, pack?.joinCode);
     const teachers = (Array.isArray(staff?.teachers) ? staff.teachers : [])
       .map(t => ({
@@ -96,7 +98,19 @@ async function buildDirectory(schoolId) {
     if (teachers.length) return { ...base, source: 'bty-csv', teachers };
   }
 
-  // 4. Nothing anywhere. Say what would fix it.
+  // 4. Names the school published in its own pack — a staff page, essentially.
+  //     No timetables, and that is the point: knowing WHO works here is useful
+  //     on its own, and is a different thing from knowing when they are free.
+  //     Ranked below the real rosters so a timetabled source always wins.
+  const packStaff = normaliseTeachers(pack?.staff);
+  if (packStaff.length) {
+    return {
+      ...base, source: 'pack', teachers: packStaff,
+      reason: `${name || 'Your school'} publishes its staff list but no timetables, so Co-Cher can name your colleagues without being able to say when they are free.`,
+    };
+  }
+
+  // 5. Nothing anywhere. Say what would fix it.
   return {
     ...base,
     source: 'none',
