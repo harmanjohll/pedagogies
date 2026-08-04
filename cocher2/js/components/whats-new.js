@@ -17,6 +17,10 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.12', items: [
+    { icon: '\u{1F5C2}', title: 'Find a Teacher groups by teaching area', text: 'A primary staff timetable has no department column, so everyone arrived unassigned and the picker was one list of ninety-odd names. Areas are now worked out from what each person is timetabled to teach \u2014 and because most primary teachers teach three or four subjects, a teacher of English and Maths appears under both. Called \u201cteaching area\u201d, not \u201cdepartment\u201d, because it is what the timetable proves rather than a reporting line the school has published.' },
+    { icon: '\u{1F4DA}', title: 'Primary starters for a primary generalist', text: 'The starter gallery keyed off one class subject, so a Park View teacher got Maths prompts only \u2014 while also teaching Social Studies, PAL and Art that same morning. Primary teachers now get those too, on top of whatever their class matched.' },
+  ] },
   { version: 'v1.11', items: [
     { icon: '\u{1F465}', title: 'Your colleagues are already there', text: 'Find a Teacher used to need somebody to load a file on their own laptop \u2014 not something you can ask a whole staffroom to do. Park View\u2019s roster now ships with the app: sign in and all 92 colleagues are listed, with real availability from their timetables. Nothing to upload, and it works offline.' },
     { icon: '\u{1F3EB}', title: 'Everything follows your sign-in', text: 'Sign in with a Beatty address and you get Beatty \u2014 its levels, CCAs, forms, routines and colleague list. Sign in with Park View and you get Park View\u2019s. Each school has its own store, its own folder and its own sources; nothing crosses.' },

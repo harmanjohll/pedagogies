@@ -89,7 +89,7 @@ async function buildDirectory(schoolId) {
   // 2. A roster loaded into this browser. Waiting on a Drive folder should not
   //     be the thing standing between a school and a working colleague list —
   //     one person can load the file and have it work today, on their machine.
-  const local = readLocalRoster(schoolId);
+  const local = readLocalRoster(schoolId, pack?.subjectDepartments);
   if (local.length) return { ...base, source: 'local', teachers: local };
 
   // 3. Beatty's own CSV, still exact for the school it was written for.
@@ -109,7 +109,7 @@ async function buildDirectory(schoolId) {
     const res = await fetch(`./schools/${encodeURIComponent(schoolId)}/staff.json`);
     if (res.ok) {
       const doc = await res.json();
-      const teachers = normaliseTeachers(doc?.teachers);
+      const teachers = normaliseTeachers(doc?.teachers, pack?.subjectDepartments);
       if (teachers.length) return { ...base, source: 'bundled', teachers };
     }
   } catch { /* no bundled roster for this school — carry on */ }
@@ -118,7 +118,7 @@ async function buildDirectory(schoolId) {
   //     No timetables, and that is the point: knowing WHO works here is useful
   //     on its own, and is a different thing from knowing when they are free.
   //     Ranked below the real rosters so a timetabled source always wins.
-  const packStaff = normaliseTeachers(pack?.staff);
+  const packStaff = normaliseTeachers(pack?.staff, pack?.subjectDepartments);
   if (packStaff.length) {
     return {
       ...base, source: 'pack', teachers: packStaff,
@@ -140,21 +140,57 @@ async function buildDirectory(schoolId) {
  * Stored per school id, so loading Park View's roster can never surface it to
  * a teacher from somewhere else.
  */
-function readLocalRoster(schoolId) {
+function readLocalRoster(schoolId, subjectMap) {
   try {
     const all = JSON.parse(localStorage.getItem(LOCAL_ROSTER_KEY) || '{}');
-    return normaliseTeachers(all?.[schoolId]?.teachers);
+    return normaliseTeachers(all?.[schoolId]?.teachers, subjectMap);
   } catch { return []; }
 }
 
-function normaliseTeachers(list) {
+/**
+ * Which teaching areas a colleague belongs to, worked out from what they are
+ * timetabled to teach.
+ *
+ * A primary staff timetable has no department column — one sheet per teacher,
+ * subjects down the page — so everybody arrived "Unassigned" and Find a Teacher
+ * offered a single "All staff" list of ninety-odd names. But the timetable does
+ * say what each person teaches, and at a primary school most people teach three
+ * or four things: the honest answer is that a teacher belongs to SEVERAL areas,
+ * not one. Someone teaching English and Maths appears under both.
+ *
+ * `map` comes from the school's own pack (`subjectDepartments`). A code the
+ * school has not mapped contributes nothing — which is what keeps committees,
+ * duties and one-off blocks from turning into departments.
+ */
+export function areasFromEntries(entries, map) {
+  if (!map) return [];
+  const found = new Set();
+  (entries || []).forEach(e => {
+    if (e?.kind && e.kind !== 'lesson') return;          // only what they TEACH
+    String(e?.title || '').split(/[,/]/).forEach(part => {
+      const area = map[part.trim()];
+      if (area) found.add(area);
+    });
+  });
+  return [...found].sort();
+}
+
+function normaliseTeachers(list, subjectMap) {
   return (Array.isArray(list) ? list : [])
-    .map(t => ({
-      name: String(t?.name || '').trim(),
-      email: String(t?.email || '').trim().toLowerCase(),
-      department: String(t?.department || t?.dept || '').trim(),
-      entries: Array.isArray(t?.entries) ? t.entries : [],
-    }))
+    .map(t => {
+      const stated = String(t?.department || t?.dept || '').trim();
+      const entries = Array.isArray(t?.entries) ? t.entries : [];
+      // A published department is the school's own word and always wins.
+      const areas = stated ? [stated] : areasFromEntries(entries, subjectMap);
+      return {
+        name: String(t?.name || '').trim(),
+        email: String(t?.email || '').trim().toLowerCase(),
+        department: areas[0] || '',
+        departments: areas,
+        derivedAreas: !stated && areas.length > 0,
+        entries,
+      };
+    })
     .filter(t => t.name)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -348,6 +384,21 @@ export async function availabilityFromEntries(teacher, dateObj = new Date(), sch
 
 /** Departments present in a directory, sorted; 'Unassigned' for the blanks. */
 export function departmentsOf(dir) {
-  return [...new Set((dir?.teachers || []).map(t => t.department || 'Unassigned'))]
-    .sort((a, b) => a.localeCompare(b));
+  // Union, not first-wins: a teacher of English and Maths puts both on the list.
+  const all = new Set();
+  (dir?.teachers || []).forEach(t => {
+    const areas = (t.departments && t.departments.length) ? t.departments
+                : (t.department ? [t.department] : []);
+    if (!areas.length) all.add('Unassigned');
+    areas.forEach(a => all.add(a));
+  });
+  return [...all].sort((a, b) => (a === 'Unassigned') - (b === 'Unassigned') || a.localeCompare(b));
+}
+
+/** Does this colleague belong to the given area? '' means "any". */
+export function inArea(teacher, area) {
+  if (!area) return true;
+  const areas = (teacher?.departments && teacher.departments.length) ? teacher.departments
+              : (teacher?.department ? [teacher.department] : []);
+  return areas.length ? areas.includes(area) : area === 'Unassigned';
 }
