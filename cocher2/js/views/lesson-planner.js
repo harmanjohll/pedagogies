@@ -1149,10 +1149,13 @@ export function render(container) {
       const prefill = JSON.parse(plannerPrefillRaw);
       if (prefill?.kind === 'cce') {
         cceContext = { contentArea: prefill.contentArea || '', topic: prefill.topic || '', pendingInput: true };
-        // GROW is the natural coaching frame for CCE conversations — pre-select
-        // its chip when the builtin exists (the teacher can still toggle it off).
-        if ((Store.getFrameworks?.() || []).some(f => f.id === 'fw_builtin_grow') && !selectedFrameworkIds.includes('fw_builtin_grow')) {
-          selectedFrameworkIds = [...selectedFrameworkIds, 'fw_builtin_grow'];
+        // A metacognition routine is the natural coaching frame for a CCE
+        // conversation — pre-select the school's own, whichever that is. Naming
+        // Beatty's GROW here meant a Park View teacher got a chip for a routine
+        // their school does not run. The teacher can still toggle it off.
+        const meta = (Store.getFrameworks?.() || []).find(f => f.purpose === 'metacognition');
+        if (meta && !selectedFrameworkIds.includes(meta.id)) {
+          selectedFrameworkIds = [...selectedFrameworkIds, meta.id];
         }
       }
     } catch { /* malformed prefill — ignore */ }

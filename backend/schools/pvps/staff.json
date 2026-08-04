@@ -1,90 +1,109 @@
 {
   "schoolId": "pvps",
-  "note": "DEMO data — fictional teacher",
+  "note": "INVENTED demo data. Not any real teacher's timetable — the entries are written to exercise the app (real clock times, week cycles, the four entry kinds), not to describe anyone's actual week.",
   "teachers": [
     {
-      "name": "Jamie Lie",
-      "email": "jamie_lie@pvps.moe.edu.sg",
-      "source": "PVPS_Timetable_Teacher.xlsx (Adeline Ang)",
+      "name": "Aisyah Rahman",
+      "email": "demo.teacher@pvps.moe.edu.sg",
       "entries": [
         {
           "cycle": null,
           "day": "Mon",
           "start": "07:30",
-          "end": "08:30",
-          "title": "MATH",
-          "class": "6R3",
+          "end": "08:00",
+          "title": "MORNING ASSEMBLY",
+          "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
           "day": "Mon",
-          "start": "09:30",
-          "end": "10:30",
-          "title": "SCI",
-          "class": "6C,6I",
-          "room": "J5-01B,J5-02",
-          "kind": "lesson"
-        },
-        {
-          "cycle": null,
-          "day": "Mon",
-          "start": "10:30",
-          "end": "11:00",
+          "start": "08:00",
+          "end": "09:00",
           "title": "MATH",
-          "class": "5R1,5R2",
-          "room": "A3-04,J4-05",
+          "class": "5R1",
+          "room": "A1-02",
           "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Mon",
+          "start": "09:00",
+          "end": "10:00",
+          "title": "SCIENCE",
+          "class": "5R1",
+          "room": "SCI LAB 1",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Mon",
+          "start": "10:00",
+          "end": "10:30",
+          "title": "RECESS DUTY",
+          "class": null,
+          "room": "CANTEEN",
+          "kind": "duty"
         },
         {
           "cycle": null,
           "day": "Mon",
           "start": "11:00",
           "end": "12:00",
-          "title": "FTGP 6I",
-          "class": null,
-          "room": null,
-          "kind": "school"
+          "title": "MATH",
+          "class": "5R2",
+          "room": "A1-03",
+          "kind": "lesson"
         },
         {
           "cycle": null,
           "day": "Mon",
           "start": "12:00",
-          "end": "12:30",
-          "title": "ASSEMBLY",
-          "class": null,
-          "room": null,
-          "kind": "school"
-        },
-        {
-          "cycle": null,
-          "day": "Tue",
-          "start": "09:30",
-          "end": "10:00",
-          "title": "DUTY@PARADE SQ",
-          "class": null,
-          "room": null,
-          "kind": "duty"
-        },
-        {
-          "cycle": null,
-          "day": "Tue",
-          "start": "10:00",
-          "end": "10:30",
-          "title": "MATH",
-          "class": "6R3",
-          "room": null,
+          "end": "13:00",
+          "title": "SCIENCE",
+          "class": "5R2",
+          "room": "SCI LAB 1",
           "kind": "lesson"
         },
         {
           "cycle": null,
           "day": "Tue",
-          "start": "12:00",
-          "end": "12:30",
-          "title": "SDC",
-          "class": "SDC",
-          "room": "MEET RM 1",
+          "start": "07:30",
+          "end": "08:30",
+          "title": "MATH",
+          "class": "5R1",
+          "room": "A1-02",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Tue",
+          "start": "08:30",
+          "end": "09:30",
+          "title": "MATH",
+          "class": "5R2",
+          "room": "A1-03",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Tue",
+          "start": "10:00",
+          "end": "11:00",
+          "title": "SCIENCE",
+          "class": "5R1,5R2",
+          "room": "SCI LAB 2",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Tue",
+          "start": "11:00",
+          "end": "12:00",
+          "title": "FORM TEACHER TIME",
+          "class": "5R1",
+          "room": "A1-02",
           "kind": "school"
         },
         {
@@ -92,9 +111,19 @@
           "day": "Tue",
           "start": "12:30",
           "end": "13:30",
-          "title": "MATH",
-          "class": "5R1,5R2",
-          "room": "A3-04,J4-05",
+          "title": "LEVEL MEETING — P5",
+          "class": null,
+          "room": "STAFF RM",
+          "kind": "pd"
+        },
+        {
+          "cycle": null,
+          "day": "Wed",
+          "start": "08:00",
+          "end": "09:00",
+          "title": "SCIENCE",
+          "class": "5R1",
+          "room": "SCI LAB 1",
           "kind": "lesson"
         },
         {
@@ -103,8 +132,8 @@
           "start": "09:00",
           "end": "10:00",
           "title": "MATH",
-          "class": "6R3",
-          "room": null,
+          "class": "5R2",
+          "room": "A1-03",
           "kind": "lesson"
         },
         {
@@ -112,29 +141,39 @@
           "day": "Wed",
           "start": "10:30",
           "end": "11:00",
-          "title": "DUTY@ECO GARDEN",
+          "title": "LIBRARY DUTY",
           "class": null,
-          "room": null,
+          "room": "LIBRARY",
           "kind": "duty"
         },
         {
           "cycle": null,
           "day": "Wed",
-          "start": "11:30",
-          "end": "12:30",
+          "start": "11:00",
+          "end": "12:00",
           "title": "MATH",
-          "class": "5R1,5R2",
-          "room": "A3-04,J4-05",
+          "class": "5R1",
+          "room": "A1-02",
           "kind": "lesson"
         },
         {
           "cycle": null,
-          "day": "Wed",
-          "start": "12:30",
-          "end": "13:30",
-          "title": "SCI",
-          "class": "6C,6I",
-          "room": "J5-01B,J5-02",
+          "day": "Thu",
+          "start": "07:30",
+          "end": "08:30",
+          "title": "MATH",
+          "class": "5R1,5R2",
+          "room": "A1-02",
+          "kind": "lesson"
+        },
+        {
+          "cycle": null,
+          "day": "Thu",
+          "start": "09:30",
+          "end": "10:30",
+          "title": "SCIENCE",
+          "class": "5R2",
+          "room": "SCI LAB 1",
           "kind": "lesson"
         },
         {
@@ -143,8 +182,8 @@
           "start": "11:00",
           "end": "12:00",
           "title": "MATH",
-          "class": "6R3",
-          "room": null,
+          "class": "5R2",
+          "room": "A1-03",
           "kind": "lesson"
         },
         {
@@ -152,9 +191,19 @@
           "day": "Thu",
           "start": "12:30",
           "end": "13:30",
-          "title": "MATH",
-          "class": "5R1,5R2",
-          "room": "A3-04,J4-05",
+          "title": "CCA — ENVIRONMENT CLUB",
+          "class": null,
+          "room": "ECO GARDEN",
+          "kind": "school"
+        },
+        {
+          "cycle": null,
+          "day": "Fri",
+          "start": "08:00",
+          "end": "09:00",
+          "title": "SCIENCE",
+          "class": "5R1",
+          "room": "SCI LAB 2",
           "kind": "lesson"
         },
         {
@@ -162,10 +211,10 @@
           "day": "Fri",
           "start": "09:00",
           "end": "10:00",
-          "title": "PLT MA2",
-          "class": "PLT MA2",
-          "room": "MEET RM 1",
-          "kind": "school"
+          "title": "MATH",
+          "class": "5R1",
+          "room": "A1-02",
+          "kind": "lesson"
         },
         {
           "cycle": null,
@@ -173,8 +222,8 @@
           "start": "10:30",
           "end": "11:30",
           "title": "MATH",
-          "class": "5R1,5R2",
-          "room": "A3-04,J4-05",
+          "class": "5R2",
+          "room": "A1-03",
           "kind": "lesson"
         },
         {
@@ -182,19 +231,19 @@
           "day": "Fri",
           "start": "11:30",
           "end": "12:30",
-          "title": "SCI",
-          "class": "6C,6I",
-          "room": "J5-01B,J5-02",
-          "kind": "lesson"
+          "title": "DEPARTMENT PLT — MATHS",
+          "class": null,
+          "room": "STAFF RM",
+          "kind": "pd"
         },
         {
           "cycle": null,
           "day": "Fri",
           "start": "12:30",
           "end": "13:30",
-          "title": "MATH",
-          "class": "6R3",
-          "room": null,
+          "title": "SCIENCE",
+          "class": "5R2",
+          "room": "SCI LAB 1",
           "kind": "lesson"
         }
       ]

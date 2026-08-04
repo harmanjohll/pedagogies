@@ -11,6 +11,7 @@ import { applySchoolTheme, paintSchoolLabel } from './utils/school-theme.js';
 import { maybeClaimTimetable } from './components/claim-timetable.js';
 import { seedDemoTimetable } from './utils/demo-timetables.js';
 import { primeVocabulary } from './utils/vocabulary.js';
+import { seedSchoolFrameworks } from './utils/school-frameworks.js';
 import { getCurrentUser } from './components/login.js';
 import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
 import { renderLogin, isLoggedIn } from './components/login.js';
@@ -76,6 +77,11 @@ async function init() {
   // the floor, not the plan: a school pack that never arrives must fall back to
   // the national defaults rather than hold up the app.
   await Promise.race([startPriming(), new Promise(r => setTimeout(r, 2500))]);
+
+  // The school's OWN pedagogy routines, and the removal of the two that used to
+  // be seeded for everyone. Awaited before the seeders below, because sample
+  // lessons reference frameworks by id.
+  await seedSchoolFrameworks().catch(() => {});
 
   // Seed sample data on first run
   seedIfNeeded();

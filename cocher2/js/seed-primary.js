@@ -677,7 +677,7 @@ export function primaryShowcaseLessons() {
         { name: 'Why does the leaf need water?', duration: 13, teachingArea: 'deepen_questions', teachingAction: 'funnel', mode: 'whole-class', e21ccFocus: 'criticalThinking',
           simId: 'photosynthesis', simTitle: 'Photosynthesis',
           activity: 'Funnel from "the water moved up" to "the leaf uses it". Run the Photosynthesis simulation on screen: water and carbon dioxide in, food and oxygen out.', studentInstructions: 'Watch what the leaf takes in and what it gives out. Be ready to say where the water in the simulation came from.' },
-        { name: 'Root to leaf, in one sentence', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_grow',
+        { name: 'Root to leaf, in one sentence', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_aal',
           activity: 'Close with a GROW self-check and one written explanation of the whole path.', studentInstructions: 'Write the journey of one drop of water from the soil to the leaf. Gift: one thing you now understand. Rise: one thing you still wonder. Own: where you have seen this outside school.' },
       ],
       sims: [{ id: 'photosynthesis', title: 'Photosynthesis' }],
@@ -730,7 +730,7 @@ export function primaryShowcaseLessons() {
           activity: 'Groups work out 12 units = $960 → 1 unit = $80, then label all three shares. Compare methods on the board.', studentInstructions: 'Find what ONE unit is worth first. Then label every bar. Be ready to explain your first step.' },
         { name: 'No total, only a difference', duration: 15, teachingArea: 'deepen_questions', teachingAction: 'funnel', mode: 'whole-class', e21ccFocus: 'criticalThinking',
           activity: 'Ali has 12 more stickers than Bala; their counts are in the ratio 5 : 3. Funnel to the realisation that the DIFFERENCE is 2 units, so 1 unit = 6.', studentInstructions: 'Draw the two bars. Circle the part of the picture that shows the 12. How many units is it?' },
-        { name: 'The one question that unlocks it', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_grow',
+        { name: 'The one question that unlocks it', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_aal',
           activity: 'Pupils write the single question they should always ask on a ratio problem, and check it against today’s three problems.', studentInstructions: 'Write the one question that starts every ratio problem. Gift: one thing you can now do. Rise: one thing you still find hard. Own: a time you have shared something in a ratio.' },
       ],
       deck: {

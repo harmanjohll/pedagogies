@@ -12,10 +12,14 @@
 
 import { getMyTimetable, saveMyTimetable } from './timetable.js';
 
+/* Invented accounts with invented timetables. The first version of this file
+ * pointed at three REAL teachers' real weeks, lifted from timetable exports —
+ * a weekly movement pattern identifies a person even under a different name,
+ * so both the identities and the entries are now fabricated. */
 const DEMO = {
-  'jamie_lie@pvps.moe.edu.sg': 'pvps-jamie-lie.json',
-  'joan_sng@sajc.moe.edu.sg': 'sajc-joan-sng.json',
-  'tham_kine_thong@sajc.moe.edu.sg': 'sajc-tham-kine-thong.json',
+  'demo.teacher@pvps.moe.edu.sg': 'pvps-demo-teacher.json',
+  'demo.econs@sajc.moe.edu.sg': 'sajc-demo-econs.json',
+  'demo.math@sajc.moe.edu.sg': 'sajc-demo-math.json',
 };
 
 /** True when this email is one of the demo accounts. */

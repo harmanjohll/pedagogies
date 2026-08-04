@@ -11,7 +11,7 @@ import { showToast } from '../components/toast.js';
 import { summarizeNotes, suggestGrouping, sendChat } from '../api.js';
 import { renderMd } from '../utils/latex.js';
 import { escapeHtml } from '../utils/markdown.js';
-import { levelOptions, levels, subjects, exampleClass } from '../utils/vocabulary.js';
+import { levelOptions, levels, subjects, exampleClass, classCodes } from '../utils/vocabulary.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
 import {
   SCHEMA_PRESETS, getSchemaForClass, getFieldValue, applyFieldUpdate,
@@ -281,7 +281,10 @@ function showAddClassModal() {
     body: `
       <div class="input-group">
         <label class="input-label">Class Name</label>
-        <input class="input" id="modal-class-name" placeholder="e.g. ${exampleClass()}" autofocus />
+        <input class="input" id="modal-class-name" placeholder="e.g. ${exampleClass()}" autofocus
+               ${classCodes().length ? 'list="class-code-list"' : ''} />
+        ${classCodes().length ? `<datalist id="class-code-list">${
+          classCodes().map(c => `<option value="${c}"></option>`).join('')}</datalist>` : ''}
       </div>
       <div class="input-group">
         <label class="input-label">Level</label>

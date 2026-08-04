@@ -2302,7 +2302,7 @@ const SHOWCASE_LESSONS = [
       { name: 'Neutralisation: where does the acid go?', duration: 12, teachingArea: 'deepen_questions', teachingAction: 'funnel', mode: 'whole-class', e21ccFocus: 'criticalThinking',
         simId: 'titration', simTitle: 'Acid-Base Titration',
         activity: 'Build the word equation acid + base → salt + water through funnelling questions, then demonstrate it live in the Acid-Base Titration simulation — watch the indicator flick at the endpoint.', studentInstructions: 'Answer each question. Watch the titration on screen — be ready to explain what happens to the H⁺ and OH⁻ ions at the endpoint.' },
-      { name: 'GROW: what do you now understand?', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_grow',
+      { name: 'GROW: what do you now understand?', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_aal',
         activity: 'Close with the GROW reflection routine.', studentInstructions: 'Gift yourself one thing you understand. Rise: one gap. Own: a real-life example.' }
     ],
     sims: [{ id: 'titration', title: 'Acid-Base Titration' }],
@@ -2391,7 +2391,7 @@ const SHOWCASE_LESSONS = [
         activity: 'Students take a stance in a corner, debate, and refine their view.', studentInstructions: 'Pick your corner. Defend your choice with a reason. Be ready to move if convinced.' },
       { name: 'Whose responsibility?', duration: 12, teachingArea: 'deepen_questions', teachingAction: 'socratic', mode: 'whole-class', e21ccFocus: 'socialConnectedness',
         activity: 'Probe where responsibility lies — the poster, the platform, the bystander.', studentInstructions: 'What makes you say that? Whose choice matters most here?' },
-      { name: 'My digital promise', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_act',
+      { name: 'My digital promise', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_afl',
         activity: 'Commit to one responsible change, ACT-on-feedback style.', studentInstructions: 'Write one habit to keep, one to change, and one person to look out for.' }
     ],
     deck: { title: 'Think Before You Share', wallPrompt: 'One responsible habit you will keep online?', slides: [
@@ -2725,8 +2725,8 @@ export function seedPortalDemosIfNeeded() {
         eventType: 'Learning Journey', status: 'completed', isSample: true,
         tasks: [
           mkTask('rams', 'completed', { activity_desc: 'Guided trail linking animal adaptations to the Science unit on living things, with a worksheet trail and a keeper talk.', venue: 'Singapore Zoo, Mandai', hazards: 'Heat and dehydration, pupils separating from the group in crowds, uneven paths, allergies at the animal-contact area', mitigations: 'Staff:pupil 1:10 with parent volunteers, group T-shirts and name tags with the school number, hourly headcount at trail markers, hydration stop every 30 min, no bare-hand animal contact without the keeper', emergency_plan: 'Nearest hospital: Khoo Teck Puat. Assembly point at the main entrance plaza. Teacher-IC holds all emergency contacts and the pupil medical list.', risk_level: 'Medium' }),
-          mkTask('bus_booking', 'completed', { teacher_ic: 'Mdm Adeline Ang', pickup_point: 'School Bus Bay', destination: 'Singapore Zoo, Mandai', departure_time: '8:00 AM', return_time: '1:30 PM', return_to: 'School', num_passengers: '120', num_buses: '3' }),
-          mkTask('student_list', 'completed', { teacher_ic: 'Mdm Adeline Ang' }),
+          mkTask('bus_booking', 'completed', { teacher_ic: 'Mdm Aisyah Rahman', pickup_point: 'School Bus Bay', destination: 'Singapore Zoo, Mandai', departure_time: '8:00 AM', return_time: '1:30 PM', return_to: 'School', num_passengers: '120', num_buses: '3' }),
+          mkTask('student_list', 'completed', { teacher_ic: 'Mdm Aisyah Rahman' }),
           mkTask('parent_notification', 'completed', {}),
           mkTask('aor', 'completed', { estimated_cost: '$1,140', cost_breakdown: 'Bus charter $720 + admission at school rate $420', budget_code: 'PS-SCI-2026-007' })
         ], createdAt: now - 25 * DAY, updatedAt: now - 4 * DAY
@@ -2755,7 +2755,7 @@ export function seedPortalDemosIfNeeded() {
         eventType: 'Community Service', status: 'in_progress', isSample: true,
         tasks: [
           mkTask('rams', 'completed', { activity_desc: 'Values-in-Action visit to a nearby senior activity centre — pupils lead simple games, teach a short phone-basics session, and present handmade cards. Prepared in FTGP the week before.', venue: 'Senior Activity Centre, Pasir Ris (walking distance)', hazards: 'Road crossings on the walk over, heat, pupils unsure how to interact with frail seniors, infection control', mitigations: 'Route walked and risk-assessed beforehand, staff:pupil 1:10 with adults at front and rear of the crocodile line, hand sanitiser on arrival and departure, pupils briefed and rehearsed in FTGP, any pupil unwell stays back', emergency_plan: 'Nearest hospital: Changi General. First-aid kit carried by the Teacher-IC. Centre staff hold the emergency line; school office informed of departure and return times.', risk_level: 'Low' }),
-          mkTask('bus_booking', 'completed', { teacher_ic: 'Mdm Adeline Ang', pickup_point: 'School Main Gate (walking &mdash; no bus needed)', destination: 'Senior Activity Centre, Pasir Ris', departure_time: '8:30 AM', return_time: '10:30 AM', return_to: 'School', num_passengers: '40', num_buses: '0' }),
+          mkTask('bus_booking', 'completed', { teacher_ic: 'Mdm Aisyah Rahman', pickup_point: 'School Main Gate (walking &mdash; no bus needed)', destination: 'Senior Activity Centre, Pasir Ris', departure_time: '8:30 AM', return_time: '10:30 AM', return_to: 'School', num_passengers: '40', num_buses: '0' }),
           mkTask('student_list', 'pending', {}), mkTask('parent_notification', 'pending', {}), mkTask('aor', 'pending', {})
         ], createdAt: now - 6 * DAY, updatedAt: now - 2 * DAY
       }
