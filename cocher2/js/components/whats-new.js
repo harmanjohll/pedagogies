@@ -17,6 +17,10 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.13', items: [
+    { icon: '\u{1F511}', title: 'Park View signs in as name@pvps', text: 'A short pilot handle \u2014 adeline@pvps \u2014 deliberately not an MOE address, so it cannot be confused with or collide with a real one. The school is in beta: only names on its list get in, and it no longer appears in the \u201cwhich school are you at?\u201d picker, so nobody can select their way into a school they do not work at.' },
+    { icon: '\u{1F4CB}', title: 'The admin decides who tests', text: 'All 92 handles are generated from the staff timetable and listed in the school\u2019s own registry entry. Trimming that list is how access is controlled \u2014 no code change, no separate account system.' },
+  ] },
   { version: 'v1.12', items: [
     { icon: '\u{1F5C2}', title: 'Find a Teacher groups by teaching area', text: 'A primary staff timetable has no department column, so everyone arrived unassigned and the picker was one list of ninety-odd names. Areas are now worked out from what each person is timetabled to teach \u2014 and because most primary teachers teach three or four subjects, a teacher of English and Maths appears under both. Called \u201cteaching area\u201d, not \u201cdepartment\u201d, because it is what the timetable proves rather than a reporting line the school has published.' },
     { icon: '\u{1F4DA}', title: 'Primary starters for a primary generalist', text: 'The starter gallery keyed off one class subject, so a Park View teacher got Maths prompts only \u2014 while also teaching Social Studies, PAL and Art that same morning. Primary teachers now get those too, on top of whatever their class matched.' },

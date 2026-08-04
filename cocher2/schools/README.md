@@ -106,6 +106,26 @@ leave out what you don't have yet and the app falls back to sensible defaults.
 | `sampleClasses` | `[{ "name": "5R1 Mathematics", "level": "Primary 5", "subject": "Mathematics" }]` | Real class codes for first-run samples and placeholder text. |
 | `identity` | `{ "vision": "…", "mission": "…", "motto": "…" }` | Shown in Settings so a teacher can see what Co-Cher knows about their school. |
 
+## Who may sign in
+
+`registry.json` carries `access`, and each school may carry `closed` + `allowEmails`.
+
+| | Effect |
+|---|---|
+| `access: "open"` (default) | Anyone signs in. An unrecognised domain picks a school, or continues without one. |
+| A school with `closed: true` | Only its own domain, and only addresses on its `allowEmails` list. It is **hidden from the picker**, so nobody can select their way in. |
+| `allowEmails: []` | Empty means the whole domain is welcome. Populated means only those addresses. |
+
+Park View is `closed` for its beta: sign-in handles are `name@pvps` — short, and
+deliberately not an MOE address so it cannot collide with a real one. The admin
+controls the beta by trimming `allowEmails`; there is no separate account system.
+
+Be plain about what this is. The check runs in the browser on a public page, so
+it is a front door, not a lock — it stops a stray visitor wandering into a
+school's Co-Cher; it does not protect anything served at a public URL. An
+unreadable registry falls back to open rather than locking anybody out, because
+Co-Cher 1's one real outage was a failed fetch that locked out every teacher.
+
 ## Where a school's colleague list comes from
 
 Everything below is chosen by **who signs in**. The email domain resolves to a
