@@ -69,6 +69,66 @@ export async function listSchools() {
  * domain (so `name@sajc.moe.edu.sg` still resolves if a school registered
  * `moe.edu.sg`). Returns null when nothing matches — the caller then asks.
  */
+/**
+ * Who is allowed in.
+ *
+ * `open`       — anyone signs in. An unknown domain picks a school, or carries
+ *                on without one. This is Co-Cher 2's default, and it is a
+ *                deliberate reaction to Co-Cher 1, where a failed fetch of one
+ *                CSV locked every teacher out of the app.
+ * `restricted` — only addresses at a registered school. A school may narrow
+ *                further with `allowEmails`, and an empty list means the whole
+ *                domain is welcome.
+ *
+ * Worth being plain about what this is: the check runs in the browser, on a
+ * public page, so it is a front door, not a lock. It keeps a stray visitor from
+ * wandering into a school's Co-Cher; it does not protect anything served at a
+ * public URL. Data that needs protecting has to move behind the backend.
+ */
+export async function accessMode() {
+  const reg = await loadRegistry();
+  return reg?.access === 'restricted' ? 'restricted' : 'open';
+}
+
+/**
+ * → { ok } | { ok: false, reason }. Never throws: a registry that fails to load
+ * must not become a lockout, so an unreadable registry falls back to open.
+ */
+export async function mayAccess(email) {
+  const addr = String(email || '').toLowerCase().trim();
+  const at = addr.split('@')[1];
+  if (!at) return { ok: false, reason: 'That does not look like an email address.' };
+
+  const school = await schoolForEmail(addr);
+
+  // A CLOSED school is one running a beta: only its own people get in as it.
+  // The list is the school's to keep — an admin decides who is on it.
+  if (school?.closed) {
+    const named = Array.isArray(school.allowEmails) ? school.allowEmails.map(e => String(e).toLowerCase()) : [];
+    if (named.length && !named.includes(addr)) {
+      return { ok: false, reason: `${school.name} is in beta and ${addr} is not on its list yet. Ask whoever set up Co-Cher at your school to add you.` };
+    }
+    return { ok: true, school };
+  }
+
+  if (await accessMode() === 'open') return { ok: true, school };
+
+  if (!school) {
+    return { ok: false, reason: `Co-Cher is not open to ${at} yet. Sign in with your school email, or ask for your school to be added.` };
+  }
+  const named = Array.isArray(school.allowEmails) ? school.allowEmails.map(e => String(e).toLowerCase()) : [];
+  if (named.length && !named.includes(addr)) {
+    return { ok: false, reason: `${school.name} keeps a named list of Co-Cher users, and ${addr} is not on it yet. Ask whoever set it up to add you.` };
+  }
+  return { ok: true, school };
+}
+
+/** Schools an unrecognised address may pick from — a closed school is not one,
+ *  or anybody could select their way into a school they do not work at. */
+export async function pickableSchools() {
+  return (await listSchools()).filter(s => !s.closed);
+}
+
 export async function schoolForEmail(email) {
   const at = String(email || '').toLowerCase().split('@')[1];
   if (!at) return null;

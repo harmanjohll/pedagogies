@@ -1,10 +1,10 @@
 {
   "schoolId": "pvps",
-  "note": "Park View Primary, staff timetable 2026 Term 3 (source tag 2026_T3_130726). Real staff timetable \u2014 hold outside the public repo.",
+  "note": "Park View Primary, staff timetable 2026 Term 3 (source tag 2026_T3_130726). Real staff timetable — hold outside the public repo.. Sign-in handles are name@pvps — a pilot handle, deliberately not an MOE address. A live Drive/Apps Script feed overrides this file when one is configured.",
   "teachers": [
     {
       "name": "Abidah",
-      "email": "",
+      "email": "abidah@pvps",
       "department": "",
       "entries": [
         {
@@ -231,7 +231,7 @@
     },
     {
       "name": "Adeline",
-      "email": "",
+      "email": "adeline@pvps",
       "department": "",
       "entries": [
         {
@@ -428,7 +428,7 @@
     },
     {
       "name": "Angeline",
-      "email": "",
+      "email": "angeline@pvps",
       "department": "",
       "entries": [
         {
@@ -585,7 +585,7 @@
     },
     {
       "name": "Anna",
-      "email": "",
+      "email": "anna@pvps",
       "department": "",
       "entries": [
         {
@@ -802,7 +802,7 @@
     },
     {
       "name": "Anuradha",
-      "email": "",
+      "email": "anuradha@pvps",
       "department": "",
       "entries": [
         {
@@ -1019,7 +1019,7 @@
     },
     {
       "name": "Averil",
-      "email": "",
+      "email": "averil@pvps",
       "department": "",
       "entries": [
         {
@@ -1036,7 +1036,7 @@
     },
     {
       "name": "Azmi",
-      "email": "",
+      "email": "azmi@pvps",
       "department": "",
       "entries": [
         {
@@ -1253,7 +1253,7 @@
     },
     {
       "name": "Catherine",
-      "email": "",
+      "email": "catherine@pvps",
       "department": "",
       "entries": [
         {
@@ -1440,7 +1440,7 @@
     },
     {
       "name": "Celine",
-      "email": "",
+      "email": "celine@pvps",
       "department": "",
       "entries": [
         {
@@ -1677,7 +1677,7 @@
     },
     {
       "name": "Charlene",
-      "email": "",
+      "email": "charlene@pvps",
       "department": "",
       "entries": [
         {
@@ -1874,7 +1874,7 @@
     },
     {
       "name": "Chitra",
-      "email": "",
+      "email": "chitra@pvps",
       "department": "",
       "entries": [
         {
@@ -2071,7 +2071,7 @@
     },
     {
       "name": "Darvin",
-      "email": "",
+      "email": "darvin@pvps",
       "department": "",
       "entries": [
         {
@@ -2278,7 +2278,7 @@
     },
     {
       "name": "Eileen",
-      "email": "",
+      "email": "eileen@pvps",
       "department": "",
       "entries": [
         {
@@ -2495,7 +2495,7 @@
     },
     {
       "name": "Emily",
-      "email": "",
+      "email": "emily@pvps",
       "department": "",
       "entries": [
         {
@@ -2692,7 +2692,7 @@
     },
     {
       "name": "Engtiong",
-      "email": "",
+      "email": "engtiong@pvps",
       "department": "",
       "entries": [
         {
@@ -2909,7 +2909,7 @@
     },
     {
       "name": "Este",
-      "email": "",
+      "email": "este@pvps",
       "department": "",
       "entries": [
         {
@@ -3136,7 +3136,7 @@
     },
     {
       "name": "Evie",
-      "email": "",
+      "email": "evie@pvps",
       "department": "",
       "entries": [
         {
@@ -3343,7 +3343,7 @@
     },
     {
       "name": "Faizah",
-      "email": "",
+      "email": "faizah@pvps",
       "department": "",
       "entries": [
         {
@@ -3550,7 +3550,7 @@
     },
     {
       "name": "Farah",
-      "email": "",
+      "email": "farah@pvps",
       "department": "",
       "entries": [
         {
@@ -3747,7 +3747,7 @@
     },
     {
       "name": "Farizah",
-      "email": "",
+      "email": "farizah@pvps",
       "department": "",
       "entries": [
         {
@@ -3934,7 +3934,7 @@
     },
     {
       "name": "Fatin",
-      "email": "",
+      "email": "fatin@pvps",
       "department": "",
       "entries": [
         {
@@ -4171,7 +4171,7 @@
     },
     {
       "name": "Hanim",
-      "email": "",
+      "email": "hanim@pvps",
       "department": "",
       "entries": [
         {
@@ -4228,7 +4228,7 @@
     },
     {
       "name": "Hannah",
-      "email": "",
+      "email": "hannah@pvps",
       "department": "",
       "entries": [
         {
@@ -4465,7 +4465,7 @@
     },
     {
       "name": "Hazimah",
-      "email": "",
+      "email": "hazimah@pvps",
       "department": "",
       "entries": [
         {
@@ -4492,7 +4492,7 @@
     },
     {
       "name": "Haziqah",
-      "email": "",
+      "email": "haziqah@pvps",
       "department": "",
       "entries": [
         {
@@ -4519,7 +4519,7 @@
     },
     {
       "name": "Helen",
-      "email": "",
+      "email": "helen@pvps",
       "department": "",
       "entries": [
         {
@@ -4736,7 +4736,7 @@
     },
     {
       "name": "Irene",
-      "email": "",
+      "email": "irene@pvps",
       "department": "",
       "entries": [
         {
@@ -4953,7 +4953,7 @@
     },
     {
       "name": "Izdihar",
-      "email": "",
+      "email": "izdihar@pvps",
       "department": "",
       "entries": [
         {
@@ -5200,7 +5200,7 @@
     },
     {
       "name": "Izree",
-      "email": "",
+      "email": "izree@pvps",
       "department": "",
       "entries": [
         {
@@ -5397,7 +5397,7 @@
     },
     {
       "name": "Jais",
-      "email": "",
+      "email": "jais@pvps",
       "department": "",
       "entries": [
         {
@@ -5604,7 +5604,7 @@
     },
     {
       "name": "Jareen",
-      "email": "",
+      "email": "jareen@pvps",
       "department": "",
       "entries": [
         {
@@ -5831,7 +5831,7 @@
     },
     {
       "name": "Jeannie",
-      "email": "",
+      "email": "jeannie@pvps",
       "department": "",
       "entries": [
         {
@@ -6028,7 +6028,7 @@
     },
     {
       "name": "Jiayi",
-      "email": "",
+      "email": "jiayi@pvps",
       "department": "",
       "entries": [
         {
@@ -6235,7 +6235,7 @@
     },
     {
       "name": "Jordan",
-      "email": "",
+      "email": "jordan@pvps",
       "department": "",
       "entries": [
         {
@@ -6452,7 +6452,7 @@
     },
     {
       "name": "Julie",
-      "email": "",
+      "email": "julie@pvps",
       "department": "",
       "entries": [
         {
@@ -6659,7 +6659,7 @@
     },
     {
       "name": "June Lee",
-      "email": "",
+      "email": "junelee@pvps",
       "department": "",
       "entries": [
         {
@@ -6876,7 +6876,7 @@
     },
     {
       "name": "June Quek",
-      "email": "",
+      "email": "junequek@pvps",
       "department": "",
       "entries": [
         {
@@ -7063,7 +7063,7 @@
     },
     {
       "name": "Justin",
-      "email": "",
+      "email": "justin@pvps",
       "department": "",
       "entries": [
         {
@@ -7220,7 +7220,7 @@
     },
     {
       "name": "Kang Yn",
-      "email": "",
+      "email": "kangyn@pvps",
       "department": "",
       "entries": [
         {
@@ -7427,7 +7427,7 @@
     },
     {
       "name": "Kenny",
-      "email": "",
+      "email": "kenny@pvps",
       "department": "",
       "entries": [
         {
@@ -7614,7 +7614,7 @@
     },
     {
       "name": "Khadijah",
-      "email": "",
+      "email": "khadijah@pvps",
       "department": "",
       "entries": [
         {
@@ -7821,7 +7821,7 @@
     },
     {
       "name": "Khairina",
-      "email": "",
+      "email": "khairina@pvps",
       "department": "",
       "entries": [
         {
@@ -8058,7 +8058,7 @@
     },
     {
       "name": "Kimberly",
-      "email": "",
+      "email": "kimberly@pvps",
       "department": "",
       "entries": [
         {
@@ -8255,7 +8255,7 @@
     },
     {
       "name": "Kineng",
-      "email": "",
+      "email": "kineng@pvps",
       "department": "",
       "entries": [
         {
@@ -8502,7 +8502,7 @@
     },
     {
       "name": "Kirthi",
-      "email": "",
+      "email": "kirthi@pvps",
       "department": "",
       "entries": [
         {
@@ -8689,7 +8689,7 @@
     },
     {
       "name": "Limshirui",
-      "email": "",
+      "email": "limshirui@pvps",
       "department": "",
       "entries": [
         {
@@ -8916,7 +8916,7 @@
     },
     {
       "name": "Lipseng",
-      "email": "",
+      "email": "lipseng@pvps",
       "department": "",
       "entries": [
         {
@@ -9083,7 +9083,7 @@
     },
     {
       "name": "Luning",
-      "email": "",
+      "email": "luning@pvps",
       "department": "",
       "entries": [
         {
@@ -9300,7 +9300,7 @@
     },
     {
       "name": "Malia",
-      "email": "",
+      "email": "malia@pvps",
       "department": "",
       "entries": [
         {
@@ -9487,7 +9487,7 @@
     },
     {
       "name": "Muslim",
-      "email": "",
+      "email": "muslim@pvps",
       "department": "",
       "entries": [
         {
@@ -9764,7 +9764,7 @@
     },
     {
       "name": "Nailul",
-      "email": "",
+      "email": "nailul@pvps",
       "department": "",
       "entries": [
         {
@@ -9951,7 +9951,7 @@
     },
     {
       "name": "Natalie",
-      "email": "",
+      "email": "natalie@pvps",
       "department": "",
       "entries": [
         {
@@ -10148,7 +10148,7 @@
     },
     {
       "name": "Nelly",
-      "email": "",
+      "email": "nelly@pvps",
       "department": "",
       "entries": [
         {
@@ -10355,7 +10355,7 @@
     },
     {
       "name": "Norah",
-      "email": "",
+      "email": "norah@pvps",
       "department": "",
       "entries": [
         {
@@ -10522,7 +10522,7 @@
     },
     {
       "name": "Norinna",
-      "email": "",
+      "email": "norinna@pvps",
       "department": "",
       "entries": [
         {
@@ -10749,7 +10749,7 @@
     },
     {
       "name": "Norjannah",
-      "email": "",
+      "email": "norjannah@pvps",
       "department": "",
       "entries": [
         {
@@ -10936,7 +10936,7 @@
     },
     {
       "name": "Pamela",
-      "email": "",
+      "email": "pamela@pvps",
       "department": "",
       "entries": [
         {
@@ -11093,7 +11093,7 @@
     },
     {
       "name": "Patricia",
-      "email": "",
+      "email": "patricia@pvps",
       "department": "",
       "entries": [
         {
@@ -11310,7 +11310,7 @@
     },
     {
       "name": "Pavani",
-      "email": "",
+      "email": "pavani@pvps",
       "department": "",
       "entries": [
         {
@@ -11537,7 +11537,7 @@
     },
     {
       "name": "Pehyan",
-      "email": "",
+      "email": "pehyan@pvps",
       "department": "",
       "entries": [
         {
@@ -11794,7 +11794,7 @@
     },
     {
       "name": "Phoebe",
-      "email": "",
+      "email": "phoebe@pvps",
       "department": "",
       "entries": [
         {
@@ -11991,7 +11991,7 @@
     },
     {
       "name": "Pohsoon",
-      "email": "",
+      "email": "pohsoon@pvps",
       "department": "",
       "entries": [
         {
@@ -12228,7 +12228,7 @@
     },
     {
       "name": "Raha",
-      "email": "",
+      "email": "raha@pvps",
       "department": "",
       "entries": [
         {
@@ -12415,7 +12415,7 @@
     },
     {
       "name": "Raihanna",
-      "email": "",
+      "email": "raihanna@pvps",
       "department": "",
       "entries": [
         {
@@ -12612,7 +12612,7 @@
     },
     {
       "name": "Santhi",
-      "email": "",
+      "email": "santhi@pvps",
       "department": "",
       "entries": [
         {
@@ -12839,7 +12839,7 @@
     },
     {
       "name": "Sebby",
-      "email": "",
+      "email": "sebby@pvps",
       "department": "",
       "entries": [
         {
@@ -13036,7 +13036,7 @@
     },
     {
       "name": "Sharina",
-      "email": "",
+      "email": "sharina@pvps",
       "department": "",
       "entries": [
         {
@@ -13263,7 +13263,7 @@
     },
     {
       "name": "Sherylene",
-      "email": "",
+      "email": "sherylene@pvps",
       "department": "",
       "entries": [
         {
@@ -13470,7 +13470,7 @@
     },
     {
       "name": "Shi_Rui",
-      "email": "",
+      "email": "shirui@pvps",
       "department": "",
       "entries": [
         {
@@ -13697,7 +13697,7 @@
     },
     {
       "name": "Shirin",
-      "email": "",
+      "email": "shirin@pvps",
       "department": "",
       "entries": [
         {
@@ -13954,7 +13954,7 @@
     },
     {
       "name": "Shiyu",
-      "email": "",
+      "email": "shiyu@pvps",
       "department": "",
       "entries": [
         {
@@ -14161,7 +14161,7 @@
     },
     {
       "name": "Shuang",
-      "email": "",
+      "email": "shuang@pvps",
       "department": "",
       "entries": [
         {
@@ -14408,7 +14408,7 @@
     },
     {
       "name": "Shuankwee",
-      "email": "",
+      "email": "shuankwee@pvps",
       "department": "",
       "entries": [
         {
@@ -14595,7 +14595,7 @@
     },
     {
       "name": "Siewhui",
-      "email": "",
+      "email": "siewhui@pvps",
       "department": "",
       "entries": [
         {
@@ -14792,7 +14792,7 @@
     },
     {
       "name": "Siewkiang",
-      "email": "",
+      "email": "siewkiang@pvps",
       "department": "",
       "entries": [
         {
@@ -14969,7 +14969,7 @@
     },
     {
       "name": "Siewyeun",
-      "email": "",
+      "email": "siewyeun@pvps",
       "department": "",
       "entries": [
         {
@@ -15146,7 +15146,7 @@
     },
     {
       "name": "Singwee",
-      "email": "",
+      "email": "singwee@pvps",
       "department": "",
       "entries": [
         {
@@ -15363,7 +15363,7 @@
     },
     {
       "name": "Suhaila",
-      "email": "",
+      "email": "suhaila@pvps",
       "department": "",
       "entries": [
         {
@@ -15580,7 +15580,7 @@
     },
     {
       "name": "Suriani",
-      "email": "",
+      "email": "suriani@pvps",
       "department": "",
       "entries": [
         {
@@ -15767,7 +15767,7 @@
     },
     {
       "name": "Tiantian",
-      "email": "",
+      "email": "tiantian@pvps",
       "department": "",
       "entries": [
         {
@@ -16014,7 +16014,7 @@
     },
     {
       "name": "Tina",
-      "email": "",
+      "email": "tina@pvps",
       "department": "",
       "entries": [
         {
@@ -16181,7 +16181,7 @@
     },
     {
       "name": "Valar",
-      "email": "",
+      "email": "valar@pvps",
       "department": "",
       "entries": [
         {
@@ -16438,7 +16438,7 @@
     },
     {
       "name": "Vareck",
-      "email": "",
+      "email": "vareck@pvps",
       "department": "",
       "entries": [
         {
@@ -16585,7 +16585,7 @@
     },
     {
       "name": "Watson",
-      "email": "",
+      "email": "watson@pvps",
       "department": "",
       "entries": [
         {
@@ -16772,7 +16772,7 @@
     },
     {
       "name": "Xiuling",
-      "email": "",
+      "email": "xiuling@pvps",
       "department": "",
       "entries": [
         {
@@ -17009,7 +17009,7 @@
     },
     {
       "name": "Yinching",
-      "email": "",
+      "email": "yinching@pvps",
       "department": "",
       "entries": [
         {
@@ -17176,7 +17176,7 @@
     },
     {
       "name": "Yusneeta",
-      "email": "",
+      "email": "yusneeta@pvps",
       "department": "",
       "entries": [
         {
@@ -17393,7 +17393,7 @@
     },
     {
       "name": "Zahrah",
-      "email": "",
+      "email": "zahrah@pvps",
       "department": "",
       "entries": [
         {
@@ -17580,7 +17580,7 @@
     },
     {
       "name": "Zainah",
-      "email": "",
+      "email": "zainah@pvps",
       "department": "",
       "entries": [
         {
@@ -17737,7 +17737,7 @@
     },
     {
       "name": "Zairina",
-      "email": "",
+      "email": "zairina@pvps",
       "department": "",
       "entries": [
         {
@@ -17914,7 +17914,7 @@
     },
     {
       "name": "Zatty",
-      "email": "",
+      "email": "zatty@pvps",
       "department": "",
       "entries": [
         {
@@ -18111,7 +18111,7 @@
     },
     {
       "name": "Zubaidah",
-      "email": "",
+      "email": "zubaidah@pvps",
       "department": "",
       "entries": [
         {

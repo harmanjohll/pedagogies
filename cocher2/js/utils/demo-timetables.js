@@ -17,7 +17,7 @@ import { getMyTimetable, saveMyTimetable } from './timetable.js';
  * a weekly movement pattern identifies a person even under a different name,
  * so both the identities and the entries are now fabricated. */
 const DEMO = {
-  'demo.teacher@pvps.moe.edu.sg': 'pvps-demo-teacher.json',
+  'demo.teacher@pvps': 'pvps-demo-teacher.json',
   'demo.econs@sajc.moe.edu.sg': 'sajc-demo-econs.json',
   'demo.math@sajc.moe.edu.sg': 'sajc-demo-math.json',
 };

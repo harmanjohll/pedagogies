@@ -1,4 +1,6 @@
 {
+  "access": "open",
+  "accessNote": "open = anyone may sign in; an unrecognised domain picks a school or continues without one. A school marked \"closed\" is the exception: only its own domain and its allowEmails list may sign in as that school, and it is hidden from the picker so nobody can select their way in.",
   "schools": [
     {
       "id": "bty",
@@ -6,15 +8,113 @@
       "domains": [
         "btyss.moe.edu.sg"
       ],
-      "pack": "bty.json"
+      "pack": "bty.json",
+      "allowEmails": []
     },
     {
       "id": "pvps",
       "name": "Park View Primary School",
       "domains": [
-        "pvps.moe.edu.sg"
+        "pvps"
       ],
-      "pack": "pvps.json"
+      "pack": "pvps.json",
+      "allowEmails": [
+        "abidah@pvps",
+        "adeline@pvps",
+        "angeline@pvps",
+        "anna@pvps",
+        "anuradha@pvps",
+        "averil@pvps",
+        "azmi@pvps",
+        "catherine@pvps",
+        "celine@pvps",
+        "charlene@pvps",
+        "chitra@pvps",
+        "darvin@pvps",
+        "eileen@pvps",
+        "emily@pvps",
+        "engtiong@pvps",
+        "este@pvps",
+        "evie@pvps",
+        "faizah@pvps",
+        "farah@pvps",
+        "farizah@pvps",
+        "fatin@pvps",
+        "hanim@pvps",
+        "hannah@pvps",
+        "hazimah@pvps",
+        "haziqah@pvps",
+        "helen@pvps",
+        "irene@pvps",
+        "izdihar@pvps",
+        "izree@pvps",
+        "jais@pvps",
+        "jareen@pvps",
+        "jeannie@pvps",
+        "jiayi@pvps",
+        "jordan@pvps",
+        "julie@pvps",
+        "junelee@pvps",
+        "junequek@pvps",
+        "justin@pvps",
+        "kangyn@pvps",
+        "kenny@pvps",
+        "khadijah@pvps",
+        "khairina@pvps",
+        "kimberly@pvps",
+        "kineng@pvps",
+        "kirthi@pvps",
+        "limshirui@pvps",
+        "lipseng@pvps",
+        "luning@pvps",
+        "malia@pvps",
+        "muslim@pvps",
+        "nailul@pvps",
+        "natalie@pvps",
+        "nelly@pvps",
+        "norah@pvps",
+        "norinna@pvps",
+        "norjannah@pvps",
+        "pamela@pvps",
+        "patricia@pvps",
+        "pavani@pvps",
+        "pehyan@pvps",
+        "phoebe@pvps",
+        "pohsoon@pvps",
+        "raha@pvps",
+        "raihanna@pvps",
+        "santhi@pvps",
+        "sebby@pvps",
+        "sharina@pvps",
+        "sherylene@pvps",
+        "shirin@pvps",
+        "shirui@pvps",
+        "shiyu@pvps",
+        "shuang@pvps",
+        "shuankwee@pvps",
+        "siewhui@pvps",
+        "siewkiang@pvps",
+        "siewyeun@pvps",
+        "singwee@pvps",
+        "suhaila@pvps",
+        "suriani@pvps",
+        "tiantian@pvps",
+        "tina@pvps",
+        "valar@pvps",
+        "vareck@pvps",
+        "watson@pvps",
+        "xiuling@pvps",
+        "yinching@pvps",
+        "yusneeta@pvps",
+        "zahrah@pvps",
+        "zainah@pvps",
+        "zairina@pvps",
+        "zatty@pvps",
+        "zubaidah@pvps",
+        "demo.teacher@pvps"
+      ],
+      "closed": true,
+      "closedNote": "Beta. The admin decides who is on allowEmails."
     },
     {
       "id": "sajc",
@@ -22,7 +122,8 @@
       "domains": [
         "sajc.moe.edu.sg"
       ],
-      "pack": "sajc.json"
+      "pack": "sajc.json",
+      "allowEmails": []
     }
   ]
 }

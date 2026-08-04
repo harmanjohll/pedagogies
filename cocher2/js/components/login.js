@@ -16,7 +16,7 @@
 
 import { Store } from '../state.js';
 import { trackEvent } from '../utils/analytics.js';
-import { schoolForEmail, listSchools, resetSchoolCache } from '../utils/school.js';
+import { schoolForEmail, listSchools, resetSchoolCache, mayAccess, pickableSchools } from '../utils/school.js';
 import { seedDemoTimetable } from '../utils/demo-timetables.js';
 
 export function getCurrentUser() {
@@ -258,15 +258,30 @@ export async function renderLogin(onComplete) {
     const email = emailInput.value.trim().toLowerCase();
     errorEl.style.display = 'none';
 
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      errorEl.textContent = 'Please enter a valid email address.';
+    // A dot in the domain is NOT required. Pilot schools sign in with a short
+    // handle — adeline@pvps — deliberately chosen so it cannot be mistaken for,
+    // or collide with, a real MOE address. Insisting on user@host.tld would
+    // reject every one of them.
+    if (!/^[^@\s]+@[^@\s.][^@\s]*$/.test(email)) {
+      errorEl.textContent = 'Please enter your sign-in address, e.g. yourname@pvps.';
       errorEl.style.display = 'block';
       return;
     }
 
-    // The domain decides the school. An unknown domain is NOT a rejection —
-    // the teacher simply tells us which school they're from.
     goBtn.disabled = true;
+    // Is this address allowed in at all? Open by default; restricted only when
+    // the registry says so. The message says what would fix it, because "no"
+    // with no route forward is how a teacher decides an app is broken.
+    const gate = await mayAccess(email).catch(() => ({ ok: true }));
+    if (!gate.ok) {
+      goBtn.disabled = false;
+      errorEl.textContent = gate.reason;
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    // The domain decides the school. Under open access an unknown domain is NOT
+    // a rejection — the teacher simply tells us which school they're from.
     const match = await schoolForEmail(email);
     goBtn.disabled = false;
 
@@ -307,7 +322,7 @@ async function signIn(overlay, user, onComplete) {
  * school pack, just without school-specific calendar/levels/frameworks.
  */
 async function showSchoolPicker(overlay, email, onComplete) {
-  const schools = await listSchools();
+  const schools = await pickableSchools();
   const card = overlay.querySelector('#login-card');
   card.innerHTML = `
     <div style="text-align:left;">
