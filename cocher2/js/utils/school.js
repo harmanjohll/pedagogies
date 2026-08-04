@@ -153,6 +153,42 @@ export async function frameworksFor(id) {
   return Array.isArray(p?.frameworks) ? p.frameworks : [];
 }
 
+/**
+ * The school's learning-practice model: an outer ring of named practices and an
+ * inner ring of learner behaviours. Beatty's is GROW / ACT / MAP / ASK; the
+ * shape is common, the four names are not. A school that publishes none gets
+ * the national frame — Assessment FOR and AS Learning — which is genuinely
+ * everyone's, rather than someone else's acronyms.
+ */
+export const NATIONAL_LEARNING_PRACTICE = {
+  title: 'The Learning Practice',
+  blurb: 'Assessment FOR Learning and Assessment AS Learning run together, in and out of lessons. '
+       + 'They are not stages: the teacher is gathering evidence while the pupil is judging their own work.',
+  centre: ['Proactive', 'Learner'],
+  practices: [
+    { key: 'AfL', label: 'Assess FOR learning', blurb: 'Evidence gathered while learning, acted on now', colour: '#3b82f6' },
+    { key: 'AaL', label: 'Assess AS learning', blurb: 'The pupil judges their own work and decides next', colour: '#10b981' },
+  ],
+  behaviours: [
+    { label: 'Prepare', blurb: 'Get ready for learning before the lesson', colour: '#6366f1' },
+    { label: 'Participate', blurb: 'Engage actively during the lesson', colour: '#ec4899' },
+    { label: 'Process', blurb: 'Make sense of it afterwards', colour: '#14b8a6' },
+  ],
+};
+
+export async function learningPracticeFor(id) {
+  const p = await loadPack(id);
+  const lp = p?.learningPractice;
+  if (!lp || !Array.isArray(lp.practices) || !lp.practices.length) return NATIONAL_LEARNING_PRACTICE;
+  return {
+    title: lp.title || NATIONAL_LEARNING_PRACTICE.title,
+    blurb: lp.blurb || '',
+    centre: Array.isArray(lp.centre) && lp.centre.length ? lp.centre : NATIONAL_LEARNING_PRACTICE.centre,
+    practices: lp.practices,
+    behaviours: Array.isArray(lp.behaviours) && lp.behaviours.length ? lp.behaviours : NATIONAL_LEARNING_PRACTICE.behaviours,
+  };
+}
+
 /** Reset caches — used when switching accounts so nothing leaks across. */
 export function resetSchoolCache() {
   _registry = null;
@@ -197,8 +233,40 @@ export async function schoolTeachingContext(id, { subject } = {}) {
 
   const haf = p.programmes?.haf;
   if (haf?.domains) lines.push(`\nRecognition (${haf.name}) spans: ${haf.domains.join(', ')}.`);
-  if (p.programmes?.assessment?.verbatim) lines.push(`\nAssessment stance: ${p.programmes.assessment.verbatim}`);
+
+  /* Assessment, split so a prompt can reach for the right half. AfL is what the
+   * teacher does while pupils learn; AaL is what the pupils do. A lesson plan
+   * that names neither is not this school's lesson plan. */
+  const asmt = p.programmes?.assessment;
+  if (asmt?.verbatim) lines.push(`\nAssessment stance: ${asmt.verbatim}`);
+  if (Array.isArray(asmt?.afl) && asmt.afl.length) {
+    lines.push(`  Assessment FOR Learning here means: ${asmt.afl.join('; ')}.`);
+  }
+  if (Array.isArray(asmt?.aal) && asmt.aal.length) {
+    lines.push(`  Assessment AS Learning here means: ${asmt.aal.join('; ')}.`);
+  }
+  if (asmt?.purpose) lines.push(`  Purpose: ${asmt.purpose}.`);
   if (p.programmes?.discipline?.verbatim) lines.push(`Discipline stance: ${p.programmes.discipline.verbatim}`);
+
+  /* The school's own learner routines, named and staged. Without these the
+   * model invents a plausible reflection routine, which is worse than none —
+   * the teacher then has to unpick a framework their school does not use. */
+  const fws = Array.isArray(p.frameworks) ? p.frameworks : [];
+  if (fws.length) {
+    lines.push(`\nThe school's OWN learner routines — use these names and stages, do not substitute others:`);
+    fws.forEach(f => {
+      const stages = (f.stages || []).map(st => `${st.key} = ${st.label}`).join(' → ');
+      lines.push(`  ${f.name}${f.purpose ? ` (${f.purpose})` : ''}${stages ? `: ${stages}` : ''}`);
+      if (f.guidance) lines.push(`    ${f.guidance}`);
+    });
+  }
+
+  /* The learning-practice model, when the school publishes one. */
+  const lp = p.learningPractice;
+  if (lp && Array.isArray(lp.practices) && lp.practices.length) {
+    lines.push(`\n${lp.title || 'Learning practice'}: ${lp.practices.map(x => `${x.key} (${x.label})`).join(' · ')}`
+      + `${Array.isArray(lp.behaviours) && lp.behaviours.length ? `, around learner behaviours ${lp.behaviours.map(b => b.label).join(' / ')}` : ''}.`);
+  }
 
   if (!lines.length) return '';
   return `[The teacher's school — use ITS OWN language and approaches. The wording below is quoted from the school's published material; reproduce its terminology exactly rather than substituting generic equivalents. Do not invent expansions for acronyms the school has not defined.]\n${lines.join('\n')}`;

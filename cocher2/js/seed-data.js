@@ -2302,7 +2302,7 @@ const SHOWCASE_LESSONS = [
       { name: 'Neutralisation: where does the acid go?', duration: 12, teachingArea: 'deepen_questions', teachingAction: 'funnel', mode: 'whole-class', e21ccFocus: 'criticalThinking',
         simId: 'titration', simTitle: 'Acid-Base Titration',
         activity: 'Build the word equation acid + base → salt + water through funnelling questions, then demonstrate it live in the Acid-Base Titration simulation — watch the indicator flick at the endpoint.', studentInstructions: 'Answer each question. Watch the titration on screen — be ready to explain what happens to the H⁺ and OH⁻ ions at the endpoint.' },
-      { name: 'GROW: what do you now understand?', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_grow',
+      { name: 'GROW: what do you now understand?', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_aal',
         activity: 'Close with the GROW reflection routine.', studentInstructions: 'Gift yourself one thing you understand. Rise: one gap. Own: a real-life example.' }
     ],
     sims: [{ id: 'titration', title: 'Acid-Base Titration' }],
@@ -2391,7 +2391,7 @@ const SHOWCASE_LESSONS = [
         activity: 'Students take a stance in a corner, debate, and refine their view.', studentInstructions: 'Pick your corner. Defend your choice with a reason. Be ready to move if convinced.' },
       { name: 'Whose responsibility?', duration: 12, teachingArea: 'deepen_questions', teachingAction: 'socratic', mode: 'whole-class', e21ccFocus: 'socialConnectedness',
         activity: 'Probe where responsibility lies — the poster, the platform, the bystander.', studentInstructions: 'What makes you say that? Whose choice matters most here?' },
-      { name: 'My digital promise', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_builtin_act',
+      { name: 'My digital promise', duration: 10, teachingArea: 'conclude', teachingAction: 'grow_selfcheck', mode: 'individual', frameworkId: 'fw_afl',
         activity: 'Commit to one responsible change, ACT-on-feedback style.', studentInstructions: 'Write one habit to keep, one to change, and one person to look out for.' }
     ],
     deck: { title: 'Think Before You Share', wallPrompt: 'One responsible habit you will keep online?', slides: [

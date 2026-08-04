@@ -15,6 +15,8 @@ import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/work
 import { processLatex, renderMd } from '../utils/latex.js';
 import { stripExpandMarkers } from '../utils/markdown.js';
 import { studentDescriptor, exampleLevel } from '../utils/vocabulary.js';
+import { learningPracticeFor } from '../utils/school.js';
+import { getCurrentUser } from '../components/login.js';
 import { openModal } from '../components/modals.js';
 import { isNarrow } from '../utils/viewport.js';
 
@@ -1373,6 +1375,90 @@ function updateAoLStepper(container) {
    AaL: Assessment as Learning (Metacognition)
    \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 
+
+/* ── The Learning Practice ring ───────────────────────────────────────────────
+ * Drawn from the school's own model rather than hardcoded. Co-Cher 1 painted
+ * four fixed quadrants — GROW / ACT / MAP / ASK — into the SVG, which is
+ * Beatty's model and nobody else's; a Park View teacher was being taught
+ * another school's vocabulary by a diagram they could not change. The ring now
+ * takes however many practices the school names (two, four, six), and a school
+ * that names none gets the national frame, Assessment FOR and AS Learning.
+ */
+const LP_R_OUTER = 190, LP_R_INNER = 110, LP_C = 220;
+
+/** One arc of an n-way split, starting at 12 o'clock. */
+function lpArc(i, n, r) {
+  const a0 = (-90 + (i * 360) / n) * Math.PI / 180;
+  const a1 = (-90 + ((i + 1) * 360) / n) * Math.PI / 180;
+  const pt = (a) => [LP_C + r * Math.cos(a), LP_C + r * Math.sin(a)];
+  const [x0, y0] = pt(a0), [x1, y1] = pt(a1);
+  const large = (360 / n) > 180 ? 1 : 0;
+  const mid = pt((a0 + a1) / 2);
+  // A single-segment ring cannot be drawn as one arc — split it in two.
+  const d = n === 1
+    ? `M ${LP_C},${LP_C - r} A ${r},${r} 0 1,1 ${LP_C - 0.01},${LP_C - r}`
+    : `M ${x0},${y0} A ${r},${r} 0 ${large},1 ${x1},${y1}`;
+  return { d, mx: mid[0], my: mid[1] };
+}
+
+function lpSvg(model) {
+  const P = model.practices, B = model.behaviours;
+  const outer = P.map((p, i) => {
+    const a = lpArc(i, P.length, LP_R_OUTER);
+    const c = p.colour || 'var(--accent,#4361ee)';
+    return `<path d="${a.d}" fill="none" stroke="${c}" stroke-opacity="0.18" stroke-width="40"/>
+      <path d="${a.d}" fill="none" stroke="${c}" stroke-width="2"/>
+      <text x="${a.mx.toFixed(1)}" y="${(a.my - 6).toFixed(1)}" text-anchor="middle" font-size="20" font-weight="800"
+            fill="${c}" stroke="var(--bg-card,#fff)" stroke-width="3" paint-order="stroke">${escHtml(p.key)}</text>
+      <text x="${a.mx.toFixed(1)}" y="${(a.my + 11).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700"
+            font-style="italic" fill="${c}" stroke="var(--bg-card,#fff)" stroke-width="3" paint-order="stroke">${escHtml(p.label || '')}</text>`;
+  }).join('');
+  const inner = B.map((b, i) => {
+    const a = lpArc(i, B.length, LP_R_INNER);
+    const c = b.colour || 'var(--ink-muted,#64748b)';
+    return `<path d="${a.d}" fill="none" stroke="${c}" stroke-opacity="0.2" stroke-width="32"/>
+      <path d="${a.d}" fill="none" stroke="${c}" stroke-width="1.5"/>
+      <text x="${a.mx.toFixed(1)}" y="${(a.my + 4).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700"
+            fill="${c}" stroke="var(--bg-card,#fff)" stroke-width="3" paint-order="stroke">${escHtml(b.label)}</text>`;
+  }).join('');
+  const centre = (model.centre || []).slice(0, 2);
+  return `<svg viewBox="0 0 440 440" width="380" height="380" style="max-width:100%;" role="img"
+      aria-label="${escHtml(model.title)}: ${escHtml(P.map(p => p.key).join(', '))} around ${escHtml(B.map(b => b.label).join(', '))}">
+    <circle cx="${LP_C}" cy="${LP_C}" r="200" fill="none" stroke="var(--border,#e2e5ea)" stroke-width="1"/>
+    ${outer}
+    <circle cx="${LP_C}" cy="${LP_C}" r="120" fill="var(--bg-card,#fff)"/>
+    <circle cx="${LP_C}" cy="${LP_C}" r="120" fill="none" stroke="var(--border,#e2e5ea)" stroke-width="1"/>
+    ${inner}
+    <circle cx="${LP_C}" cy="${LP_C}" r="55" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
+    ${centre.map((t, i) => `<text x="${LP_C}" y="${LP_C + (centre.length > 1 ? (i ? 12 : -5) : 4)}" text-anchor="middle"
+      font-size="13" font-weight="800" fill="var(--ink,#374151)">${escHtml(t)}</text>`).join('')}
+  </svg>`;
+}
+
+/** Paint the ring and its legend once the school's model has loaded. */
+async function paintLearningPractice(container) {
+  let model;
+  try { model = await learningPracticeFor(getCurrentUser()?.schoolId); } catch { return; }
+  if (!model) return;
+  const blurb = container.querySelector('#lp-blurb');
+  const dia = container.querySelector('#lp-diagram');
+  const leg = container.querySelector('#lp-legend');
+  if (!blurb || !dia || !leg) return;
+  blurb.textContent = model.blurb || '';
+  dia.innerHTML = lpSvg(model);
+  const row = (items, k) => items.map(x => `<span style="color:${x.colour};font-weight:600;">${escHtml(x[k] || x.label)}</span>: ${escHtml(x.blurb || '')}<br/>`).join('');
+  leg.innerHTML = `
+    <div>
+      <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Outer Ring: Learning Practices</div>
+      <div style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;">${row(model.practices, 'key')}</div>
+      <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">All of these happen at once, not in sequence.</div>
+    </div>
+    <div>
+      <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Inner Ring: Learner Behaviours</div>
+      <div style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;">${row(model.behaviours, 'label')}</div>
+    </div>`;
+}
+
 export function renderAaL(container) {
   const classes = Store.getClasses();
 
@@ -1418,90 +1504,9 @@ export function renderAaL(container) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </span>
           </div>
-          <div class="assess-section-desc">
-            The Learning Practice model shows how GROW, ACT, MAP, and ASK work together simultaneously,
-            both in and out of lessons. All practices happen all the time, not in sequence.
-            The inner ring represents the learner behaviours that drive learning: Prepare, Participate, and Process.
-          </div>
-
-          <div style="display:flex;justify-content:center;margin-bottom:20px;">
-            <svg viewBox="0 0 440 440" width="380" height="380" style="max-width:100%;">
-              <!-- Outer ring band (GROW / ACT / MAP / ASK) -->
-              <!-- Full outer ring background -->
-              <circle cx="220" cy="220" r="200" fill="none" stroke="var(--border,#e2e5ea)" stroke-width="1"/>
-
-              <!-- Outer quadrant arcs as thick bands -->
-              <!-- GROW (top): blue band -->
-              <path d="M220,30 A190,190 0 0,1 410,220" fill="none" stroke="rgba(59,130,246,0.18)" stroke-width="40"/>
-              <path d="M220,30 A190,190 0 0,1 410,220" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="0"/>
-              <!-- ACT (right): red band -->
-              <path d="M410,220 A190,190 0 0,1 220,410" fill="none" stroke="rgba(239,68,68,0.18)" stroke-width="40"/>
-              <path d="M410,220 A190,190 0 0,1 220,410" fill="none" stroke="#ef4444" stroke-width="2"/>
-              <!-- MAP (bottom): green band -->
-              <path d="M220,410 A190,190 0 0,1 30,220" fill="none" stroke="rgba(16,185,129,0.18)" stroke-width="40"/>
-              <path d="M220,410 A190,190 0 0,1 30,220" fill="none" stroke="#10b981" stroke-width="2"/>
-              <!-- ASK (left): amber band -->
-              <path d="M30,220 A190,190 0 0,1 220,30" fill="none" stroke="rgba(245,158,11,0.18)" stroke-width="40"/>
-              <path d="M30,220 A190,190 0 0,1 220,30" fill="none" stroke="#f59e0b" stroke-width="2"/>
-
-              <!-- Outer ring labels (positioned at midpoints of each quadrant arc) -->
-              <text x="336" y="104" text-anchor="middle" font-size="22" font-weight="800" fill="#3b82f6">GROW</text>
-              <text x="336" y="121" text-anchor="middle" font-size="12" fill="#3b82f6" font-weight="700" font-style="italic" stroke="var(--bg-card,#fff)" stroke-width="3" paint-order="stroke">Reflect on learning</text>
-              <text x="336" y="336" text-anchor="middle" font-size="22" font-weight="800" fill="#ef4444">ACT</text>
-              <text x="336" y="353" text-anchor="middle" font-size="12" fill="#ef4444" font-weight="700" font-style="italic">Act on feedback</text>
-              <text x="104" y="336" text-anchor="middle" font-size="22" font-weight="800" fill="#10b981">MAP</text>
-              <text x="104" y="353" text-anchor="middle" font-size="12" fill="#10b981" font-weight="700" font-style="italic">Map your progress</text>
-              <text x="104" y="104" text-anchor="middle" font-size="22" font-weight="800" fill="#f59e0b">ASK</text>
-              <text x="104" y="121" text-anchor="middle" font-size="12" fill="#f59e0b" font-weight="700" font-style="italic">Ask for help</text>
-
-              <!-- Inner ring band (Prepare / Participate / Process) -->
-              <!-- Inner ring background -->
-              <circle cx="220" cy="220" r="120" fill="var(--bg-card,#fff)"/>
-              <circle cx="220" cy="220" r="120" fill="none" stroke="var(--border,#e2e5ea)" stroke-width="1"/>
-
-              <!-- Inner thirds as curved bands -->
-              <!-- Prepare (top-right, 0° to 120°) -->
-              <path d="M220,110 A110,110 0 0,1 315.3,275" fill="none" stroke="rgba(99,102,241,0.2)" stroke-width="32"/>
-              <path d="M220,110 A110,110 0 0,1 315.3,275" fill="none" stroke="#6366f1" stroke-width="1.5"/>
-              <!-- Participate (120° to 240°) -->
-              <path d="M315.3,275 A110,110 0 0,1 124.7,275" fill="none" stroke="rgba(236,72,153,0.2)" stroke-width="32"/>
-              <path d="M315.3,275 A110,110 0 0,1 124.7,275" fill="none" stroke="#ec4899" stroke-width="1.5"/>
-              <!-- Process (240° to 360°) -->
-              <path d="M124.7,275 A110,110 0 0,1 220,110" fill="none" stroke="rgba(20,184,166,0.2)" stroke-width="32"/>
-              <path d="M124.7,275 A110,110 0 0,1 220,110" fill="none" stroke="#14b8a6" stroke-width="1.5"/>
-
-              <!-- Inner labels (positioned along the bands, rotated to follow the curve) -->
-              <text x="280" y="168" text-anchor="middle" font-size="14" font-weight="700" fill="#6366f1" transform="rotate(30,280,168)">Prepare</text>
-              <text x="220" y="310" text-anchor="middle" font-size="14" font-weight="700" fill="#ec4899">Participate</text>
-              <text x="158" y="168" text-anchor="middle" font-size="14" font-weight="700" fill="#14b8a6" transform="rotate(-30,158,168)">Process</text>
-
-              <!-- Centre circle -->
-              <circle cx="220" cy="220" r="55" fill="var(--bg-card,#fff)" stroke="var(--border,#e2e5ea)" stroke-width="2"/>
-              <text x="220" y="215" text-anchor="middle" font-size="13" font-weight="800" fill="var(--ink,#374151)">Proactive</text>
-              <text x="220" y="232" text-anchor="middle" font-size="13" font-weight="800" fill="var(--ink,#374151)">Learner</text>
-            </svg>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div>
-              <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Outer Ring: Learning Practices</div>
-              <div style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;">
-                <span style="color:#3b82f6;font-weight:600;">GROW</span>: Reflect on what you know and don\u2019t know<br/>
-                <span style="color:#ef4444;font-weight:600;">ACT</span>: Process and act on feedback received<br/>
-                <span style="color:#10b981;font-weight:600;">MAP</span>: Track your progress against goals<br/>
-                <span style="color:#f59e0b;font-weight:600;">ASK</span>: Seek help and clarify understanding
-              </div>
-              <div style="font-size:0.75rem;color:var(--ink-faint);margin-top:6px;font-style:italic;">All four practices happen simultaneously, not in sequence.</div>
-            </div>
-            <div>
-              <div style="font-size:0.8125rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Inner Ring: Learner Behaviours</div>
-              <div style="font-size:0.875rem;color:var(--ink-muted);line-height:1.6;">
-                <span style="color:#6366f1;font-weight:600;">Prepare</span>: Get ready for learning before class<br/>
-                <span style="color:#ec4899;font-weight:600;">Participate</span>: Engage actively during lessons<br/>
-                <span style="color:#14b8a6;font-weight:600;">Process</span>: Make sense of learning after class
-              </div>
-            </div>
-          </div>
+          <div class="assess-section-desc" id="lp-blurb">Loading your school\u2019s learning practice&hellip;</div>
+          <div id="lp-diagram" style="display:flex;justify-content:center;margin-bottom:20px;"></div>
+          <div id="lp-legend" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"></div>
         </div>
 
         <!-- Reflection Prompt Generator -->
@@ -1648,8 +1653,14 @@ function aalFrameworks() {
   return Store.getFrameworks().filter(f => f.purpose === 'metacognition' || f.purpose === 'feedback');
 }
 
-/** Stable card ids for the seeded builtins (deep links / tours rely on them). */
-const BUILTIN_CARD_IDS = { fw_builtin_grow: 'aal-grow-card', fw_builtin_act: 'aal-act-card' };
+/** Stable card ids for the seeded builtins (deep links / tours rely on them).
+ *  The two Beatty ids are kept only so an existing install's deep links do not
+ *  break before its frameworks are re-seeded from its own pack. */
+const BUILTIN_CARD_IDS = {
+  fw_afl: 'aal-afl-card', fw_aal: 'aal-aal-card',
+  fw_bty_grow: 'aal-grow-card', fw_bty_act: 'aal-act-card',
+  fw_builtin_grow: 'aal-grow-card', fw_builtin_act: 'aal-act-card',
+};
 
 const STAGE_COLORS = ['#f59e0b', '#ef4444', '#10b981', '#8b5cf6', '#3b82f6', '#ec4899'];
 
@@ -1659,11 +1670,14 @@ function slugifyFramework(name) {
   return String(name || 'framework').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'framework';
 }
 
-/* The builtins keep their hand-written enacted examples (keyed grow-g … act-t). */
+/* Beatty's GROW and ACT keep their hand-written enacted examples (keyed
+ * grow-g … act-t), whether they arrive from the pack or from an install that
+ * still carries the old hardcoded ids. Every other framework — including the
+ * national AfL/AaL pair — renders from its own stage prompts. */
 function enactedPanelKey(fw, stage) {
   const k = String(stage.key || '').toLowerCase();
-  if (fw.id === 'fw_builtin_grow') return `grow-${k}`;
-  if (fw.id === 'fw_builtin_act') return `act-${k}`;
+  if (fw.id === 'fw_bty_grow' || fw.id === 'fw_builtin_grow') return `grow-${k}`;
+  if (fw.id === 'fw_bty_act' || fw.id === 'fw_builtin_act') return `act-${k}`;
   return null;
 }
 
@@ -1864,6 +1878,7 @@ Make them concrete, empowering, and suitable for student self-reflection journal
 }
 
 function wireAaLEvents(container) {
+  paintLearningPractice(container).catch(() => {});
   bindWorkflowClicks(container);
   // MAI collapsible toggle
   const maiToggle = container.querySelector('#mai-toggle');

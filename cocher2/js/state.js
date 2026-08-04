@@ -122,51 +122,65 @@ function syncRefContentToIdb(oldList, newList) {
   } catch { /* non-fatal — content stays in memory this session */ }
 }
 
-/* ── Built-in pedagogy frameworks (WS-D) ──
- * Stage structure + wording lifted faithfully from the previously hardcoded
- * AaL cards in views/assessment.js (GROW by Reflecting / ACT on Feedback).
+/* ── Built-in pedagogy frameworks ──
+ * GROW by Reflecting and ACT on Feedback used to live here, seeded into every
+ * install. They are BEATTY'S routines: a Park View teacher opening Assessment
+ * as Learning was handed another school's vocabulary and could not delete it.
+ * They now live in `bty.json`, alongside every other school's own routines,
+ * and what is seeded for everyone is the national frame that actually is
+ * everyone's — Assessment FOR Learning and Assessment AS Learning.
+ *
+ * A school's own routines seed on top of these from its pack (utils/school.js
+ * frameworksFor), so Beatty still opens on GROW and ACT and Park View opens on
+ * its own ASK approach and Sense-Think-Act.
+ *
  * Fixed ids make boot seeding idempotent and let shared lessons reference
- * builtins across installs. Purposes: feedback | metacognition | questioning | custom. */
+ * frameworks across installs. Purposes: feedback | metacognition | questioning | custom. */
 export const FRAMEWORK_PURPOSES = ['feedback', 'metacognition', 'questioning', 'custom'];
 
 const BUILTIN_FRAMEWORKS = [
   {
-    id: 'fw_builtin_grow',
-    name: 'GROW by Reflecting',
-    purpose: 'metacognition',
+    id: 'fw_afl',
+    name: 'Assessment for Learning (AfL)',
+    purpose: 'feedback',
     builtin: true,
-    guidance: 'The GROW by Reflecting routine empowers students to become proactive, self-reflective learners. Each stage guides personal reflection: celebrating success, planning improvement, owning knowledge, and looking ahead.',
+    national: true,
+    guidance: 'Assessment FOR Learning is the teacher\u2019s stance: gather evidence of what pupils understand WHILE they are learning, and act on it in the same lesson. It is not a test at the end \u2014 it is the questioning, the tasks and the feedback that change what happens next.',
     stages: [
-      { key: 'G', label: 'Gift yourself success',
-        prompt: 'Celebrate what you DO understand. "What is one thing I understand? How would I teach this to a friend?"',
-        studentPrompt: 'What is one thing I understand?' },
-      { key: 'R', label: 'Rise above with small steps',
-        prompt: 'Identify gaps and plan improvement. "What do I not yet understand? What will I do to improve?"',
-        studentPrompt: 'What do I not yet understand?' },
-      { key: 'O', label: 'Own your knowledge',
-        prompt: 'Connect learning to real life and share it. "What is one real-life example? How have I shared this?"',
-        studentPrompt: 'What is one real-life example?' },
-      { key: 'W', label: 'Watch for what comes next',
-        prompt: 'Look ahead and prepare. "What do I already know about the next topic? What is coming up?"',
-        studentPrompt: 'What do I already know about the next topic?' }
+      { key: 'C', label: 'Clarify what success looks like',
+        prompt: 'Share the learning intention and success criteria in pupil-friendly words, and check they can say what a good one looks like.',
+        studentPrompt: 'What am I learning, and how will I know I have got it?' },
+      { key: 'E', label: 'Elicit the evidence',
+        prompt: 'Design a question, task or check that makes thinking visible for EVERY pupil, not just the ones with their hands up.',
+        studentPrompt: 'Can I show what I am thinking?' },
+      { key: 'F', label: 'Feed it forward',
+        prompt: 'Give feedback that tells the pupil what to do next, not just how they did. Leave time in the lesson to act on it.',
+        studentPrompt: 'What is my next step?' },
+      { key: 'A', label: 'Adjust the teaching',
+        prompt: 'Change the next move on the evidence \u2014 reteach, regroup, extend. Evidence that changes nothing was not worth gathering.',
+        studentPrompt: 'What are we doing differently now?' }
     ]
   },
   {
-    id: 'fw_builtin_act',
-    name: 'ACT on Feedback',
-    purpose: 'feedback',
+    id: 'fw_aal',
+    name: 'Assessment as Learning (AaL)',
+    purpose: 'metacognition',
     builtin: true,
-    guidance: 'A learner-centred framework for acting on feedback received. ACT teaches students to treat feedback as a growth tool rather than a judgement, moving from passive receipt to active response.',
+    national: true,
+    guidance: 'Assessment AS Learning is the pupil\u2019s stance: they monitor their own understanding against the success criteria, judge where they are, and decide the next step. The teacher\u2019s job is to hand over that judgement, gradually and deliberately.',
     stages: [
-      { key: 'A', label: 'Acknowledge',
-        prompt: '"How do I feel about this feedback? How might it help me learn better?"',
-        studentPrompt: 'How do I feel about this feedback?' },
-      { key: 'C', label: 'Connect',
-        prompt: '"How does this connect with success criteria/my goals? How does this connect with previous feedback?"',
-        studentPrompt: 'How does this connect with the success criteria or my goals?' },
-      { key: 'T', label: 'Test',
-        prompt: '"What habit do I need to adjust? How will I know I am improving?"',
-        studentPrompt: 'What habit do I need to adjust?' }
+      { key: 'G', label: 'Set the goal',
+        prompt: 'Pupil names what they are aiming for against the success criteria, in their own words.',
+        studentPrompt: 'What am I aiming for today?' },
+      { key: 'M', label: 'Monitor while working',
+        prompt: 'Pupil checks their own work against the criteria as they go, rather than waiting to be marked.',
+        studentPrompt: 'Am I meeting the criteria so far?' },
+      { key: 'J', label: 'Judge with evidence',
+        prompt: 'Pupil self- and peer-assesses against the criteria, pointing at the evidence in the work.',
+        studentPrompt: 'Where in my work can I show that?' },
+      { key: 'D', label: 'Decide the next step',
+        prompt: 'Pupil names one specific thing to do next, and when they will do it.',
+        studentPrompt: 'What will I do next, and when?' }
     ]
   }
 ];
@@ -1078,6 +1092,14 @@ export const Store = {
     return (_state.frameworks || []).find(f => f.id === id) || null;
   },
 
+  /* Replace the whole registry in one write — used when the school's own
+   * routines are seeded at sign-in, which both adds and removes in one pass. */
+  setFrameworks(list) {
+    _state.frameworks = Array.isArray(list) ? list : [];
+    this._persist();
+    this._notify();
+  },
+
   addFramework(data) {
     const fw = {
       id: data.id || generateId(),
@@ -1359,7 +1381,8 @@ export const Store = {
     _state.practiceGoal = null;
     _state.trackingSchemas = [];
     // Builtin pedagogy frameworks reseed immediately — they are app content,
-    // not teacher data, and other views assume GROW/ACT always exist.
+    // not teacher data, and other views assume a frame always exists. The
+    // school's OWN routines reseed separately, from its pack, at sign-in.
     _state.frameworks = builtinFrameworkSeeds();
     _state.references = [];
     _refContentInIdb.clear();
@@ -1381,8 +1404,9 @@ export const Store = {
 
 /* ── Seed builtin pedagogy frameworks (idempotent) ──
  * Keyed by fixed id, not a localStorage flag: a reload, an import, or an old
- * snapshot without `frameworks` all converge on exactly one GROW and one ACT.
- * Custom frameworks are left untouched. */
+ * snapshot without `frameworks` all converge on exactly one AfL and one AaL.
+ * Custom frameworks — and the school's own, seeded from its pack — are left
+ * untouched. */
 (function seedBuiltinFrameworks() {
   const existing = _state.frameworks || [];
   const missing = builtinFrameworkSeeds().filter(b => !existing.some(f => f.id === b.id));

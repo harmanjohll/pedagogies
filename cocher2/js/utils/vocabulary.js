@@ -27,7 +27,7 @@ const DEFAULT_SUBJECTS = [
   'Social Studies', 'Art', 'Music', 'Physical Education', 'Character & Citizenship Education',
 ];
 
-let _vocab = { levels: null, subjects: null, streams: [], bands: null, stage: null, sample: null, cca: [], contacts: {}, values: null, identity: null, adminTools: [], ready: false };
+let _vocab = { levels: null, subjects: null, streams: [], bands: null, stage: null, sample: null, cca: [], contacts: {}, values: null, identity: null, adminTools: [], classCodes: null, ready: false };
 
 /**
  * Load the signed-in teacher's school vocabulary. Safe to call repeatedly, and
@@ -50,11 +50,12 @@ export async function primeVocabulary() {
     values: p?.values ?? null,
     identity: p?.identity || null,
     adminTools: Array.isArray(p?.adminTools) ? p.adminTools : [],
+    classCodes: p?.classCodes || null,
     ready: true,
   };
   return _vocab;
 }
-const emptyVocab = () => ({ levels: null, subjects: null, streams: [], bands: null, stage: null, sample: null, cca: [], contacts: {}, values: null, identity: null, adminTools: [] });
+const emptyVocab = () => ({ levels: null, subjects: null, streams: [], bands: null, stage: null, sample: null, cca: [], contacts: {}, values: null, identity: null, adminTools: [], classCodes: null });
 
 /** True once primeVocabulary has run — pickers can paint before this. */
 export const vocabularyReady = () => _vocab.ready;
@@ -243,6 +244,19 @@ export const packIdentity = () => _vocab.identity || {};
  * none, which is not a gap Co-Cher may fill with another school's links.
  */
 export const packAdminTools = () => (_vocab.adminTools || []).filter(t => t && t.label && t.href);
+
+/**
+ * The school's real class codes, `{ 'Primary 5': ['5C','5I','5R1', …] }` — read
+ * off its own timetable. Offered when a teacher names a class, so they pick
+ * "5R1" from their school's own list instead of typing it and hoping.
+ * Empty for a school that has not published them; the input stays free text.
+ */
+export function classCodes(level = '') {
+  const map = _vocab.classCodes;
+  if (!map) return [];
+  if (level) return (map[level] || []).map(String);
+  return Object.values(map).flat().map(String);
+}
 
 /** How the school describes a class group, for AI prompts and copy. */
 export function classNoun() {

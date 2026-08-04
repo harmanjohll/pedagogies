@@ -349,17 +349,54 @@
     }
   ],
   "learningPractice": {
-    "name": "The Learning Practice",
-    "outer": [
-      "GROW",
-      "ACT",
-      "MAP",
-      "ASK"
+    "title": "The Learning Practice",
+    "blurb": "GROW, ACT, MAP and ASK work together simultaneously, both in and out of lessons. All four practices happen all the time, not in sequence. The inner ring is the learner behaviours that drive them: Prepare, Participate, Process.",
+    "centre": [
+      "Proactive",
+      "Learner"
     ],
-    "inner": [
-      "Prepare",
-      "Participate",
-      "Process"
+    "practices": [
+      {
+        "key": "GROW",
+        "label": "Reflect on learning",
+        "blurb": "Reflect on what you know and don’t know",
+        "colour": "#3b82f6"
+      },
+      {
+        "key": "ACT",
+        "label": "Act on feedback",
+        "blurb": "Process and act on feedback received",
+        "colour": "#ef4444"
+      },
+      {
+        "key": "MAP",
+        "label": "Map your progress",
+        "blurb": "Track your progress against goals",
+        "colour": "#10b981"
+      },
+      {
+        "key": "ASK",
+        "label": "Ask for help",
+        "blurb": "Seek help and clarify understanding",
+        "colour": "#f59e0b"
+      }
+    ],
+    "behaviours": [
+      {
+        "label": "Prepare",
+        "blurb": "Get ready for learning before class",
+        "colour": "#6366f1"
+      },
+      {
+        "label": "Participate",
+        "blurb": "Engage actively during lessons",
+        "colour": "#ec4899"
+      },
+      {
+        "label": "Process",
+        "blurb": "Make sense of it afterwards",
+        "colour": "#14b8a6"
+      }
     ]
   },
   "slotMinutes": 35,

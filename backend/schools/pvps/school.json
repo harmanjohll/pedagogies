@@ -82,15 +82,15 @@
     "English",
     "Mathematics",
     "Science",
+    "Social Studies",
     "Chinese Language",
     "Malay Language",
     "Tamil Language",
-    "Social Studies",
-    "Art",
+    "Physical Education",
     "Music",
-    "Physical & Health Education",
-    "ICT",
-    "Character & Citizenship Education"
+    "Art & Craft",
+    "Character & Citizenship Education",
+    "Programme for Active Learning (PAL)"
   ],
   "sampleClasses": [
     {
@@ -323,7 +323,17 @@
       "verbatim": "A restorative approach that focuses on restoring and strengthening relationships in conflict management, using principles of restitution, accountability and resolution, as an alternative to punitive punishment."
     },
     "assessment": {
-      "verbatim": "Teachers use a range of formative assessment techniques such as questioning, giving feedback and peer and self-assessment. Bite-size forms of assessment such as topical reviews, listening tasks and performance tasks are used to provide students with opportunities to experience success and build confidence."
+      "verbatim": "Teachers use a range of formative assessment techniques such as questioning, giving feedback and peer and self-assessment. Bite-size forms of assessment such as topical reviews, listening tasks and performance tasks are used to provide students with opportunities to experience success and build confidence.",
+      "afl": [
+        "questioning",
+        "giving feedback",
+        "bite-size assessment — topical reviews, listening tasks, performance tasks"
+      ],
+      "aal": [
+        "peer assessment",
+        "self-assessment"
+      ],
+      "purpose": "to provide students with opportunities to experience success and build confidence"
     },
     "aiPolicy": {
       "verbatim": "If the use of AI is permitted in weighted assessments and homework, students should acknowledge the use of AI as required and practice academic integrity and be responsible for their own learning when using AI."
@@ -390,7 +400,7 @@
     "provisional": true,
     "note": "PLACEHOLDER. The school does not publish its colours; five dedicated searches found none. Replace once confirmed from the crest or the school."
   },
-  "sourceNote": "Compiled from parkviewpri.moe.edu.sg. Quoted fields are the school's own wording; see each source URL.",
+  "sourceNote": "Compiled from parkviewpri.moe.edu.sg for identity, values and CCAs; levels, class codes, subjects, room names and the period grid are read from the school’s own staff timetable (2026 Term 3). The timetable itself is staff data and is not held in this repo.",
   "needsConfirmation": [
     "School colours (accent is a placeholder)",
     "STAR — the expansion of S-T-A-R is not published",
@@ -398,9 +408,213 @@
     "PRIDE (P4 VIA) — expansion not published",
     "SLC — the site uses both 'Service Learning Council' and 'Student Leadership Council'",
     "Staff names — only the Principal and Head of Aesthetics surfaced; no HODs, form teachers or subject teachers",
-    "School start and recess times (dismissal 1.30-2.00 pm is published)",
     "Term dates — the school calendar page publishes none",
     "Uniformed groups beyond Scouts; Basketball unconfirmed",
-    "Class naming conventions"
-  ]
+    "Recess — the timetable marks no recess block, so break times are still unknown",
+    "Class suffixes C/H/I/R1/R2/R3 mirror the R3ICH values, but P2 also runs a \"2G\" class that does not fit that pattern; the naming rationale is not published",
+    "ICT was listed as a subject from the website but does not appear in the staff timetable",
+    "AfL/AaL — the two practices are the national frame and every phrase quoted is the school’s own published wording; Park View’s internal staff site may name them differently"
+  ],
+  "bell": {
+    "dayStart": "07:00",
+    "periodMinutes": 30,
+    "periods": [
+      {
+        "id": 1,
+        "start": "07:00",
+        "end": "07:30"
+      },
+      {
+        "id": 2,
+        "start": "07:30",
+        "end": "08:00"
+      },
+      {
+        "id": 3,
+        "start": "08:00",
+        "end": "08:30"
+      },
+      {
+        "id": 4,
+        "start": "08:30",
+        "end": "09:00"
+      },
+      {
+        "id": 5,
+        "start": "09:00",
+        "end": "09:30"
+      },
+      {
+        "id": 6,
+        "start": "09:30",
+        "end": "10:00"
+      },
+      {
+        "id": 7,
+        "start": "10:00",
+        "end": "10:30"
+      },
+      {
+        "id": 8,
+        "start": "10:30",
+        "end": "11:00"
+      },
+      {
+        "id": 9,
+        "start": "11:00",
+        "end": "11:30"
+      },
+      {
+        "id": 10,
+        "start": "11:30",
+        "end": "12:00"
+      },
+      {
+        "id": 11,
+        "start": "12:00",
+        "end": "12:30"
+      },
+      {
+        "id": 12,
+        "start": "12:30",
+        "end": "13:00"
+      },
+      {
+        "id": 13,
+        "start": "13:00",
+        "end": "13:30"
+      },
+      {
+        "id": 14,
+        "start": "13:30",
+        "end": "14:00"
+      },
+      {
+        "id": 15,
+        "start": "14:00",
+        "end": "14:30"
+      }
+    ]
+  },
+  "classCodes": {
+    "Primary 1": [
+      "1C",
+      "1H",
+      "1I",
+      "1R1",
+      "1R2",
+      "1R3"
+    ],
+    "Primary 2": [
+      "2C",
+      "2G",
+      "2H",
+      "2I",
+      "2R1",
+      "2R2",
+      "2R3"
+    ],
+    "Primary 3": [
+      "3C",
+      "3I",
+      "3R1",
+      "3R2",
+      "3R3"
+    ],
+    "Primary 4": [
+      "4C",
+      "4H",
+      "4I",
+      "4R1",
+      "4R2",
+      "4R3"
+    ],
+    "Primary 5": [
+      "5C",
+      "5I",
+      "5R1",
+      "5R2",
+      "5R3"
+    ],
+    "Primary 6": [
+      "6C",
+      "6I",
+      "6R1",
+      "6R2",
+      "6R3"
+    ]
+  },
+  "supportProgrammes": [
+    {
+      "code": "EL-LSP",
+      "name": "English — Learning Support Programme"
+    },
+    {
+      "code": "MATH-LSM",
+      "name": "Mathematics — Learning Support for Maths"
+    },
+    {
+      "code": "EL-LIB",
+      "name": "English reading period (library)"
+    },
+    {
+      "code": "CL-LIB",
+      "name": "Chinese reading period"
+    },
+    {
+      "code": "ML-LIB",
+      "name": "Malay reading period"
+    },
+    {
+      "code": "TL-LIB",
+      "name": "Tamil reading period"
+    },
+    {
+      "code": "ECCE",
+      "name": "English-medium CCE"
+    },
+    {
+      "code": "MT-CCE",
+      "name": "Mother Tongue CCE"
+    }
+  ],
+  "learningPractice": {
+    "title": "The Learning Practice",
+    "blurb": "Assessment FOR Learning and Assessment AS Learning run together in every lesson. Park View’s own stance: “Teachers use a range of formative assessment techniques such as questioning, giving feedback and peer and self-assessment.”",
+    "centre": [
+      "Proactive",
+      "Learner"
+    ],
+    "practices": [
+      {
+        "key": "AfL",
+        "label": "Assess FOR learning",
+        "blurb": "Questioning and feedback that change the next move — “bite-size forms of assessment such as topical reviews, listening tasks and performance tasks”",
+        "colour": "#3b82f6"
+      },
+      {
+        "key": "AaL",
+        "label": "Assess AS learning",
+        "blurb": "Peer and self-assessment, so pupils “experience success and build confidence”",
+        "colour": "#10b981"
+      }
+    ],
+    "behaviours": [
+      {
+        "label": "Prepare",
+        "blurb": "Get ready for learning before the lesson",
+        "colour": "#6366f1"
+      },
+      {
+        "label": "Participate",
+        "blurb": "Engage actively during the lesson",
+        "colour": "#ec4899"
+      },
+      {
+        "label": "Process",
+        "blurb": "Make sense of it afterwards",
+        "colour": "#14b8a6"
+      }
+    ]
+  }
 }
