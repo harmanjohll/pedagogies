@@ -12,7 +12,7 @@ import { sendChat } from '../api.js';
 import { getCurrentUser } from '../components/login.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
 import { openStaffPicker, loadStaffDirectory, renderRecipientChips, ALL_STAFF_EMAIL } from '../components/staff-picker.js';
-import { loadDirectory, availabilityFromEntries, departmentsOf, importSchoolRoster, clearSchoolRoster, parseStaffList } from '../utils/directory.js';
+import { loadDirectory, availabilityFromEntries, departmentsOf, inArea, importSchoolRoster, clearSchoolRoster, parseStaffList } from '../utils/directory.js';
 import { isPrimary, isJC, levelFromTop, exampleLevel, packAdminTools } from '../utils/vocabulary.js';
 
 /* ── Examples that belong to THIS school ─────────────────────────────
@@ -384,7 +384,7 @@ export function render(container) {
             </p>
             <div id="ft-selectors" style="display:grid;grid-template-columns:1fr 1fr 0.9fr;gap:var(--sp-3);">
               <div>
-                <label class="ft-label" for="ft-dept">Department</label>
+                <label class="ft-label" for="ft-dept" id="ft-dept-label">Department</label>
                 <select id="ft-dept" class="input" style="width:100%;box-sizing:border-box;"><option value="">Loading&hellip;</option></select>
               </div>
               <div>
@@ -653,7 +653,7 @@ async function renderFindTeacher(container) {
   const fillTeachers = (dept) => {
     const inDept = dir.teachers
       .map((t, i) => ({ t, i }))
-      .filter(x => !dept || (x.t.department || 'Unassigned') === dept);
+      .filter(x => inArea(x.t, dept));
     const known = inDept.filter(x => hasWeek(x.t));
     const unknown = inDept.filter(x => !hasWeek(x.t));
 
@@ -690,7 +690,13 @@ async function renderFindTeacher(container) {
   };
 
   if (hasDepts) {
-    deptSel.innerHTML = `<option value="">Select a department&hellip;</option>`
+    // "Teaching area", not "Department", when it was worked out from the
+    // timetable — the school has not told us its reporting lines, and saying
+    // "Department" would claim it had.
+    const derived = dir.teachers.some(t => t.derivedAreas);
+    const lbl = container.querySelector('#ft-dept-label');
+    if (lbl) lbl.textContent = derived ? 'Teaching area' : 'Department';
+    deptSel.innerHTML = `<option value="">${derived ? 'Select a teaching area' : 'Select a department'}&hellip;</option>`
       + depts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
     deptSel.addEventListener('change', () => {
       result.innerHTML = '';

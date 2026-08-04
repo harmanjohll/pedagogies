@@ -907,6 +907,19 @@ function buildQuickPrompts(classes) {
     prompts.push({ label: 'Plan a lesson', desc: 'Engaging activities, clear outcomes, E21CC development', prompt: `Plan a ${level} ${subj} lesson on [topic e.g. ${topicExample(subj)}]. Include engaging activities, clear learning outcomes, and opportunities for pupil collaboration and E21CC development. The lesson is [${isPrimary() ? '30/60' : '40/60'}] minutes.` });
   }
 
+  /* A primary teacher is a generalist. Park View's timetable has every teacher
+   * on between two and six subjects, so keying the gallery off one class
+   * subject hands a Maths-only set to someone who also teaches Social Studies,
+   * PAL and Art that same morning. These are added on top of whatever matched. */
+  if (isPrimary()) {
+    prompts.push({ label: 'Plan a Social Studies lesson', desc: 'Start from their own neighbourhood, then out to Singapore',
+      prompt: `Plan a ${level} Social Studies lesson on [topic e.g. ${topicExample('Social Studies')}]. Start from something the pupils already know near the school, use one clear source or artefact, and finish with an inquiry question the class can carry. The lesson is [30/60] minutes.` });
+    prompts.push({ label: 'Plan a PAL session', desc: 'Experiential, non-examinable, no worksheets',
+      prompt: `Plan a ${level} PAL (Programme for Active Learning) session on [Sports & Games / Outdoor Education / Performing Arts / Visual Arts]. It is experiential and non-examinable, so no worksheets. Build confidence and social-emotional skills, and end with a short reflection.` });
+    prompts.push({ label: 'A day across my subjects', desc: 'Tie the morning together without cramming',
+      prompt: `I teach ${subj} and other subjects to the same ${level} class. Suggest how to connect [topic] across two or three of my subjects this week so the learning reinforces itself — without making every lesson about the same thing.` });
+  }
+
   // Universal prompts (always available)
   prompts.push({ label: 'Develop CAIT in my lesson', desc: 'Critical & Inventive Thinking with concrete activities', prompt: `How can I intentionally develop Critical, Adaptive & Inventive Thinking (CAIT) in a ${level} ${subj} lesson on [topic]? Suggest 2-3 concrete activities with EdTech integration.` });
   prompts.push({ label: 'Differentiate for my class', desc: 'Scaffolding for weaker + extension for stronger learners', prompt: `Suggest differentiation strategies for a ${level} ${subj} lesson on [topic]. I have students who [need more scaffolding / are advanced / have specific learning needs]. Include both support and extension options.` });

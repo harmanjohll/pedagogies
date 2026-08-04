@@ -1,6 +1,6 @@
 {
   "schoolId": "pvps",
-  "note": "Park View Primary staff timetable, 2026 Term 3. Published with the app so every teacher at the school gets the colleague list without anyone having to upload it. A live Drive/Apps Script feed overrides this file when one is configured.",
+  "note": "Park View Primary, staff timetable 2026 Term 3 (source tag 2026_T3_130726). Real staff timetable \u2014 hold outside the public repo.",
   "teachers": [
     {
       "name": "Abidah",
@@ -195,7 +195,7 @@
           "title": "ENRICHMENT (1R2)",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -1030,7 +1030,7 @@
           "title": "ENRICHMENT 2C",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         }
       ]
     },
@@ -1247,7 +1247,7 @@
           "title": "PRAYERS",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         }
       ]
     },
@@ -1671,7 +1671,7 @@
           "title": "IMP",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         }
       ]
     },
@@ -2122,7 +2122,7 @@
           "title": "SDT",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -2753,7 +2753,7 @@
           "title": "SDT",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -2920,7 +2920,7 @@
           "title": "REPORT LATE",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -3070,7 +3070,7 @@
           "title": "REPORT LATE",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -3100,7 +3100,7 @@
           "title": "REPORT LATE",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -4503,7 +4503,7 @@
           "title": "ENRICHMENT 2i",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -4513,7 +4513,7 @@
           "title": "ENRICHMENT 2I",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         }
       ]
     },
@@ -4670,7 +4670,7 @@
           "title": "T&L Co",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -4917,7 +4917,7 @@
           "title": "ENRICHMENT 2R1",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -5194,7 +5194,7 @@
           "title": "Prayers",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         }
       ]
     },
@@ -5391,7 +5391,7 @@
           "title": "PRAYERS",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         }
       ]
     },
@@ -5468,7 +5468,7 @@
           "title": "MA MEET",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -5598,7 +5598,7 @@
           "title": "Prayers",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         }
       ]
     },
@@ -6002,7 +6002,7 @@
           "title": "ENRICHMENT 2G",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -6296,7 +6296,7 @@
           "title": "SDT",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -6543,7 +6543,7 @@
           "title": "MA MEET",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -6730,7 +6730,7 @@
           "title": "SDT",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -6840,7 +6840,7 @@
           "title": "T&L Co",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -7184,7 +7184,7 @@
           "title": "T&L Co",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -7588,7 +7588,7 @@
           "title": "ENRICHMENT 2H",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -8129,7 +8129,7 @@
           "title": "SDT",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -8987,7 +8987,7 @@
           "title": "MA MEET",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -9037,7 +9037,7 @@
           "title": "T&L Co",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -9598,7 +9598,7 @@
           "title": "MA MEET",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -9758,7 +9758,7 @@
           "title": "PRAYERS",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         }
       ]
     },
@@ -10339,7 +10339,7 @@
           "title": "ENRICHMENT 1R1",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -10496,7 +10496,7 @@
           "title": "T&L Co",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -10703,7 +10703,7 @@
           "title": "ENRICHMENT 1R3",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -10987,7 +10987,7 @@
           "title": "SDT",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -11164,7 +11164,7 @@
           "title": "SDT",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -12379,7 +12379,7 @@
           "title": "Enrichment 2R3",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -12426,7 +12426,7 @@
           "title": "REPORT LATE",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -12486,7 +12486,7 @@
           "title": "REPORT LATE",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -12516,7 +12516,7 @@
           "title": "REPORT LATE",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -12546,7 +12546,7 @@
           "title": "REPORT LATE",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -12586,7 +12586,7 @@
           "title": "REPORT LATE",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -12803,7 +12803,7 @@
           "title": "ENRICHMENT (1I)",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -14559,7 +14559,7 @@
           "title": "T&L Co",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -15110,7 +15110,7 @@
           "title": "T&L Co",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -15327,7 +15327,7 @@
           "title": "T&L Co",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -15731,7 +15731,7 @@
           "title": "ENRICHMENT 2R2",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -16135,7 +16135,7 @@
           "title": "T&L Co",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -16579,7 +16579,7 @@
           "title": "IMP",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         }
       ]
     },
@@ -16726,7 +16726,7 @@
           "title": "T&L Co",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -17060,7 +17060,7 @@
           "title": "SDT",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "pd"
         },
         {
           "cycle": null,
@@ -17701,7 +17701,7 @@
           "title": "ENRICHMENT (BACKUP)",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,
@@ -17888,7 +17888,7 @@
           "title": "ENRICHMENT 1H",
           "class": null,
           "room": null,
-          "kind": "lesson"
+          "kind": "school"
         },
         {
           "cycle": null,

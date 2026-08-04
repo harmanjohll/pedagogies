@@ -72,11 +72,11 @@
     "English",
     "Mathematics",
     "Science",
+    "Social Studies",
     "Mother Tongue",
     "Aesthetics",
     "Physical & Health Education",
-    "ICT",
-    "Character & Citizenship Education"
+    "Programme for Active Learning"
   ],
   "subjects": [
     "English",
@@ -413,7 +413,8 @@
     "Recess — the timetable marks no recess block, so break times are still unknown",
     "Class suffixes C/H/I/R1/R2/R3 mirror the R3ICH values, but P2 also runs a \"2G\" class that does not fit that pattern; the naming rationale is not published",
     "ICT was listed as a subject from the website but does not appear in the staff timetable",
-    "AfL/AaL — the two practices are the national frame and every phrase quoted is the school’s own published wording; Park View’s internal staff site may name them differently"
+    "AfL/AaL — the two practices are the national frame and every phrase quoted is the school’s own published wording; Park View’s internal staff site may name them differently",
+    "Teaching areas in Find a Teacher are derived from what each teacher is timetabled to teach; the school has not published its department structure, and Social Studies in particular may sit under a Humanities or CCE department rather than standing alone"
   ],
   "bell": {
     "dayStart": "07:00",
@@ -616,5 +617,27 @@
         "colour": "#14b8a6"
       }
     ]
+  },
+  "subjectDepartments": {
+    "EL": "English",
+    "EL-LSP": "English",
+    "EL-LIB": "English",
+    "ECCE": "English",
+    "MATH": "Mathematics",
+    "MATH-LSM": "Mathematics",
+    "SCI": "Science",
+    "SS": "Social Studies",
+    "CL": "Mother Tongue",
+    "CL-LIB": "Mother Tongue",
+    "FCL": "Mother Tongue",
+    "ML": "Mother Tongue",
+    "ML-LIB": "Mother Tongue",
+    "TL": "Mother Tongue",
+    "TL-LIB": "Mother Tongue",
+    "MT-CCE": "Mother Tongue",
+    "ART": "Aesthetics",
+    "MUSIC": "Aesthetics",
+    "PE": "Physical & Health Education",
+    "PAL": "Programme for Active Learning"
   }
 }
