@@ -258,6 +258,35 @@ export function classCodes(level = '') {
   return Object.values(map).flat().map(String);
 }
 
+/* Topic examples that belong to the teacher's own stage. Every starter prompt
+ * in the planner used to read "[topic e.g. Quadratic Equations]" — an O-Level
+ * topic offered to a P3 teacher. Same subject, different school year, entirely
+ * different content. */
+const TOPIC_EG = {
+  'Mathematics':      { primary: 'Fractions / Bar Models',        secondary: 'Quadratic Equations',  'junior-college': 'Differentiation' },
+  'Science':          { primary: 'Life Cycles / Magnets',         secondary: 'Chemical Bonding',     'junior-college': 'Reaction Kinetics' },
+  'English':          { primary: 'Personal Recount / Comprehension', secondary: 'Persuasive Writing / Comprehension', 'junior-college': 'Argumentative Essay' },
+  'Social Studies':   { primary: 'Our Water Story / Neighbourhood', secondary: 'Managing Diversity', 'junior-college': 'Governance' },
+  'History':          { primary: 'Founding of Singapore',         secondary: 'Fall of Singapore',    'junior-college': 'Cold War Origins' },
+  'Geography':        { primary: 'Weather & Seasons',             secondary: 'Plate Tectonics / Tourism', 'junior-college': 'Coastal Systems' },
+  'Chinese':          { primary: '看图写话 / 阅读理解',              secondary: '口语交际 / 阅读理解',    'junior-college': '文学赏析' },
+  'Malay':            { primary: 'Karangan Bergambar / Kefahaman', secondary: 'Karangan / Kefahaman', 'junior-college': 'Esei' },
+  'Tamil':            { primary: 'படக்கதை / படிப்புணர்வு',           secondary: 'கட்டுரை / படிப்புணர்வு', 'junior-college': 'கட்டுரை' },
+  'Art':              { primary: 'Colour & Texture / Printmaking', secondary: 'Still Life Drawing',   'junior-college': 'Studio Practice' },
+  'Music':            { primary: 'Rhythm & Beat / Singing Games',  secondary: 'Chord Progressions',   'junior-college': 'Set Works' },
+  'Physical Education': { primary: 'Fundamental Movement Skills',  secondary: 'Net-Barrier Games',    'junior-college': 'Games Concepts' },
+};
+
+/**
+ * A topic worth putting in a placeholder for this subject, at THIS school's
+ * stage. Falls back to a neutral phrase rather than a wrong-stage example.
+ */
+export function topicExample(subject = '') {
+  const stage = _vocab.stage || 'secondary';
+  const key = Object.keys(TOPIC_EG).find(k => String(subject).toLowerCase().includes(k.toLowerCase()));
+  return (key && TOPIC_EG[key][stage]) || 'your current topic';
+}
+
 /** How the school describes a class group, for AI prompts and copy. */
 export function classNoun() {
   return _vocab.stage === 'junior-college' ? 'tutorial group' : 'class';

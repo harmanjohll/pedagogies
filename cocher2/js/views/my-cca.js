@@ -4,7 +4,7 @@
  * CCA management hub — CCA List and LEAPS 2.0 Development Framework tracker.
  */
 
-import { Store, generateId } from '../state.js';
+import { Store, generateId, schoolKey } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { studentDescriptor } from '../utils/vocabulary.js';
 import { confirmDialog } from '../components/modals.js';
@@ -248,10 +248,10 @@ function escHtml(str) {
 
 /* ── localStorage helpers ── */
 function getCCAList() {
-  try { return JSON.parse(localStorage.getItem('cocher2_cca_list') || '[]'); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(schoolKey('cocher2_cca_list')) || '[]'); } catch { return []; }
 }
 function saveCCAList(list) {
-  localStorage.setItem('cocher2_cca_list', JSON.stringify(list));
+  localStorage.setItem(schoolKey('cocher2_cca_list'), JSON.stringify(list));
 }
 function getLEAPSProgress() {
   try { return JSON.parse(localStorage.getItem('cocher2_leaps_progress') || '{}'); } catch { return {}; }

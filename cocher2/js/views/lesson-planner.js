@@ -28,7 +28,7 @@ import { ATTACH_ACCEPT, isAcceptedAttachment, buildAttachment, toMultimodalMessa
 import { priorityLabel, getPriorities } from '../utils/priorities.js';
 import { openLiveSession } from '../components/live-launch.js';
 import { listArtifacts, getArtifact, artifactContextText, artifactKind, openArtifactWindow } from '../utils/library.js';
-import { levelOptions, subjectOptions, defaultLevel, exampleLevel } from '../utils/vocabulary.js';
+import { levelOptions, subjectOptions, defaultLevel, exampleLevel, topicExample, isPrimary, isJC } from '../utils/vocabulary.js';
 
 // Shared escape (covers quotes, so it is attribute-safe too)
 const esc = escapeHtml;
@@ -772,6 +772,25 @@ function buildFollowUpPrompts(messages) {
   return followUps.slice(0, 3);
 }
 
+/* A stable colour per framework, so the chips read as a palette rather than a
+ * row of identical grey pills — and so the same routine keeps its colour
+ * between visits. Purpose first (a feedback routine and a metacognition one
+ * should not look alike), then a hash of the id to separate same-purpose ones. */
+const FW_PALETTE = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#ef4444', '#6366f1'];
+const FW_PURPOSE_COLOUR = { feedback: '#ef4444', metacognition: '#3b82f6', questioning: '#f59e0b' };
+function fwColour(fw) {
+  if (FW_PURPOSE_COLOUR[fw.purpose]) {
+    // Same purpose, different routine — nudge along the palette so a school
+    // with two metacognition routines does not get two identical chips.
+    const sameId = String(fw.id || '');
+    let h = 0; for (let i = 0; i < sameId.length; i++) h = (h * 31 + sameId.charCodeAt(i)) >>> 0;
+    return h % 3 === 0 ? FW_PURPOSE_COLOUR[fw.purpose] : FW_PALETTE[h % FW_PALETTE.length];
+  }
+  let h = 0; const id = String(fw.id || fw.name || '');
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return FW_PALETTE[h % FW_PALETTE.length];
+}
+
 /* ── Build quick prompts based on classes/subjects ── */
 function buildQuickPrompts(classes) {
   const prompts = [];
@@ -791,44 +810,44 @@ function buildQuickPrompts(classes) {
   // Subject-specific prompts — each with label, desc (card hint), and prompt (full editable text)
   const subjectBank = {
     'Mathematics': [
-      { label: 'Plan a Maths lesson', desc: 'Hands-on activities, real-world applications, collaborative problem-solving', prompt: `Plan a ${level} Mathematics lesson on [topic e.g. Quadratic Equations]. Include hands-on activities, real-world applications, and opportunities for collaborative problem-solving. The lesson is [40/60] minutes.` },
+      { label: 'Plan a Maths lesson', desc: 'Hands-on activities, real-world applications, collaborative problem-solving', prompt: `Plan a ${level} Mathematics lesson on [topic e.g. ${topicExample('Mathematics')}]. Include hands-on activities, real-world applications, and opportunities for collaborative problem-solving. The lesson is [40/60] minutes.` },
       { label: 'Maths with E21CC focus', desc: 'Intentional CAIT development with formative checks', prompt: `Design a ${level} Mathematics lesson on [topic] that intentionally develops CAIT through [open-ended problem solving / pattern recognition]. Include a formative check and an EdTech-enhanced activity.` },
     ],
     'Science': [
-      { label: 'Plan a Science lesson', desc: 'Inquiry-based learning with investigation and real-world links', prompt: `Plan a ${level} Science lesson on [topic e.g. Chemical Bonding]. Use inquiry-based learning with a hands-on investigation and a clear link to real-world phenomena. The lesson is [40/60] minutes.` },
+      { label: 'Plan a Science lesson', desc: 'Inquiry-based learning with investigation and real-world links', prompt: `Plan a ${level} Science lesson on [topic e.g. ${topicExample('Science')}]. Use inquiry-based learning with a hands-on investigation and a clear link to real-world phenomena. The lesson is [40/60] minutes.` },
       { label: 'Design a practical lesson', desc: 'Pre-lab discussion, guided investigation, POE framework', prompt: `Design a ${level} Science practical lesson on [topic]. Include pre-lab discussion, safety briefing, guided investigation with prediction-observation-explanation, and a debrief.` },
     ],
     'Chemistry': [
-      { label: 'Plan a Chemistry lesson', desc: 'Concept-to-application with molecular visualisation', prompt: `Plan a ${level} Chemistry lesson on [topic e.g. Organic Chemistry]. Connect concepts to real-world applications and include opportunities for molecular visualisation. The lesson is [40/60] minutes.` },
+      { label: 'Plan a Chemistry lesson', desc: 'Concept-to-application with molecular visualisation', prompt: `Plan a ${level} Chemistry lesson on [topic e.g. ${topicExample('Chemistry')}]. Connect concepts to real-world applications and include opportunities for molecular visualisation. The lesson is [40/60] minutes.` },
       { label: 'Chemistry with simulations', desc: 'PhET/virtual labs with scaffolded inquiry', prompt: `Design a ${level} Chemistry lesson on [topic] incorporating interactive simulations (PhET/virtual labs). Include scaffolded inquiry questions and an E21CC focus on CAIT.` },
     ],
     'Physics': [
-      { label: 'Plan a Physics lesson', desc: 'Demonstrations, problem-solving, and data analysis', prompt: `Plan a ${level} Physics lesson on [topic e.g. Forces & Motion]. Include demonstrations, collaborative problem-solving, and data analysis activities. The lesson is [40/60] minutes.` },
+      { label: 'Plan a Physics lesson', desc: 'Demonstrations, problem-solving, and data analysis', prompt: `Plan a ${level} Physics lesson on [topic e.g. ${topicExample('Physics')}]. Include demonstrations, collaborative problem-solving, and data analysis activities. The lesson is [40/60] minutes.` },
     ],
     'Biology': [
-      { label: 'Plan a Biology lesson', desc: 'Visual models, investigation, real-world health/ecology links', prompt: `Plan a ${level} Biology lesson on [topic e.g. Cell Division]. Include visual models, collaborative investigation, and real-world applications in health or ecology. The lesson is [40/60] minutes.` },
+      { label: 'Plan a Biology lesson', desc: 'Visual models, investigation, real-world health/ecology links', prompt: `Plan a ${level} Biology lesson on [topic e.g. ${topicExample('Biology')}]. Include visual models, collaborative investigation, and real-world applications in health or ecology. The lesson is [40/60] minutes.` },
     ],
     'English': [
-      { label: 'Plan an English lesson', desc: 'Model texts, peer feedback, differentiated scaffolding', prompt: `Plan a ${level} English Language lesson on [topic e.g. Persuasive Writing / Comprehension]. Include model texts, collaborative peer feedback, and differentiated scaffolding. The lesson is [40/60] minutes.` },
+      { label: 'Plan an English lesson', desc: 'Model texts, peer feedback, differentiated scaffolding', prompt: `Plan a ${level} English Language lesson on [topic e.g. ${topicExample('English')}]. Include model texts, collaborative peer feedback, and differentiated scaffolding. The lesson is [40/60] minutes.` },
       { label: 'English with structured discussion', desc: 'Socratic seminar, think-pair-share, sentence frames', prompt: `Design a ${level} English lesson on [text/theme] that develops CCI through structured academic discussion (e.g. Socratic seminar, think-pair-share). Include sentence frames for different ability levels.` },
     ],
     'History': [
-      { label: 'Plan a History lesson', desc: 'Source-based inquiry, multiple perspectives, SBQ practice', prompt: `Plan a ${level} History lesson on [topic e.g. Fall of Singapore]. Use source-based inquiry, structured discussion, and multiple perspectives. Include an SBQ-style activity. The lesson is [40/60] minutes.` },
+      { label: 'Plan a History lesson', desc: 'Source-based inquiry, multiple perspectives, SBQ practice', prompt: `Plan a ${level} History lesson on [topic e.g. ${topicExample('History')}]. Use source-based inquiry, structured discussion, and multiple perspectives. Include an SBQ-style activity. The lesson is [40/60] minutes.` },
     ],
     'Geography': [
-      { label: 'Plan a Geography lesson', desc: 'Data analysis, fieldwork skills, sustainability links', prompt: `Plan a ${level} Geography lesson on [topic e.g. Plate Tectonics / Tourism]. Include data analysis, fieldwork skills, and connections to sustainability (CGC). The lesson is [40/60] minutes.` },
+      { label: 'Plan a Geography lesson', desc: 'Data analysis, fieldwork skills, sustainability links', prompt: `Plan a ${level} Geography lesson on [topic e.g. ${topicExample('Geography')}]. Include data analysis, fieldwork skills, and connections to sustainability (CGC). The lesson is [40/60] minutes.` },
     ],
     'Social Studies': [
       { label: 'Plan a Social Studies lesson', desc: 'Structured inquiry, source analysis, perspective-taking', prompt: `Plan a ${level} Social Studies lesson on [issue e.g. Governance / Diversity]. Use structured inquiry, source analysis, and develop CGC through perspective-taking activities. The lesson is [40/60] minutes.` },
     ],
     'Chinese': [
-      { label: 'Plan a Chinese lesson', desc: 'Vocabulary building, model texts, peer interaction', prompt: `Plan a ${level} Chinese Language lesson on [topic e.g. 口语交际 / 阅读理解]. Include vocabulary building, model texts, and peer interaction activities. The lesson is [40/60] minutes.` },
+      { label: 'Plan a Chinese lesson', desc: 'Vocabulary building, model texts, peer interaction', prompt: `Plan a ${level} Chinese Language lesson on [topic e.g. ${topicExample('Chinese')}]. Include vocabulary building, model texts, and peer interaction activities. The lesson is [40/60] minutes.` },
     ],
     'Malay': [
-      { label: 'Plan a Malay lesson', desc: 'Vocabulary enrichment, collaborative writing, cultural links', prompt: `Plan a ${level} Malay Language lesson on [topic e.g. Karangan / Kefahaman]. Include vocabulary enrichment, collaborative writing, and cultural connections. The lesson is [40/60] minutes.` },
+      { label: 'Plan a Malay lesson', desc: 'Vocabulary enrichment, collaborative writing, cultural links', prompt: `Plan a ${level} Malay Language lesson on [topic e.g. ${topicExample('Malay')}]. Include vocabulary enrichment, collaborative writing, and cultural connections. The lesson is [40/60] minutes.` },
     ],
     'Tamil': [
-      { label: 'Plan a Tamil lesson', desc: 'Vocabulary strategies, model responses, peer review', prompt: `Plan a ${level} Tamil Language lesson on [topic e.g. கட்டுரை / படிப்புணர்வு]. Include vocabulary strategies, model responses, and peer review activities. The lesson is [40/60] minutes.` },
+      { label: 'Plan a Tamil lesson', desc: 'Vocabulary strategies, model responses, peer review', prompt: `Plan a ${level} Tamil Language lesson on [topic e.g. ${topicExample('Tamil')}]. Include vocabulary strategies, model responses, and peer review activities. The lesson is [40/60] minutes.` },
     ],
     'CCE': [
       { label: 'Plan a CCE lesson', desc: 'Values discussion, contemporary issues, SEL, CCE2021 Big Ideas', prompt: `Plan a ${level} CCE lesson on [topic e.g. Cyber Wellness / Responsible Decision-Making / National Identity]. Use the CCE2021 framework (Big Ideas: Identity, Relationships, Choices). Include a values-based discussion with facilitation strategies and an SEL component. The lesson is [40/60] minutes.` },
@@ -839,6 +858,39 @@ function buildQuickPrompts(classes) {
       { label: 'CCE Education & Career Guidance', desc: 'Self-discovery, career exploration, MySkillsFuture', prompt: `Plan a ${level} CCE ECG lesson on [topic e.g. Discovering My Strengths / Exploring Career Pathways / Work Values / Post-Secondary Options]. Help students develop self-awareness of interests, abilities, and values. Include a reflective activity (e.g. strengths inventory or values card sort) and connect to MySkillsFuture portal. The lesson is [40/60] minutes.` },
     ],
   };
+
+  /* Primary-only subjects. A P4 teacher's timetable is full of Social Studies,
+   * Mother Tongue, PAL, Art, Music and PE; the bank above was built for a
+   * secondary specialist and offered them nothing. Added rather than swapped,
+   * because the shared subjects (English, Maths, Science) already match. */
+  if (isPrimary()) {
+    Object.assign(subjectBank, {
+      'Social Studies': [
+        { label: 'Plan a Social Studies lesson', desc: 'Inquiry from a familiar place, then out to Singapore',
+          prompt: `Plan a ${level} Social Studies lesson on [topic e.g. ${topicExample('Social Studies')}]. Start from something the pupils already know in their own neighbourhood, use one clear source or artefact, and finish with a whole-class inquiry question. The lesson is [30/60] minutes.` },
+      ],
+      'Programme for Active Learning': [
+        { label: 'Plan a PAL module', desc: 'Experiential, non-examinable, confidence-building',
+          prompt: `Plan a ${level} PAL (Programme for Active Learning) session on [Sports & Games / Outdoor Education / Performing Arts / Visual Arts]. It is experiential and non-examinable: no worksheets. Build confidence and social-emotional skills, and include a short reflection.` },
+      ],
+      'Art': [
+        { label: 'Plan an Art lesson', desc: 'Make, look, talk — one skill at a time',
+          prompt: `Plan a ${level} Art & Craft lesson on [topic e.g. ${topicExample('Art')}]. One technique, materials a primary classroom actually has, and time to look at and talk about each other's work. The lesson is [60] minutes.` },
+      ],
+      'Music': [
+        { label: 'Plan a Music lesson', desc: 'Sing, move, play — participation over performance',
+          prompt: `Plan a ${level} Music lesson on [topic e.g. ${topicExample('Music')}]. Everyone participates; nobody performs alone unless they want to. Include singing or movement, a simple classroom instrument, and a listening moment.` },
+      ],
+      'Physical Education': [
+        { label: 'Plan a PE lesson', desc: 'Maximum activity time, minimum queueing',
+          prompt: `Plan a ${level} PE lesson on [topic e.g. ${topicExample('Physical Education')}]. Maximise moving time and minimise queueing — small-sided, everyone active. Include a safety check and a differentiated option for pupils still developing the skill.` },
+      ],
+      'Chinese': [
+        { label: 'Plan a Mother Tongue lesson', desc: 'Speak first, then read, then write',
+          prompt: `Plan a ${level} Chinese Language lesson on [topic e.g. ${topicExample('Chinese')}]. Speaking before reading before writing, with a game or picture prompt to get every pupil talking. The lesson is [30/60] minutes.` },
+      ],
+    });
+  }
 
   // Match subject-specific prompts
   if (hasSub) {
@@ -852,7 +904,7 @@ function buildQuickPrompts(classes) {
 
   // Default subject prompt if no match
   if (prompts.length === 0) {
-    prompts.push({ label: 'Plan a lesson', desc: 'Engaging activities, clear outcomes, E21CC development', prompt: `Plan a ${level} ${subj} lesson on [topic]. Include engaging activities, clear learning outcomes, and opportunities for student collaboration and E21CC development. The lesson is [40/60] minutes.` });
+    prompts.push({ label: 'Plan a lesson', desc: 'Engaging activities, clear outcomes, E21CC development', prompt: `Plan a ${level} ${subj} lesson on [topic e.g. ${topicExample(subj)}]. Include engaging activities, clear learning outcomes, and opportunities for pupil collaboration and E21CC development. The lesson is [${isPrimary() ? '30/60' : '40/60'}] minutes.` });
   }
 
   // Universal prompts (always available)
@@ -1285,7 +1337,8 @@ export function render(container) {
               <div id="framework-chips" style="display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center;" title="Pedagogy frameworks to weave into this plan (toggle any)">
                 ${(Store.getFrameworks?.() || []).map(f => {
                   const on = selectedFrameworkIds.includes(f.id);
-                  return `<button type="button" class="fw-chip" data-fw="${esc(f.id)}" aria-pressed="${on}" style="padding:2px 10px;height:28px;font-size:0.6875rem;font-weight:600;border-radius:999px;cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'var(--border-light)'};color:${on ? 'var(--accent)' : 'var(--ink-muted)'};background:${on ? 'var(--accent-light, rgba(67,97,238,0.08))' : 'var(--bg-card)'};">${esc(f.name)}</button>`;
+                  const c = fwColour(f);
+                  return `<button type="button" class="fw-chip" data-fw="${esc(f.id)}" aria-pressed="${on}" title="${esc(f.guidance || f.name)}" style="padding:2px 10px;height:28px;font-size:0.6875rem;font-weight:600;border-radius:999px;cursor:pointer;transition:background .15s,border-color .15s;border:1px solid ${c};color:${on ? '#fff' : c};background:${on ? c : `color-mix(in srgb, ${c} 10%, var(--bg-card))`};">${esc(f.name)}</button>`;
                 }).join('')}
               </div>
             </div>

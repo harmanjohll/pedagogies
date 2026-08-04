@@ -10,6 +10,7 @@ import { renderSidebar } from './components/sidebar.js';
 import { applySchoolTheme, paintSchoolLabel } from './utils/school-theme.js';
 import { maybeClaimTimetable } from './components/claim-timetable.js';
 import { seedDemoTimetable } from './utils/demo-timetables.js';
+import { Store } from './state.js';
 import { primeVocabulary } from './utils/vocabulary.js';
 import { seedSchoolFrameworks } from './utils/school-frameworks.js';
 import { getCurrentUser } from './components/login.js';
@@ -76,6 +77,11 @@ async function init() {
   // it has almost always resolved and this await costs nothing. The timeout is
   // the floor, not the plan: a school pack that never arrives must fall back to
   // the national defaults rather than hold up the app.
+  // Load THIS school's store. Sign-in happens after state.js has already read a
+  // blob, so without this the previous teacher's school stays in memory — which
+  // is how Park View's classes and CCAs turned up in a Beatty session.
+  Store.rehydrate?.();
+
   await Promise.race([startPriming(), new Promise(r => setTimeout(r, 2500))]);
 
   // The school's OWN pedagogy routines, and the removal of the two that used to

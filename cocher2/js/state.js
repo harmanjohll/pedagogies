@@ -9,15 +9,98 @@ import { idbSetContent, idbDeleteContent, idbGetAllContent, idbClearContent, idb
 import { getSchemaForClass, getFieldValue } from './utils/tracking.js';
 import { applyIdentity } from './utils/identity.js';
 
-const STORAGE_KEY = 'cocher2_app_data';
+/* ── One store per school ──────────────────────────────────────────────────
+ * Everything below used to live in a single `cocher2_app_data` blob. On a
+ * shared machine that meant a Beatty teacher signing in after a Park View one
+ * inherited Park View's classes, CCAs and pedagogy routines — localStorage is
+ * scoped to the ORIGIN, not to whoever is signed in, so nothing separated them.
+ *
+ * The key now carries the school id, so each school has its own Co-Cher:
+ *   cocher2_app_data            ← no school chosen ("Not listed")
+ *   cocher2_app_data__pvps      ← Park View
+ *   cocher2_app_data__bty       ← Beatty
+ *
+ * Teacher-level settings — API key, model, theme, identity — deliberately stay
+ * outside this blob in their own keys, because they belong to the person, not
+ * the school, and a teacher should not have to retype their key when they move.
+ */
+const STORAGE_BASE = 'cocher2_app_data';
+
+/** Read the signed-in school WITHOUT importing login.js — state.js sits below
+ *  it in the import graph, and a cycle here would break boot. */
+function currentSchoolId() {
+  try {
+    const raw = localStorage.getItem('cocher2_current_user');
+    const id = raw ? (JSON.parse(raw) || {}).schoolId : '';
+    return typeof id === 'string' && /^[a-z0-9_-]{1,32}$/i.test(id) ? id : '';
+  } catch { return ''; }
+}
+
+export function storageKeyFor(schoolId) {
+  return schoolId ? `${STORAGE_BASE}__${schoolId}` : STORAGE_BASE;
+}
+
+const STORAGE_KEY = () => storageKeyFor(currentSchoolId());
+
+/**
+ * Scope any OTHER localStorage key to the signed-in school. Seed flags and the
+ * CCA list live outside the main blob, and without this two schools on one
+ * machine share them — which is how a Beatty teacher ended up looking at Park
+ * View's twelve CCAs.
+ */
+export const schoolKey = (base) => {
+  const id = currentSchoolId();
+  return id ? `${base}__${id}` : base;
+};
+
+/**
+ * True when a one-shot flag has already been set — for THIS school, or before
+ * the keys were school-scoped at all.
+ *
+ * The fallback is the whole point. A teacher upgrading from an earlier version
+ * carries unscoped flags like `cocher2_seeded_primary`; without this, every
+ * seeder would decide it had never run and pile sample classes on top of a term
+ * of real work. Reading the legacy flag also RETIRES it into the scoped one, so
+ * the fallback is needed exactly once per school.
+ */
+export function seedFlagSet(base) {
+  const key = schoolKey(base);
+  try {
+    if (localStorage.getItem(key)) return true;
+    if (key !== base && localStorage.getItem(base)) {
+      localStorage.setItem(key, '1');
+      return true;
+    }
+  } catch { /* storage unavailable — treat as not seeded */ }
+  return false;
+}
 
 export function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+/**
+ * The blob for the current school. A teacher whose school store does not exist
+ * yet inherits the pre-split blob ONCE — otherwise the first person to upgrade
+ * would appear to have lost everything they had built.
+ */
 function loadFromStorage() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const key = STORAGE_KEY();
+    let raw = localStorage.getItem(key);
+    if (!raw && key !== STORAGE_BASE) {
+      const legacy = localStorage.getItem(STORAGE_BASE);
+      // Claim it ONCE, for the first school this teacher signs into — but only
+      // if it is genuinely pre-split. A blob stamped for another school is that
+      // school's data and must never be adopted, however it got there.
+      let claimable = !!legacy;
+      try { claimable = claimable && !JSON.parse(legacy).__school; } catch { claimable = false; }
+      if (claimable) {
+        localStorage.setItem(key, legacy);
+        try { localStorage.removeItem(STORAGE_BASE); } catch { /* quota */ }
+        raw = legacy;
+      }
+    }
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
 }
@@ -48,7 +131,7 @@ function clearStorageWarning() {
 
 function saveToStorage(data) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY(), JSON.stringify(data));
     clearStorageWarning();
   } catch (e) {
     console.warn('Co-Cher: Failed to save to localStorage', e);
@@ -343,8 +426,32 @@ export const Store = {
     _listeners.forEach(fn => fn({ ..._state }));
   },
 
+  /**
+   * Re-read the store for whoever is signed in NOW. Sign-in happens after this
+   * module has already loaded a blob, so without this the first teacher's
+   * school store stays in memory for the second teacher's session.
+   */
+  rehydrate() {
+    const saved = loadFromStorage();
+    const fresh = { ...DEFAULT_STATE, frameworks: builtinFrameworkSeeds() };
+    const next = saved ? { ...fresh, ...saved } : fresh;
+    // Mutate in place: _state is a const binding other modules already hold.
+    Object.keys(_state).forEach(k => { delete _state[k]; });
+    Object.assign(_state, next);
+    // Teacher-level settings survive the switch — they belong to the person.
+    _state.apiKey = localStorage.getItem('cocher2_api_key') || _state.apiKey || '';
+    _state.model = localStorage.getItem('cocher2_model') || _state.model || 'gemini-2.5-flash';
+    _kbContentInIdb.clear();
+    _refContentInIdb.clear();
+    this._notify();
+    return _state;
+  },
+
   _persist() {
     saveToStorage({
+      // Whose store this is. Read on load to stop one school's blob being
+      // adopted by another.
+      __school: currentSchoolId(),
       apiKey: _state.apiKey,
       model: _state.model,
       darkMode: _state.darkMode,

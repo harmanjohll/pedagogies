@@ -17,6 +17,11 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.10', items: [
+    { icon: '\u{1F510}', title: 'Each school gets its own Co-Cher', text: 'Browser storage is tied to the website, not to who is signed in \u2014 so on a shared staffroom machine, the next teacher inherited the last one\u2019s classes, CCAs and pedagogy routines. Every school now has its own separate store. Sign out, sign in as another school, and nothing crosses; come back and your own work is exactly where you left it.' },
+    { icon: '\u{1F3A8}', title: 'Framework chips have colours', text: 'The pedagogy chips above the planner box were a row of identical grey pills. Each routine now keeps its own colour, and hovering one tells you what it is for.' },
+    { icon: '\u{1F4DA}', title: 'Starter prompts for YOUR level', text: 'A P3 teacher was being offered \u201cQuadratic Equations\u201d and \u201cOrganic Chemistry\u201d. Topic examples now follow your school\u2019s stage, and primary teachers get starters for Social Studies, Mother Tongue, PAL, Art, Music and PE \u2014 the subjects actually on their timetable.' },
+  ] },
   { version: 'v1.9', items: [
     { icon: '\u{1F3AF}', title: 'The learning practice is your school\u2019s, not Beatty\u2019s', text: 'GROW, ACT, MAP and ASK were built into the app and seeded into every install \u2014 four routines belonging to one school, that nobody else could delete. They now live in Beatty\u2019s own pack. Every other school opens on Assessment FOR Learning and Assessment AS Learning, which genuinely are everyone\u2019s, plus whatever routines its own pack names.' },
     { icon: '\u{1F504}', title: 'Park View opens on its own routines', text: 'The ASK approach and Sense-Think-Act were sitting in Park View\u2019s pack, unused, while the app showed another school\u2019s. They now appear in Assessment as Learning, and the AfL/AaL ring quotes Park View\u2019s own words \u2014 questioning, feedback, peer and self-assessment.' },

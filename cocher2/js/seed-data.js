@@ -5,7 +5,7 @@
  * Students have Singapore-representative names (Chinese, Malay, Indian, Eurasian).
  */
 
-import { Store, generateId } from './state.js';
+import { Store, generateId, schoolKey, seedFlagSet } from './state.js';
 import { compileDeckHTML, saveDeckMaterial, deleteDeckMaterial, listDeckMeta } from './utils/deck.js';
 import { isPrimary, schoolStage, sampleClasses, packCCAs } from './utils/vocabulary.js';
 import { primaryChatExemplars, primaryLifecycleExemplars, primaryShowcaseLessons, PRIMARY_REHEARSED } from './seed-primary.js';
@@ -20,7 +20,7 @@ const stageTag = () => schoolStage() || 'default';
  * not list any, which is when the generic sample list still earns its place. */
 const schoolCCAs = () => asCCARecords(packCCAs());
 
-const SEED_KEY = () => `cocher2_seeded_${stageTag()}`;
+const SEED_KEY = () => schoolKey(`cocher2_seeded_${stageTag()}`);
 
 /* ── Student name pools ── */
 const NAMES = [
@@ -128,7 +128,7 @@ export function seedIfNeeded() {
   // anyone whose stage did NOT change under them, so a teacher who deliberately
   // deleted the sample classes does not find them back the next morning.
   if (!migrated && localStorage.getItem('cocher2_seeded') && !isPrimary()) return;
-  if (localStorage.getItem(SEED_KEY())) return;
+  if (seedFlagSet(`cocher2_seeded_${stageTag()}`)) return;
   if (Store.getClasses().length > 0) {
     localStorage.setItem(SEED_KEY(), '1');
     return;
@@ -1322,9 +1322,10 @@ export function seedCCAIfNeeded() {
   // v5: seeded from the school's own pack where it lists CCAs. A Park View
   // teacher opening My CCA should find Park View's CCAs, not a generic
   // secondary list — the pack already carries them, verbatim.
-  const CCA_SEED_KEY = `cocher2_cca_seeded_v5_${stageTag()}`;
+  const CCA_SEED_KEY = schoolKey(`cocher2_cca_seeded_v5_${stageTag()}`);
+  const CCA_LIST_KEY = schoolKey('cocher2_cca_list');
   let existing = [];
-  try { existing = JSON.parse(localStorage.getItem('cocher2_cca_list') || '[]'); } catch { existing = []; }
+  try { existing = JSON.parse(localStorage.getItem(CCA_LIST_KEY) || '[]'); } catch { existing = []; }
   if (!Array.isArray(existing)) existing = [];
 
   const fromPack = schoolCCAs();
@@ -1336,16 +1337,16 @@ export function seedCCAIfNeeded() {
     return;
   }
   // Empty and already seeded means they cleared it deliberately. Leave it empty.
-  if (!existing.length && localStorage.getItem(CCA_SEED_KEY)) return;
+  if (!existing.length && seedFlagSet(`cocher2_cca_seeded_v5_${stageTag()}`)) return;
 
   const seeded = fromPack.length ? fromPack : asCCARecords(GENERIC_CCAS);
-  localStorage.setItem('cocher2_cca_list', JSON.stringify(seeded));
+  localStorage.setItem(CCA_LIST_KEY, JSON.stringify(seeded));
   try { localStorage.setItem(CCA_SEED_KEY, '1'); } catch { /* quota */ }
 }
 
 /* ══════════ Exemplar Lesson Plans ══════════ */
 
-const LESSON_SEED_KEY = () => `cocher2_lessons_seeded_${stageTag()}`;
+const LESSON_SEED_KEY = () => schoolKey(`cocher2_lessons_seeded_${stageTag()}`);
 
 const EXEMPLAR_LESSONS = [
   {
@@ -1661,7 +1662,7 @@ Key discussion point for (e): the limits include a negative $x$-value \u2014 doe
 
 export function seedLessonsIfNeeded() {
   if (localStorage.getItem('cocher2_lessons_seeded') && !isPrimary()) return;   // pre-v1.5 flag
-  if (localStorage.getItem(LESSON_SEED_KEY())) return;
+  if (seedFlagSet(`cocher2_lessons_seeded_${stageTag()}`)) return;
   const existing = Store.get('lessons') || [];
   if (existing.length > 0) {
     localStorage.setItem(LESSON_SEED_KEY(), '1');
@@ -1707,7 +1708,7 @@ export function seedLessonsIfNeeded() {
    Full-Lifecycle Exemplar Lessons — 9 subjects
    ══════════════════════════════════════════════════════ */
 
-const EXEMPLAR_SEED_KEY = () => `cocher2_exemplars_seeded_v1_${stageTag()}`;
+const EXEMPLAR_SEED_KEY = () => schoolKey(`cocher2_exemplars_seeded_v1_${stageTag()}`);
 const DAY = 86400000;
 
 const LIFECYCLE_EXEMPLARS = [
@@ -2114,7 +2115,7 @@ const EXEMPLAR_REHEARSED = new Set([
 
 export function seedExemplarsIfNeeded() {
   if (localStorage.getItem('cocher2_exemplars_seeded_v1') && !isPrimary()) return;   // pre-v1.5 flag
-  if (localStorage.getItem(EXEMPLAR_SEED_KEY())) return;
+  if (seedFlagSet(`cocher2_exemplars_seeded_v1_${stageTag()}`)) return;
   const classes = Store.getClasses();
   if (classes.length === 0) return; // classes must exist first
   const now = Date.now();
@@ -2150,7 +2151,7 @@ export function seedExemplarsIfNeeded() {
    it also appears for existing installs on this version.
    ══════════════════════════════════════════════════════ */
 
-const SHOWCASE_SEED_KEY = () => `cocher2_showcase_seeded_v5_${stageTag()}`;
+const SHOWCASE_SEED_KEY = () => schoolKey(`cocher2_showcase_seeded_v5_${stageTag()}`);
 
 /* A six-pod discussion layout (+ teacher desk) sized to the 1440×720 canvas,
  * with one saved scene the seated segments point at. */
@@ -2477,7 +2478,7 @@ function refreshShowcaseSims(lesson, spec) {
 
 export function seedShowcaseLessonsIfNeeded() {
   if (localStorage.getItem('cocher2_showcase_seeded_v5') && !isPrimary()) return;   // pre-v1.5 flag
-  if (localStorage.getItem(SHOWCASE_SEED_KEY())) return;
+  if (seedFlagSet(`cocher2_showcase_seeded_v5_${stageTag()}`)) return;
   if (Store.getClasses().length === 0) return; // classes must exist first
   // The showcase is a first-run demo, and it MAKES a class when none matches its
   // level. A teacher who has already planned something real does not need the
@@ -2543,11 +2544,11 @@ export function seedShowcaseLessonsIfNeeded() {
    Admin, Spatial layouts (for demo/testing)
    ══════════════════════════════════════════════════════ */
 
-const PORTAL_SEED_KEY = () => `cocher2_portal_demos_seeded_v2_${stageTag()}`;
+const PORTAL_SEED_KEY = () => schoolKey(`cocher2_portal_demos_seeded_v2_${stageTag()}`);
 
 export function seedPortalDemosIfNeeded() {
   if (localStorage.getItem('cocher2_portal_demos_seeded_v2') && !isPrimary()) return;   // pre-v1.5 flag
-  if (localStorage.getItem(PORTAL_SEED_KEY())) return;
+  if (seedFlagSet(`cocher2_portal_demos_seeded_v2_${stageTag()}`)) return;
   // A primary teacher who already has the secondary demo events should get the
   // primary ones instead — but only the SAMPLES go, never a real event.
   if (isPrimary()) {
