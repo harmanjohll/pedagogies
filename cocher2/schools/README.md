@@ -106,6 +106,35 @@ leave out what you don't have yet and the app falls back to sensible defaults.
 | `sampleClasses` | `[{ "name": "5R1 Mathematics", "level": "Primary 5", "subject": "Mathematics" }]` | Real class codes for first-run samples and placeholder text. |
 | `identity` | `{ "vision": "…", "mission": "…", "motto": "…" }` | Shown in Settings so a teacher can see what Co-Cher knows about their school. |
 
+## Where a school's colleague list comes from
+
+Everything below is chosen by **who signs in**. The email domain resolves to a
+school id, and every source is scoped to that id — nothing crosses.
+
+| Order | Source | Who has to do what |
+|---|---|---|
+| 1 | **Live** — the school's Drive folder via Apps Script | an admin drops a file in Drive; needs `BACKEND_URL` set once |
+| 2 | **This device** — a file a teacher loaded themselves | one teacher, one laptop |
+| 3 | **Bundled** — `schools/<id>/staff.json`, shipped with the app | **nobody. It just works.** |
+| 4 | **Pack names** — `staff` in `<id>.json`, names only | nobody |
+| 5 | Nothing — an honest empty state and the way to fill it | — |
+
+**Source 3 is the default answer for a new school.** Drop the roster into
+`schools/<id>/staff.json`, and every teacher at that school signs in and finds
+their colleagues already there. No upload, no instruction, no admin, and it
+works offline because the service worker caches it.
+
+A school that later stands up a live Drive feed overrides it without a code
+change; a teacher testing a newer roster on their own machine overrides it too.
+Ranking, not replacement.
+
+```
+cocher2/schools/
+  registry.json      ← domain → school id
+  pvps.json          ← the pack: levels, subjects, CCAs, values, frameworks
+  pvps/staff.json    ← the roster: who works here and when they teach
+```
+
 ### `staff` — who works here, without timetables
 
 Optional. Names off your school's own staff page, nothing more:

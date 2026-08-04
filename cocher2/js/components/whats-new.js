@@ -17,6 +17,10 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.11', items: [
+    { icon: '\u{1F465}', title: 'Your colleagues are already there', text: 'Find a Teacher used to need somebody to load a file on their own laptop \u2014 not something you can ask a whole staffroom to do. Park View\u2019s roster now ships with the app: sign in and all 92 colleagues are listed, with real availability from their timetables. Nothing to upload, and it works offline.' },
+    { icon: '\u{1F3EB}', title: 'Everything follows your sign-in', text: 'Sign in with a Beatty address and you get Beatty \u2014 its levels, CCAs, forms, routines and colleague list. Sign in with Park View and you get Park View\u2019s. Each school has its own store, its own folder and its own sources; nothing crosses.' },
+  ] },
   { version: 'v1.10', items: [
     { icon: '\u{1F510}', title: 'Each school gets its own Co-Cher', text: 'Browser storage is tied to the website, not to who is signed in \u2014 so on a shared staffroom machine, the next teacher inherited the last one\u2019s classes, CCAs and pedagogy routines. Every school now has its own separate store. Sign out, sign in as another school, and nothing crosses; come back and your own work is exactly where you left it.' },
     { icon: '\u{1F3A8}', title: 'Framework chips have colours', text: 'The pedagogy chips above the planner box were a row of identical grey pills. Each routine now keeps its own colour, and hovering one tells you what it is for.' },
