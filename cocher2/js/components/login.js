@@ -68,10 +68,16 @@ export function clearCurrentUser() {
   // is signed in — a static import here would close the cycle.
   import('../utils/vocabulary.js').then(m => m.resetVocabulary()).catch(() => {});
   import('../utils/directory.js').then(m => m.resetDirectory()).catch(() => {});
-  localStorage.removeItem('cocher2_current_user');
-  // Clear API key so next user must enter their own
+  // ORDER MATTERS. Clearing the key persists the store, and persisting AFTER
+  // the user is gone writes this school's entire blob into the school-less one
+  // — which the next teacher's school then inherits as "legacy" data. Clear it
+  // while still signed in, so the write lands in this school's own store.
   Store.set('apiKey', '');
   localStorage.removeItem('cocher2_api_key');
+  localStorage.removeItem('cocher2_current_user');
+  // And drop this school's data from memory, so nothing on the way out can be
+  // written into the next school's store either.
+  Store.rehydrate?.();
 }
 
 function animateOut(overlay, onComplete) {

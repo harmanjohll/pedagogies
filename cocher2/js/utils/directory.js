@@ -98,7 +98,23 @@ async function buildDirectory(schoolId) {
     if (teachers.length) return { ...base, source: 'bty-csv', teachers };
   }
 
-  // 4. Names the school published in its own pack — a staff page, essentially.
+  // 4. A roster published WITH THE APP, in the school's own folder. This is the
+  //     path that needs no deployment, no admin and no instruction: drop
+  //     schools/<id>/staff.json into the repo and every teacher at that school
+  //     has their colleague list on first sign-in. Ranked below the backend, so
+  //     a school that later stands up a live Drive feed overrides it without a
+  //     code change, and below a locally loaded file, so a teacher testing a
+  //     newer roster on their own machine still wins.
+  try {
+    const res = await fetch(`./schools/${encodeURIComponent(schoolId)}/staff.json`);
+    if (res.ok) {
+      const doc = await res.json();
+      const teachers = normaliseTeachers(doc?.teachers);
+      if (teachers.length) return { ...base, source: 'bundled', teachers };
+    }
+  } catch { /* no bundled roster for this school — carry on */ }
+
+  // 5. Names the school published in its own pack — a staff page, essentially.
   //     No timetables, and that is the point: knowing WHO works here is useful
   //     on its own, and is a different thing from knowing when they are free.
   //     Ranked below the real rosters so a timetabled source always wins.
@@ -110,7 +126,7 @@ async function buildDirectory(schoolId) {
     };
   }
 
-  // 5. Nothing anywhere. Say what would fix it.
+  // 6. Nothing anywhere. Say what would fix it.
   return {
     ...base,
     source: 'none',

@@ -712,6 +712,18 @@ async function renderFindTeacher(container) {
   teacherSel.addEventListener('change', renderSelected);
   dateSel?.addEventListener('change', renderSelected);
 
+  // Where the list came from. A teacher should be able to tell "published for
+  // my whole school" from "a file I loaded on this laptop" at a glance.
+  if (dir.source === 'bundled' || dir.source === 'backend') {
+    const note = document.createElement('p');
+    note.id = 'ft-local-note';
+    note.className = 'ft-line ft-muted';
+    note.style.cssText = 'margin-top:10px;font-size:0.6875rem;';
+    note.textContent = `${dir.teachers.length} colleagues, published for everyone at ${dir.schoolName || 'your school'}`
+      + (dir.source === 'backend' ? ' (live from your school\u2019s folder).' : '.');
+    container.querySelector('#ft-selectors')?.after(note);
+  }
+
   // A locally loaded roster is this device only — say so, and offer the undo.
   if (dir.source === 'local') {
     const note = document.createElement('p');
