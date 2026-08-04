@@ -638,6 +638,15 @@
     "ART": "Aesthetics",
     "MUSIC": "Aesthetics",
     "PE": "Physical & Health Education",
-    "PAL": "Programme for Active Learning"
+    "PAL": "Programme for Active Learning",
+    "SCIENCE": "Science",
+    "MATHEMATICS": "Mathematics",
+    "ENGLISH": "English",
+    "SOCIAL STUDIES": "Social Studies",
+    "CHINESE": "Mother Tongue",
+    "MALAY": "Mother Tongue",
+    "TAMIL": "Mother Tongue",
+    "ART & CRAFT": "Aesthetics",
+    "PHYSICAL EDUCATION": "Physical & Health Education"
   }
 }

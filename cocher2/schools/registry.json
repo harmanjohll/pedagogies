@@ -31,6 +31,7 @@
         "charlene@pvps",
         "chitra@pvps",
         "darvin@pvps",
+        "demo.teacher@pvps",
         "eileen@pvps",
         "emily@pvps",
         "engtiong@pvps",
@@ -49,6 +50,7 @@
         "izdihar@pvps",
         "izree@pvps",
         "jais@pvps",
+        "jamie@pvps",
         "jareen@pvps",
         "jeannie@pvps",
         "jiayi@pvps",
@@ -110,8 +112,7 @@
         "zainah@pvps",
         "zairina@pvps",
         "zatty@pvps",
-        "zubaidah@pvps",
-        "demo.teacher@pvps"
+        "zubaidah@pvps"
       ],
       "closed": true,
       "closedNote": "Beta. The admin decides who is on allowEmails."

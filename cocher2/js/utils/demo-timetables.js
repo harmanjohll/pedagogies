@@ -18,6 +18,7 @@ import { getMyTimetable, saveMyTimetable } from './timetable.js';
  * so both the identities and the entries are now fabricated. */
 const DEMO = {
   'demo.teacher@pvps': 'pvps-demo-teacher.json',
+  'jamie@pvps': 'pvps-jamie.json',
   'demo.econs@sajc.moe.edu.sg': 'sajc-demo-econs.json',
   'demo.math@sajc.moe.edu.sg': 'sajc-demo-math.json',
 };

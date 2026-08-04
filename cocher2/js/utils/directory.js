@@ -164,11 +164,16 @@ function readLocalRoster(schoolId, subjectMap) {
  */
 export function areasFromEntries(entries, map) {
   if (!map) return [];
+  // Case-insensitive: a school's timetable and its sample week do not always
+  // spell a subject the same way (SCI here, SCIENCE there), and a teacher
+  // should not lose an area to a synonym.
+  const lookup = {};
+  Object.keys(map).forEach(k => { lookup[String(k).trim().toUpperCase()] = map[k]; });
   const found = new Set();
   (entries || []).forEach(e => {
     if (e?.kind && e.kind !== 'lesson') return;          // only what they TEACH
     String(e?.title || '').split(/[,/]/).forEach(part => {
-      const area = map[part.trim()];
+      const area = lookup[part.trim().toUpperCase()];
       if (area) found.add(area);
     });
   });
