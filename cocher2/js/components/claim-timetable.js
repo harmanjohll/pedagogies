@@ -20,6 +20,7 @@ import { getCurrentUser, setCurrentUser } from './login.js';
 import { openModal } from './modals.js';
 import { escapeHtml } from '../utils/markdown.js';
 import { fetchSchoolStaff, findTeacherInStaff, staffNames } from '../utils/backend.js';
+import { fetchBundledRoster } from '../utils/directory.js';
 import { getMyTimetable, saveMyTimetable } from '../utils/timetable.js';
 import { loadPack } from '../utils/school.js';
 
@@ -36,12 +37,23 @@ export async function maybeClaimTimetable() {
 
   const pack = await loadPack(user.schoolId);
   const staff = await fetchSchoolStaff(user.schoolId, pack?.joinCode);
-  const people = staffNames(staff);
-  if (!people.length) return false;
 
   // Exact email match needs no question — that is unambiguous.
   const direct = findTeacherInStaff(staff, { email: user.email });
   if (direct) return adopt(direct, staff, user);
+
+  // No live feed yet, but the school may have published its roster WITH the
+  // app. An exact email match there is just as unambiguous, and it is the
+  // difference between "every teacher signs in and their week is there" and
+  // "every teacher must first be told to import a file". Only an exact match
+  // is taken: a near-miss would put someone in a colleague's week, so anyone
+  // unmatched falls through to the picker below, or to importing their own.
+  const bundled = await fetchBundledRoster(user.schoolId);
+  const mine = findTeacherInStaff(bundled, { email: user.email });
+  if (mine) return adopt(mine, bundled, user);
+
+  const people = staffNames(staff);
+  if (!people.length) return false;
 
   return new Promise(resolve => {
     const { backdrop, close } = openModal({

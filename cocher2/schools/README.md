@@ -9,17 +9,23 @@ which school. Both live here, in the repo, and are safe to publish.
 
 ```
 schools/
-  registry.json     which schools exist, and which email domains route to them
-  bty.json          a filled-in worked example (Beatty Secondary School)
-  _template.json    blank — copy this to start a new school
-  README.md         this file
+  registry.json      which schools exist, and which email domains route to them
+  bty.json           a filled-in worked example (Beatty Secondary School)
+  pvps.json          Park View Primary — a primary school, built from its own timetable
+  oeps.json          Opera Estate Primary — the second primary school
+  <id>/staff.json    that school's roster (see "colleague list" below)
+  demo-timetables/   invented weeks for the demo accounts, clearly labelled
+  _template.json     blank — copy this to start a new school
+  README.md          this file
 ```
 
 ---
 
-## The one rule: no personal data in here
+## Two kinds of file, two different rules
 
-School Packs are **configuration, not people**. The repo is public, so:
+A **pack** (`<id>.json`) is configuration, not people. A **roster**
+(`<id>/staff.json`) is people, by definition. They are separate files because
+they carry different risk, and only the pack is unconditionally safe to publish.
 
 | Goes in a pack ✅ | Never goes in a pack ❌ |
 |---|---|
@@ -28,9 +34,16 @@ School Packs are **configuration, not people**. The repo is public, so:
 | CCA list, school frameworks | Student names, class registers |
 | A group distribution address (`…_all_staff@…`) | Individual staff or parent contacts |
 
-Timetables and class lists are **loaded by each teacher on their own device**, not
-committed here. That keeps names and schedules off a public URL, and it means a
-teacher can get going without waiting for anyone to add their school.
+A roster is the exception, and it is a deliberate one. Park View's and Opera
+Estate's real staff timetables ship in this repo so their teachers get a working
+colleague list on first sign-in with nothing to do. **This repo is public**, so
+committing a roster publishes staff names and their weekly movements — and a
+weekly pattern identifies a person even without a name attached. Do it only for
+a school that has agreed to it, and only with staff data: student names and
+class registers never belong here under any circumstance.
+
+If a school has not agreed, it still works — a teacher loads the file on their
+own device (source 2 below) and nothing is committed.
 
 ---
 
@@ -116,9 +129,12 @@ leave out what you don't have yet and the app falls back to sensible defaults.
 | A school with `closed: true` | Only its own domain, and only addresses on its `allowEmails` list. It is **hidden from the picker**, so nobody can select their way in. |
 | `allowEmails: []` | Empty means the whole domain is welcome. Populated means only those addresses. |
 
-Park View is `closed` for its beta: sign-in handles are `name@pvps` — short, and
-deliberately not an MOE address so it cannot collide with a real one. The admin
-controls the beta by trimming `allowEmails`; there is no separate account system.
+Park View and Opera Estate are both `closed` for their betas: sign-in handles are
+`name@pvps` and `name@oeps` — short, and deliberately not MOE addresses so they
+cannot collide with real ones. The handle is derived from the school's own
+timetable, one per sheet, so the list needs no invention and no guessing. Each
+school's admin controls its beta by trimming `allowEmails`; there is no separate
+account system.
 
 Be plain about what this is. The check runs in the browser on a public page, so
 it is a front door, not a lock — it stops a stray visitor wandering into a
@@ -154,6 +170,47 @@ cocher2/schools/
   pvps.json          ← the pack: levels, subjects, CCAs, values, frameworks
   pvps/staff.json    ← the roster: who works here and when they teach
 ```
+
+A bundled roster also answers a second question: **which row is me?** If the
+signed-in address matches a roster `email` exactly, that teacher's own week is
+loaded on first sign-in — no import, no picker, nothing anyone has to be told to
+do. Only an exact match counts; anything less would put a teacher in a
+colleague's week, so a near-miss falls through to the "which of these is you?"
+picker or to importing their own file.
+
+### Converting a school's staff timetable
+
+Every school's export is shaped differently and none of them are canonical, so
+each needs a small one-off converter. Two that have been written:
+
+| | Park View | Opera Estate |
+|---|---|---|
+| Layout | periods down the rows, days across | **days down the rows, periods across** |
+| Doubles | the same value repeated in consecutive blocks | **a merged cell range** |
+| Names | first names only | full names in row 2, sheet tag in brackets |
+| Duties | in the grid, with times | in the grid **and** in untimed margin cells |
+
+Two traps worth knowing before writing the third:
+
+* **Expand merged ranges first.** A spreadsheet reader returns a merge's value
+  only in its top-left cell, so every double period silently becomes a single.
+* **Do not invent times for untimed things.** Opera Estate writes duty posts in
+  the margin, off the period grid. They are kept as day-level facts
+  (`dayDuties: [{ day, post }]`) rather than given a slot the school never
+  assigned — putting a teacher somewhere at a time nobody said is worse than
+  not showing it.
+
+Both converters produce the same canonical entry, which is the only thing the
+app knows about:
+
+```json
+{ "cycle": null, "day": "Wed", "start": "09:00", "end": "10:00",
+  "title": "MA", "class": "5D", "room": null, "kind": "lesson" }
+```
+
+`kind` is `lesson` · `duty` · `pd` · `school`. Only `lesson` entries feed the
+teaching-area derivation, which is what keeps duty posts and committees from
+turning into departments.
 
 ### `staff` — who works here, without timetables
 
@@ -213,3 +270,19 @@ and the GROW / ACT frameworks that are currently hardcoded as undeletable
 
 It's the template for what "good" looks like, and it doubles as the proof that
 Beatty is now just *the first school*, not a special case.
+
+`pvps.json` and `oeps.json` are the two primary schools, and between them they
+show what a pack looks like when the website and the timetable disagree about
+how much is knowable. Everything read from a school's own timetable — the period
+grid, class codes, subject codes, duty posts — is first-hand and exact.
+Everything about identity, values and programmes is only as good as the source
+it came from, and `needsConfirmation` says which is which. Opera Estate's is the
+longer list: its website refuses fetches from the build environment, so its
+vision, values and CCAs were assembled from search results and are flagged for
+the school to confirm rather than quoted as settled.
+
+Its learning routines are not in yet, so it deliberately carries no
+`learningPractice` and no `frameworks`. That is not a gap to be filled with a
+plausible guess — a pack with neither falls back to the national Assessment FOR
+/ AS Learning frame, which is genuinely everyone's, and the school's own
+routines drop in later without a code change.

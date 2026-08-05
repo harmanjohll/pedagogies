@@ -294,6 +294,24 @@ export async function schoolTeachingContext(id, { subject } = {}) {
   const haf = p.programmes?.haf;
   if (haf?.domains) lines.push(`\nRecognition (${haf.name}) spans: ${haf.domains.join(', ')}.`);
 
+  /* The school's named programmes — its ALP, its LLP, whatever else it runs.
+   * These are the things a school is KNOWN for, and they were reaching the
+   * screen but not the model, so a lesson plan for a school built around
+   * environmental advocacy came back with no trace of it. Driven off the data,
+   * not a fixed list of keys, so a pack that names a new programme gets it
+   * without a code change. */
+  const HANDLED = new Set(['haf', 'assessment', 'discipline', 'aiPolicy', 'via']);
+  Object.entries(p.programmes || {}).forEach(([key, prog]) => {
+    if (HANDLED.has(key) || !prog || Array.isArray(prog) || typeof prog !== 'object') return;
+    if (!prog.name && !prog.verbatim) return;
+    lines.push(`\n[${key.toUpperCase()}${prog.name ? ` — ${prog.name}` : ''}] ${prog.verbatim || ''}`);
+    if (Array.isArray(prog.prongs)) {
+      lines.push(`  ${prog.prongs.map(x => `${x.key}: ${x.blurb}`).join(' · ')}`);
+    }
+    if (Array.isArray(prog.domains)) lines.push(`  Spans: ${prog.domains.join(', ')}.`);
+    if (Array.isArray(prog.levels)) lines.push(`  Runs at: ${prog.levels.join(', ')}.`);
+  });
+
   /* Assessment, split so a prompt can reach for the right half. AfL is what the
    * teacher does while pupils learn; AaL is what the pupils do. A lesson plan
    * that names neither is not this school's lesson plan. */
