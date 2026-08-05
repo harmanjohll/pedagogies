@@ -1,6 +1,6 @@
 {
   "schoolId": "oeps",
-  "note": "Opera Estate Primary, staff timetable 2026 TERM1 v6. Sign-in handles are name@oeps — a pilot handle, deliberately not an MOE address. A live Drive/Apps Script feed overrides this file when one is configured.",
+  "note": "Opera Estate Primary, staff timetable 2026 TERM1 v6. Sign-in handles are name@oeps — a pilot handle, deliberately not an MOE address. A live Drive/Apps Script feed overrides this file when one is configured. Designations for key personnel are from the school’s published 2026 School Staff page; everyone else carries none, because the workbook has no department column.",
   "teachers": [
     {
       "name": "Boo Seow Fang",
@@ -248,12 +248,12 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Bunawar Bin Md Ali",
       "email": "bunawar@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -401,7 +401,9 @@
           "day": "Thu",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "LH — Science",
+      "department": ""
     },
     {
       "name": "Chelsea Teo Shao Jing",
@@ -578,7 +580,8 @@
           "day": "Tue",
           "post": "Bus Stop"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Chong Yong Tian",
@@ -765,7 +768,8 @@
           "day": "Fri",
           "post": "Bus Stop"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Hanisah Binte Mohd Jailani",
@@ -988,7 +992,8 @@
           "day": "Wed",
           "post": "Bus Stop Gate"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Harlina Abdul Jalil",
@@ -1206,13 +1211,13 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
-      "name": "Hoo Wai Ling",
+      "name": "Mrs Tan Wai Ling",
       "email": "wailing@oeps",
-      "department": "",
-      "note": "Principal. Following Elvenia Poh's week for the beta — this is not a timetable the school issued for her.",
+      "note": "Principal. The school's site names her Mrs Tan Wai Ling; Co-Cher was told Hoo Wai Ling — see needsConfirmation. Following Elvenia Poh's week for the beta; this is not a timetable the school issued for her.",
       "entries": [
         {
           "cycle": null,
@@ -1330,7 +1335,9 @@
           "day": "Wed",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "Principal",
+      "department": ""
     },
     {
       "name": "Mdm Ang Hong Ling",
@@ -1538,7 +1545,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Angeline Leow",
@@ -1746,7 +1754,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Angie Wa",
@@ -1927,12 +1936,12 @@
           "day": "Thu",
           "post": "Hall"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mdm Aruna",
       "email": "aruna@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -2040,7 +2049,9 @@
           "day": "Wed",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "Year Head — Middle Primary",
+      "department": ""
     },
     {
       "name": "Mdm Debby Anggreanie",
@@ -2243,7 +2254,8 @@
           "day": "Fri",
           "post": "Bus Bay"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mdm Eileen Ong",
@@ -2410,7 +2422,8 @@
           "day": "Thu",
           "post": "Bicycle Bay"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mdm Lienda Jamali",
@@ -2588,7 +2601,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Lim Ching Ching",
@@ -2746,7 +2760,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Ma Khin Kyi",
@@ -2884,7 +2899,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Michelle Kee",
@@ -3172,7 +3188,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Nasibah Bte Idros Alkhatib",
@@ -3345,7 +3362,8 @@
           "day": "Mon",
           "post": "Pedestrian Crossing"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mdm Norain",
@@ -3492,12 +3510,12 @@
           "day": "Tue",
           "post": "Bus Stop Gate"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mdm Noraini Binte Abdul Rahim",
       "email": "noraini@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -3675,7 +3693,9 @@
           "day": "Fri",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "Year Head — Lower Primary",
+      "department": ""
     },
     {
       "name": "Mdm Nur Farah",
@@ -3843,7 +3863,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Nuraihan Bte Abdul Subhan",
@@ -4021,7 +4042,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Nursidah Bte Abdul Wahid",
@@ -4194,7 +4216,8 @@
           "day": "Tue",
           "post": "Pedestrian Crossing"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mdm Nurul Ashilah",
@@ -4392,12 +4415,12 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Rajima d/o Sevathamaricar",
       "email": "rajima@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -4575,7 +4598,9 @@
           "day": "Mon",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "Year Head — Upper Primary",
+      "department": ""
     },
     {
       "name": "Mdm Rosnah",
@@ -4736,7 +4761,8 @@
           "day": "Fri",
           "post": "Hall"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mdm Siti Arfah",
@@ -4974,12 +5000,12 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Siti Haszilah",
       "email": "haszilah@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -5087,12 +5113,13 @@
           "day": "Wed",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "HOD — English",
+      "department": ""
     },
     {
       "name": "Mdm Siti Suhaila",
       "email": "suhaila@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -5220,7 +5247,9 @@
           "day": "Fri",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "SH — Malay Language",
+      "department": ""
     },
     {
       "name": "Mdm Tan Hui Qing",
@@ -5398,7 +5427,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mdm Tan Li San",
@@ -5541,12 +5571,12 @@
           "day": "Mon",
           "post": "Bus Stop Gate"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mdm Yu Xinyi",
       "email": "xinyi@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -5674,7 +5704,9 @@
           "day": "Tue",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "Assistant Year Head — Middle Primary",
+      "department": ""
     },
     {
       "name": "Mdm Zahureen Binte Aman",
@@ -5847,7 +5879,8 @@
           "day": "Thu",
           "post": "Bus Stop Gate"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mdm Zuo Qinjie",
@@ -5995,7 +6028,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mr Abdul Rahim",
@@ -6173,7 +6207,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mr Foo Yu Ren",
@@ -6381,7 +6416,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mr Issac Pang",
@@ -6554,7 +6590,8 @@
           "day": "Wed",
           "post": "Hall"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mr Leonard Paul Gomes",
@@ -6742,7 +6779,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mr Lim Yanzhi",
@@ -6950,12 +6988,12 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mr Lincoln Yeo",
       "email": "lincoln@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -7148,7 +7186,9 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": "Senior Teacher — Physical Education",
+      "department": ""
     },
     {
       "name": "Mr Mohammed Farid Bin Rozalli",
@@ -7346,7 +7386,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mr Nor Hadi Bin Isnin",
@@ -7594,12 +7635,12 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mr Omar Azahari",
       "email": "omar@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -7717,7 +7758,9 @@
           "day": "Tue",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "SH — Discipline",
+      "department": ""
     },
     {
       "name": "Mr Osman B Suradi",
@@ -7975,12 +8018,12 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mr Ray Aziz",
       "email": "ray@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -8173,7 +8216,9 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": "Senior Teacher — Music",
+      "department": ""
     },
     {
       "name": "Mr Tham Renjie",
@@ -8356,7 +8401,8 @@
           "day": "Thu",
           "post": "Hall"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mr Tong Chin Hong",
@@ -8509,7 +8555,8 @@
           "day": "Tue",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mr Won Wee Son",
@@ -8682,12 +8729,12 @@
           "day": "Thu",
           "post": "Bus Bay"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Mrs Balan",
       "email": "sumathi@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -8815,7 +8862,9 @@
           "day": "Fri",
           "post": "Bicycle Bay"
         }
-      ]
+      ],
+      "role": "Lead Teacher — Science",
+      "department": ""
     },
     {
       "name": "Mrs Eileen Pang",
@@ -8983,7 +9032,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mrs Eliza Lim (ELIZA (2))",
@@ -9201,7 +9251,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mrs Eliza Lim (ELIZA)",
@@ -9409,12 +9460,12 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Mrs Elvenia Poh",
       "email": "elvenia@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -9532,12 +9583,13 @@
           "day": "Wed",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "School Staff Developer",
+      "department": ""
     },
     {
       "name": "Mrs Sng Peiling",
       "email": "peiling@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -9655,7 +9707,9 @@
           "day": "Fri",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "HOD — Mathematics",
+      "department": ""
     },
     {
       "name": "Mrs Tan Kwee Gek",
@@ -9798,7 +9852,8 @@
           "day": "Fri",
           "post": "Hall"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Ms Amanda Yong Yue Teng",
@@ -10006,7 +10061,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Ms Chen Lijia",
@@ -10139,12 +10195,12 @@
           "day": "Fri",
           "post": "Pedestrian Crossing"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Ms Chia Hui Min",
       "email": "huimin@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -10242,7 +10298,9 @@
           "day": "Mon",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "HOD — Student Management",
+      "department": ""
     },
     {
       "name": "Ms Chow Yan Mei",
@@ -10395,12 +10453,12 @@
           "day": "Mon",
           "post": "Bicycle Bay"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Ms Chua Jinxun",
       "email": "jinxun@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -10488,12 +10546,13 @@
           "day": "Thu",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "HOD — CCE",
+      "department": ""
     },
     {
       "name": "Ms Dawn Sim",
       "email": "dawn@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -10631,12 +10690,13 @@
           "day": "Tue",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "SH — Aesthetics",
+      "department": ""
     },
     {
       "name": "Ms Felicia Chow",
       "email": "felicia@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -10764,7 +10824,9 @@
           "day": "Mon",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "HOD — Mother Tongue Languages",
+      "department": ""
     },
     {
       "name": "Ms Guo Xinyi Cindy",
@@ -10822,7 +10884,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Ms Gwendolyn Poh",
@@ -10990,7 +11053,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Ms He Wen Li",
@@ -11133,12 +11197,12 @@
           "day": "Fri",
           "post": "Bus Stop Gate"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Ms Hema Kumari Welkers",
       "email": "hema@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -11301,7 +11365,9 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": "Senior Teacher — English",
+      "department": ""
     },
     {
       "name": "Ms Kau Siew Fun",
@@ -11469,7 +11535,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Ms Komathy d/o Selvaraj",
@@ -11647,7 +11714,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Ms Lim Pei Yi, Rachel",
@@ -11785,7 +11853,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Ms Ng Ai Leen",
@@ -11932,7 +12001,8 @@
           "day": "Wed",
           "post": "Bicycle Bay"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Ms Ng Wei Ee",
@@ -12085,7 +12155,8 @@
           "day": "Thu",
           "post": "Bus Bay"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Ms Nor Murniyanti Binte Ali",
@@ -12243,7 +12314,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Ms Seet Swee Li",
@@ -12431,12 +12503,12 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Ms Shaikha Maimunah",
       "email": "shaikha@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -12574,7 +12646,9 @@
           "day": "Thu",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "SH — Information & Communications Technology",
+      "department": ""
     },
     {
       "name": "Ms Sherilyn Lee",
@@ -12711,7 +12785,8 @@
           "day": "Thu",
           "post": "Bus Stop Gate"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Ms Tan Siew Chin Elaine",
@@ -12878,7 +12953,8 @@
           "day": "Thu",
           "post": "Pedestrian"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Ms. S Aishwarya",
@@ -13106,7 +13182,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Nur Aisha Bte Abdul Ghafar",
@@ -13303,7 +13380,8 @@
           "day": "Fri",
           "post": "Pedestrian"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Poh Jing Wen Alyssa",
@@ -13511,7 +13589,8 @@
           "kind": "lesson"
         }
       ],
-      "dayDuties": []
+      "dayDuties": [],
+      "role": ""
     },
     {
       "name": "Saraswathy Arumugam",
@@ -13724,12 +13803,12 @@
           "day": "Tue",
           "post": "Bus Bay"
         }
-      ]
+      ],
+      "role": ""
     },
     {
       "name": "Tan Chay Tin Jasmine",
       "email": "jasmine@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -13827,12 +13906,13 @@
           "day": "Mon",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "HOD — Science",
+      "department": ""
     },
     {
       "name": "Tan Chor Kheng Christine",
       "email": "christine@oeps",
-      "department": "",
       "entries": [
         {
           "cycle": null,
@@ -13970,7 +14050,9 @@
           "day": "Thu",
           "post": "Team Leader"
         }
-      ]
+      ],
+      "role": "SH — CCE",
+      "department": ""
     }
   ]
 }

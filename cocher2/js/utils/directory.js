@@ -206,6 +206,11 @@ function normaliseTeachers(list, subjectMap) {
         department: areas[0] || '',
         departments: areas,
         derivedAreas: !stated && areas.length > 0,
+        // A published DESIGNATION — "HOD — English", "Year Head — Lower Primary".
+        // Deliberately not `department`: a stated department replaces the areas
+        // derived from the timetable, so putting a job title there would drop
+        // the Head of English out of English and invent an area nobody teaches.
+        role: String(t?.role || '').trim(),
         entries,
       };
     })
