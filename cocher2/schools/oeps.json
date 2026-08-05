@@ -14,7 +14,8 @@
     "valuesNote": "The school states its values as the acronym R2IGHT, and aims to create opportunities for pupils to learn and meaningfully apply them, so as to form a strong sense of identity and make good choices across contexts.",
     "foundedNote": "Formed in 1985 from the amalgamation of Opera Boys’ School and Opera Girls’ School.",
     "principal": "Mdm Hoo Wai Ling",
-    "source": "https://www.operaestatepri.moe.edu.sg/"
+    "source": "NOT FETCHED — assembled from search-engine summaries of https://www.operaestatepri.moe.edu.sg/, which refuses direct fetches. Confirm against the page itself.",
+    "corroboration": "Mission and the R2IGHT values came back from two independent searches. Vision, motto and the CCA list surfaced once each."
   },
   "values": [
     "Respect",
@@ -113,7 +114,7 @@
         }
       ],
       "prongsNote": "The three prongs of OPG are described by the school as the 3 As.",
-      "source": "https://www.moe.gov.sg/schoolfinder/schooldetail/opera-estate-primary-school"
+      "source": "NOT FETCHED — assembled from search-engine summaries of https://www.moe.gov.sg/schoolfinder/schooldetail/opera-estate-primary-school, which refuses direct fetches. Confirm against the page itself."
     },
     "digitalMaker": {
       "name": "Digital Maker Programme",
@@ -122,12 +123,12 @@
         "Primary 5"
       ],
       "verbatim": "In line with Smart Nation and a need to inculcate entrepreneurial dare and lifelong learning, the P4 and P5 levels go through a Digital Maker Programme which integrates STEM with Sustainability education. Students learn coding and computational thinking using a micro:bit. They then go through a Design Thinking process to create prototypes using recycled materials to tackle real-life environmental problems.",
-      "source": "https://www.moe.gov.sg/schoolfinder/schooldetail/opera-estate-primary-school"
+      "source": "NOT FETCHED — assembled from search-engine summaries of https://www.moe.gov.sg/schoolfinder/schooldetail/opera-estate-primary-school, which refuses direct fetches. Confirm against the page itself."
     },
     "llp": {
       "name": "Ignite D' Arts @ OEPS",
       "verbatim": "The Learning for Life Programme (LLP) “Ignite D' Arts@OEPS” provide opportunities for students to have a deeper appreciation for the Arts and develop the confidence in articulating one's expression for the Arts.",
-      "source": "https://www.moe.gov.sg/schoolfinder/schooldetail/opera-estate-primary-school"
+      "source": "NOT FETCHED — assembled from search-engine summaries of https://www.moe.gov.sg/schoolfinder/schooldetail/opera-estate-primary-school, which refuses direct fetches. Confirm against the page itself."
     },
     "pal": {
       "name": "Programme for Active Learning (PAL)",
@@ -379,6 +380,7 @@
   "needsConfirmation": [
     "Learning routines and teaching-and-learning imperatives — not yet supplied; the app currently shows the national AfL/AaL frame for Opera Estate, not a school-specific one.",
     "Vision, mission, motto and the R2IGHT values were assembled from search results, NOT read off the school site (which refuses fetches from this environment). Confirm the exact wording before it is quoted to pupils or parents.",
+    "The values are DISPUTED between sources: one search returned the R2IGHT acronym (Respect, Responsibility, Integrity, Gratitude, Humility, Tenacity), another returned \"Respect, Responsibility, Resilience, Integrity, Care, Harmony\". R2IGHT is in the pack because its six letters map exactly and it appeared twice — but that is a judgement call, not a verified fact.",
     "School colours — the accent is a placeholder.",
     "The general office email address — deliberately left blank rather than guessed.",
     "Two workbook sheets (ELIZA and ELIZA (2)) carry the same name, Mrs Eliza Lim, and hold two different weeks for the same class 1J. Confirm which is current, or whether these are two people.",
