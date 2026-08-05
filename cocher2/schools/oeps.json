@@ -11,11 +11,17 @@
     "motto": "Towards Higher Goals",
     "philosophy": "Every child is a Gem, to be polished through the holistic experiences in OEPS.",
     "valuesAcronym": "R2IGHT",
-    "valuesNote": "The school states its values as the acronym R2IGHT, and aims to create opportunities for pupils to learn and meaningfully apply them, so as to form a strong sense of identity and make good choices across contexts.",
+    "valuesNote": "The school states its values as the acronym R2IGHT, described as its NEW values — which is the likely reason a second, older-looking set (Respect, Responsibility, Resilience, Integrity, Care, Harmony) also circulates. R2IGHT is corroborated across three independent searches.",
     "foundedNote": "Formed in 1985 from the amalgamation of Opera Boys’ School and Opera Girls’ School.",
     "principal": "Mdm Hoo Wai Ling",
     "source": "NOT FETCHED — assembled from search-engine summaries of https://www.operaestatepri.moe.edu.sg/, which refuses direct fetches. Confirm against the page itself.",
-    "corroboration": "Mission and the R2IGHT values came back from two independent searches. Vision, motto and the CCA list surfaced once each."
+    "corroboration": "R2IGHT, the mission and the vision came back from three, two and two independent searches respectively. The motto surfaced once. The CCA list is the weakest item: the school’s CCA page is not indexed at all, so that list is inferred and should be replaced wholesale.",
+    "visionOutcomes": [
+      "Effective Communicators",
+      "Self-directed Learners",
+      "Creative and Critical Thinkers",
+      "Civic-Minded Rooted Citizens"
+    ]
   },
   "values": [
     "Respect",
@@ -378,17 +384,18 @@
     }
   ],
   "needsConfirmation": [
+    "LEARNING IMPERATIVES — the school publishes an \"Opera Learning Disposition\" (OPERA LD) at /opera-ld/. That is almost certainly the school-specific learning routine this pack is missing. It could not be read from the build environment; send the page and it drops into learningPractice and frameworks without a code change.",
     "Learning routines and teaching-and-learning imperatives — not yet supplied; the app currently shows the national AfL/AaL frame for Opera Estate, not a school-specific one.",
     "Vision, mission, motto and the R2IGHT values were assembled from search results, NOT read off the school site (which refuses fetches from this environment). Confirm the exact wording before it is quoted to pupils or parents.",
-    "The values are DISPUTED between sources: one search returned the R2IGHT acronym (Respect, Responsibility, Integrity, Gratitude, Humility, Tenacity), another returned \"Respect, Responsibility, Resilience, Integrity, Care, Harmony\". R2IGHT is in the pack because its six letters map exactly and it appeared twice — but that is a judgement call, not a verified fact.",
+    "Values: R2IGHT is corroborated three times and is described as the school’s NEW set, so the older \"Respect, Responsibility, Resilience, Integrity, Care, Harmony\" that also circulates is probably retired. Worth one confirmation.",
     "School colours — the accent is a placeholder.",
     "The general office email address — deliberately left blank rather than guessed.",
     "Two workbook sheets (ELIZA and ELIZA (2)) carry the same name, Mrs Eliza Lim, and hold two different weeks for the same class 1J. Confirm which is current, or whether these are two people.",
     "Recess — the timetable marks no recess block, so break times are unknown.",
     "Duty posts carry no times in the workbook (they sit in the margin, not in a period), so they are recorded as day-level facts and are not placed on the timetable.",
     "Class-letter scheme C/D/G/H/I/J — the naming rationale is not published. 6FDN is the P6 Foundation class.",
-    "CCA list is from search results and is not confirmed against the school’s own CCA page.",
     "Term dates — none found.",
-    "Departments/HODs — the workbook has no department column, so teaching areas are DERIVED from what each teacher is timetabled to teach."
+    "Departments/HODs — the workbook has no department column, so teaching areas are DERIVED from what each teacher is timetabled to teach.",
+    "CCA list — the school’s CCA page is NOT indexed by search at all, so the twelve CCAs in this pack are inferred rather than sourced. Treat the whole list as provisional and replace it."
   ]
 }
