@@ -19,7 +19,7 @@
  * Bump alongside `sw.js` VERSION (the cache name derives from it).
  */
 
-export const APP_VERSION = 'v1.14';
+export const APP_VERSION = 'v1.16';
 
 /* The previous line, still live for existing users. */
 export const PREVIOUS_VERSIONS = [

@@ -105,14 +105,9 @@ async function buildDirectory(schoolId) {
   //     a school that later stands up a live Drive feed overrides it without a
   //     code change, and below a locally loaded file, so a teacher testing a
   //     newer roster on their own machine still wins.
-  try {
-    const res = await fetch(`./schools/${encodeURIComponent(schoolId)}/staff.json`);
-    if (res.ok) {
-      const doc = await res.json();
-      const teachers = normaliseTeachers(doc?.teachers, pack?.subjectDepartments);
-      if (teachers.length) return { ...base, source: 'bundled', teachers };
-    }
-  } catch { /* no bundled roster for this school — carry on */ }
+  const doc = await fetchBundledRoster(schoolId);
+  const teachers = normaliseTeachers(doc?.teachers, pack?.subjectDepartments);
+  if (teachers.length) return { ...base, source: 'bundled', teachers };
 
   // 5. Names the school published in its own pack — a staff page, essentially.
   //     No timetables, and that is the point: knowing WHO works here is useful
@@ -132,6 +127,24 @@ async function buildDirectory(schoolId) {
     source: 'none',
     reason: `${name || 'Your school'} has not published a staff timetable yet, so there is nobody to list. Load it from Admin \u2192 Find a Teacher and it works straight away on this device; publish it to the school's folder and it works for everyone.`,
   };
+}
+
+/**
+ * The roster a school published WITH the app, at `schools/<id>/staff.json`.
+ * → the raw document, or null when that school has not published one.
+ *
+ * Exported because two different questions are answered from the same file:
+ * "who else works here" (this module) and "which of these rows is ME"
+ * (claim-timetable.js). One fetch path, so the convention lives in one place.
+ */
+export async function fetchBundledRoster(schoolId) {
+  if (!schoolId) return null;
+  try {
+    const res = await fetch(`./schools/${encodeURIComponent(schoolId)}/staff.json`);
+    if (!res.ok) return null;
+    const doc = await res.json();
+    return Array.isArray(doc?.teachers) ? doc : null;
+  } catch { return null; }      // no bundled roster for this school
 }
 
 /* ── A roster held in this browser ───────────────────────────────────
@@ -193,6 +206,11 @@ function normaliseTeachers(list, subjectMap) {
         department: areas[0] || '',
         departments: areas,
         derivedAreas: !stated && areas.length > 0,
+        // A published DESIGNATION — "HOD — English", "Year Head — Lower Primary".
+        // Deliberately not `department`: a stated department replaces the areas
+        // derived from the timetable, so putting a job title there would drop
+        // the Head of English out of English and invent an area nobody teaches.
+        role: String(t?.role || '').trim(),
         entries,
       };
     })

@@ -661,8 +661,13 @@ async function renderFindTeacher(container) {
     // Leaving them out would suggest they do not work here; letting them be
     // picked would promise an availability answer Co-Cher cannot give. Named
     // and greyed, with the reason on the label, is the only honest option.
+    // A published designation rides along on the label. "Ms Chua Jin Xun" and
+    // "Ms Chua Jin Xun · HOD — CCE" are the same lookup, but only one of them
+    // tells you whether you have found the right person to ask.
     const opt = (x, disabled) =>
-      `<option value="${x.i}"${disabled ? ' disabled' : ''}>${esc(x.t.name)}${disabled ? ' — timetable not uploaded' : ''}</option>`;
+      `<option value="${x.i}"${disabled ? ' disabled' : ''}>${esc(x.t.name)}`
+      + `${x.t.role ? ` · ${esc(x.t.role)}` : ''}`
+      + `${disabled ? ' — timetable not uploaded' : ''}</option>`;
 
     teacherSel.disabled = false;
     teacherSel.innerHTML = `<option value="">Select a teacher&hellip;</option>`

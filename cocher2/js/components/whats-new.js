@@ -17,6 +17,15 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.16', items: [
+    { icon: '\u{1F4D6}', title: 'Opera Estate speaks in its own words now', text: 'The school sent its full site, so the guesses are gone. Its vision, mission, R2IGHT values, crest and 40th-anniversary theme are quoted exactly; so are the curriculum stances of all eight departments — C-P-A in Maths, EL Syllabus 2020, the seven PE Learning Areas, CCE@OEPS on Identity/Relationships/Choices — and every one of them now reaches the AI when you plan.' },
+    { icon: '\u{1F552}', title: 'The bell knows Wednesday is short', text: 'Wednesday dismisses at 12.30, not 1.30. Recess is staggered by level (P1 & P4 at 9.30, P2 & P5 at 10.00, P3 & P6 at 10.30) and is not marked on the staff timetable, so a slot that looks free may be a duty. Both are recorded, along with CCA and remedial times.' },
+    { icon: '\u{1F464}', title: 'Find a Teacher shows who does what', text: 'A colleague’s published designation — HOD, Year Head, Subject Head, Senior Teacher — now rides on their name, so you can tell whether you have found the right person to ask. Their teaching areas are still worked out from the timetable, because a job title is not a subject.' },
+  ] },
+  { version: 'v1.15', items: [
+    { icon: '\u{1F3EB}', title: 'Opera Estate Primary joins', text: 'Its own bubble, from its own timetable: twelve 30-minute periods from 7:30 to 1:30, its real class codes across P1–P6 including the P6 Foundation class, and all 81 colleagues listed on first sign-in. Sign-in is name@oeps. Its learning routines are not in yet, so Opera Estate opens on Assessment FOR and AS Learning rather than a school-specific frame that nobody has confirmed.' },
+    { icon: '\u{1F4C5}', title: 'Your own week is already loaded', text: 'If your school published its roster with the app and your sign-in matches a row in it, your timetable is simply there — no import, no picker, nothing to be told to do. Anything less than an exact match still asks, because a near-miss would put you in a colleague’s week.' },
+  ] },
   { version: 'v1.13', items: [
     { icon: '\u{1F511}', title: 'Park View signs in as name@pvps', text: 'A short pilot handle \u2014 adeline@pvps \u2014 deliberately not an MOE address, so it cannot be confused with or collide with a real one. The school is in beta: only names on its list get in, and it no longer appears in the \u201cwhich school are you at?\u201d picker, so nobody can select their way into a school they do not work at.' },
     { icon: '\u{1F4CB}', title: 'The admin decides who tests', text: 'All 92 handles are generated from the staff timetable and listed in the school\u2019s own registry entry. Trimming that list is how access is controlled \u2014 no code change, no separate account system.' },
