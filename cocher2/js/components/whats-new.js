@@ -17,6 +17,10 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.18', items: [
+    { icon: '\u{1F50E}', title: 'Student Finder, in Admin One-Stop', text: 'Load your school\u2019s student timetable and find any student: who teaches them each subject, where they are now, and which of your classes they are in. The file stays on this device, and only the columns Co-Cher needs are kept; remarks and the like are left out.' },
+    { icon: '\u2705', title: 'Commit class', text: 'Turn a teaching group or a form class into a My Classes class in one tap, ready for seating, E21CC tracking, lessons and assessment. Committing again updates it: nobody is doubled, and what you already hold on a student is kept. Try it with the demo data first.' },
+  ] },
   { version: 'v1.17', items: [
     { icon: '\u{1F9ED}', title: 'Paths, inside ECG', text: 'CCE2021 \u2192 ECG now has a Paths view: the live Pathways app, answering ECG\u2019s third question, \u201cHow do I get there?\u201d Every update to Paths shows here, and Open full screen gives it a tab of its own.' },
     { icon: '\u{1F4DD}', title: 'The E21CC Learning Log, under My Classes', text: 'For Beatty: the student app, your teacher console and the demo, in one place beside your classes. The Log keeps its own data, the same whether you open it here or on its own.' },

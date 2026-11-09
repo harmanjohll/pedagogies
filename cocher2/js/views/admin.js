@@ -11,6 +11,7 @@ import { openModal, confirmDialog } from '../components/modals.js';
 import { sendChat } from '../api.js';
 import { getCurrentUser } from '../components/login.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
+import { renderStudentFinder } from './student-finder.js';
 import { openStaffPicker, loadStaffDirectory, renderRecipientChips, ALL_STAFF_EMAIL } from '../components/staff-picker.js';
 import { loadDirectory, availabilityFromEntries, departmentsOf, inArea, importSchoolRoster, clearSchoolRoster, parseStaffList } from '../utils/directory.js';
 import { isPrimary, isJC, levelFromTop, exampleLevel, packAdminTools } from '../utils/vocabulary.js';
@@ -400,6 +401,9 @@ export function render(container) {
           </div>
         </div>
 
+        <!-- Student Finder: who teaches whom, from a timetable loaded on this device -->
+        <div style="margin-bottom:var(--sp-8);" id="student-finder"></div>
+
         <!-- MOE Circulars & Directives (Placeholder) -->
         <div style="margin-bottom:var(--sp-8);">
           <div class="section-header">
@@ -429,6 +433,7 @@ export function render(container) {
 
   renderQuickTools(container.querySelector('#admin-tools'));
   renderFindTeacher(container);
+  renderStudentFinder(container.querySelector('#student-finder'));
   renderEventsList(container.querySelector('#events-list'), events);
 
   container.querySelector('#new-event-btn').addEventListener('click', () => showNewEventModal(container));
