@@ -7,7 +7,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 ## 0. Opening message to paste into the new chat
 
-> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.1). First read
+> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.2). First read
 > `HANDOVER.md` at the repo root. The next work is in section 2. Don't copy any
 > student data into this repo.
 
@@ -20,7 +20,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 | Line | Folder | Live address | Who it's for | Status |
 |---|---|---|---|---|
 | **Co-Cher 1** | `app/` (`app/cocher.html`) | `harmanjohll.github.io/pedagogies/` (the root redirects here) | **Beatty only.** | **Frozen at v8.9.** Emergency fixes only. |
-| **Co-Cher 2** | `cocher2/` (`cocher2/cocher2.html`) | `harmanjohll.github.io/pedagogies/cocher2/` | **Every school**: Beatty, Park View Primary, Opera Estate Primary, SAJC | **Active, v2.1.** All new work goes here. |
+| **Co-Cher 2** | `cocher2/` (`cocher2/cocher2.html`) | `harmanjohll.github.io/pedagogies/cocher2/` | **Every school**: Beatty, Park View Primary, Opera Estate Primary, SAJC | **Active, v2.2.** All new work goes here. |
 
 - Each school has a pack (`cocher2/schools/<id>.json`), an optional roster
   (`cocher2/schools/<id>/staff.json`) and its own storage on the device
@@ -31,7 +31,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 ### Shipping a Co-Cher 2 version
 
-1. `cocher2/js/version.js`: bump `APP_VERSION` (next is **v2.2**).
+1. `cocher2/js/version.js`: bump `APP_VERSION` (next is **v2.3**).
 2. `cocher2/sw.js`: set `VERSION` to the same value.
 3. `cocher2/js/components/whats-new.js`: add an entry at the top.
 4. `VERSIONS.md`: new row **Current (active)**, old row **Superseded**.
@@ -42,6 +42,25 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
   be committed. Made up demo students only.
 - Signing in is a routing step, not real security. Anything that truly needs
   access control needs `backend/`.
+
+### What v2.2 added
+
+- **Observe in Present** (button or O): `components/observe-panel.js`. Saves
+  observations `{ competency, verdict: showed|towards, note, lessonId,
+  segment, classId, source: 'present' }` on the student (`utils/evidence.js`).
+- **Student profile**: `components/student-profile.js`, opened from the
+  roster name (`views/classes.js`), search (students are results now,
+  `components/unified-search.js`) and the lesson page. The same child across
+  classes is matched by `sfKey`, else by name within the same form class
+  (record `formClass`, or the class code that starts the class name).
+- **Pathway on the profile**: a pasted Paths share link is decoded (year,
+  subject levels, goal) and stored as `pathsLink` on the student; "Open in
+  Paths" opens `/genapp/pathways/?s=shared&d=...&for=teacher`.
+- **Lesson page**: "Evidence from this lesson", with "Add to reflection".
+- **Beatty roster**: `schools/bty/staff.json`, built by
+  `schools/tools/bty-build.py` from `btyrelief/BTYTT_2026Sem2_v1.csv`. A
+  Beatty teacher whose email is in the CSV gets My Timetable at sign in.
+  Rebuild it each semester from the new CSV.
 
 ### What v2.1 added
 
