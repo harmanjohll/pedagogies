@@ -1,0 +1,251 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Co-Cher briefing renderer</title>
+<style>
+:root{--bg:#0A1033;--bg2:#141B44;--bg3:#1E2758;--ink:#EAECFF;--muted:#9AA0C8;--soft:#B4BAE0;--line:#2A3468;--gold:#FFE200}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+body{font-family:'Inter',sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+#root{position:relative;width:1920px;height:1080px;overflow:hidden;
+  background:radial-gradient(1400px 800px at 28% -18%,#1b2766 0%,rgba(27,39,102,0) 60%),radial-gradient(1000px 700px at 104% 112%,#142060 0%,rgba(20,32,96,0) 60%),var(--bg)}
+#stage{position:absolute;inset:0;z-index:1}
+#cardB{z-index:10}#cardA{z-index:11}
+.card .txt{position:relative;z-index:3;max-width:780px}
+.card.hero h1{font-size:96px;line-height:1.02}
+.heroW{position:absolute;right:96px;top:50%;margin-top:-262px;width:840px;height:525px;z-index:2}
+.heroI{width:840px;height:525px;border-radius:18px;overflow:hidden;box-shadow:0 60px 110px -30px rgba(0,0,0,.85),0 0 0 1.5px rgba(255,255,255,.14);transform:perspective(2000px) rotateY(-10deg) rotateX(2deg)}
+.heroI img,.colI img{display:block;width:100%;height:100%}
+.colW{position:absolute;width:600px;height:375px;z-index:2}
+.colI{width:600px;height:375px;border-radius:14px;overflow:hidden;box-shadow:0 40px 80px -24px rgba(0,0,0,.85),0 0 0 1.5px rgba(255,255,255,.14)}
+.colI span{position:absolute;left:14px;top:14px;font:700 15px 'Inter';letter-spacing:.06em;color:#1a1d05;background:var(--gold);border-radius:999px;padding:5px 12px}
+/* top bar */
+#top{position:absolute;left:40px;right:40px;top:26px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:14px}
+.mark{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#12b3b0,#0a1a6b);display:grid;place-items:center;box-shadow:0 0 0 2px rgba(255,226,0,.35) inset;flex:none}
+.mark b{font:800 22px 'Inter';color:#fff}
+.mark.xl{width:132px;height:132px;border-radius:30px;box-shadow:0 0 0 4px rgba(255,226,0,.4) inset,0 30px 60px -20px rgba(0,0,0,.6)}
+.mark.xl b{font-size:70px}
+.t1{font:600 20px 'Inter';color:var(--ink);letter-spacing:-.005em}
+.t2{font:500 15px 'Inter';color:var(--muted);margin-top:3px}
+.parts{display:flex;gap:8px}
+.part{font:600 14px 'Inter';color:var(--muted);border:1.5px solid var(--line);border-radius:999px;padding:7px 14px;display:flex;gap:8px;align-items:center;white-space:nowrap}
+.part i{font-style:normal;font-weight:800;color:#6f77a8}
+.part.on{background:var(--gold);border-color:var(--gold);color:#1a1d05}.part.on i{color:#1a1d05}
+.part.done{color:#c9cdf0;border-color:#3a4685}
+/* frame */
+#frame{position:absolute;left:40px;top:104px;width:1440px;height:900px;border-radius:16px;overflow:hidden;background:#0d1330;box-shadow:0 40px 90px -30px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.10)}
+#frame img{position:absolute;left:0;top:0;width:1440px;height:900px;display:block;opacity:0}
+#ring{position:absolute;left:0;top:0;border:3px solid var(--gold);border-radius:10px;box-shadow:0 0 0 4000px rgba(8,12,36,.58),0 0 26px rgba(255,226,0,.45);opacity:0;z-index:5}
+#notes{position:absolute;inset:0;z-index:7}
+.na{position:absolute}
+.na .dot{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px rgba(255,226,0,.3),0 1px 4px rgba(0,0,0,.5)}
+.na .pill{position:absolute;left:0;top:0;white-space:nowrap;background:#0b1340;color:#fff;border:2px solid rgba(255,226,0,.65);border-radius:11px;padding:8px 15px;font:700 19px 'Inter';box-shadow:0 10px 26px rgba(0,0,0,.5)}
+.na .pill b{color:var(--gold);font-weight:800}
+.na.big .pill{font-size:22px;padding:10px 18px;border-color:var(--gold)}
+#cur{position:absolute;left:0;top:0;width:34px;z-index:9;opacity:0;transform-origin:5.7px 2.5px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.55))}
+#cur svg{display:block;width:100%;height:auto;position:relative;z-index:2}
+.rip{position:absolute;left:-34px;top:-37px;width:80px;height:80px;border-radius:50%;border:3px solid var(--gold);opacity:0;z-index:1}
+/* sidebar */
+#side{position:absolute;left:1512px;top:104px;width:368px;height:900px}
+#count{font:700 15px 'Inter';letter-spacing:.16em;color:var(--gold)}
+#count span{color:var(--muted);font-weight:600}
+#stitle{font:600 36px/1.12 'Inter Display','Inter';color:#fff;margin-top:16px;letter-spacing:-.012em}
+#sdesc{font:400 19px/1.5 'Inter';color:var(--soft);margin-top:16px}
+#srule{width:56px;height:4px;background:var(--gold);border-radius:3px;margin-top:24px}
+#list{position:absolute;left:0;right:0;bottom:0}
+.lh{font:700 12px 'Inter';letter-spacing:.2em;color:#6f77a8;text-transform:uppercase;margin-bottom:8px}
+.row{display:flex;align-items:center;gap:11px;height:25px;font:500 15px 'Inter';color:#5f679a;white-space:nowrap}
+.row .d{width:8px;height:8px;border-radius:50%;background:#2A3468;flex:none}
+.row.done{color:#a9afd8}.row.done .d{background:#7f88c4}
+.row.on{color:var(--gold);font-weight:700}.row.on .d{background:var(--gold);box-shadow:0 0 0 4px rgba(255,226,0,.25)}
+#prog{position:absolute;left:40px;right:40px;top:1028px;height:5px;border-radius:5px;background:var(--bg3);overflow:hidden}
+#prog i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--gold);border-radius:5px}
+#plabel{position:absolute;left:40px;right:40px;top:1043px;display:flex;justify-content:space-between;font:500 15px 'Inter';color:var(--muted)}
+#plabel b{color:var(--ink);font-weight:600}
+/* cards */
+.card{position:absolute;inset:0;opacity:0;visibility:hidden;padding:0 170px;display:flex;flex-direction:column;justify-content:center;
+  background:radial-gradient(1400px 900px at 18% -8%,#1c2868 0%,rgba(28,40,104,0) 55%),linear-gradient(160deg,#0B1340 0%,#0d1748 60%,#0A1033 100%)}
+.card .eb{font:700 19px 'Inter';letter-spacing:.26em;text-transform:uppercase;color:var(--gold)}
+.card .rule{width:76px;height:5px;background:var(--gold);border-radius:3px;margin:22px 0 32px}
+.card h1{font:700 112px/1.0 'Inter Display','Inter';letter-spacing:-.03em;color:#fff}
+.card h2{font:600 74px/1.06 'Inter Display','Inter';letter-spacing:-.022em;color:#fff;max-width:1400px}
+.card .sub{font:400 32px/1.42 'Inter';color:var(--soft);margin-top:28px;max-width:1240px}
+.card .note{font:500 21px 'Inter';color:var(--muted);margin-top:40px;display:flex;align-items:center;gap:12px}
+.card .note::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 5px rgba(255,226,0,.2)}
+.card .bignum{position:absolute;right:110px;bottom:10px;font:800 460px/1 'Inter Display','Inter';color:rgba(255,226,0,.07);letter-spacing:-.05em}
+.card .logo{display:flex;align-items:center;gap:40px}
+.card ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:22px 70px;margin-top:48px;max-width:1500px}
+.card li{display:flex;gap:18px;align-items:flex-start;font:500 29px/1.35 'Inter';color:var(--ink)}
+.card li svg{width:32px;height:32px;color:var(--gold);flex:none;margin-top:3px}
+.card .cta{font:500 25px 'Inter';color:var(--soft);margin-top:52px}
+.card .cta b{color:var(--gold);font-weight:700}
+.ag{display:grid;gap:16px;margin-top:44px;max-width:1420px}
+.ag .it{display:flex;align-items:center;gap:30px;padding:20px 30px;border:1.5px solid var(--line);border-radius:18px;background:rgba(20,27,68,.6)}
+.ag .n{font:800 46px 'Inter Display','Inter';color:var(--gold);width:74px;flex:none}
+.ag .h{font:600 33px 'Inter Display','Inter';color:#fff}
+.ag .s{font:400 22px 'Inter';color:var(--soft);margin-top:4px}
+.ag .tm{margin-left:auto;font:600 21px 'Inter';color:var(--muted);flex:none}
+#fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:30}
+</style></head><body>
+<div id="root">
+  <div id="stage">
+    <div id="top">
+      <div class="brand"><span class="mark"><b>C</b></span><div><div class="t1">Co-Cher — Lesson Design Assistant</div><div class="t2" id="t2"></div></div></div>
+      <div class="parts" id="parts"></div>
+    </div>
+    <div id="frame">
+      <div id="ring"></div>
+      <div id="notes"></div>
+      <div id="cur"><div class="rip" id="rip1"></div><div class="rip" id="rip2"></div><svg viewBox="0 0 24 24"><path d="M4 1.8l15.5 8.2-6.4 1.4L11 19.5z" fill="#0b1340" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
+    </div>
+    <div id="side">
+      <div id="stext"><div id="count"></div><div id="stitle"></div><div id="sdesc"></div><div id="srule"></div></div>
+      <div id="list"></div>
+    </div>
+    <div id="prog"><i id="progi"></i></div>
+    <div id="plabel"><span>Every screen shown is the <b>real, live app</b></span><span>harmanjohll.github.io/pedagogies</span></div>
+  </div>
+  <div class="card" id="cardB"></div>
+  <div class="card" id="cardA"></div>
+  <div id="fade"></div>
+</div>
+<script>
+(function(){
+"use strict";
+const TL=window.TL, FS=0.5;
+const segs=TL.segments, starts=[]; let acc=0; for(const s of segs){starts.push(acc);acc+=s.dur;}
+const TOTAL=acc; window.TOTAL_MS=TOTAL;
+const $=s=>document.querySelector(s);
+const clamp=p=>p<0?0:p>1?1:p, eo=p=>{p=clamp(p);return 1-Math.pow(1-p,3)}, eio=p=>{p=clamp(p);return p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2}, lerp=(a,b,k)=>a+(b-a)*k;
+const pad=n=>String(n).padStart(2,'0');
+let K=[];
+const css=(el,p,v)=>{el.style[p]=v;K.push(v);};
+const cache=new WeakMap();
+const setHTML=(el,h)=>{if(cache.get(el)!==h){el.innerHTML=h;cache.set(el,h);}K.push(h);};
+const frame=$('#frame'), ring=$('#ring'), notesEl=$('#notes'), cur=$('#cur'), rip1=$('#rip1'), rip2=$('#rip2');
+const stage=$('#stage'), cardA=$('#cardA'), cardB=$('#cardB'), fade=$('#fade');
+// images
+const imgEls={};
+for(const [k,src] of Object.entries(TL.images)){const im=new Image();im.src=src;frame.insertBefore(im,ring);imgEls[k]=im;}
+// parts
+const partsEl=$('#parts');
+TL.chapters.forEach((c,i)=>{const d=document.createElement('div');d.className='part';d.innerHTML=`<i>${i+1}</i>${c.short}`;partsEl.appendChild(d);});
+const partEls=[...partsEl.children];
+window.ready=Promise.all([document.fonts.ready,...Object.values(imgEls).map(i=>i.decode())]);
+
+const PLACE={top:'translate(-50%,calc(-100% - 16px))',bottom:'translate(-50%,16px)',left:'translate(calc(-100% - 16px),-50%)',right:'translate(16px,-50%)'};
+let notesFor=-1, noteEls=[], listFor=-1, rows=[];
+function buildNotes(s){
+  notesEl.innerHTML='';noteEls=[];
+  const fr=frame.getBoundingClientRect();
+  (s.notes||[]).forEach(n=>{
+    const a=document.createElement('div');a.className='na'+(n.big?' big':'');
+    a.style.left=(n.x*FS)+'px';a.style.top=(n.y*FS)+'px';
+    a.innerHTML='<span class="dot"></span><span class="pill">'+n.text+'</span>';
+    notesEl.appendChild(a);
+    const pill=a.querySelector('.pill'), pl=PLACE[n.place||'top'];
+    pill.style.transform=pl;
+    const r=pill.getBoundingClientRect(); let dx=0,dy=0; const m=12;
+    if(r.left<fr.left+m)dx=fr.left+m-r.left; if(r.right>fr.right-m)dx=fr.right-m-r.right;
+    if(r.top<fr.top+m)dy=fr.top+m-r.top; if(r.bottom>fr.bottom-m)dy=fr.bottom-m-r.bottom;
+    pill.style.transform=`translate(${dx}px,${dy}px) `+pl;
+    noteEls.push(a);
+  });
+}
+function buildList(ch){
+  const c=TL.chapters[ch];
+  setHTML($('#list'),'<div class="lh">'+c.name+'</div>'+c.labels.map(l=>'<div class="row"><span class="d"></span>'+l+'</div>').join(''));
+  rows=[...$('#list').querySelectorAll('.row')];
+}
+function renderScene(si,u){
+  const s=segs[si], c=TL.chapters[s.ch];
+  setHTML($('#t2'), TL.mode==='master'?`Staff briefing · Part ${s.ch+1} of ${TL.chapters.length} · ${c.name}`:`Feature guide · ${c.name}`);
+  partEls.forEach((p,i)=>{const cl=i===s.ch?'part on':(TL.mode==='master'&&i<s.ch?'part done':'part'); if(p.className!==cl)p.className=cl; K.push(cl);});
+  const prev=(si>0&&segs[si-1].type==='scene'&&segs[si-1].ch===s.ch)?segs[si-1]:null;
+  const ck=s.imgKey, pk=prev?prev.imgKey:null;
+  for(const [k,el] of Object.entries(imgEls)){
+    let o=0,z=0;
+    if(k===ck){o=(pk&&pk!==ck)?eio(u/520):1;z=2;} else if(k===pk&&u<520){o=1;z=1;}
+    css(el,'opacity',o.toFixed(3)); el.style.zIndex=z;
+  }
+  // spotlight ring
+  let rect=null, ro=0; const same=prev&&pk===ck;
+  if(s.box){ if(same&&prev.box){const k=eio(u/650);rect=prev.box.map((v,i)=>lerp(v,s.box[i],k));ro=1;} else {rect=s.box;ro=eo(u/420);} }
+  else if(same&&prev.box){rect=prev.box;ro=1-eo(u/320);}
+  if(rect&&ro>0.001){
+    let x=rect[0]*FS-4, y=rect[1]*FS-4, w=rect[2]*FS+8, h=rect[3]*FS+8;
+    const x2=Math.min(1438,x+w), y2=Math.min(898,y+h); x=Math.max(2,x); y=Math.max(2,y); w=x2-x; h=y2-y;
+    css(ring,'transform',`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`);
+    css(ring,'width',w.toFixed(1)+'px'); css(ring,'height',h.toFixed(1)+'px'); css(ring,'opacity',ro.toFixed(3));
+  } else css(ring,'opacity','0');
+  // callouts
+  if(notesFor!==si){buildNotes(s);notesFor=si;}
+  noteEls.forEach((a,i)=>{const p=eo((u-(380+i*240))/420); css(a,'opacity',p.toFixed(3)); css(a,'transform',`translateY(${((1-p)*10).toFixed(1)}px)`);});
+  // click cursor
+  if(s.click){
+    const tx=s.click[0]*FS, ty=s.click[1]*FS, m=eio((u-150)/700);
+    const x=lerp(tx+70,tx,m), y=lerp(ty+60,ty,m);
+    const press=(u>850&&u<1010)?0.86:1;
+    css(cur,'opacity',eo((u-100)/250).toFixed(3));
+    css(cur,'transform',`translate(${(x-5.7).toFixed(1)}px,${(y-2.5).toFixed(1)}px) scale(${press})`);
+    [[rip1,850],[rip2,1450]].forEach(([r,a])=>{const p=(u-a)/900; if(p>=0&&p<=1){css(r,'opacity',((1-p)*.9).toFixed(3));css(r,'transform',`scale(${lerp(.3,1.35,eo(p)).toFixed(3)})`);} else css(r,'opacity','0');});
+  } else { css(cur,'opacity','0'); }
+  // sidebar
+  const usePrev=prev&&u<170, src=usePrev?prev:s;
+  setHTML($('#count'),`${pad(src.idx+1)} <span>/ ${pad(src.count)}</span>`);
+  setHTML($('#stitle'),src.title); setHTML($('#sdesc'),src.desc);
+  const op=usePrev?1-u/170:(prev?eo((u-170)/380):eo(u/450));
+  css($('#stext'),'opacity',op.toFixed(3)); css($('#stext'),'transform',`translateY(${(usePrev?0:(1-op)*12).toFixed(1)}px)`);
+  if(listFor!==s.ch){buildList(s.ch);listFor=s.ch;}
+  rows.forEach((r,i)=>{const cl=i===s.idx?'row on':(i<s.idx?'row done':'row'); if(r.className!==cl)r.className=cl; K.push(cl);});
+  css($('#progi'),'width',(((s.idx+eio(u/500))/s.count)*100).toFixed(2)+'%');
+}
+const CK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+function buildCard(s){
+  const d=s.data;
+  if(s.kind==='opening'){
+    const pos=[[1010,120,-4],[1250,250,3],[1040,480,-2],[1270,610,4]];
+    return `<div class="txt"><div class="eb" data-d="150">${d.eb}</div><div class="rule" data-d="250"></div>
+    <div class="logo" data-d="380"><span class="mark xl"><b>C</b></span><h1>Co-Cher</h1></div>
+    <div class="sub" data-d="700">${d.sub}</div><div class="note" data-d="1000">${d.note}</div></div>`+
+    d.collage.map((c,i)=>`<div class="colW" style="left:${pos[i][0]}px;top:${pos[i][1]}px" data-d="${500+i*170}"><div class="colI" style="transform:rotate(${pos[i][2]}deg)"><img src="${c.src}"><span>${pad(i+1)} · ${c.label}</span></div></div>`).join('');
+  }
+  if(s.kind==='agenda') return `<div class="eb" data-d="150">${d.eb}</div><div class="rule" data-d="250"></div><h2 data-d="350">${d.h2}</h2>
+    <div class="ag">${d.items.map((it,i)=>`<div class="it" data-d="${650+i*160}"><div class="n">${pad(i+1)}</div><div><div class="h">${it.h}</div><div class="s">${it.s}</div></div>${it.tm?`<div class="tm">${it.tm}</div>`:''}</div>`).join('')}</div>`;
+  if(s.kind==='chapter') return `<div class="bignum" data-d="0">${pad(d.n)}</div>
+    <div class="txt"><div class="eb" data-d="150">${d.eb}</div><div class="rule" data-d="250"></div>
+    <h1 data-d="350">${d.title}</h1><div class="sub" data-d="620">${d.promise}</div><div class="note" data-d="920">${d.note}</div></div>
+    <div class="heroW" data-d="450"><div class="heroI"><img src="${d.hero}"></div></div>`;
+  if(s.kind==='outro') return `<div class="eb" data-d="150">${d.eb}</div><div class="rule" data-d="250"></div><h2 data-d="350">${d.h2}</h2>
+    <ul>${d.items.map((it,i)=>`<li data-d="${700+i*120}">${CK}<span>${it}</span></li>`).join('')}</ul><div class="cta" data-d="${750+d.items.length*120+250}">${d.cta}</div>`;
+  if(s.kind==='closing') return `<div class="eb" data-d="150">${d.eb}</div><div class="rule" data-d="250"></div><h2 data-d="350">${d.h2}</h2>
+    <div class="ag">${d.items.map((it,i)=>`<div class="it" data-d="${650+i*160}"><div class="n">${pad(i+1)}</div><div><div class="h">${it.h}</div><div class="s">${it.s}</div></div></div>`).join('')}</div>
+    <div class="cta" data-d="${650+d.items.length*160+200}">${d.cta}</div>`;
+  return '';
+}
+const pending=[];
+function renderCard(layer,idx,u,op){
+  if(layer._seg!==idx){const s=segs[idx];layer.innerHTML=buildCard(s);layer.className='card'+(s.kind==='chapter'?' hero':'');layer._seg=idx;layer._els=[...layer.querySelectorAll('[data-d]')];pending.push(...layer.querySelectorAll('img'));}
+  css(layer,'opacity',op.toFixed(3)); layer.style.visibility=op>0?'visible':'hidden'; K.push(idx);
+  layer._els.forEach(el=>{const p=eo((u-(+el.dataset.d))/650); css(el,'opacity',p.toFixed(3)); css(el,'transform',`translateY(${((1-p)*28).toFixed(1)}px)`);});
+}
+function hideCard(layer){css(layer,'opacity','0');layer.style.visibility='hidden';}
+window.renderAt=async function(t){
+  K=[];
+  let si=0; while(si<segs.length-1&&t>=starts[si+1])si++;
+  const s=segs[si], u=t-starts[si], ps=si>0?segs[si-1]:null;
+  K.push(si);
+  if(s.type==='scene'){
+    stage.style.visibility='visible'; renderScene(si,u); hideCard(cardB);
+    if(ps&&ps.type==='card'&&u<450) renderCard(cardA,si-1,1e6,1-eo(u/450)); else hideCard(cardA);
+  } else if(ps&&ps.type==='scene'){
+    stage.style.visibility='visible'; renderScene(si-1,1e6); hideCard(cardB); renderCard(cardA,si,u,eo(u/450));
+  } else if(ps&&ps.type==='card'){
+    stage.style.visibility='hidden'; renderCard(cardB,si-1,1e6,1); renderCard(cardA,si,u,eo(u/450));
+  } else { stage.style.visibility='hidden'; hideCard(cardB); renderCard(cardA,si,u,1); }
+  let f=0; if(t<550)f=1-eo(t/550); if(t>TOTAL-750)f=Math.max(f,eio((t-(TOTAL-750))/750));
+  css(fade,'opacity',f.toFixed(3));
+  const key=K.join('|');
+  if(pending.length) await Promise.all(pending.splice(0).map(i=>i.decode().catch(()=>{})));
+  return key;
+};
+})();
+</script></body></html>

@@ -13,11 +13,18 @@ import { navigate } from '../router.js';
 import { processLatex } from '../utils/latex.js';
 import { md as renderMarkdown, escapeHtml as escapeHTML } from '../utils/markdown.js';
 import { levels, schoolStage, packValues } from '../utils/vocabulary.js';
+import { mountEmbed, GENAPP } from '../components/app-embed.js';
 
 /* ── Module-level state ── */
 
 let cceIncludeYouTube = false;
 let cceNewsSources = [];
+
+/* ECG has two views: Co-Cher's own guidance and lessons, and Paths, the live
+ * Pathways app from genapp (embedded, never copied). Paths answers ECG's third
+ * question, "How do I get there?". Open to every school. */
+let ecgView = 'content';
+const PATHS_SRC = `${GENAPP}/pathways/index.html?s=path`;
 
 /* ── Constants ── */
 
@@ -261,10 +268,14 @@ export function render(container) {
   let generationId = 0;          // tracks async generation; increments on each renderView
   let pendingResult = null;       // holds { content, meta } if generation completes across a re-render
 
+  let stopEmbed = null;            // clears the Paths frame's load timer
+
   function renderView() {
     generationId++;               // invalidate any in-flight generation from previous render
+    if (stopEmbed) { stopEmbed(); stopEmbed = null; }
     const discussions = getSavedDiscussions();
     const area = CONTENT_AREAS.find(a => a.id === activeTab);
+    const showPaths = activeTab === 'ECG' && ecgView === 'paths';
 
     container.innerHTML = `
       <div class="main-scroll">
@@ -488,6 +499,35 @@ export function render(container) {
           animation: cceSpin 0.6s linear infinite;
         }
         @keyframes cceSpin { to { transform: rotate(360deg); } }
+        .cce-subswitch {
+          display: flex;
+          justify-content: center;
+          gap: 4px;
+          margin: -8px auto var(--sp-5, 20px);
+          padding: 3px;
+          width: fit-content;
+          border: 1px solid var(--border-light, #e5e7eb);
+          border-radius: 999px;
+          background: var(--bg-card, #fff);
+        }
+        .cce-sub {
+          padding: 6px 16px;
+          border: 0;
+          border-radius: 999px;
+          background: transparent;
+          font: inherit;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          color: var(--ink-secondary, #666);
+          cursor: pointer;
+        }
+        .cce-sub.active { background: #f59e0b; color: #fff; }
+        .cce-paths-lead {
+          font-size: 0.875rem;
+          color: var(--ink-secondary, #666);
+          margin: 0 0 var(--sp-3, 12px);
+          line-height: 1.6;
+        }
         .cce-empty {
           text-align: center;
           padding: var(--sp-6, 24px);
@@ -514,6 +554,18 @@ export function render(container) {
         `).join('')}
       </div>
 
+      ${activeTab === 'ECG' ? `
+      <div class="cce-subswitch" role="tablist" aria-label="ECG views">
+        <button class="cce-sub${ecgView === 'content' ? ' active' : ''}" data-ecg="content" role="tab" aria-selected="${ecgView === 'content'}">Lessons &amp; guidance</button>
+        <button class="cce-sub${ecgView === 'paths' ? ' active' : ''}" data-ecg="paths" role="tab" aria-selected="${ecgView === 'paths'}">Paths</button>
+      </div>` : ''}
+
+      ${showPaths ? `
+      <div class="cce-content">
+        <p class="cce-paths-lead">Paths answers ECG's third question: <strong>&ldquo;How do I get there?&rdquo;</strong> Plans made here are saved on this device, in Paths itself.</p>
+        <div id="cce-paths-embed"></div>
+      </div>
+      ` : `
       <!-- Content -->
       <div class="cce-content">
 
@@ -749,6 +801,7 @@ export function render(container) {
         </div>
 
       </div>
+      `}
       </div>
     `;
 
@@ -763,6 +816,24 @@ export function render(container) {
         renderView();
       });
     });
+
+    // ECG sub-switch: Lessons & guidance / Paths
+    container.querySelectorAll('.cce-sub').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (ecgView === btn.dataset.ecg) return;
+        ecgView = btn.dataset.ecg;
+        renderView();
+      });
+    });
+
+    if (showPaths) {
+      stopEmbed = mountEmbed(container.querySelector('#cce-paths-embed'), {
+        src: PATHS_SRC,
+        title: 'Paths',
+        note: 'The live Pathways app. Every update to Paths shows here.'
+      });
+      return;
+    }
 
     // "Others" custom format toggle
     const formatSelect = container.querySelector('#cce-format');
@@ -1007,5 +1078,5 @@ Design an engaging, age-appropriate lesson that connects to the CCE2021 framewor
   }
 
   renderView();
+  return () => { if (stopEmbed) stopEmbed(); };
 }
-

@@ -28,7 +28,7 @@ const STORAGE_BASE = 'cocher2_app_data';
 
 /** Read the signed-in school WITHOUT importing login.js — state.js sits below
  *  it in the import graph, and a cycle here would break boot. */
-function currentSchoolId() {
+export function currentSchoolId() {
   try {
     const raw = localStorage.getItem('cocher2_current_user');
     const id = raw ? (JSON.parse(raw) || {}).schoolId : '';
@@ -73,6 +73,33 @@ export function seedFlagSet(base) {
     }
   } catch { /* storage unavailable — treat as not seeded */ }
   return false;
+}
+
+/**
+ * One student record, in the shape every part of Co-Cher reads (My Classes,
+ * seating, E21CC tracking, assessment). Optional roster fields travel with it:
+ * `index` (register number), `formClass`, and `sfKey`, the Student Finder key
+ * that lets a committed class be updated later without doubling anyone.
+ */
+export function newStudentRecord(data = {}) {
+  return {
+    id: generateId(),
+    name: data.name || 'Student',
+    ...(data.index ? { index: String(data.index) } : {}),
+    ...(data.formClass ? { formClass: String(data.formClass) } : {}),
+    ...(data.sfKey ? { sfKey: String(data.sfKey) } : {}),
+    e21cc: {
+      criticalThinking: 'developing',
+      creativeThinking: 'developing',
+      communication: 'developing',
+      collaboration: 'developing',
+      socialConnectedness: 'developing',
+      selfRegulation: 'developing',
+      ...(data.e21cc || {})
+    },
+    observations: data.observations || [],
+    createdAt: Date.now()
+  };
 }
 
 export function generateId() {
@@ -588,21 +615,7 @@ export const Store = {
   /* ══════════ Students ══════════ */
 
   addStudent(classId, data) {
-    const student = {
-      id: generateId(),
-      name: data.name || 'Student',
-      e21cc: {
-        criticalThinking: 'developing',
-        creativeThinking: 'developing',
-        communication: 'developing',
-        collaboration: 'developing',
-        socialConnectedness: 'developing',
-        selfRegulation: 'developing',
-        ...(data.e21cc || {})
-      },
-      observations: data.observations || [],
-      createdAt: Date.now()
-    };
+    const student = newStudentRecord(data);
     this.updateClass(classId, {
       students: [...(this.getClass(classId)?.students || []), student]
     });

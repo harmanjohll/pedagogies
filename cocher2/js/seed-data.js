@@ -22,8 +22,9 @@ const schoolCCAs = () => asCCARecords(packCCAs());
 
 const SEED_KEY = () => schoolKey(`cocher2_seeded_${stageTag()}`);
 
-/* ── Student name pools ── */
-const NAMES = [
+/* ── Student name pools ── (exported: Student Finder's demo timetable uses the
+ * same made up students, so committing a demo class links to the seeded one) */
+export const NAMES = [
   // Class 1: Pure Chemistry
   'Tan Wei Lin', 'Muhammad Irfan', 'Priya Nair', 'Lim Jia Xuan',
   'Nur Aisyah', 'Raj Kumar', 'Chua Kai Wen', 'Siti Nurhaliza',
