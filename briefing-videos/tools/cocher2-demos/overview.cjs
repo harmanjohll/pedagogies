@@ -11,13 +11,13 @@ const PICKS = [
   ['03-student-finder', 'Find any student', 1.6],
   ['04-commit-class', 'Committed: an ordinary class', -1.4],
   ['05-plan-to-present', 'Present, with one tap', 0.4],
+  ['14-observe-in-present', 'Pick the students you saw', 0.6],
+  ['15-student-profile', 'Add the pathway they are aiming for', 0.3],
   ['06-spatial-designer', 'Swap the layout, see the trade offs', 0.2],
   ['07-cce-and-paths', 'Paths answers “How do I get there?”', 0.5],
   ['08-learning-log', 'Inside a student’s log', 0.8],
   ['09-assessment', 'Assessment as Learning', 0.4],
   ['10-simulations-tools', 'Interactive practicals', 6.9],
-  ['11-resources-library', 'Reopen anything', 0.3],
-  ['12-find-anything', 'Students and classes too', 0.2],
   ['13-every-school', 'Your timetable, without retyping', 0.2],
 ];
 const ff = args => execFileSync('ffmpeg', ['-loglevel', 'error', '-y', ...args]);
@@ -35,7 +35,7 @@ const ENC = ['-c:v', 'libx264', '-preset', 'slow', '-crf', '19', '-pix_fmt', 'yu
     await p.evaluate(([k, t, d]) => { window.__dir.card(k, t, d); document.getElementById('dir-card').style.transition = 'none'; }, [k, t, d]);
     await p.waitForTimeout(300); await p.screenshot({ path: file });
   };
-  await card(path.join(TMP, 'intro.png'), 'One minute tour', 'Plan, teach and track,<br>in one place', 'Co-Cher 2: thirteen things it does for a teacher, from the timetable to the student.');
+  await card(path.join(TMP, 'intro.png'), 'One minute tour', 'Plan, teach and track,<br>in one place', 'Co-Cher 2: what it does for a teacher, from the timetable to the student.');
   await card(path.join(TMP, 'outro.png'), 'Every school, its own space', 'Co-Cher 2', 'Beatty, Park View, Opera Estate and SAJC.<br>Open it at harmanjohll.github.io/pedagogies/cocher2');
   await b.close();
 

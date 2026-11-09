@@ -8,6 +8,8 @@ const SAJC = { email: 'demo.math@sajc.moe.edu.sg', name: 'Daniel Foo', preferred
 const firstClassId = page => page.evaluate(() => { const k = Object.keys(localStorage).find(k => k.startsWith('cocher2_app_data')); return JSON.parse(localStorage.getItem(k)).classes[0].id; });
 const lessonId = (page, start) => page.evaluate(s => { const k = Object.keys(localStorage).find(k => k.startsWith('cocher2_app_data')); return JSON.parse(localStorage.getItem(k)).lessons.find(l => l.title.startsWith(s)).id; }, start);
 const frame = page => page.frameLocator('.ae-frame');
+// A made up Paths share link: Sec 3, six subjects, goal Nurse via Polytechnic. No name, as Paths links never carry one.
+const PATHS_LINK = 'https://harmanjohll.github.io/genapp/pathways/?s=shared&for=teacher&d=' + Buffer.from(JSON.stringify({ v: 1, y: 'sec3', p: 'el3~em3~am3~phy3~chem3~geo2', g: { sector: 'health', role: 'Nurse', dest: 'poly', family: null } })).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 const S = {
   '01-your-day': [BTY, '#/', async (page, d) => {
@@ -228,6 +230,56 @@ const S = {
     await d.move('text=25S03 H2 Chemistry'); await d.wait(1400);
     await d.move('text=25S03 General Paper'); await d.wait(1600);
     await d.endCard('Every school, its own space', 'Beatty, Park View, Opera Estate and SAJC.');
+  }],
+  '14-observe-in-present': [BTY, '#/lessons', async (page, d) => {
+    await d.card('Present', 'Observe, while you teach', 'Note who showed a competency, in two taps, without leaving the lesson.');
+    await d.cap('Press O in Present', 'The Observe panel opens beside the lesson. The competency this part grows is already chosen.');
+    await d.click('#present-observe'); await d.wait(1600);
+    await d.cap('Pick the students you saw', 'Tap names, add a few words if you like.');
+    await d.click(page.locator('.obs-kid').nth(0)); await d.click(page.locator('.obs-kid').nth(2)); await d.click(page.locator('.obs-kid').nth(7));
+    await d.click('#obs-note'); await page.locator('#obs-note').pressSequentially('Explained why toothpaste is a base', { delay: 45 });
+    await d.wait(400);
+    await d.click('[data-verdict="showed"]'); await d.wait(1500);
+    await d.cap('Projector on? Show initials', 'And switch competency in a tap: here, working towards Collaboration.');
+    await d.click('[data-act="names"]'); await d.wait(900);
+    await d.click(page.locator('.obs-kid').nth(4)); await d.click('[data-comp="collaboration"]');
+    await d.click('[data-verdict="towards"]'); await d.wait(1600);
+    await d.cap('Saved to each student, linked to this lesson', 'It shows on their profile, the lesson page and in report comments.');
+    await d.click('[data-act="names"]'); await d.wait(1800);
+    await d.endCard('Observe, while you teach', 'Present mode, then O.');
+  }, async (page) => {
+    const id = await lessonId(page, 'Acids');
+    await page.evaluate(i => { location.hash = '#/present/' + i; }, id); await page.waitForTimeout(1400);
+    await page.keyboard.press('ArrowRight'); await page.waitForTimeout(800);
+    try { localStorage.setItem('cocher2_observe_names', 'names'); } catch {}
+  }],
+
+  '15-student-profile': [BTY, '#/lessons', async (page, d) => {
+    await d.card('Every student, as one person', 'A profile for every student', 'Competencies across your classes, the evidence, and the pathway they are aiming for.');
+    await d.cap('Evidence from this lesson', 'What you observed in Present, grouped by competency. Add it to your reflection in a tap.');
+    await d.ringAround('#lesson-evidence', '', ''); await d.wait(1800); await d.unring();
+    await d.click('#evidence-to-reflection'); await d.wait(1800);
+    await d.scroll(null, -700, 16, 700);
+    await d.cap('Tap a name: their profile', 'E21CC in each of your classes, the trend, and the evidence behind it.');
+    await d.click(page.locator('.evidence-student').first()); await d.wait(2600);
+    await d.cap('Add the pathway they are aiming for', 'Paste the link the student shares from Paths. It carries their year, subjects and goal, never their name.');
+    await d.click('#sp-paths');
+    await page.locator('#sp-paths').fill(PATHS_LINK); await d.wait(900);
+    await d.click('[data-act="paths-save"]'); await d.wait(1200);
+    await d.ringAround('.sp-path', '', '.sp-sec'); await d.wait(2600); await d.unring();
+    await d.endCard('A profile for every student', 'From My Classes, search, or a lesson.');
+  }, async (page) => {
+    const id = await lessonId(page, 'Acids');
+    await page.evaluate(i => { location.hash = '#/present/' + i; }, id); await page.waitForTimeout(1400);
+    await page.keyboard.press('ArrowRight'); await page.waitForTimeout(500);
+    await page.keyboard.press('o'); await page.waitForTimeout(500);
+    await page.locator('.obs-kid').nth(0).click(); await page.locator('.obs-kid').nth(2).click(); await page.locator('.obs-kid').nth(7).click();
+    await page.fill('#obs-note', 'Explained why toothpaste is a base');
+    await page.locator('[data-verdict="showed"]').click();
+    await page.locator('.obs-kid').nth(4).click(); await page.locator('[data-comp="collaboration"]').click(); await page.locator('[data-verdict="towards"]').click();
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+    await page.evaluate(i => { location.hash = '#/lessons/' + i; }, id); await page.waitForTimeout(1500);
+    await page.locator('#lesson-evidence').scrollIntoViewIfNeeded(); await page.evaluate(() => { const m = document.querySelector('.main-scroll'); if (m) m.scrollTop -= 140; });
   }],
 };
 
