@@ -17,7 +17,7 @@ import { openModal, confirmDialog } from '../components/modals.js';
 import { sendChat } from '../api.js';
 import { navigate } from '../router.js';
 import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
-import { getCurrentUser, getPreferredName } from '../components/login.js';
+import { getCurrentUser, currentSchoolId, getPreferredName } from '../components/login.js';
 import { nowNext, rangeLabel } from '../utils/timetable.js';
 import { escapeHtml } from '../utils/markdown.js';
 import { isTouch, isNarrow } from '../utils/viewport.js';
@@ -31,7 +31,7 @@ let _ttData = null;
  * another school's CSV would either 404 or, worse, match a name by accident. */
 async function loadTimetable() {
   if (_ttData) return _ttData;
-  if (getCurrentUser()?.schoolId !== 'bty') { _ttData = []; return _ttData; }
+  if (currentSchoolId() !== 'bty') { _ttData = []; return _ttData; }
   try {
     const [res] = await Promise.all([
       fetch('./btyrelief/BTYTT_2026Sem2_v1.csv'),

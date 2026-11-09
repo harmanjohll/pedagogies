@@ -13,7 +13,7 @@
  */
 
 import { escapeHtml } from '../utils/markdown.js';
-import { getCurrentUser } from '../components/login.js';
+import { getCurrentUser, currentSchoolId } from '../components/login.js';
 import { mountEmbed, GENAPP } from '../components/app-embed.js';
 
 const LOG = `${GENAPP}/e21cclog`;
@@ -49,7 +49,7 @@ const VIEWS = [
 const PREF_KEY = 'cocher2_learninglog_view';
 
 /* Legacy users have no schoolId; they predate the other schools (dashboard.js). */
-export const learningLogOpen = () => (getCurrentUser()?.schoolId ?? 'bty') === 'bty';
+export const learningLogOpen = () => currentSchoolId() === 'bty';
 
 function readPref() {
   try { return JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); } catch { return {}; }

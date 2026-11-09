@@ -13,7 +13,7 @@
 
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
-import { getCurrentUser, getPreferredName, guessFirstName } from '../components/login.js';
+import { getCurrentUser, currentSchoolId, getPreferredName, guessFirstName } from '../components/login.js';
 import { loadCalendarReference, getWeekType } from '../utils/calendar.js';
 import { escapeHtml } from '../utils/markdown.js';
 import { lessonStage, lessonNextStep, LIFECYCLE_STAGES } from './lessons.js';
@@ -262,7 +262,7 @@ let _ttCache = null;
 let _ttCacheSchool = null;
 
 export async function loadTT() {
-  const schoolId = getCurrentUser()?.schoolId ?? 'bty';   // legacy users have no schoolId
+  const schoolId = currentSchoolId();   // legacy accounts (no schoolId key) are Beatty's; null is no school
   if (_ttCache && _ttCacheSchool === schoolId) return _ttCache;
   _ttCacheSchool = schoolId;
   if (schoolId !== 'bty') { _ttCache = []; return _ttCache; }

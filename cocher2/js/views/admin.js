@@ -9,7 +9,7 @@ import { Store, generateId } from '../state.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { sendChat } from '../api.js';
-import { getCurrentUser } from '../components/login.js';
+import { getCurrentUser, currentSchoolId } from '../components/login.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
 import { renderStudentFinder } from './student-finder.js';
 import { openStaffPicker, loadStaffDirectory, renderRecipientChips, ALL_STAFF_EMAIL } from '../components/staff-picker.js';
@@ -277,7 +277,7 @@ const ADMIN_TOOLS = [
 /* The tools this teacher's school actually has: the universal ones, the ones
  * that belong to their school, plus anything their pack publishes. */
 function adminTools() {
-  const id = getCurrentUser()?.schoolId || '';
+  const id = currentSchoolId() || '';
   const own = packAdminTools().map((t, i) => ({
     key: `pack_${i}`,
     label: String(t?.label || '').trim(),

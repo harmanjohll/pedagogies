@@ -26,6 +26,19 @@ export function getCurrentUser() {
   } catch { return null; }
 }
 
+/**
+ * The signed-in teacher's school id, or null.
+ * Accounts made before Co-Cher had schools carry no schoolId at all, and those
+ * were all Beatty's. An explicit null means the teacher signed in from a
+ * domain no school claims and chose "my school isn't listed": that must NOT
+ * fall back to Beatty. The sign-in domain decides what loads.
+ */
+export function currentSchoolId() {
+  const u = getCurrentUser();
+  if (!u) return null;
+  return Object.prototype.hasOwnProperty.call(u, 'schoolId') ? (u.schoolId || null) : 'bty';
+}
+
 /** Get the user's preferred display name, or null. */
 export function getPreferredName() {
   const user = getCurrentUser();

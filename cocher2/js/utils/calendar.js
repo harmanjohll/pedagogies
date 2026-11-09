@@ -5,7 +5,7 @@
  * for any given date, replacing the fragile math-based calculation.
  */
 
-import { getCurrentUser } from '../components/login.js';
+import { getCurrentUser, currentSchoolId } from '../components/login.js';
 
 let _calCache = null;
 let _calCacheSchool = null;
@@ -21,7 +21,7 @@ let _calCacheSchool = null;
  * across a school switch it would be someone else's calendar.
  */
 export async function loadCalendarReference() {
-  const schoolId = getCurrentUser()?.schoolId ?? 'bty';   // legacy users have no schoolId
+  const schoolId = currentSchoolId();   // legacy accounts (no schoolId key) are Beatty's; null is no school
   if (_calCache && _calCacheSchool === schoolId) return _calCache;
   _calCacheSchool = schoolId;
   if (schoolId !== 'bty') { _calCache = []; return _calCache; }

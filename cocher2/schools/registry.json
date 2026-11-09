@@ -9,7 +9,8 @@
         "btyss.moe.edu.sg"
       ],
       "pack": "bty.json",
-      "allowEmails": []
+      "allowEmails": [],
+      "closed": true
     },
     {
       "id": "oeps",
@@ -218,7 +219,8 @@
         "sajc.moe.edu.sg"
       ],
       "pack": "sajc.json",
-      "allowEmails": []
+      "allowEmails": [],
+      "closed": true
     }
   ]
 }
