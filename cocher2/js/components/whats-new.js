@@ -20,7 +20,8 @@ const RELEASES = [
   { version: 'v2.2', items: [
     { icon: '\u{1F441}', title: 'Observe, while you teach', text: 'In Present, press O (or tap Observe). Pick students, tap \u201cShowed it\u201d or \u201cWorking towards it\u201d for a competency, and it is saved to each student, linked to the lesson. Show initials instead of names when the projector is on.' },
     { icon: '\u{1F9D1}\u200D\u{1F393}', title: 'A profile for every student', text: 'Tap a name in My Classes, or search for it. One page: E21CC levels in each of your classes, the trend, the evidence behind it, who teaches them each subject, and the pathway they are working towards from their Paths link.' },
-    { icon: '\u{1F4C5}', title: 'Beatty: your week is already here', text: 'Sign in with your school email and My Timetable fills itself from the school timetable. Nothing to import.' },
+    { icon: '\u{1F4C5}', title: 'Beatty: your week is already here', text: 'Sign in with your btyss email and My Timetable fills itself from the school timetable. Not matched? Pick your name once.' },
+    { icon: '\u{1F512}', title: 'Your sign in decides your school', text: 'Each school\u2019s space opens only from its own email domain. Other addresses are no longer offered a school to pick.' },
   ] },
   { version: 'v2.1', items: [
     { icon: '\u{1F9ED}', title: 'Paths, inside ECG', text: 'CCE2021 \u2192 ECG now has a Paths view: the live Pathways app, answering ECG\u2019s third question, \u201cHow do I get there?\u201d Every update to Paths shows here, and Open full screen gives it a tab of its own.' },

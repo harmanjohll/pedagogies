@@ -61,6 +61,12 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
   `schools/tools/bty-build.py` from `btyrelief/BTYTT_2026Sem2_v1.csv`. A
   Beatty teacher whose email is in the CSV gets My Timetable at sign in.
   Rebuild it each semester from the new CSV.
+- **The sign in domain decides what loads.** Every school in
+  `schools/registry.json` is `closed`: reachable only from its own domain
+  (plus `allowEmails` where listed). Other domains get no school. Use
+  `currentSchoolId()` (`components/login.js`) for any school check: an
+  account with no `schoolId` field predates schools and is Beatty's; `null`
+  means no school and must never fall back to Beatty.
 
 ### What v2.1 added
 

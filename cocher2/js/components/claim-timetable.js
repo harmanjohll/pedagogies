@@ -52,7 +52,11 @@ export async function maybeClaimTimetable() {
   const mine = findTeacherInStaff(bundled, { email: user.email });
   if (mine) return adopt(mine, bundled, user);
 
-  const people = staffNames(staff);
+  // No exact match. Offer the picker from the live feed, or, where a school
+  // has none (Beatty today), from the roster published with the app, so a
+  // teacher whose email is missing from the timetable still gets their week.
+  const pickFrom = staffNames(staff).length ? staff : bundled;
+  const people = staffNames(pickFrom);
   if (!people.length) return false;
 
   return new Promise(resolve => {
@@ -81,9 +85,9 @@ export async function maybeClaimTimetable() {
         </button>`).join('')
         : `<p style="font-size:0.8125rem;color:var(--ink-muted);padding:12px 2px;">No match. You can import your own timetable instead.</p>`;
       listEl.querySelectorAll('.claim-opt').forEach(b => b.addEventListener('click', async () => {
-        const person = (staff.teachers || [])[Number(b.dataset.i)];
+        const person = (pickFrom.teachers || [])[Number(b.dataset.i)];
         close();
-        resolve(await adopt(person, staff, user));
+        resolve(await adopt(person, pickFrom, user));
       }));
     };
     paint();

@@ -14,14 +14,14 @@
  */
 
 import { Store } from '../state.js';
-import { getCurrentUser } from '../components/login.js';
+import { getCurrentUser, currentSchoolId } from '../components/login.js';
 import { frameworksFor } from './school.js';
 
 /* The ids state.js used to seed for everyone. Kept only so they can be removed. */
 const RETIRED_BEATTY_IDS = ['fw_builtin_grow', 'fw_builtin_act'];
 
 /** Beatty's own pack ids, so a Beatty install is never stripped of them. */
-const isBeatty = () => getCurrentUser()?.schoolId === 'bty';
+const isBeatty = () => currentSchoolId() === 'bty';
 
 /**
  * Seed the school's frameworks, once per school, and clear out the retired

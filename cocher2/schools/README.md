@@ -288,3 +288,11 @@ Its learning routines are not in yet, so it deliberately carries no
 plausible guess — a pack with neither falls back to the national Assessment FOR
 / AS Learning frame, which is genuinely everyone's, and the school's own
 routines drop in later without a code change.
+
+## Who reaches a school
+
+The sign in domain decides. Every school in `registry.json` is `"closed": true`,
+so it is never offered in the "Which school are you at?" list: a teacher reaches
+it only from one of its `domains` (and, where `allowEmails` is non empty, only
+those addresses). An address no school claims gets Co-Cher with no school.
+
