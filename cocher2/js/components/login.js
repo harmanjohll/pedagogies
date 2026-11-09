@@ -39,6 +39,23 @@ export function currentSchoolId() {
   return Object.prototype.hasOwnProperty.call(u, 'schoolId') ? (u.schoolId || null) : 'bty';
 }
 
+/**
+ * Accounts made before Co-Cher had schools carry no schoolId at all. Give them
+ * one, once, from their email domain (the sign in domain decides), so every
+ * part of the app (Find a Teacher, the timetable claim, the school's words and
+ * colours) sees the same school. Resolves true when the account changed; the
+ * caller reloads so the store reopens under the school's key, which adopts the
+ * pre-split blob once (state.js loadFromStorage), so no work is lost.
+ */
+export async function upgradeLegacyAccount() {
+  const u = getCurrentUser();
+  if (!u || Object.prototype.hasOwnProperty.call(u, 'schoolId')) return false;
+  let school = null;
+  try { const gate = await mayAccess(u.email); school = gate?.ok ? gate.school || null : null; } catch { school = null; }
+  setCurrentUser({ ...u, schoolId: school?.id || null, schoolName: school?.name || '' });
+  return true;
+}
+
 /** Get the user's preferred display name, or null. */
 export function getPreferredName() {
   const user = getCurrentUser();

@@ -15,7 +15,7 @@ import { primeVocabulary } from './utils/vocabulary.js';
 import { seedSchoolFrameworks } from './utils/school-frameworks.js';
 import { getCurrentUser } from './components/login.js';
 import { renderWelcome, shouldShowWelcome, isApiKeyMissing } from './components/welcome.js';
-import { renderLogin, isLoggedIn } from './components/login.js';
+import { renderLogin, isLoggedIn, upgradeLegacyAccount } from './components/login.js';
 import { seedIfNeeded, seedPdIfNeeded, seedLessonsIfNeeded, seedCCAIfNeeded, seedExemplarsIfNeeded, seedPortalDemosIfNeeded, seedShowcaseLessonsIfNeeded } from './seed-data.js';
 
 /* ── Views ── */
@@ -271,6 +271,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!isLoggedIn()) {
     renderLogin(() => startApp());
   } else {
-    startApp();
+    // An account from before schools existed gets its school from its email
+    // domain, once; reload so every module opens under that school.
+    upgradeLegacyAccount()
+      .then(changed => { if (changed) location.reload(); else startApp(); })
+      .catch(() => startApp());
   }
 });

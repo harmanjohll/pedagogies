@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v2.3', items: [
+    { icon: '\u{1F527}', title: 'Older accounts find their school', text: 'If you signed in before Co-Cher knew about schools, your school now comes from your email, once. Find a Teacher, your timetable and your school\u2019s own words appear. Your saved work stays.' },
+  ] },
   { version: 'v2.2', items: [
     { icon: '\u{1F441}', title: 'Observe, while you teach', text: 'In Present, press O (or tap Observe). Pick students, tap \u201cShowed it\u201d or \u201cWorking towards it\u201d for a competency, and it is saved to each student, linked to the lesson. Show initials instead of names when the projector is on.' },
     { icon: '\u{1F9D1}\u200D\u{1F393}', title: 'A profile for every student', text: 'Tap a name in My Classes, or search for it. One page: E21CC levels in each of your classes, the trend, the evidence behind it, who teaches them each subject, and the pathway they are working towards from their Paths link.' },
