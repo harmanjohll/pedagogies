@@ -1,13 +1,13 @@
 # Co-Cher: handover brief for the next chat
 
-Updated 9 November 2026, after v1.17 (Paths, Learning Log) and v1.18 (Student
-Finder). Read this first, then `VERSIONS.md` and `cocher2/schools/README.md`.
+Updated 9 November 2026, after v2.1 (Paths, Learning Log, Student Finder).
+v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `VERSIONS.md` and `cocher2/schools/README.md`.
 
 ---
 
 ## 0. Opening message to paste into the new chat
 
-> We're continuing **Co-Cher 2** (`cocher2/`, currently v1.18). First read
+> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.1). First read
 > `HANDOVER.md` at the repo root. The next work is in section 2. Don't copy any
 > student data into this repo.
 
@@ -20,7 +20,7 @@ Finder). Read this first, then `VERSIONS.md` and `cocher2/schools/README.md`.
 | Line | Folder | Live address | Who it's for | Status |
 |---|---|---|---|---|
 | **Co-Cher 1** | `app/` (`app/cocher.html`) | `harmanjohll.github.io/pedagogies/` (the root redirects here) | **Beatty only.** | **Frozen at v8.9.** Emergency fixes only. |
-| **Co-Cher 2** | `cocher2/` (`cocher2/cocher2.html`) | `harmanjohll.github.io/pedagogies/cocher2/` | **Every school**: Beatty, Park View Primary, Opera Estate Primary, SAJC | **Active, v1.18.** All new work goes here. |
+| **Co-Cher 2** | `cocher2/` (`cocher2/cocher2.html`) | `harmanjohll.github.io/pedagogies/cocher2/` | **Every school**: Beatty, Park View Primary, Opera Estate Primary, SAJC | **Active, v2.1.** All new work goes here. |
 
 - Each school has a pack (`cocher2/schools/<id>.json`), an optional roster
   (`cocher2/schools/<id>/staff.json`) and its own storage on the device
@@ -31,7 +31,7 @@ Finder). Read this first, then `VERSIONS.md` and `cocher2/schools/README.md`.
 
 ### Shipping a Co-Cher 2 version
 
-1. `cocher2/js/version.js`: bump `APP_VERSION` (next is **v1.19**).
+1. `cocher2/js/version.js`: bump `APP_VERSION` (next is **v2.2**).
 2. `cocher2/sw.js`: set `VERSION` to the same value.
 3. `cocher2/js/components/whats-new.js`: add an entry at the top.
 4. `VERSIONS.md`: new row **Current (active)**, old row **Superseded**.
@@ -43,7 +43,7 @@ Finder). Read this first, then `VERSIONS.md` and `cocher2/schools/README.md`.
 - Signing in is a routing step, not real security. Anything that truly needs
   access control needs `backend/`.
 
-### What v1.17 and v1.18 added
+### What v2.1 added
 
 | Feature | Where | Notes |
 |---|---|---|
