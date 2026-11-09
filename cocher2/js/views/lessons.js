@@ -22,6 +22,8 @@ import { buildCardModel, openCardWindow } from '../utils/takehome-card.js';
 import { isVoiceInputSupported, createDictation, dictationErrorMessage } from '../utils/voice.js';
 import { isTouch } from '../utils/viewport.js';
 import { openArtifactWindow } from '../utils/library.js';
+import { evidenceForLesson, VERDICTS, competencyLabel } from '../utils/evidence.js';
+import { openStudentProfile } from '../components/student-profile.js';
 
 const STATUS_MAP = {
   draft: { label: 'Draft', badge: 'badge-gray' },
@@ -1106,6 +1108,29 @@ export function renderDetail(container, { id }) {
             </div>`;
         })()}
 
+        ${(() => {
+          /* Evidence captured in Present (Observe, O). Grouped by competency;
+           * each name opens the student's profile. */
+          const ev = evidenceForLesson(lesson);
+          if (!ev.length) return lesson.classId ? `<div class="card" style="margin-bottom:var(--sp-4);">
+            <h3 style="font-size:1rem;font-weight:600;margin-bottom:var(--sp-2);color:var(--ink);">Evidence from this lesson</h3>
+            <p style="font-size:0.8125rem;color:var(--ink-muted);margin:0;line-height:1.5;">None yet. In Present, press <strong>O</strong> to note which students showed a competency, or are working towards it. It lands here, on each student&rsquo;s profile, and in report comments.</p>
+          </div>` : '';
+          const byComp = {};
+          ev.forEach(o => { (byComp[o.competency] = byComp[o.competency] || []).push(o); });
+          return `<div class="card" style="margin-bottom:var(--sp-4);" id="lesson-evidence">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:var(--sp-3);">
+              <h3 style="font-size:1rem;font-weight:600;margin:0;color:var(--ink);">Evidence from this lesson <span style="font-weight:500;color:var(--ink-muted);font-size:0.8125rem;">${ev.length} observation${ev.length === 1 ? '' : 's'}</span></h3>
+              <button class="btn btn-ghost btn-sm" id="evidence-to-reflection" title="Add a summary of this evidence to the E21CC box in your reflection">Add to reflection</button>
+            </div>
+            ${Object.entries(byComp).map(([k, list]) => `
+              <div style="margin-bottom:var(--sp-3);">
+                <div style="font-size:0.75rem;font-weight:700;color:var(--ink-secondary);margin-bottom:4px;">${esc(competencyLabel(k))}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">${list.map(o => { const v = VERDICTS[o.verdict] || VERDICTS.showed; return `<button class="pill evidence-student" data-sid="${esc(o._student.id)}" title="${esc(o.text)}" style="display:inline-flex;gap:5px;align-items:center;padding:3px 10px;border-radius:999px;border:1px solid ${v.color}55;background:${v.color}12;color:${v.color};font-size:0.75rem;font-weight:600;cursor:pointer;">${v.icon} ${esc(o._student.name)}</button>`; }).join('')}</div>
+              </div>`).join('')}
+          </div>`;
+        })()}
+
         <div class="card">
           <h3 style="font-size:1rem;font-weight:600;margin-bottom:var(--sp-3);color:var(--ink);">Post-Lesson Reflection</h3>
           <p style="font-size:0.8125rem;color:var(--ink-muted);margin-bottom:var(--sp-4);line-height:1.5;">After teaching, capture what went well, what you'd change, and student responses.</p>
@@ -1333,6 +1358,19 @@ export function renderDetail(container, { id }) {
   if (voiceOn) {
     container.querySelectorAll('.ref-mic-btn').forEach(btn => wireMic(btn, container));
   }
+
+  container.querySelectorAll('.evidence-student').forEach(b => b.addEventListener('click', () => openStudentProfile(lesson.classId, b.dataset.sid)));
+  container.querySelector('#evidence-to-reflection')?.addEventListener('click', () => {
+    const box = container.querySelector('#ref-e21cc');
+    if (!box) return;
+    const byComp = {};
+    evidenceForLesson(lesson).forEach(o => { const c = (byComp[o.competency] = byComp[o.competency] || { showed: [], towards: [] }); (c[o.verdict] || c.showed).push(o._student.name); });
+    const lines = Object.entries(byComp).map(([k, c]) => `${competencyLabel(k)}: ${[c.showed.length ? `showed it (${[...new Set(c.showed)].join(', ')})` : '', c.towards.length ? `working towards it (${[...new Set(c.towards)].join(', ')})` : ''].filter(Boolean).join('; ')}.`);
+    box.value = [box.value.trim(), ...lines].filter(Boolean).join('\n');
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast('Evidence added to your reflection. Save the reflection to keep it.', 'success');
+  });
 
   container.querySelector('#save-ref').addEventListener('click', () => {
     // Snapshot the stage BEFORE saving so we can detect the taught → reflected

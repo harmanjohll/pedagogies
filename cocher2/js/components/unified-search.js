@@ -3,6 +3,7 @@
  * ================================
  * Global search overlay that spans all data stores.
  */
+import { openStudentProfile } from './student-profile.js';
 
 import { Store } from '../state.js';
 import { navigate } from '../router.js';
@@ -156,8 +157,25 @@ function getAllSearchableItems() {
     items.push({
       type: 'class', icon: 'CL', color: '#06b6d4',
       title: c.name, subtitle: `Class · ${c.level || ''} ${c.subject || ''} · ${(c.students || []).length} students`,
-      searchText: `${c.name} ${c.level || ''} ${c.subject || ''} ${(c.students || []).map(s => s.name).join(' ')}`,
+      // Student names are searched as students (below), each opening a profile.
+      searchText: `${c.name} ${c.level || ''} ${c.subject || ''}`,
       action: () => navigate(`/classes/${c.id}`)
+    });
+  });
+
+  // Students: each opens their profile (E21CC across classes, evidence, pathway)
+  const seenStudents = new Set();
+  (Store.get('classes') || []).forEach(c => {
+    (c.students || []).forEach(st => {
+      const key = st.sfKey || `${(st.name || '').toLowerCase()}|${st.formClass || ''}`;
+      if (seenStudents.has(key)) return;
+      seenStudents.add(key);
+      items.push({
+        type: 'student', icon: 'ST', color: '#2c7a4b',
+        title: st.name, subtitle: `Student · ${st.formClass ? st.formClass + ' · ' : ''}${c.name}`,
+        searchText: `${st.name} ${st.formClass || ''}`,
+        action: () => openStudentProfile(c.id, st.id)
+      });
     });
   });
 

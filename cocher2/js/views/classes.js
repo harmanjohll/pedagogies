@@ -13,6 +13,7 @@ import { renderMd } from '../utils/latex.js';
 import { escapeHtml } from '../utils/markdown.js';
 import { levelOptions, levels, subjects, exampleClass, classCodes } from '../utils/vocabulary.js';
 import { createStudentUploadZone } from '../components/student-upload.js';
+import { openStudentProfile } from '../components/student-profile.js';
 import {
   SCHEMA_PRESETS, getSchemaForClass, getFieldValue, applyFieldUpdate,
   levelMeta as fieldLevelMeta, E21CC_LEVELS
@@ -611,6 +612,11 @@ export function renderDetail(container, { id }) {
         });
       });
 
+      // Student profile: E21CC across classes, evidence, subjects, pathway
+      container.querySelectorAll('.student-profile-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); openStudentProfile(id, btn.dataset.studentId); });
+      });
+
       // Edit student tracking levels (schema-aware)
       container.querySelectorAll('.student-edit-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1044,7 +1050,7 @@ function renderStudentsTab(cls, schema) {
               <td>
                 <div style="display: flex; align-items: center; gap: var(--sp-3);">
                   <div class="avatar avatar-sm" style="background: ${stringToColor(s.name)};">${initials(s.name)}</div>
-                  <span style="font-weight: 500;">${escapeHtml(s.name)}</span>
+                  <button class="student-profile-btn" data-student-id="${s.id}" title="Open ${escapeAttr(s.name)}'s profile: E21CC across classes, evidence and pathway" style="font:inherit;font-weight:500;background:none;border:0;padding:0;color:var(--ink);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--border);text-underline-offset:3px;">${escapeHtml(s.name)}</button>${(s.observations || []).length ? `<span title="${(s.observations || []).length} pieces of evidence" style="font-size:0.6875rem;color:var(--ink-faint);">&middot; ${(s.observations || []).length}</span>` : ''}
                 </div>
               </td>
               ${schema.fields.map(field => {
