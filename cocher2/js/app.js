@@ -223,7 +223,11 @@ async function init() {
 
   // If the school published a staff timetable and this teacher hasn't got one
   // yet, offer it — one tap, once. Silent when there's nothing to offer.
-  maybeClaimTimetable();
+  // When it lands (an exact email match needs no question), repaint the view:
+  // the first screen was drawn before the week arrived.
+  maybeClaimTimetable().then(ok => {
+    if (ok) window.dispatchEvent(new HashChangeEvent('hashchange'));
+  }).catch(() => {});
 
   // One-time "what's new" for RETURNING users after a version bump. For genuine
   // first-run users this records the current version silently and shows nothing,
