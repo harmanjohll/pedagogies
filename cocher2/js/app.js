@@ -48,6 +48,7 @@ import { render as renderSubjectTools } from './views/subject-tools.js';
 import { render as renderReportComments } from './views/report-comments.js';
 import { render as renderQuestionBank } from './views/question-bank.js';
 import { render as renderReliefKit } from './views/relief-kit.js';
+import { render as renderLearningLog } from './views/learning-log.js';
 import { renderPresent } from './views/present.js';
 import { renderDeckViewer } from './views/deck-viewer.js';
 import { renderLivePresent, renderLiveJoin } from './views/live.js';
@@ -153,6 +154,7 @@ async function init() {
   registerRoute('/spatial', renderSpatialDesigner);
   registerRoute('/classes', renderClassesList);
   registerRoute('/classes/:id', renderClassDetail);
+  registerRoute('/learning-log', renderLearningLog);
   registerRoute('/lessons', renderLessonsList);
   registerRoute('/lessons/:id', renderLessonDetail);
   registerRoute('/knowledge', renderKnowledgeBase);

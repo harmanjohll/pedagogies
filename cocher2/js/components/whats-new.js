@@ -17,6 +17,10 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v1.17', items: [
+    { icon: '\u{1F9ED}', title: 'Paths, inside ECG', text: 'CCE2021 \u2192 ECG now has a Paths view: the live Pathways app, answering ECG\u2019s third question, \u201cHow do I get there?\u201d Every update to Paths shows here, and Open full screen gives it a tab of its own.' },
+    { icon: '\u{1F4DD}', title: 'The E21CC Learning Log, under My Classes', text: 'For Beatty: the student app, your teacher console and the demo, in one place beside your classes. The Log keeps its own data, the same whether you open it here or on its own.' },
+  ] },
   { version: 'v1.16', items: [
     { icon: '\u{1F4D6}', title: 'Opera Estate speaks in its own words now', text: 'The school sent its full site, so the guesses are gone. Its vision, mission, R2IGHT values, crest and 40th-anniversary theme are quoted exactly; so are the curriculum stances of all eight departments — C-P-A in Maths, EL Syllabus 2020, the seven PE Learning Areas, CCE@OEPS on Identity/Relationships/Choices — and every one of them now reaches the AI when you plan.' },
     { icon: '\u{1F552}', title: 'The bell knows Wednesday is short', text: 'Wednesday dismisses at 12.30, not 1.30. Recess is staggered by level (P1 & P4 at 9.30, P2 & P5 at 10.00, P3 & P6 at 10.30) and is not marked on the staff timetable, so a slot that looks free may be a duty. Both are recorded, along with CCA and remedial times.' },
