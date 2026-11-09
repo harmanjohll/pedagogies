@@ -90,22 +90,30 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 ## 2. Next work
 
-1. **Videos and guides (the user asked to be reminded).** New briefing videos
-   and user guides for Co-Cher 2, including Paths, the Learning Log, Student
-   Finder and Commit class. The renderer is in `briefing-videos/tools/` (see its
-   README). The old MP4s show Co-Cher 1 and live only on branch
-   `claude/cocher-audit-versioning-h85j3x`; keep MP4s out of `main` (Drive or a
-   GitHub Release instead).
-2. **The end state: personalised tracking.** A teacher follows each student's
-   competency growth and progress towards the pathway they hope for. Embedding
-   alone cannot do this: an embedded app shows the teacher's own browser data,
-   and students' logs and plans live on students' devices. Plan:
-   - Each app exports a small summary for one student: the Log gives
-     competency levels with evidence; Pathways gives goal and progress
-     (Pathways already makes share links that carry year, levels and goal).
-   - Co-Cher imports it and attaches it to the student in My Classes, matched
-     by `sfKey` (Student Finder owns the teacher and student links).
-   - Needs changes in genapp. Spec it with the user first.
+1. **Videos.** Demo snippets are done (v2.1): a one minute overview and 13
+   snippets of 20 to 30 seconds, delivered to the user as files, not in the
+   repo. Scripts: `briefing-videos/tools/cocher2-demos/`. **Instructional
+   videos and user guides come later**, made the same way. Keep MP4s out of
+   `main`.
+2. **Integration, without the data question.** A review on 9 November found
+   Co-Cher organised around classes and lessons, not the student. The user has
+   **parked the data part for later**: one record per student (keyed by
+   `sfKey`), one competency framework (6 areas, 3 domains and the Log's 9 MOE
+   competencies do not line up), per student results, and above all whether
+   teachers share a view of a student (that needs `backend/` or OneDrive). Do
+   not start those without the user. Moves that do not depend on it:
+   - Capture evidence in lessons: tap a student on Present's seat map to log
+     an observation tagged with the lesson and its focus; tag students in the
+     reflection form (today its E21CC box is class level free text).
+   - One timetable: the dashboard reads My Timetable (an SAJC demo teacher sees
+     "No timetable found" on the dashboard while My Timetable holds the week).
+   - One identity: Student Finder's "Who are you?" reuses the timetable claim
+     and sign in, instead of asking again.
+   - A first student profile page from what exists (Student Finder subjects
+     and teachers, E21CC across the teacher's classes, observations).
+   - The end state stays: each app sends a small per student summary (Log:
+     competency levels with evidence; Paths: its share link already carries
+     year, levels and goal) into the student's profile. Needs genapp changes.
 3. **Primary schools set their own P6 data in Paths.** The user wants each
    primary school to set its own posting ranges (Paths' P6 page shows Beatty's).
    This is a Pathways change in genapp, for example a `?school=` parameter
