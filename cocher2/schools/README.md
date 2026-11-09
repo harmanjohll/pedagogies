@@ -34,8 +34,10 @@ they carry different risk, and only the pack is unconditionally safe to publish.
 | CCA list, school frameworks | Student names, class registers |
 | A group distribution address (`…_all_staff@…`) | Individual staff or parent contacts |
 
-A roster is the exception, and it is a deliberate one. Park View's and Opera
-Estate's real staff timetables ship in this repo so their teachers get a working
+A roster is the exception, and it is a deliberate one. Park View's, Opera
+Estate's and Beatty's real staff timetables ship in this repo (Beatty's
+`bty/staff.json` is built by `tools/bty-build.py` from the CSV already in
+`btyrelief/`, so it publishes nothing new) so their teachers get a working
 colleague list on first sign-in with nothing to do. **This repo is public**, so
 committing a roster publishes staff names and their weekly movements — and a
 weekly pattern identifies a person even without a name attached. Do it only for

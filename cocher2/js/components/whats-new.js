@@ -17,6 +17,11 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v2.2', items: [
+    { icon: '\u{1F441}', title: 'Observe, while you teach', text: 'In Present, press O (or tap Observe). Pick students, tap \u201cShowed it\u201d or \u201cWorking towards it\u201d for a competency, and it is saved to each student, linked to the lesson. Show initials instead of names when the projector is on.' },
+    { icon: '\u{1F9D1}\u200D\u{1F393}', title: 'A profile for every student', text: 'Tap a name in My Classes, or search for it. One page: E21CC levels in each of your classes, the trend, the evidence behind it, who teaches them each subject, and the pathway they are working towards from their Paths link.' },
+    { icon: '\u{1F4C5}', title: 'Beatty: your week is already here', text: 'Sign in with your school email and My Timetable fills itself from the school timetable. Nothing to import.' },
+  ] },
   { version: 'v2.1', items: [
     { icon: '\u{1F9ED}', title: 'Paths, inside ECG', text: 'CCE2021 \u2192 ECG now has a Paths view: the live Pathways app, answering ECG\u2019s third question, \u201cHow do I get there?\u201d Every update to Paths shows here, and Open full screen gives it a tab of its own.' },
     { icon: '\u{1F4DD}', title: 'The E21CC Learning Log, under My Classes', text: 'For Beatty: the student app, your teacher console and the demo, in one place beside your classes. The Log keeps its own data, the same whether you open it here or on its own.' },

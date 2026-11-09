@@ -23,6 +23,7 @@ import { openLiveSession } from '../components/live-launch.js';
 import { showToast } from '../components/toast.js';
 import { resolveTeachingAction, TEACHING_AREA_ICONS } from '../utils/stp.js';
 import { buildCardModel, cardPreviewHTML, openCardWindow, cardShareUrl } from '../utils/takehome-card.js';
+import { mountObservePanel } from '../components/observe-panel.js';
 
 let _timerId = null;
 let _remaining = 0;      // seconds left in the running segment
@@ -251,6 +252,7 @@ export function renderPresent(container, params) {
         </div>
         <div class="present-ctrl">
           <button class="btn btn-secondary btn-sm" id="present-golive" title="Run this lesson's deck as a live session — students scan a QR to join on their phones, vote and respond, and leave with a personal card" style="color:#e11d48;font-weight:700;">&#9654; Go Live</button>
+          <button class="btn btn-secondary btn-sm" id="present-observe" title="Observe students: capture E21CC evidence as you teach (O)">&#128065; Observe</button>
           <button class="btn btn-secondary btn-sm" id="present-audience" title="Audience mode — hide class-only details (seating, groups) for an assembly / open house" aria-pressed="${_audienceMode}">&#128101; Audience</button>
           <button class="btn btn-secondary btn-sm" id="present-fullscreen" title="Fullscreen (F)">&#x26F6; Fullscreen</button>
           <button class="btn btn-secondary btn-sm" id="present-exit" title="Exit (Esc)">&times; Exit</button>
@@ -272,6 +274,10 @@ export function renderPresent(container, params) {
     </div>`;
 
   const stage = container.querySelector('#present-stage');
+  const observe = mountObservePanel(container.querySelector('.present-root'), {
+    lesson, cls,
+    currentSegment: () => (_segIdx >= 1 && _segIdx <= segments.length ? segments[_segIdx - 1] : null),
+  });
   const dots = container.querySelector('#present-dots');
   const timerBtn = container.querySelector('#present-timer');
   const moreCue = container.querySelector('#present-more-cue');
@@ -547,6 +553,7 @@ export function renderPresent(container, params) {
       });
     }
     renderDots();
+    observe.refresh();
     stage.scrollTop = 0; // each screen starts at the top
     requestAnimationFrame(updateMoreCue); // after layout settles
   }
@@ -575,6 +582,7 @@ export function renderPresent(container, params) {
     btn.style.color = _audienceMode ? '#fff' : '';
     showScreen(_segIdx); // re-render the current screen with the new filter
   });
+  container.querySelector('#present-observe').addEventListener('click', () => observe.toggle());
   container.querySelector('#present-exit').addEventListener('click', () => navigate(`/lessons/${lesson.id}`));
   container.querySelector('#present-fullscreen').addEventListener('click', () => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -591,6 +599,8 @@ export function renderPresent(container, params) {
     else if (e.key === 'ArrowLeft') showScreen(_segIdx - 1);
     else if (e.key === ' ') { e.preventDefault(); _running ? stopTimer() : startTimer(); }
     else if (e.key === 'f' || e.key === 'F') container.querySelector('#present-fullscreen')?.click();
+    else if (e.key === 'o' || e.key === 'O') observe.toggle();
+    else if (e.key === 'Escape' && observe.isOpen()) observe.close();
     else if (e.key === 'Escape' && !document.fullscreenElement) navigate(`/lessons/${lesson.id}`);
   };
   window.addEventListener('keydown', _keyHandler);
@@ -601,6 +611,7 @@ export function renderPresent(container, params) {
   return () => {
     stopTimer();
     clearSeatMapSessions(); // drop un-saved live rearrangements when leaving Present
+    observe.destroy();
     window.removeEventListener('resize', updateMoreCue);
     if (_keyHandler) { window.removeEventListener('keydown', _keyHandler); _keyHandler = null; }
     _audioUrls.forEach(url => URL.revokeObjectURL(url));
