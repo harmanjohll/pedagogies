@@ -10,7 +10,7 @@
        HTML, so a fresh Pages deploy always wins online; it only serves a cached
        shell offline. See the registration block at the end of <body>. -->
   <link rel="manifest" href="manifest.webmanifest" />
-  <meta name="theme-color" content="#F3F0E8" />
+  <meta name="theme-color" content="#F0F3F2" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,7 +19,7 @@
   <!-- Co-Cher 3: apply the teacher's look before first paint. Mirrors v3/prefs.js. -->
   <script>
     (function () {
-      var d = { look: 'washi', night: 'off', type: 'mincho', nav: 'rail', home: 'flow', density: 'airy' }, p = {};
+      var d = { look: 'fjord', night: 'off', type: 'mincho', nav: 'dock', home: 'flow', density: 'airy' }, p = {};
       try { p = JSON.parse(localStorage.getItem('cocher3_prefs') || '{}') || {}; } catch (e) {}
       var h = document.documentElement, g = function (k) { return typeof p[k] === 'string' ? p[k] : d[k]; };
       h.classList.add('v3'); h.dataset.look = g('look'); h.dataset.type = g('type'); h.dataset.density = g('density');

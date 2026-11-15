@@ -40,7 +40,8 @@ export const CHOICES = {
   ],
 };
 
-export const DEFAULTS = { look: 'washi', night: 'off', type: 'mincho', nav: 'rail', home: 'flow', density: 'airy' };
+/* The owner's chosen starting point (A2 B1 C3 D1). Every teacher can change all of it in Look and feel. */
+export const DEFAULTS = { look: 'fjord', night: 'off', type: 'mincho', nav: 'dock', home: 'flow', density: 'airy' };
 
 export function getPrefs() {
   let saved = {};
