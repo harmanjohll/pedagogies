@@ -9,7 +9,7 @@
 import { Store } from '../js/state.js';
 import { getPrefs } from './prefs.js';
 import { PLACES, visible } from './places.js';
-import { getCurrentUser, getPreferredName, currentSchoolId } from '../js/components/login.js';
+import { currentSchoolId } from '../js/components/login.js';
 import { getMyTimetable, entriesForDate, rangeLabel } from '../js/utils/timetable.js';
 import { loadPack, cycleForDate } from '../js/utils/school.js';
 import { lessonStage } from '../js/views/lessons.js';
@@ -18,7 +18,7 @@ import { openSearch } from '../js/components/unified-search.js';
 
 const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const toMin = (t) => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? +m[1] * 60 + +m[2] : null; };
-const clock = (m) => `${Math.floor(m / 60)}.${String(m % 60).padStart(2, '0')}`;
+const clock = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : /(s|sh|ch|x)$/.test(w) ? 'es' : 's'}`;
 const DAY = 86400000;
 const dateLine = (d) => d.toLocaleDateString('en-SG', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -27,8 +27,8 @@ const dateLine = (d) => d.toLocaleDateString('en-SG', { weekday: 'long', day: 'n
 
 const STAGE = {
   taught: { rank: 0, verb: 'Reflect on', go: 'Reflect' },
-  ready: { rank: 1, verb: 'Ready to teach:', go: 'Present' },
-  rehearsed: { rank: 1, verb: 'Rehearsed, ready:', go: 'Present' },
+  ready: { rank: 1, verb: 'Ready to teach', go: 'Present' },
+  rehearsed: { rank: 1, verb: 'Rehearsed and ready', go: 'Present' },
   draft: { rank: 2, verb: 'Finish designing', go: 'Open' },
 };
 
@@ -64,18 +64,18 @@ function insights() {
     Object.entries(byComp).forEach(([comp, k]) => {
       if (k.towards.size >= 2) out.push({ w: 3 + k.towards.size, href: `#/classes/${cls.id}`,
         t: `${plural(k.towards.size, 'student')} in ${cls.name} are working towards ${competencyLabel(comp)}`,
-        s: 'Group them, or build it into the next lesson.' });
+        s: 'Group them, or build it into the next lesson' });
       else if (k.showed.size >= 3) out.push({ w: 1 + k.showed.size, href: `#/classes/${cls.id}`,
         t: `${plural(k.showed.size, 'student')} in ${cls.name} showed ${competencyLabel(comp)}`,
-        s: 'Enough evidence to move a level? Check their profiles.' });
+        s: 'Enough evidence to move a level? Check their profiles' });
     });
   });
   const taught = pipeline().filter(x => x.stage === 'taught');
-  if (taught.length >= 2) out.push({ w: 4, href: '#/lessons', t: `${plural(taught.length, 'lesson')} taught, not yet reflected on`, s: 'Two minutes each, while they are fresh.' });
+  if (taught.length >= 2) out.push({ w: 4, href: '#/lessons', t: `${plural(taught.length, 'lesson')} taught, not yet reflected on`, s: 'Two minutes each, while they are fresh' });
   const noEvidence = Store.getClasses().filter(c => (c.students || []).length && !(c.students || []).some(s => (s.observations || []).length));
   if (noEvidence.length && Store.getClasses().length) out.push({ w: 1, href: '#/lessons',
     t: `No evidence yet for ${noEvidence.length === 1 ? noEvidence[0].name : plural(noEvidence.length, 'class')}`,
-    s: 'In Present, press O and tap who showed what.' });
+    s: 'In Present, press O and tap who showed what' });
   return out.sort((a, b) => b.w - a.w).slice(0, 4);
 }
 
@@ -137,29 +137,25 @@ export function renderNow(container) {
   if (mode === 'board') return renderBoard(container);
   if (mode === 'ask') return renderAsk(container);
 
-  const name = getPreferredName() || (getCurrentUser()?.name || '').split(' ')[0] || '';
   container.innerHTML = `<div class="main-scroll"><div class="v3-page" id="v3-now"><p class="v3-empty">Reading your day…</p></div></div>`;
   let alive = true;
 
   today().then(t => {
     if (!alive) return;
     const lessonsToday = t.list.filter(e => e.kind === 'lesson');
-    const title = t.current ? `${esc(t.current.class || t.current.title)}, until ${clock(toMin(t.current.end))}`
-      : t.next ? `${esc(t.next.class || t.next.title)} next, at ${clock(toMin(t.next.start))}`
-      : t.list.length ? 'Teaching is done for today'
-      : t.has ? 'Nothing on your timetable today'
-      : (name ? `Hello, ${esc(name)}` : 'Today');
+    const others = t.list.length - lessonsToday.length;
     const lede = t.list.length
-      ? `${plural(lessonsToday.length, 'lesson')} today${t.list.length > lessonsToday.length ? `, and ${plural(t.list.length - lessonsToday.length, 'other commitment')}` : ''}.`
-      : t.has ? 'A day to plan ahead, or to look back.'
-      : 'Your timetable is not loaded yet, so this page starts from your lessons.';
+      ? `${plural(lessonsToday.length, 'lesson')}${others ? ` and ${plural(others, 'other commitment')}` : ''} today`
+        + (t.current || t.next ? '' : ', all done')
+      : t.has ? 'Nothing on your timetable today'
+      : 'No timetable on this device yet, so this page starts from your lessons';
 
     const pipe = pipeline();
     const ins = insights();
     container.querySelector('#v3-now').innerHTML = `
       <div class="v3-head"><div>
-        <div class="v3-eyebrow">${dateLine(new Date())}${t.cycle ? ' · ' + esc(t.cycle) + ' week' : ''}</div>
-        <h1 class="v3-title">${title}</h1>
+        <div class="v3-eyebrow">${t.cycle ? esc(t.cycle) + ' week' : 'Today'}</div>
+        <h1 class="v3-title">${dateLine(new Date())}</h1>
         <p class="v3-lede">${lede}</p>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -187,7 +183,7 @@ export function renderNow(container) {
             <div class="v3-h">Today <a href="#/week">The week</a></div>
             ${rowsHTML(t.list.map(e => `<div class="v3-row"><span class="v3-time">${esc(rangeLabel(e))}</span>
               <span><span class="v3-row-t">${esc(e.class || e.title)}</span>${e.room ? `<br><span class="v3-row-s">${esc(e.room)}</span>` : ''}</span></div>`),
-              t.has ? 'No entries today.' : 'No timetable on this device. Open <a href="#/my-timetable">My timetable</a> to load yours.')}
+              t.has ? 'No entries today' : 'No timetable on this device. Open <a href="#/my-timetable">My timetable</a> to load yours.')}
           </div>
         </div>
       </div>`;
@@ -201,7 +197,7 @@ function renderBoard(container) {
     <div class="v3-head"><div>
       <div class="v3-eyebrow">${dateLine(new Date())}</div>
       <h1 class="v3-title">Everything, in its place</h1>
-      <p class="v3-lede">Each screen in Co-Cher, grouped by what you are doing.</p>
+      <p class="v3-lede">Each screen in Co-Cher, grouped by what you are doing</p>
     </div></div>
     ${PLACES.map(p => `<div style="margin-bottom:calc(var(--gap) * 1.2);">
       <div class="v3-h">${p.label}</div>
@@ -245,17 +241,17 @@ export function renderWeek(container) {
       <div class="v3-head"><div>
         <div class="v3-eyebrow">Week of ${monday.toLocaleDateString('en-SG', { day: 'numeric', month: 'long' })}${cycle ? ' · ' + esc(cycle) + ' week' : ''}</div>
         <h1 class="v3-title">This week</h1>
-        <p class="v3-lede">${tt ? `${plural(total, 'lesson')} on your timetable, ${plural(pipe.length, 'lesson')} in flight.` : 'Your timetable is not loaded yet. The lessons you are working on are below.'}</p>
+        <p class="v3-lede">${tt ? `${plural(total, 'lesson')} on your timetable, ${plural(pipe.length, 'lesson')} in progress` : 'No timetable on this device yet, so the week starts from your lessons'}</p>
       </div><a class="btn btn-secondary" href="#/my-timetable">Odd and even weeks</a></div>
       ${tt ? `<div class="v3-week">${days.map((d, i) => `<div class="d${d.toDateString() === now.toDateString() ? ' today' : ''}">
         <div class="dh"><span>${d.toLocaleDateString('en-SG', { weekday: 'short' })}</span><span>${d.getDate()}</span></div>
         ${lists[i].length ? lists[i].map(e => `<div class="e${e.kind === 'lesson' ? '' : ' other'}"><b>${esc(e.class || e.title)}</b><span>${esc(rangeLabel(e))}${e.room ? ' · ' + esc(e.room) : ''}</span></div>`).join('') : '<span class="v3-row-s">Free</span>'}
       </div>`).join('')}</div>` : ''}
       <div class="v3-grid" style="margin-top:calc(var(--gap) * 1.2);">
-        <div class="v3-col-7"><div class="v3-panel"><div class="v3-h">Lessons in flight <a href="#/lessons">All lessons</a></div>
+        <div class="v3-col-7"><div class="v3-panel"><div class="v3-h">Lessons in progress <a href="#/lessons">All lessons</a></div>
           ${rowsHTML(pipe.slice(0, 8).map(x => `<a class="v3-row" href="#/lessons/${x.l.id}">
             <span><span class="v3-row-t">${esc(x.l.title)}</span><br><span class="v3-row-s">${x.cls ? esc(x.cls.name) + ' · ' : ''}${STAGE[x.stage].go === 'Present' ? 'ready to teach' : x.stage === 'taught' ? 'taught, awaiting reflection' : 'in design'}</span></span>
-            <span class="go">Open →</span></a>`), 'No lessons in progress.')}
+            <span class="go">Open →</span></a>`), 'No lessons in progress')}
         </div></div>
         <div class="v3-col-5"><div class="v3-panel"><div class="v3-h">Evidence, last 7 days</div>
           ${rowsHTML(ev.map(x => `<a class="v3-row" href="#/classes/${x.c.id}"><span class="v3-row-t">${esc(x.c.name)}</span><span class="go">${plural(x.n, 'observation')}</span></a>`),
@@ -287,27 +283,29 @@ export function renderTerm(container) {
     const obs = students.reduce((n, s) => n + (s.observations || []).length, 0);
     const withEv = students.filter(s => (s.observations || []).length).length;
     const withPath = students.filter(s => s.pathsLink).length;
-    const stat = (n, label) => `<div class="v3-col-4 v3-panel v3-stat"><b>${n}</b><span>${label}</span></div>`;
+    const stat = (n, label) => `<div><b>${n}</b><span>${label}</span></div>`;
     container.querySelector('#v3-term').innerHTML = `
       <div class="v3-head"><div>
         <div class="v3-eyebrow">${esc(pack?.name || 'Your school')}</div>
         <h1 class="v3-title">${inTerm ? `Week ${idx - a + 1} of ${b - a + 1}` : weeks.length ? 'Between terms' : 'This term'}</h1>
-        <p class="v3-lede">${inTerm ? `${plural(b - idx, 'week')} of this term left after this one.` : weeks.length ? 'A good time to look back, and to plan the next stretch.' : 'Your school has not published its calendar, so the term is shown by what you have built.'}</p>
+        <p class="v3-lede">${inTerm ? `${plural(b - idx, 'week')} left after this one` : weeks.length ? 'A good time to look back, and to plan the next stretch' : 'Your school has not published its calendar, so the term is shown by what you have built'}</p>
       </div></div>
       ${weeks.length ? `<div class="v3-panel" style="margin-bottom:var(--gap);"><div class="v3-h">The year, week by week</div>
         <div class="v3-term">${weeks.map((w, i) => `<i class="${!w.cycle ? 'hol' : i === idx ? 'now' : i < idx ? 'past' : ''}" title="Week of ${w.start.toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}${w.cycle ? ', ' + w.cycle : ', no lessons'}"></i>`).join('')}</div></div>` : ''}
-      <div class="v3-grid">
+      <div class="v3-panel" style="margin-bottom:var(--gap);"><div class="v3-h">What you have built</div><div class="v3-stats">
         ${stat(lessons.length, 'lessons designed')}
         ${stat(stages.filter(s => s === 'taught' || s === 'reflected').length, 'taught')}
         ${stat(stages.filter(s => s === 'reflected').length, 'reflected on')}
         ${stat(obs, 'observations of students')}
-        ${stat(`${withEv}<span style="font-size:1rem;color:var(--ink-muted);"> of ${students.length}</span>`, 'student records with evidence')}
+        ${stat(`${withEv}<small> of ${students.length}</small>`, 'student records with evidence')}
         ${stat(withPath, 'student records with a pathway')}
+      </div></div>
+      <div class="v3-grid">
         <div class="v3-col-12 v3-panel"><div class="v3-h">The term’s larger jobs</div>
-          <a class="v3-row" href="#/assessment/aol"><span><span class="v3-row-t">Set a paper</span><br><span class="v3-row-s">Table of Specifications, then draft questions.</span></span><span class="go">Assess →</span></a>
-          <a class="v3-row" href="#/report-comments"><span><span class="v3-row-t">Write report comments</span><br><span class="v3-row-s">Drafted from each student’s levels and evidence.</span></span><span class="go">Classes →</span></a>
-          <a class="v3-row" href="#/cce"><span><span class="v3-row-t">ECG conversations</span><br><span class="v3-row-s">Paths, inside CCE2021. Add a student’s plan to their profile.</span></span><span class="go">Lessons →</span></a>
-          <a class="v3-row" href="#/my-growth"><span><span class="v3-row-t">Your own learning</span><br><span class="v3-row-s">Reflections and rehearsals build your practice story.</span></span><span class="go">Open →</span></a>
+          <a class="v3-row" href="#/assessment/aol"><span><span class="v3-row-t">Set a paper</span><br><span class="v3-row-s">Table of Specifications, then draft questions</span></span><span class="go">Assess →</span></a>
+          <a class="v3-row" href="#/report-comments"><span><span class="v3-row-t">Write report comments</span><br><span class="v3-row-s">Drafted from each student’s levels and evidence</span></span><span class="go">Classes →</span></a>
+          <a class="v3-row" href="#/cce"><span><span class="v3-row-t">ECG conversations</span><br><span class="v3-row-s">Paths, inside CCE2021; add a student’s plan to their profile</span></span><span class="go">Lessons →</span></a>
+          <a class="v3-row" href="#/my-growth"><span><span class="v3-row-t">Your own learning</span><br><span class="v3-row-s">Reflections and rehearsals build your practice story</span></span><span class="go">Open →</span></a>
         </div>
       </div>`;
   });
@@ -318,10 +316,10 @@ export function renderTerm(container) {
 
 export function renderHub(container, placeId) {
   const p = PLACES.find(x => x.id === placeId);
-  const lede = { resources: 'Everything you can bring into a lesson.', school: 'Your school’s tools and people, and your own settings.' }[placeId] || '';
+  const lede = { resources: 'Everything you can bring into a lesson', school: 'Your school’s tools and people, and your own settings' }[placeId] || '';
   container.innerHTML = `<div class="main-scroll"><div class="v3-page">
     <div class="v3-head"><div><div class="v3-eyebrow">${esc(p.group)}</div><h1 class="v3-title">${esc(p.label)}</h1><p class="v3-lede">${lede}</p></div></div>
     <div class="v3-board">${visible(p.screens).filter(s => s.route !== p.route).map(tile).join('')}
-      ${placeId === 'school' ? `<a class="v3-tile" href="cocher2.html"><b>Co-Cher 2</b><span>The current version, with the same classes and lessons.</span></a>` : ''}
+      ${placeId === 'school' ? `<a class="v3-tile" href="cocher2.html"><b>Co-Cher 2</b><span>The current version, with the same classes and lessons</span></a>` : ''}
     </div></div></div>`;
 }

@@ -134,7 +134,7 @@ window.__cocherShell = {
       app.innerHTML = `<div class="v3-gate">
         <div class="v3-eyebrow">Co-Cher 3 preview</div>
         <h1 class="v3-title">Open to Beatty for now</h1>
-        <p class="v3-lede" style="margin:0 auto 22px;">This preview is being tried at one school first. Your school’s Co-Cher is where it has always been, with all your work.</p>
+        <p class="v3-lede" style="margin:0 auto 24px;">This preview is being tried at one school first. Your school’s Co-Cher is where it has always been, with all your work.</p>
         <a class="btn btn-primary" href="cocher2.html">Open Co-Cher 2</a>
         <div id="main-view" hidden></div></div>`;
       return;

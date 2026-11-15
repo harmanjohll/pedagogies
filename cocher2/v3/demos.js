@@ -12,16 +12,16 @@
  */
 
 export const DEMOS = [
-  { id: 'now', title: 'Your day at a glance', about: 'Now, Week and Term: how Co-Cher follows your time.', src: '' },
-  { id: 'classes', title: 'A profile for every student', about: 'E21CC across classes, the evidence, and the pathway.', src: '' },
-  { id: 'student-finder', title: 'Student Finder and Commit class', about: 'From the school timetable to My Classes, without retyping a name.', src: '' },
-  { id: 'lesson-cycle', title: 'One lesson, five stages', about: 'Design, prepare, rehearse, teach, reflect.', src: '' },
-  { id: 'plan', title: 'Plan with Co-Cher', about: 'From a prompt to a staged lesson.', src: '' },
-  { id: 'room', title: 'Design the room', about: 'Layouts scored for the learning you want.', src: '' },
-  { id: 'observe', title: 'Observe while you teach', about: 'Press O in Present; two taps per student.', src: '' },
-  { id: 'paths', title: 'Paths, inside ECG', about: 'How do I get there? The live Pathways app.', src: '' },
-  { id: 'learning-log', title: 'The E21CC Learning Log', about: 'Students’ own evidence, beside your classes.', src: '' },
-  { id: 'look', title: 'Make it yours', about: 'Look, type, layout and way of working.', src: '' },
+  { id: 'now', title: 'Your day at a glance', about: 'Now, Week and Term: how Co-Cher follows your time', src: '' },
+  { id: 'classes', title: 'A profile for every student', about: 'E21CC across classes, the evidence, and the pathway', src: '' },
+  { id: 'student-finder', title: 'Student Finder and Commit class', about: 'From the school timetable to My Classes, without retyping a name', src: '' },
+  { id: 'lesson-cycle', title: 'One lesson, five stages', about: 'Design, prepare, rehearse, teach, reflect', src: '' },
+  { id: 'plan', title: 'Plan with Co-Cher', about: 'From a prompt to a staged lesson', src: '' },
+  { id: 'room', title: 'Design the room', about: 'Layouts scored for the learning you want', src: '' },
+  { id: 'observe', title: 'Observe while you teach', about: 'Press O in Present; two taps per student', src: '' },
+  { id: 'paths', title: 'Paths, inside ECG', about: 'How do I get there? The live Pathways app', src: '' },
+  { id: 'learning-log', title: 'The E21CC Learning Log', about: 'Students’ own evidence, beside your classes', src: '' },
+  { id: 'look', title: 'Make it yours', about: 'Look, type, layout and way of working', src: '' },
 ];
 
 export const demoById = (id) => DEMOS.find(d => d.id === id) || null;
@@ -32,7 +32,7 @@ const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<':
 export function demoPlayerHTML(d) {
   if (!d?.src) {
     return `<div class="v3-demo-stage empty"><div>
-      <b>Not made yet</b><span>This space is kept for a short animation of ${esc(d?.title || 'this feature').toLowerCase()}.</span>
+      <b>Not made yet</b><span>This space is kept for a short animation of ${esc(d?.title || 'this feature').toLowerCase()}</span>
     </div></div>`;
   }
   const url = `v3/demos/${d.src}`;
@@ -49,7 +49,7 @@ export function renderDemos(container, params) {
     <div class="v3-head"><div>
       <div class="v3-eyebrow">How it works</div>
       <h1 class="v3-title">Short demos</h1>
-      <p class="v3-lede">A few seconds each, showing one thing Co-Cher does. ${DEMOS.some(d => d.src) ? '' : 'The slots are ready; the animations come next.'}</p>
+      <p class="v3-lede">A few seconds each, showing one thing Co-Cher does${DEMOS.some(d => d.src) ? '' : '. The slots are ready; the animations come next.'}</p>
     </div></div>
     <div class="v3-grid">
       <div class="v3-col-8"><div class="v3-panel flush">${demoPlayerHTML(sel)}
