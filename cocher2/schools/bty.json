@@ -401,6 +401,7 @@
   },
   "slotMinutes": 35,
   "theme": {
-    "accent": "#1D3FA8"
+    "accent": "#1D3FA8",
+    "secondary": "#F2C230"
   }
 }

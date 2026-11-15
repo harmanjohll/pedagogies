@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v2.4', items: [
+    { icon: '\u{1F33F}', title: 'Beatty: try the Co-Cher 3 preview', text: 'A calmer look and a new layout built around your day, week and term, on the same classes and lessons. Open harmanjohll.github.io/pedagogies/cocher3/ and choose your own look, type and menu. Co-Cher 2 stays exactly as it is.' },
+  ] },
   { version: 'v2.3', items: [
     { icon: '\u{1F527}', title: 'Older accounts find their school', text: 'If you signed in before Co-Cher knew about schools, your school now comes from your email, once. Find a Teacher, your timetable and your school\u2019s own words appear. Your saved work stays.' },
   ] },
