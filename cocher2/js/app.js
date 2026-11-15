@@ -99,53 +99,62 @@ async function init() {
   seedPortalDemosIfNeeded();
   seedShowcaseLessonsIfNeeded();
 
-  app.innerHTML = `
-    <aside class="sidebar" id="sidebar"></aside>
-    <div class="sidebar-overlay" id="sidebar-overlay"></div>
-    <main class="main-content">
-      <div class="mobile-header" id="mobile-header">
-        <button class="hamburger-btn" id="hamburger-btn" aria-label="Open menu">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
-        <div class="mobile-brand">
-          <span class="mobile-brand-icon">C</span>
-          <span class="mobile-brand-name">Co-Cher</span>
+  /* A different shell (Co-Cher 3) may wrap the same engine. It sets
+   * window.__cocherShell before this module runs and supplies its own
+   * navigation; everything below the shell (routes, views, data) is shared. */
+  const shell = window.__cocherShell || null;
+  if (shell) {
+    shell.mount(app);                 // must create #main-view
+    applySchoolTheme().then(pack => shell.themed?.(pack)).catch(() => {});
+  } else {
+    app.innerHTML = `
+      <aside class="sidebar" id="sidebar"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay"></div>
+      <main class="main-content">
+        <div class="mobile-header" id="mobile-header">
+          <button class="hamburger-btn" id="hamburger-btn" aria-label="Open menu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="mobile-brand">
+            <span class="mobile-brand-icon">C</span>
+            <span class="mobile-brand-name">Co-Cher</span>
+          </div>
+          <div style="width:36px;"></div>
         </div>
-        <div style="width:36px;"></div>
-      </div>
-      <div id="main-view" style="height: 100%; display: flex; flex-direction: column;"></div>
-    </main>
-  `;
+        <div id="main-view" style="height: 100%; display: flex; flex-direction: column;"></div>
+      </main>
+    `;
 
-  // Render sidebar — it manages its own single Store subscription internally
-  // (badges, theme, EEE/custom-link changes); subscribing here as well would
-  // stack a new listener on every state change.
-  const sidebarEl = document.getElementById('sidebar');
-  renderSidebar(sidebarEl);
+    // Render sidebar — it manages its own single Store subscription internally
+    // (badges, theme, EEE/custom-link changes); subscribing here as well would
+    // stack a new listener on every state change.
+    const sidebarEl = document.getElementById('sidebar');
+    renderSidebar(sidebarEl);
 
-  // Tint from the school's own pack, and name the school under the wordmark —
-  // both no-ops when the teacher has no school.
-  applySchoolTheme();
-  paintSchoolLabel();
+    // Tint from the school's own pack, and name the school under the wordmark —
+    // both no-ops when the teacher has no school.
+    applySchoolTheme();
+    paintSchoolLabel();
 
-  // Mobile sidebar toggle
-  const overlay = document.getElementById('sidebar-overlay');
-  const hamburger = document.getElementById('hamburger-btn');
+    // Mobile sidebar toggle
+    const overlay = document.getElementById('sidebar-overlay');
+    const hamburger = document.getElementById('hamburger-btn');
 
-  function openSidebar() {
-    sidebarEl.classList.add('open');
-    overlay.classList.add('visible');
+    function openSidebar() {
+      sidebarEl.classList.add('open');
+      overlay.classList.add('visible');
+    }
+    function closeSidebar() {
+      sidebarEl.classList.remove('open');
+      overlay.classList.remove('visible');
+    }
+
+    hamburger.addEventListener('click', openSidebar);
+    overlay.addEventListener('click', closeSidebar);
+
+    // Close sidebar on navigation (mobile)
+    window.addEventListener('hashchange', closeSidebar);
   }
-  function closeSidebar() {
-    sidebarEl.classList.remove('open');
-    overlay.classList.remove('visible');
-  }
-
-  hamburger.addEventListener('click', openSidebar);
-  overlay.addEventListener('click', closeSidebar);
-
-  // Close sidebar on navigation (mobile)
-  window.addEventListener('hashchange', closeSidebar);
 
   // Register routes
   registerRoute('/', renderDashboard);
@@ -191,6 +200,9 @@ async function init() {
   registerRoute('/card/:data', (container, params) => renderCardView(container, params.data));
   registerRoute('/settings', renderSettings);
 
+  // A shell may add its own screens, or replace the home screen.
+  if (shell) shell.routes?.(registerRoute, { dashboard: renderDashboard });
+
   // Start router
   initRouter();
 
@@ -205,7 +217,7 @@ async function init() {
   // they never stack on top of each other.
   initOnboarding((res) => {
     // Genuine new user who wants the walkthrough: start the tour once.
-    if (res && res.shown && !res.skipped && !isTourComplete('main')) {
+    if (!shell && res && res.shown && !res.skipped && !isTourComplete('main')) {
       // Small gap so the onboarding overlay is fully gone before the tour dims.
       setTimeout(() => startTour('main'), 350);
     }
