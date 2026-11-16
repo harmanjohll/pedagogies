@@ -32,8 +32,8 @@ const route = () => {
   return home === 'school' ? '/school' : '/now';
 };
 
-/* v3 is a preview for one school first. Others keep Co-Cher 2. */
-const OPEN_TO = ['bty'];
+/* Co-Cher 3 is open to every signed in teacher. What a teacher sees still
+ * follows their school (packs, timetable, school only tools), as in Co-Cher 2. */
 
 /* Shown in Look and feel and at the foot of My School, so anyone can tell
  * which version their browser is running. Set in js/version.js. */
@@ -207,22 +207,12 @@ window.__cocherShell = {
     // Day or night is one choice across Co-Cher 2 and 3; the store holds it.
     setPref('night', Store.get('darkMode') ? 'on' : 'off');
     applyPrefs();
-    const open = OPEN_TO.includes(currentSchoolId());
     app.innerHTML = `
       <nav class="v3-nav" aria-label="Co-Cher"></nav>
       <div class="v3-body">
         <div class="v3-strip" aria-label="In this place"></div>
         <main class="main-content"><div id="main-view" style="height:100%;display:flex;flex-direction:column;"></div></main>
       </div>`;
-    if (!open) {
-      app.innerHTML = `<div class="v3-gate">
-        <div class="v3-eyebrow">Co-Cher 3 preview</div>
-        <h1 class="v3-title">Open to Beatty for now</h1>
-        <p class="v3-lede" style="margin:0 auto 24px;">This preview is being tried at one school first. Your school’s Co-Cher is where it has always been, with all your work.</p>
-        <a class="btn btn-primary" href="cocher2.html">Open Co-Cher 2</a>
-        <div id="main-view" hidden></div></div>`;
-      return;
-    }
     paint();
     window.addEventListener('hashchange', paint);
     window.matchMedia('(max-width: 760px)').addEventListener('change', () => applyPrefs());
