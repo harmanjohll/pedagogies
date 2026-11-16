@@ -392,3 +392,23 @@ a.v3-row:hover .v3-row-t { text-decoration: underline; text-underline-offset: 3p
 html.v3:not([data-look="classic"]) .page-container { max-width: 1360px; }
 html.v3:not([data-look="classic"]) .page-container[style*="max-width"] { max-width: 1120px !important; }
 html.v3:not([data-look="classic"]) .cce-content { max-width: 1200px !important; }
+
+/* My School: the landing page */
+.v3-home { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(132px, auto); gap: 16px; }
+.v3-home-tile { display: flex; flex-direction: column; gap: 4px; padding: 20px; border: 1px solid var(--border-light); border-radius: var(--radius-2xl); background: var(--bg-card); color: inherit; text-decoration: none; transition: border-color .15s var(--ease); min-width: 0; }
+.v3-home-tile:hover { border-color: var(--ink-faint); }
+.v3-home-tile .ic { color: var(--ink-muted); margin-bottom: auto; }
+.v3-home-tile .ic svg { width: 22px; height: 22px; stroke-width: 1.5; display: block; }
+.v3-home-tile b { font-size: 1.125rem; font-weight: 600; color: var(--ink); }
+.v3-home-tile .d { font-size: .875rem; color: var(--ink-muted); line-height: 1.45; }
+.v3-home-tile.now { grid-column: span 2; grid-row: span 2; padding: 24px; gap: 8px; }
+.v3-home-tile.now .k { font-size: .8125rem; color: var(--ink-muted); font-weight: 500; }
+.v3-home-tile.now .t { font-family: var(--font-serif); font-weight: var(--display-weight, 500); font-size: clamp(1.5rem, 2.2vw, 2rem); line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
+.v3-home-tile.now .m { color: var(--ink-secondary); font-size: .875rem; margin-top: 4px; }
+.v3-home-tile.now .v3-day { margin: 16px 0 8px; }
+.v3-home-tile.now .facts { display: flex; gap: 24px; flex-wrap: wrap; font-size: .875rem; color: var(--ink-muted); }
+.v3-home-tile.now .facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.v3-home-tile.now .go { margin-top: auto; font-size: .875rem; color: var(--accent-dark); }
+.v3-home-tile.now > div { flex: 1; display: flex; flex-direction: column; }
+@media (max-width: 1000px) { .v3-home { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .v3-home { grid-template-columns: 1fr; } .v3-home-tile.now { grid-column: span 1; } }

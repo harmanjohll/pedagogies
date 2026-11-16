@@ -8,7 +8,7 @@
 
 import { Store } from '../js/state.js';
 import { getPrefs } from './prefs.js';
-import { PLACES, visible, screensIn } from './places.js';
+import { PLACES, ICONS, visible, screensIn } from './places.js';
 import { currentSchoolId } from '../js/components/login.js';
 import { getMyTimetable, entriesForDate, rangeLabel } from '../js/utils/timetable.js';
 import { loadPack, cycleForDate } from '../js/utils/school.js';
@@ -137,10 +137,87 @@ const rowsHTML = (rows, empty) => rows.length ? rows.join('') : `<p class="v3-em
 
 /* ── Now ── */
 
-export function renderNow(container) {
+/* The landing page follows the teacher's chosen way to start. */
+export function renderHome(container) {
   const mode = getPrefs().home;
   if (mode === 'board') return renderBoard(container);
   if (mode === 'ask') return renderAsk(container);
+  if (mode === 'flow') return renderNow(container);
+  return renderSchool(container);
+}
+
+/* ── My School: every place as a tile, Now large and live ── */
+
+const FACT = {
+  week: () => { const now = new Date(); const mon = new Date(now); mon.setDate(now.getDate() - ((now.getDay() + 6) % 7)); const fri = new Date(mon.getTime() + 4 * DAY);
+    const n = entriesBetween(ymd(mon), ymd(fri)).filter(e => !e.done).length; return n ? `${plural(n, 'entry').replace('entrys', 'entries')} of yours this week` : ''; },
+  classes: () => { const c = Store.getClasses(); return c.length ? `${plural(c.length, 'class')}, ${plural(c.reduce((n, k) => n + (k.students || []).length, 0), 'student record')}` : ''; },
+  lessons: () => { const n = pipeline().length; return n ? `${plural(n, 'lesson')} in progress` : ''; },
+};
+
+export function renderSchool(container) {
+  const tiles = PLACES.filter(p => p.id !== 'now' && p.id !== 'school');
+  const school = PLACES.find(p => p.id === 'school');
+  container.innerHTML = `<div class="main-scroll"><div class="v3-page">
+    <div class="v3-head"><div>
+      <div class="v3-eyebrow">${dateLine(new Date())}</div>
+      <h1 class="v3-title" id="v3-school-name">My School</h1>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" id="v3-find">Find a student</button>
+      <button class="btn btn-primary" data-add-entry="${ymd(new Date())}">Add entry</button>
+    </div></div>
+    <div class="v3-home">
+      <a class="v3-home-tile now" href="#/now" data-place="now"><span class="k">Now</span><div id="v3-home-now"><span class="v3-row-s">Reading your day…</span></div><span class="go">Open Now →</span></a>
+      ${tiles.map(p => { const f = FACT[p.id] ? FACT[p.id]() : ''; const s = visible(p.screens)[0];
+        return `<a class="v3-home-tile" href="#${p.route}" data-place="${p.id}"><span class="ic">${ICONS[p.id]}</span><b>${esc(p.label)}</b><span class="d">${esc(f || s.desc)}</span></a>`; }).join('')}
+      ${visible(school.screens).filter(s => s.route !== '/school' && s.route !== '/demos').map(s => `<a class="v3-home-tile" href="#${s.route}" data-place="school"><span class="ic">${ICONS.school}</span><b>${esc(s.label)}</b><span class="d">${esc(s.desc)}</span></a>`).join('')}
+    </div></div></div>`;
+  let alive = true;
+  loadPack(currentSchoolId()).then(pack => { if (alive && pack?.name) container.querySelector('#v3-school-name').textContent = pack.name; }).catch(() => {});
+  today().then(t => {
+    if (!alive) return;
+    const e = t.current || t.next;
+    const mine = entriesForNow().filter(x => !x.done).length;
+    const need = pipeline().length;
+    container.querySelector('#v3-home-now').innerHTML = `
+      <div class="t">${e ? `${esc(e.class || e.title)} ${t.current ? 'now, until ' + clock(toMin(e.end)) : 'next, at ' + clock(toMin(e.start))}` : t.list.length ? 'Teaching is done for today' : t.has ? 'Nothing on your timetable today' : 'No timetable on this device yet'}</div>
+      ${e ? `<div class="m">${esc(rangeLabel(e))}${e.room ? ' · ' + esc(e.room) : ''}</div>` : ''}
+      ${dayLine(t)}
+      <div class="facts"><span><b>${t.list.filter(x => x.kind === 'lesson').length}</b> lessons today</span><span><b>${mine}</b> of your entries open</span><span><b>${need}</b> lessons need a next step</span></div>`;
+  });
+  container.querySelector('#v3-find').addEventListener('click', openSearch);
+  wireEntries(container, redraw);
+  wireTileFlight(container);
+  return () => { alive = false; };
+}
+
+/* A tapped tile travels to its place in the menu, then the place opens.
+ * One short move; skipped for anyone who asks for reduced motion. */
+function wireTileFlight(container) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  container.querySelectorAll('.v3-home-tile[data-place]').forEach(tile => tile.addEventListener('click', (ev) => {
+    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
+    const target = document.querySelector(`.v3-nav [data-place="${tile.dataset.place}"]`);
+    if (!target || !tile.animate) return;
+    ev.preventDefault();
+    const a = tile.getBoundingClientRect(), b = target.getBoundingClientRect();
+    const ghost = tile.cloneNode(true);
+    Object.assign(ghost.style, { position: 'fixed', left: a.left + 'px', top: a.top + 'px', width: a.width + 'px', height: a.height + 'px', margin: 0, zIndex: 500, pointerEvents: 'none', transformOrigin: 'top left' });
+    document.body.appendChild(ghost);
+    tile.style.visibility = 'hidden';
+    const done = () => { ghost.remove(); location.hash = tile.getAttribute('href'); };
+    ghost.animate([
+      { transform: 'none', opacity: 1 },
+      { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: .15 },
+    ], { duration: 360, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }).onfinish = done;
+    target.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 360, delay: 180, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+  }));
+}
+
+/* ── Now ── */
+
+export function renderNow(container) {
 
   container.innerHTML = `<div class="main-scroll"><div class="v3-page" id="v3-now"><p class="v3-empty">Reading your day…</p></div></div>`;
   let alive = true;

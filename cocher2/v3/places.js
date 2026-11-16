@@ -31,8 +31,8 @@ export const ICONS = {
 /* `match` lists route prefixes that belong to the place (first hit wins).
  * `demo` names a slot in v3/demos.js. `tag` marks beta tools, as v2 did. */
 export const PLACES = [
-  { id: 'now', group: 'Time', label: 'Now', route: '/', match: ['/dashboard'], screens: [
-    { route: '/', label: 'Now', desc: 'What is on, what is next, what needs you' },
+  { id: 'now', group: 'Time', label: 'Now', route: '/now', match: ['/now', '/dashboard'], screens: [
+    { route: '/now', label: 'Now', desc: 'What is on, what is next, what needs you' },
     { route: '/dashboard', label: 'Classic dashboard', desc: 'The Co-Cher 2 dashboard, with its widgets' },
   ] },
   { id: 'week', group: 'Time', label: 'Week', route: '/week', match: ['/week'], screens: [
@@ -74,7 +74,7 @@ export const PLACES = [
     { route: '/math-sandbox', label: 'Formula Lab', desc: 'Typeset STEM lessons', tag: 'beta' },
   ] },
   { id: 'school', group: 'Work', label: 'School', route: '/school', match: ['/school', '/admin', '/demos'], screens: [
-    { route: '/school', label: 'School', desc: 'Your school’s tools and people' },
+    { route: '/school', label: 'My School', desc: 'Every place in Co-Cher, from one page' },
     { route: '/admin', label: 'Admin', desc: 'Find a teacher, Student Finder, forms and events', demo: 'student-finder' },
     { route: '/demos', label: 'How it works', desc: 'Short demos of what Co-Cher can do' },
   ] },
@@ -91,7 +91,7 @@ export const visible = (screens) => screens.filter(s => !s.when || s.when());
 /** The place a route belongs to. */
 export function placeFor(route) {
   const r = route || '/';
-  if (r === '/') return PLACES[0];
+  if (r === '/') return PLACES.find(p => p.id === 'school');
   let best = null, len = -1;
   PLACES.forEach(p => p.match.forEach(m => {
     if ((r === m || r.startsWith(m + '/') || r.startsWith(m)) && m.length > len) { best = p; len = m.length; }

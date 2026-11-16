@@ -13,7 +13,7 @@
 
 import { getPrefs, setPref, applyPrefs, CHOICES } from './prefs.js';
 import { PLACES, ICONS, placeFor, screensIn, getLinks, setLinks, ALL_SCREENS } from './places.js';
-import { renderNow, renderWeek, renderTerm, renderHub, renderPaths } from './screens.js';
+import { renderHome, renderNow, renderSchool, renderWeek, renderTerm, renderHub, renderPaths } from './screens.js';
 import { openModal } from '../js/components/modals.js';
 import { renderDemos, demoById } from './demos.js';
 import { openSearch } from '../js/components/unified-search.js';
@@ -22,7 +22,13 @@ import { Store, storageKeyFor } from '../js/state.js';
 import { idbGet, idbPut } from '../js/utils/storage.js';
 
 const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const route = () => (location.hash.replace(/^#/, '') || '/').split('?')[0];
+/* '/' is the landing page: My School, unless the teacher chose to start elsewhere. */
+const route = () => {
+  const r = (location.hash.replace(/^#/, '') || '/').split('?')[0];
+  if (r !== '/') return r;
+  const home = getPrefs().home;
+  return home === 'school' ? '/school' : '/now';
+};
 
 /* v3 is a preview for one school first. Others keep Co-Cher 2. */
 const OPEN_TO = ['bty'];
@@ -134,7 +140,7 @@ function openLook() {
       setPref(b.dataset.key, b.dataset.val);
       if (b.dataset.key === 'night') Store.set('darkMode', b.dataset.val === 'on');
       paint(); draw();
-      if (b.dataset.key === 'home' && route() === '/') window.dispatchEvent(new HashChangeEvent('hashchange'));
+      if (b.dataset.key === 'home') { if (location.hash.replace(/^#/, '') !== '/' && location.hash !== '') location.hash = '#/'; else window.dispatchEvent(new HashChangeEvent('hashchange')); }
     });
   };
   back.onclick = close;
@@ -199,12 +205,13 @@ window.__cocherShell = {
   },
 
   routes(registerRoute, { dashboard }) {
-    registerRoute('/', renderNow);
+    registerRoute('/', renderHome);
+    registerRoute('/now', renderNow);
     registerRoute('/dashboard', dashboard);
     registerRoute('/week', renderWeek);
     registerRoute('/term', renderTerm);
     registerRoute('/resources', (c) => renderHub(c, 'resources'));
-    registerRoute('/school', (c) => renderHub(c, 'school'));
+    registerRoute('/school', renderSchool);
     registerRoute('/personal', (c) => renderHub(c, 'personal'));
     registerRoute('/paths', renderPaths);
     registerRoute('/demos', renderDemos);
