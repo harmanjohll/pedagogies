@@ -209,9 +209,9 @@ function wireTileFlight(container) {
     const done = () => { ghost.remove(); location.hash = tile.getAttribute('href'); };
     ghost.animate([
       { transform: 'none', opacity: 1 },
-      { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: .15 },
-    ], { duration: 360, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }).onfinish = done;
-    target.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 360, delay: 180, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+      { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: .4 },
+    ], { duration: 480, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }).onfinish = done;
+    target.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }], { duration: 420, delay: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
   }));
 }
 
