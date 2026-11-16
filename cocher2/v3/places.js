@@ -31,6 +31,11 @@ export const ICONS = {
 /* `match` lists route prefixes that belong to the place (first hit wins).
  * `demo` names a slot in v3/demos.js. `tag` marks beta tools, as v2 did. */
 export const PLACES = [
+  { id: 'school', group: 'Home', label: 'School', route: '/school', match: ['/school', '/admin', '/demos'], screens: [
+    { route: '/school', label: 'My School', desc: 'Every place in Co-Cher, from one page' },
+    { route: '/admin', label: 'Admin', desc: 'Find a teacher, Student Finder, forms and events', demo: 'student-finder' },
+    { route: '/demos', label: 'How it works', desc: 'Short demos of what Co-Cher can do' },
+  ] },
   { id: 'now', group: 'Time', label: 'Now', route: '/now', match: ['/now', '/dashboard'], screens: [
     { route: '/now', label: 'Now', desc: 'What is on, what is next, what needs you' },
     { route: '/dashboard', label: 'Classic dashboard', desc: 'The Co-Cher 2 dashboard, with its widgets' },
@@ -72,11 +77,6 @@ export const PLACES = [
     { route: '/library', label: 'Library', desc: 'Everything you have saved' },
     { route: '/knowledge', label: 'Knowledge bases', desc: 'Frameworks, references and your uploads' },
     { route: '/math-sandbox', label: 'Formula Lab', desc: 'Typeset STEM lessons', tag: 'beta' },
-  ] },
-  { id: 'school', group: 'Work', label: 'School', route: '/school', match: ['/school', '/admin', '/demos'], screens: [
-    { route: '/school', label: 'My School', desc: 'Every place in Co-Cher, from one page' },
-    { route: '/admin', label: 'Admin', desc: 'Find a teacher, Student Finder, forms and events', demo: 'student-finder' },
-    { route: '/demos', label: 'How it works', desc: 'Short demos of what Co-Cher can do' },
   ] },
   { id: 'personal', group: 'You', label: 'Personal', route: '/personal', match: ['/personal', '/my-timetable', '/my-growth', '/settings'], screens: [
     { route: '/personal', label: 'Personal', desc: 'What is yours' },
