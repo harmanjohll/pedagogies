@@ -18,6 +18,9 @@ import { openSearch } from '../js/components/unified-search.js';
 import { mountEmbed, GENAPP } from '../js/components/app-embed.js';
 import { ymd, entriesForNow, entriesBetween, entryHTML, wireEntries } from './agenda.js';
 
+/* The shell's build label, read late to avoid an import cycle. */
+const BUILD_LABEL = () => window.__cocherShell?.build || '';
+
 /* After an entry changes, draw the current screen again (the router does it). */
 const redraw = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
 
@@ -170,7 +173,8 @@ export function renderSchool(container) {
       <a class="v3-home-tile now" href="#/now" data-place="now"><span class="k">Now</span><div id="v3-home-now"><span class="v3-row-s">Reading your day…</span></div><span class="go">Open Now →</span></a>
       ${tiles.map(p => { const f = FACT[p.id] ? FACT[p.id]() : ''; const s = visible(p.screens)[0];
         return `<a class="v3-home-tile" href="#${p.route}" data-place="${p.id}"><span class="ic">${ICONS[p.id]}</span><b>${esc(p.label)}</b><span class="d">${esc(f || s.desc)}</span></a>`; }).join('')}
-    </div></div></div>`;
+    </div>
+    <p class="v3-row-s" style="margin-top:32px;">Co-Cher ${BUILD_LABEL()}</p></div></div>`;
   let alive = true;
   loadPack(currentSchoolId()).then(pack => { if (alive && pack?.name) container.querySelector('#v3-school-name').textContent = pack.name; }).catch(() => {});
   today().then(t => {
@@ -187,18 +191,37 @@ export function renderSchool(container) {
   container.querySelector('#v3-find').addEventListener('click', openSearch);
   wireEntries(container, redraw);
   wireTileFlight(container);
+  tilesFromDock(container);
   return () => { alive = false; };
+}
+
+/* The way back: arriving on My School from another place, each tile rises
+ * from where its menu item was (the shell noted the positions), so the menu
+ * is seen to open out into the page. */
+function tilesFromDock(container) {
+  const rects = window.__v3DockRects; window.__v3DockRects = null;
+  if (!rects || getPrefs().motion === 'off') return;
+  const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+  container.querySelectorAll('.v3-home-tile[data-place]').forEach((t, i) => {
+    const b = rects[t.dataset.place]; if (!b || !t.animate) return;
+    const a = t.getBoundingClientRect();
+    t.style.transformOrigin = 'top left';
+    t.animate([
+      { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: 0 },
+      { transform: 'none', opacity: 1 },
+    ], { duration: 560, delay: i * 35, easing: EASE, fill: 'backwards' });
+  });
 }
 
 /* My School shows no menu: the tiles are the menu. When one is tapped, every
  * tile flies down into its place and the menu forms from them; then the chosen
- * place opens. Skipped for anyone who asks for reduced motion. */
+ * place opens. Plays unless the teacher turns Motion off in Look and feel. */
 function wireTileFlight(container) {
   const root = document.documentElement;
   const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
   container.querySelectorAll('.v3-home-tile[data-place]').forEach(tile => tile.addEventListener('click', (ev) => {
     if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !tile.animate) return;
+    if (getPrefs().motion === 'off' || !tile.animate) return;
     if (root.classList.contains('v3-arriving')) { ev.preventDefault(); return; }
     ev.preventDefault();
     const tiles = [...container.querySelectorAll('.v3-home-tile[data-place]')];

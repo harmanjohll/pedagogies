@@ -33,6 +33,10 @@ const route = () => {
 /* v3 is a preview for one school first. Others keep Co-Cher 2. */
 const OPEN_TO = ['bty'];
 
+/* Shown in Look and feel and at the foot of My School, so anyone can tell
+ * which build their browser is running. Raise it with every v3 change. */
+export const BUILD = '3.1 build 5';
+
 let schoolPack = null;
 let lastPlace = null;       // the place the teacher is working in; a linked screen keeps it
 
@@ -104,7 +108,14 @@ function openLink(routeToLink) {
 
 function paint() {
   // My School is the menu, laid out large: the dock, rail or bar stays away there.
-  document.documentElement.toggleAttribute('data-home', route() === '/school');
+  // On the way in, note where each menu item sits, so the tiles can fly up from it.
+  const root = document.documentElement, toHome = route() === '/school';
+  if (toHome && !root.hasAttribute('data-home')) {
+    const rects = {};
+    document.querySelectorAll('.v3-nav [data-place]').forEach(l => { const r = l.getBoundingClientRect(); if (r.width) rects[l.dataset.place] = { left: r.left, top: r.top, width: r.width, height: r.height }; });
+    window.__v3DockRects = Object.keys(rects).length ? rects : null;
+  }
+  root.toggleAttribute('data-home', toHome);
   const nav = document.querySelector('.v3-nav');
   const strip = document.querySelector('.v3-strip');
   if (nav) nav.innerHTML = navHTML();
@@ -136,7 +147,10 @@ function openLook() {
       ${group('type', 'Type', 'three')}
       ${group('nav', 'Menu', 'three')}
       ${group('home', 'How you start')}
-      ${group('density', 'Spacing')}`;
+      ${group('density', 'Spacing')}
+      ${group('motion', 'Motion')}
+      ${window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '<p style="margin-top:8px;">This device asks apps to reduce motion. Co-Cher\u2019s tile move is short, and plays unless you turn Motion off here.</p>' : ''}
+      <p style="margin-top:24px;font-size:.8125rem;">Co-Cher ${BUILD}</p>`;
     panel.querySelector('.close').onclick = close;
     panel.querySelectorAll('.v3-opt').forEach(b => b.onclick = () => {
       setPref(b.dataset.key, b.dataset.val);
@@ -221,4 +235,5 @@ window.__cocherShell = {
   },
 
   openLook,
+  build: BUILD,
 };

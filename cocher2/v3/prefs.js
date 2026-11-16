@@ -39,10 +39,14 @@ export const CHOICES = {
     { id: 'airy', label: 'Airy' },
     { id: 'compact', label: 'Compact' },
   ],
+  motion: [
+    { id: 'on', label: 'On', note: 'Tiles fly to the menu and back' },
+    { id: 'off', label: 'Off', note: 'Places open at once' },
+  ],
 };
 
 /* The owner's chosen starting point (A2 B1 C3 D1). Every teacher can change all of it in Look and feel. */
-export const DEFAULTS = { look: 'fjord', night: 'off', type: 'mincho', nav: 'dock', home: 'school', density: 'airy' };
+export const DEFAULTS = { look: 'fjord', night: 'off', type: 'mincho', nav: 'dock', home: 'school', density: 'airy', motion: 'on' };
 
 export function getPrefs() {
   let saved = {};

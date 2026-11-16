@@ -416,3 +416,8 @@ html.v3:not([data-look="classic"]) .cce-content { max-width: 1200px !important; 
 /* My School has no menu of its own: its tiles are the menu. */
 html.v3[data-home]:not(.v3-arriving) .v3-nav { display: none; }
 html.v3[data-home] .v3-strip .where { display: none; }
+
+/* The API key notice must never cover the menu: a small card, bottom right,
+ * lifted clear of the dock when the dock is showing. */
+html.v3 #api-key-banner { left: auto !important; right: 16px !important; bottom: 16px !important; max-width: min(420px, calc(100vw - 32px)); padding: 8px 12px !important; border: 1px solid var(--border); border-radius: var(--radius-lg); justify-content: flex-start !important; }
+html.v3[data-nav="dock"]:not([data-home]) #api-key-banner { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
