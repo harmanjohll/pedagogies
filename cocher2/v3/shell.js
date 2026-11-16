@@ -60,7 +60,7 @@ function navHTML() {
   }).join('');
   const user = getCurrentUser();
   return `
-    <a class="v3-brand" href="#/"><b>Co-Cher</b><span>3.1 preview</span></a>
+    <a class="v3-brand" href="#/"><b>Co-Cher</b><span>${BUILD}</span></a>
     ${items}
     <div class="v3-spacer"></div>
     <span class="v3-sep"></span>
