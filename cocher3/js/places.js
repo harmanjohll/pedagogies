@@ -7,7 +7,7 @@
  * a teacher's time (Now, Week, Term) and the things they work on.
  */
 
-import { learningLogOpen } from '../js/views/learning-log.js';
+import { learningLogOpen } from '../../cocher2/js/views/learning-log.js';
 
 const I = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 
@@ -30,7 +30,7 @@ export const ICONS = {
 };
 
 /* `match` lists route prefixes that belong to the place (first hit wins).
- * `demo` names a slot in v3/demos.js. `tag` marks beta tools, as v2 did. */
+ * `demo` names a slot in js/demos.js. `tag` marks beta tools, as v2 did. */
 export const PLACES = [
   { id: 'school', group: 'Home', label: 'School', route: '/school', match: ['/school', '/demos'], screens: [
     { route: '/school', label: 'My School', desc: 'Every place in Co-Cher, from one page' },
@@ -46,11 +46,12 @@ export const PLACES = [
   { id: 'term', group: 'Time', label: 'Term', route: '/term', match: ['/term'], screens: [
     { route: '/term', label: 'This term', desc: 'Where the term is, and what you have built' },
   ] },
-  { id: 'classes', group: 'Work', label: 'Classes', route: '/classes', match: ['/classes', '/learning-log', '/paths', '/my-cca', '/report-comments'], screens: [
+  { id: 'classes', group: 'Work', label: 'Classes', route: '/classes', match: ['/classes', '/learning-log', '/paths', '/my-cca', '/report-comments', '/handover'], screens: [
     { route: '/classes', label: 'My classes', desc: 'Students, E21CC profiles, evidence and pathways', demo: 'classes' },
     { route: '/learning-log', label: 'Learning Log', desc: 'Students’ own evidence for the competencies you track', when: learningLogOpen, demo: 'learning-log' },
     { route: '/paths', label: 'Paths', desc: 'Education and career pathways, for students', demo: 'paths' },
     { route: '/my-cca', label: 'My CCA', desc: 'Co-curricular activities and LEAPS 2.0' },
+    { route: '/handover', label: 'Handover', desc: 'Pass evidence on a class to a colleague, and take in theirs' },
     { route: '/report-comments', label: 'Report comments', desc: 'Draft holistic comments from levels and evidence', tag: 'beta' },
   ] },
   { id: 'lessons', group: 'Work', label: 'Lessons', route: '/lessons', match: ['/lessons', '/lesson-planner', '/spatial', '/lesson-rehearsal', '/cce', '/autopilot', '/relief-kit', '/present', '/deck', '/live'], screens: [
@@ -78,8 +79,9 @@ export const PLACES = [
     { route: '/knowledge', label: 'Knowledge bases', desc: 'Frameworks, references and your uploads' },
     { route: '/math-sandbox', label: 'Formula Lab', desc: 'Typeset STEM lessons', tag: 'beta' },
   ] },
-  { id: 'admin', group: 'Work', label: 'Admin', route: '/admin', match: ['/admin'], screens: [
+  { id: 'admin', group: 'Work', label: 'Admin', route: '/admin', match: ['/admin', '/free-time'], screens: [
     { route: '/admin', label: 'Admin', desc: 'Find a teacher, Student Finder, forms and events', demo: 'student-finder' },
+    { route: '/free-time', label: 'Common free time', desc: 'When you and your colleagues are all free' },
   ] },
   { id: 'personal', group: 'You', label: 'Personal', route: '/personal', match: ['/personal', '/my-timetable', '/my-growth', '/settings'], screens: [
     { route: '/personal', label: 'Personal', desc: 'What is yours' },

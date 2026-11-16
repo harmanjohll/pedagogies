@@ -6,17 +6,18 @@
  * and evidence. Nothing is invented; an empty part says what would fill it.
  */
 
-import { Store } from '../js/state.js';
+import { Store } from '../../cocher2/js/state.js';
 import { getPrefs } from './prefs.js';
 import { PLACES, ICONS, visible, screensIn } from './places.js';
-import { currentSchoolId } from '../js/components/login.js';
-import { getMyTimetable, entriesForDate, rangeLabel } from '../js/utils/timetable.js';
-import { loadPack, cycleForDate } from '../js/utils/school.js';
-import { lessonStage } from '../js/views/lessons.js';
-import { competencyLabel } from '../js/utils/evidence.js';
-import { openSearch } from '../js/components/unified-search.js';
-import { mountEmbed, GENAPP } from '../js/components/app-embed.js';
+import { currentSchoolId } from '../../cocher2/js/components/login.js';
+import { getMyTimetable, entriesForDate, rangeLabel } from '../../cocher2/js/utils/timetable.js';
+import { loadPack, cycleForDate } from '../../cocher2/js/utils/school.js';
+import { lessonStage } from '../../cocher2/js/views/lessons.js';
+import { competencyLabel } from '../../cocher2/js/utils/evidence.js';
+import { openSearch } from '../../cocher2/js/components/unified-search.js';
+import { mountEmbed, GENAPP } from '../../cocher2/js/components/app-embed.js';
 import { ymd, entriesForNow, entriesBetween, entryHTML, wireEntries } from './agenda.js';
+import { goalsHTML, wireGoals, allGoals } from './goals.js';
 
 /* The shell's build label, read late to avoid an import cycle. */
 const BUILD_LABEL = () => window.__cocherShell?.build || '';
@@ -434,6 +435,8 @@ export function renderTerm(container) {
         ${stat(`${withEv}<small> of ${students.length}</small>`, 'student records with evidence')}
         ${stat(withPath, 'student records with a pathway')}
       </div></div>
+      <div class="v3-panel" style="margin-bottom:var(--gap);"><div class="v3-h">Your goals this term <button class="btn btn-ghost btn-sm" data-add-goal>${allGoals().length ? 'Add a goal' : 'Set a goal'}</button></div>
+        <div class="v3-goals">${goalsHTML()}</div></div>
       <div class="v3-grid">
         <div class="v3-col-5 v3-panel"><div class="v3-h">Your entries ahead <button class="btn btn-ghost btn-sm" data-add-entry="">Add entry</button></div>
           ${rowsHTML(entriesBetween(ymd(new Date()), '9999').filter(e => !e.done).slice(0, 10).map(e => entryHTML(e)),
@@ -446,6 +449,7 @@ export function renderTerm(container) {
           <a class="v3-row" href="#/my-growth"><span><span class="v3-row-t">Your own learning</span><br><span class="v3-row-s">Reflections and rehearsals build your practice story</span></span><span class="go">Open →</span></a>
         </div>
       </div>`;
+    wireGoals(container, redraw);
     wireEntries(container, redraw);
   });
   return () => { alive = false; };

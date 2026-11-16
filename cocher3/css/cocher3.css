@@ -421,3 +421,31 @@ html.v3[data-home] .v3-strip .where { display: none; }
  * lifted clear of the dock when the dock is showing. */
 html.v3 #api-key-banner { left: auto !important; right: 16px !important; bottom: 16px !important; max-width: min(420px, calc(100vw - 32px)); padding: 8px 12px !important; border: 1px solid var(--border); border-radius: var(--radius-lg); justify-content: flex-start !important; }
 html.v3[data-nav="dock"]:not([data-home]) #api-key-banner { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+
+/* Working with colleagues */
+.v3-people { display: flex; flex-direction: column; gap: 2px; max-height: 420px; overflow: auto; }
+.v3-person { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 12px; border: 0; border-radius: var(--radius-md); background: transparent; font: inherit; font-size: .875rem; color: var(--ink); cursor: pointer; text-align: left; }
+.v3-person:hover { background: var(--surface-hover); }
+.v3-person.on { background: var(--accent-light); color: var(--accent-dark); font-weight: 600; }
+.v3-person small { color: var(--ink-muted); font-size: .75rem; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v3-picked { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.v3-picked .v3-chip { border: 0; font: inherit; font-size: .8125rem; padding: 4px 8px; cursor: pointer; }
+.v3-slot { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-raised); font: inherit; font-size: .875rem; color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums; }
+.v3-slot:hover { border-color: var(--ink); }
+.v3-slot small { color: var(--ink-muted); margin-left: 4px; }
+.v3-seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 999px; }
+.v3-seg button { padding: 4px 12px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: .8125rem; color: var(--ink-muted); cursor: pointer; }
+.v3-seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg-card); }
+
+/* Term goals */
+.v3-goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.v3-goal { display: flex; flex-direction: column; gap: 8px; }
+.v3-goal .body { text-align: left; border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; padding: 0; }
+.v3-goal .t { display: block; font-size: 1rem; font-weight: 600; line-height: 1.35; color: var(--ink); }
+.v3-goal .body:hover .t { text-decoration: underline; text-underline-offset: 3px; }
+.v3-goal .s { display: block; font-size: .8125rem; color: var(--ink-muted); margin-top: 4px; }
+.v3-goal .n { font-size: .8125rem; color: var(--ink-secondary); font-variant-numeric: tabular-nums; }
+.v3-goal .bar { height: 4px; border-radius: 2px; background: var(--bg-subtle); overflow: hidden; }
+.v3-goal .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.v3-goal.done .t { color: var(--ink-muted); }
+.v3-goal.done .bar i { background: var(--growth); }
