@@ -40,8 +40,7 @@ demo slots (`demos/`). Sign in, schools, data and every existing screen are stil
 Co-Cher 2's files in `cocher2/`, loaded from there: the page sets a base address
 of `../cocher2/`, and `js/shell.js` keeps `#` links on the page. Same storage
 (`cocher2_*`), so a teacher sees their real classes and lessons. No service
-worker: Co-Cher 3 always loads its current files. Beatty only (`OPEN_TO` in
-`js/shell.js`); other schools move across later.
+worker: Co-Cher 3 always loads its current files. Open to every signed in teacher since 3.2.1; what they see follows their school.
 
 **Its own number.** `cocher3/js/version.js`, three parts: product.release.fix.
 It moves with every change to `cocher3/`. Notes for teachers go in `NOTES` there
@@ -49,7 +48,8 @@ and show in Co-Cher 3 only. Co-Cher 2's version moves only when `cocher2/` chang
 
 | Version | Live URL | Status |
 |---------|----------|--------|
-| 3.2.0 | `/pedagogies/cocher3/` | **Preview (Beatty)**. Moved into `cocher3/`; old address `cocher2/cocher3.html` forwards. Own version and notes. Common free time (`/free-time`, from the published staff timetable), Student handover (`/handover`, evidence by file, merged by student, nothing doubled), Term goals (Store `goals`; entries link to a goal). All three in `js/together.js` and `js/goals.js` |
+| 3.2.1 | `/pedagogies/cocher3/` | **Preview, open to all schools**. The Beatty only gate is removed. |
+| 3.2.0 | `/pedagogies/cocher3/` | Superseded. Moved into `cocher3/`; old address `cocher2/cocher3.html` forwards. Own version and notes. Common free time (`/free-time`, from the published staff timetable), Student handover (`/handover`, evidence by file, merged by student, nothing doubled), Term goals (Store `goals`; entries link to a goal). All three in `js/together.js` and `js/goals.js` |
 | 3.1 (builds 1 to 5) | was `cocher2/cocher3.html` | Superseded. Own entries on Now, Week, Term; Personal; teacher links; My School as the landing page with tiles that fly to the menu and back; Admin as a place; Motion switch |
 | 3.0 | was `cocher2/cocher3.html` | Superseded. Time spine, five places, teacher chosen look, type, menu and start mode; school colours softened by rule; demo slots |
 

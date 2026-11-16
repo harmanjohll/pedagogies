@@ -10,7 +10,7 @@ This repository is public and is served by GitHub Pages at
 |---|---|---|---|
 | `app/` | **Co-Cher 1** (Beatty only). The folder is called `app` for historical reasons; its address must not change | `/pedagogies/` (the root forwards to `app/cocher.html`) | Frozen at v8.9 |
 | `cocher2/` | **Co-Cher 2**, for every school, and the shared engine (sign in, schools, data, every screen) | `/pedagogies/cocher2/` | Active |
-| `cocher3/` | **Co-Cher 3 preview**: a new layout and look on Co-Cher 2's engine. Only its own files live here | `/pedagogies/cocher3/` | Preview, Beatty only |
+| `cocher3/` | **Co-Cher 3 preview**: a new layout and look on Co-Cher 2's engine. Only its own files live here | `/pedagogies/cocher3/` | Preview, open to all |
 | `cocher2/schools/` | School packs and published staff rosters (see its README) | | |
 | `backend/` | The optional school backend (a Drive folder per school) | | |
 | `live/` | Live session pages for students | | |
