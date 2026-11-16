@@ -487,6 +487,9 @@ export const Store = {
       lessons: _state.lessons,
       savedLayouts: _state.savedLayouts || [],
       adminEvents: _state.adminEvents || [],
+      // A teacher's own entries on Now, Week and Term (Co-Cher 3): things to do,
+      // each optionally linked to a lesson, a class or a screen.
+      agenda: _state.agenda || [],
       // Upload content lives in IndexedDB — persist metadata only for
       // uploads whose content is confirmed written there
       knowledgeUploads: (_state.knowledgeUploads || []).map(u => {
@@ -1373,6 +1376,9 @@ export const Store = {
       lessons: _state.lessons,
       savedLayouts: _state.savedLayouts || [],
       adminEvents: _state.adminEvents || [],
+      // A teacher's own entries on Now, Week and Term (Co-Cher 3): things to do,
+      // each optionally linked to a lesson, a class or a screen.
+      agenda: _state.agenda || [],
       knowledgeUploads: _state.knowledgeUploads || [],
       pdFolders: _state.pdFolders || [],
       stimulusLibrary: stimLib,
@@ -1430,6 +1436,7 @@ export const Store = {
       if (Array.isArray(data.lessons)) _state.lessons = data.lessons;
       if (Array.isArray(data.savedLayouts)) _state.savedLayouts = data.savedLayouts;
       if (Array.isArray(data.adminEvents)) _state.adminEvents = data.adminEvents;
+      if (Array.isArray(data.agenda)) _state.agenda = data.agenda;
       if (Array.isArray(data.knowledgeUploads)) {
         _state.knowledgeUploads = data.knowledgeUploads;
         // Imported backups may carry upload content — put it in IndexedDB
@@ -1489,6 +1496,7 @@ export const Store = {
     _state.lessons = [];
     _state.savedLayouts = [];
     _state.adminEvents = [];
+    _state.agenda = [];
     _state.knowledgeUploads = [];
     _state.pdFolders = [];
     _state.stimulusLibrary = [];

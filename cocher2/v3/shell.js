@@ -12,8 +12,9 @@
  */
 
 import { getPrefs, setPref, applyPrefs, CHOICES } from './prefs.js';
-import { PLACES, ICONS, placeFor, visible } from './places.js';
-import { renderNow, renderWeek, renderTerm, renderHub } from './screens.js';
+import { PLACES, ICONS, placeFor, screensIn, getLinks, setLinks, ALL_SCREENS } from './places.js';
+import { renderNow, renderWeek, renderTerm, renderHub, renderPaths } from './screens.js';
+import { openModal } from '../js/components/modals.js';
 import { renderDemos, demoById } from './demos.js';
 import { openSearch } from '../js/components/unified-search.js';
 import { currentSchoolId, getCurrentUser } from '../js/components/login.js';
@@ -27,9 +28,20 @@ const route = () => (location.hash.replace(/^#/, '') || '/').split('?')[0];
 const OPEN_TO = ['bty'];
 
 let schoolPack = null;
+let lastPlace = null;       // the place the teacher is working in; a linked screen keeps it
+
+/* The place to show for a route: stay in the current place when the screen
+ * was linked into it by the teacher, otherwise the screen's own home. */
+function currentPlace() {
+  const r = route();
+  const home = placeFor(r);
+  if (lastPlace && lastPlace.id !== home?.id && screensIn(lastPlace).some(s => s.linked && (r === s.route || r.startsWith(s.route + '/')))) return lastPlace;
+  lastPlace = home;
+  return home;
+}
 
 function navHTML() {
-  const here = placeFor(route());
+  const here = currentPlace();
   let group = '';
   const items = PLACES.map(p => {
     const head = p.group !== group ? `${group ? '<span class="v3-sep"></span>' : ''}<div class="v3-group">${p.group}</div>` : '';
@@ -38,26 +50,50 @@ function navHTML() {
   }).join('');
   const user = getCurrentUser();
   return `
-    <a class="v3-brand" href="#/"><b>Co-Cher</b><span>3 preview</span></a>
+    <a class="v3-brand" href="#/"><b>Co-Cher</b><span>3.1 preview</span></a>
     ${items}
     <div class="v3-spacer"></div>
     <span class="v3-sep"></span>
     <button class="v3-link v3-util" data-act="search">${ICONS.search}<span>Search</span><kbd>Ctrl K</kbd></button>
-    <button class="v3-link v3-util" data-act="look">${ICONS.look}<span>Look and feel</span></button>
     <div class="v3-school"><i></i><b>${esc(schoolPack?.name || user?.schoolName || 'Your school')}</b>${esc(user?.preferredName || user?.name || user?.email || '')}</div>`;
 }
 
 function stripHTML() {
   const r = route();
-  const place = placeFor(r);
+  const place = currentPlace();
   if (!place) return '';
-  const screens = visible(place.screens);
-  if (screens.length < 2) return '';
+  const screens = screensIn(place);
   const current = screens.filter(s => r === s.route || (s.route !== '/' && r.startsWith(s.route))).sort((a, b) => b.route.length - a.route.length)[0];
   const demo = current?.demo ? demoById(current.demo) : null;
-  return `<span class="where">${place.label}</span>` + screens.map(s =>
-    `<a href="#${s.route}" class="${current && current.route === s.route ? 'on' : ''}">${esc(s.label)}</a>`).join('')
-    + (demo ? `<a class="demo" href="#/demos/${demo.id}" title="A short demo of this screen">${ICONS.play}Demo</a>` : '');
+  const tabs = screens.length > 1 ? `<span class="where">${place.label}</span>` + screens.map(s =>
+    `<a href="#${s.route}" class="${current && current.route === s.route ? 'on' : ''}"${current && current.route === s.route ? ' aria-current="page"' : ''}${s.linked ? ` title="Linked here by you; its home is ${esc(s.home.label)}"` : ''}>${esc(s.label)}${s.linked ? ICONS.link : ''}</a>`).join('') : '';
+  const tools = current ? `<span class="tools">
+      ${demo ? `<a class="tool" href="#/demos/${demo.id}" title="A short demo of this screen">${ICONS.play}Demo</a>` : ''}
+      <button class="tool" data-act="link" data-route="${esc(current.route)}" title="Also show this screen under another place">${ICONS.link}Link</button>
+    </span>` : '';
+  return tabs + tools;
+}
+
+/* "Also show this screen under...": the teacher's own tagging. */
+function openLink(routeToLink) {
+  const screen = ALL_SCREENS().find(s => s.route === routeToLink);
+  if (!screen) return;
+  const mine = getLinks()[routeToLink] || [];
+  const { backdrop, close } = openModal({
+    title: `Link \u201c${esc(screen.label)}\u201d`,
+    width: 440,
+    body: `<p style="font-size:.875rem;color:var(--ink-secondary);line-height:1.55;margin:0 0 14px;">Its home is ${esc(screen.home.label)}. Tick the other places where you want it within reach. Only you decide; link it where it is useful.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        ${PLACES.filter(p => p.id !== screen.home.id).map(p => `<label style="display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-md);cursor:pointer;font-size:.875rem;">
+          <input type="checkbox" value="${p.id}"${mine.includes(p.id) ? ' checked' : ''} style="accent-color:var(--accent);"> ${esc(p.label)}</label>`).join('')}
+      </div>`,
+    footer: `<button class="btn btn-secondary" data-act="cancel">Cancel</button><button class="btn btn-primary" data-act="save">Save</button>`,
+  });
+  backdrop.querySelector('[data-act="cancel"]').onclick = close;
+  backdrop.querySelector('[data-act="save"]').onclick = () => {
+    setLinks(routeToLink, [...backdrop.querySelectorAll('input:checked')].map(i => i.value));
+    close(); paint();
+  };
 }
 
 function paint() {
@@ -147,6 +183,7 @@ window.__cocherShell = {
       if (!b) return;
       if (b.dataset.act === 'search') openSearch();
       if (b.dataset.act === 'look') openLook();
+      if (b.dataset.act === 'link') openLink(b.dataset.route);
     });
     backupOnce();
   },
@@ -168,6 +205,8 @@ window.__cocherShell = {
     registerRoute('/term', renderTerm);
     registerRoute('/resources', (c) => renderHub(c, 'resources'));
     registerRoute('/school', (c) => renderHub(c, 'school'));
+    registerRoute('/personal', (c) => renderHub(c, 'personal'));
+    registerRoute('/paths', renderPaths);
     registerRoute('/demos', renderDemos);
     registerRoute('/demos/:id', renderDemos);
   },

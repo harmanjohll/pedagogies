@@ -8,13 +8,18 @@
 
 import { Store } from '../js/state.js';
 import { getPrefs } from './prefs.js';
-import { PLACES, visible } from './places.js';
+import { PLACES, visible, screensIn } from './places.js';
 import { currentSchoolId } from '../js/components/login.js';
 import { getMyTimetable, entriesForDate, rangeLabel } from '../js/utils/timetable.js';
 import { loadPack, cycleForDate } from '../js/utils/school.js';
 import { lessonStage } from '../js/views/lessons.js';
 import { competencyLabel } from '../js/utils/evidence.js';
 import { openSearch } from '../js/components/unified-search.js';
+import { mountEmbed, GENAPP } from '../js/components/app-embed.js';
+import { ymd, entriesForNow, entriesBetween, entryHTML, wireEntries } from './agenda.js';
+
+/* After an entry changes, draw the current screen again (the router does it). */
+const redraw = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
 
 const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const toMin = (t) => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? +m[1] * 60 + +m[2] : null; };
@@ -161,6 +166,7 @@ export function renderNow(container) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a class="btn btn-secondary" href="#/lesson-planner">New lesson</a>
         <button class="btn btn-ghost" id="v3-find">Find a student</button>
+        <button class="btn btn-primary" data-add-entry="${ymd(new Date())}">Add entry</button>
       </div></div>
       ${dayLine(t)}
       ${nowCard(t)}
@@ -175,6 +181,11 @@ export function renderNow(container) {
         </div></div>
         <div class="v3-col-5">
           <div class="v3-panel" style="margin-bottom:var(--gap);">
+            <div class="v3-h">Your entries <a href="#/week">The week</a></div>
+            ${rowsHTML(entriesForNow().slice(0, 7).map(e => entryHTML(e)),
+              'Nothing added. Use Add entry for a lesson to develop, a paper to set or an admin task, and link it to a class or a lesson.')}
+          </div>
+          <div class="v3-panel" style="margin-bottom:var(--gap);">
             <div class="v3-h">Worth a look</div>
             ${rowsHTML(ins.map(i => `<a class="v3-row" href="${i.href}"><span><span class="v3-row-t">${esc(i.t)}</span><br><span class="v3-row-s">${esc(i.s)}</span></span></a>`),
               'Nothing stands out yet. As you observe students in lessons, patterns show here.')}
@@ -188,6 +199,7 @@ export function renderNow(container) {
         </div>
       </div>`;
     container.querySelector('#v3-find')?.addEventListener('click', openSearch);
+    wireEntries(container, redraw);
   });
   return () => { alive = false; };
 }
@@ -242,11 +254,13 @@ export function renderWeek(container) {
         <div class="v3-eyebrow">Week of ${monday.toLocaleDateString('en-SG', { day: 'numeric', month: 'long' })}${cycle ? ' · ' + esc(cycle) + ' week' : ''}</div>
         <h1 class="v3-title">This week</h1>
         <p class="v3-lede">${tt ? `${plural(total, 'lesson')} on your timetable, ${plural(pipe.length, 'lesson')} in progress` : 'No timetable on this device yet, so the week starts from your lessons'}</p>
-      </div><a class="btn btn-secondary" href="#/my-timetable">Odd and even weeks</a></div>
-      ${tt ? `<div class="v3-week">${days.map((d, i) => `<div class="d${d.toDateString() === now.toDateString() ? ' today' : ''}">
+      </div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a class="btn btn-secondary" href="#/my-timetable">Odd and even weeks</a><button class="btn btn-primary" data-add-entry="${ymd(now)}">Add entry</button></div></div>
+      <div class="v3-week">${days.map((d, i) => { const mine = entriesBetween(ymd(d), ymd(d)); return `<div class="d${d.toDateString() === now.toDateString() ? ' today' : ''}">
         <div class="dh"><span>${d.toLocaleDateString('en-SG', { weekday: 'short' })}</span><span>${d.getDate()}</span></div>
-        ${lists[i].length ? lists[i].map(e => `<div class="e${e.kind === 'lesson' ? '' : ' other'}"><b>${esc(e.class || e.title)}</b><span>${esc(rangeLabel(e))}${e.room ? ' · ' + esc(e.room) : ''}</span></div>`).join('') : '<span class="v3-row-s">Free</span>'}
-      </div>`).join('')}</div>` : ''}
+        ${lists[i].length ? lists[i].map(e => `<div class="e${e.kind === 'lesson' ? '' : ' other'}"><b>${esc(e.class || e.title)}</b><span>${esc(rangeLabel(e))}${e.room ? ' · ' + esc(e.room) : ''}</span></div>`).join('') : (tt ? '<span class="v3-row-s">No lessons</span>' : '')}
+        ${mine.map(e => entryHTML(e, { compact: true })).join('')}
+        <button class="v3-add" data-add-entry="${ymd(d)}" aria-label="Add an entry on ${d.toLocaleDateString('en-SG', { weekday: 'long' })}">+ Add</button>
+      </div>`; }).join('')}</div>
       <div class="v3-grid" style="margin-top:calc(var(--gap) * 1.2);">
         <div class="v3-col-7"><div class="v3-panel"><div class="v3-h">Lessons in progress <a href="#/lessons">All lessons</a></div>
           ${rowsHTML(pipe.slice(0, 8).map(x => `<a class="v3-row" href="#/lessons/${x.l.id}">
@@ -258,6 +272,7 @@ export function renderWeek(container) {
             'None captured this week. In Present, press O to note who showed what.')}
         </div></div>
       </div>`;
+    wireEntries(container, redraw);
   });
   return () => { alive = false; };
 }
@@ -301,13 +316,18 @@ export function renderTerm(container) {
         ${stat(withPath, 'student records with a pathway')}
       </div></div>
       <div class="v3-grid">
-        <div class="v3-col-12 v3-panel"><div class="v3-h">The term’s larger jobs</div>
+        <div class="v3-col-5 v3-panel"><div class="v3-h">Your entries ahead <button class="btn btn-ghost btn-sm" data-add-entry="">Add entry</button></div>
+          ${rowsHTML(entriesBetween(ymd(new Date()), '9999').filter(e => !e.done).slice(0, 10).map(e => entryHTML(e)),
+            'Nothing dated ahead. Add the term’s deadlines here: papers to set, reports, events.')}
+        </div>
+        <div class="v3-col-7 v3-panel"><div class="v3-h">The term’s larger jobs</div>
           <a class="v3-row" href="#/assessment/aol"><span><span class="v3-row-t">Set a paper</span><br><span class="v3-row-s">Table of Specifications, then draft questions</span></span><span class="go">Assess →</span></a>
           <a class="v3-row" href="#/report-comments"><span><span class="v3-row-t">Write report comments</span><br><span class="v3-row-s">Drafted from each student’s levels and evidence</span></span><span class="go">Classes →</span></a>
           <a class="v3-row" href="#/cce"><span><span class="v3-row-t">ECG conversations</span><br><span class="v3-row-s">Paths, inside CCE2021; add a student’s plan to their profile</span></span><span class="go">Lessons →</span></a>
           <a class="v3-row" href="#/my-growth"><span><span class="v3-row-t">Your own learning</span><br><span class="v3-row-s">Reflections and rehearsals build your practice story</span></span><span class="go">Open →</span></a>
         </div>
       </div>`;
+    wireEntries(container, redraw);
   });
   return () => { alive = false; };
 }
@@ -316,10 +336,25 @@ export function renderTerm(container) {
 
 export function renderHub(container, placeId) {
   const p = PLACES.find(x => x.id === placeId);
-  const lede = { resources: 'Everything you can bring into a lesson', school: 'Your school’s tools and people, and your own settings' }[placeId] || '';
+  const lede = {
+    resources: 'Everything you can bring into a lesson',
+    school: 'Your school’s tools and people',
+    personal: 'What is yours: your timetable, your learning, and how Co-Cher looks and works for you',
+  }[placeId] || '';
   container.innerHTML = `<div class="main-scroll"><div class="v3-page">
     <div class="v3-head"><div><div class="v3-eyebrow">${esc(p.group)}</div><h1 class="v3-title">${esc(p.label)}</h1><p class="v3-lede">${lede}</p></div></div>
-    <div class="v3-board">${visible(p.screens).filter(s => s.route !== p.route).map(tile).join('')}
+    <div class="v3-board big">${screensIn(p).filter(s => s.route !== p.route).map(tile).join('')}
+      ${placeId === 'personal' ? `<button class="v3-tile" data-act="look"><b>Look and feel</b><span>Look, day or night, type, menu, how you start, spacing</span></button>` : ''}
       ${placeId === 'school' ? `<a class="v3-tile" href="cocher2.html"><b>Co-Cher 2</b><span>The current version, with the same classes and lessons</span></a>` : ''}
     </div></div></div>`;
+}
+
+/* ── Paths, on its own (also inside CCE2021, ECG) ── */
+
+export function renderPaths(container) {
+  container.innerHTML = `<div class="main-scroll"><div class="v3-page">
+    <div class="v3-head"><div><div class="v3-eyebrow">For students</div><h1 class="v3-title">Paths</h1>
+      <p class="v3-lede">How do I get there? The live Pathways app. A student’s shared plan can be added to their profile in My classes</p></div></div>
+    <div id="v3-paths"></div></div></div>`;
+  return mountEmbed(container.querySelector('#v3-paths'), { src: `${GENAPP}/pathways/index.html?s=path`, title: 'Paths', note: 'Every update to Paths shows here.' });
 }

@@ -19,10 +19,12 @@ export const ICONS = {
   lessons: I('<path d="M4 5.5c2.6-1 5.4-1 8 .5v13c-2.6-1.5-5.4-1.5-8-.5zM20 5.5c-2.6-1-5.4-1-8 .5v13c2.6-1.5 5.4-1.5 8-.5z"/>'),
   assess: I('<path d="M5 4h14v16H5zM8.5 9h7M8.5 13h7M8.5 17h4"/>'),
   resources: I('<path d="M4 7.5 12 4l8 3.5-8 3.5zM4 12l8 3.5 8-3.5M4 16.5 12 20l8-3.5"/>'),
+  personal: I('<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c.8-3.8 3.6-5.5 7-5.5s6.2 1.7 7 5.5"/>'),
   school: I('<path d="M3 10 12 4l9 6M5 10v9h14v-9M10 19v-5h4v5"/>'),
   search: I('<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>'),
   look: I('<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M12 12h8.5"/>'),
   settings: I('<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>'),
+  link: I('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/>'),
   play: I('<circle cx="12" cy="12" r="8.5"/><path d="m10 8.5 5.5 3.5-5.5 3.5z"/>'),
 };
 
@@ -33,17 +35,16 @@ export const PLACES = [
     { route: '/', label: 'Now', desc: 'What is on, what is next, what needs you' },
     { route: '/dashboard', label: 'Classic dashboard', desc: 'The Co-Cher 2 dashboard, with its widgets' },
   ] },
-  { id: 'week', group: 'Time', label: 'Week', route: '/week', match: ['/week', '/my-timetable'], screens: [
-    { route: '/week', label: 'This week', desc: 'Your week, with the lessons in flight' },
-    { route: '/my-timetable', label: 'My timetable', desc: 'Odd and even weeks, as the school published them' },
+  { id: 'week', group: 'Time', label: 'Week', route: '/week', match: ['/week'], screens: [
+    { route: '/week', label: 'This week', desc: 'Your week, with your entries and the lessons in progress' },
   ] },
-  { id: 'term', group: 'Time', label: 'Term', route: '/term', match: ['/term', '/my-growth'], screens: [
+  { id: 'term', group: 'Time', label: 'Term', route: '/term', match: ['/term'], screens: [
     { route: '/term', label: 'This term', desc: 'Where the term is, and what you have built' },
-    { route: '/my-growth', label: 'My learning', desc: 'Your PD portfolio and practice story' },
   ] },
-  { id: 'classes', group: 'Work', label: 'Classes', route: '/classes', match: ['/classes', '/learning-log', '/my-cca', '/report-comments'], screens: [
+  { id: 'classes', group: 'Work', label: 'Classes', route: '/classes', match: ['/classes', '/learning-log', '/paths', '/my-cca', '/report-comments'], screens: [
     { route: '/classes', label: 'My classes', desc: 'Students, E21CC profiles, evidence and pathways', demo: 'classes' },
     { route: '/learning-log', label: 'Learning Log', desc: 'Students’ own evidence for the competencies you track', when: learningLogOpen, demo: 'learning-log' },
+    { route: '/paths', label: 'Paths', desc: 'Education and career pathways, for students', demo: 'paths' },
     { route: '/my-cca', label: 'My CCA', desc: 'Co-curricular activities and LEAPS 2.0' },
     { route: '/report-comments', label: 'Report comments', desc: 'Draft holistic comments from levels and evidence', tag: 'beta' },
   ] },
@@ -72,10 +73,15 @@ export const PLACES = [
     { route: '/knowledge', label: 'Knowledge bases', desc: 'Frameworks, references and your uploads' },
     { route: '/math-sandbox', label: 'Formula Lab', desc: 'Typeset STEM lessons', tag: 'beta' },
   ] },
-  { id: 'school', group: 'Work', label: 'School', route: '/school', match: ['/school', '/admin', '/settings', '/demos'], screens: [
+  { id: 'school', group: 'Work', label: 'School', route: '/school', match: ['/school', '/admin', '/demos'], screens: [
     { route: '/school', label: 'School', desc: 'Your school’s tools and people' },
     { route: '/admin', label: 'Admin', desc: 'Find a teacher, Student Finder, forms and events', demo: 'student-finder' },
     { route: '/demos', label: 'How it works', desc: 'Short demos of what Co-Cher can do' },
+  ] },
+  { id: 'personal', group: 'You', label: 'Personal', route: '/personal', match: ['/personal', '/my-timetable', '/my-growth', '/settings'], screens: [
+    { route: '/personal', label: 'Personal', desc: 'What is yours' },
+    { route: '/my-timetable', label: 'My timetable', desc: 'Odd and even weeks, as the school published them' },
+    { route: '/my-growth', label: 'My learning', desc: 'Your PD portfolio and practice story' },
     { route: '/settings', label: 'Settings', desc: 'Your key, your data, your preferences' },
   ] },
 ];
@@ -91,4 +97,32 @@ export function placeFor(route) {
     if ((r === m || r.startsWith(m + '/') || r.startsWith(m)) && m.length > len) { best = p; len = m.length; }
   }));
   return best;
+}
+
+/* ── Links a teacher adds: "also show this screen under that place" ──
+ * A screen has one home, and a teacher may tag it into other places where it
+ * is useful to them: the Learning Log under Assess, Paths under Lessons. Kept
+ * on this device (cocher3_links). The defaults keep two personal screens
+ * within reach of the time they belong to. */
+
+const LINK_KEY = 'cocher3_links';
+const DEFAULT_LINKS = { '/my-timetable': ['week'], '/my-growth': ['term'] };
+
+export function getLinks() {
+  try { const v = JSON.parse(localStorage.getItem(LINK_KEY) || 'null'); return v && typeof v === 'object' ? v : { ...DEFAULT_LINKS }; }
+  catch { return { ...DEFAULT_LINKS }; }
+}
+export function setLinks(route, placeIds) {
+  const all = getLinks();
+  if (placeIds.length) all[route] = placeIds; else delete all[route];
+  try { localStorage.setItem(LINK_KEY, JSON.stringify(all)); } catch { /* private mode */ }
+}
+export const ALL_SCREENS = () => PLACES.flatMap(p => visible(p.screens).map(s => ({ ...s, home: p })));
+/** A place's own screens, then the ones the teacher linked into it. */
+export function screensIn(place) {
+  const own = visible(place.screens);
+  const links = getLinks();
+  const linked = ALL_SCREENS().filter(s => s.home.id !== place.id && (links[s.route] || []).includes(place.id) && !own.some(o => o.route === s.route))
+    .map(s => ({ ...s, linked: true }));
+  return [...own, ...linked];
 }

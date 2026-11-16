@@ -36,30 +36,30 @@ html.v3 {
 }
 
 html.v3[data-look="washi"] {
-  --bg: #F3F0E8; --bg-subtle: #EBE7DC; --bg-card: #FAF8F2; --surface: #FAF8F2; --surface-raised: #FFFDF8;
+  --bg: #EEEAE0; --bg-subtle: #E5E0D3; --bg-card: #FBF9F4; --surface: #FBF9F4; --surface-raised: #FFFDF8;
   --surface-hover: rgba(60,50,30,.035);
-  --ink: #2A2925; --ink-secondary: #4A473F; --ink-muted: #736E62; --ink-faint: #A49E90;
-  --border: #D9D2C2; --border-light: #E6E0D2;
+  --ink: #25241F; --ink-secondary: #45423A; --ink-muted: #686357; --ink-faint: #999384;
+  --border: #CFC7B5; --border-light: #DED7C7;
   --soft: #7d776a;
   --growth: #5E7A5A; --growth-light: #E4EAE0; --redpen: #A8554A; --redpen-light: #F1E3DF;
   --success: #5E7A5A; --success-light: #E4EAE0; --warning: #B78A3C; --warning-light: #F2E8D2;
   --danger: #A8554A; --danger-light: #F1E3DF; --info: #6C6A8C; --info-light: #E6E5EE;
 }
 html.v3[data-look="fjord"] {
-  --bg: #F0F3F2; --bg-subtle: #E5EAE9; --bg-card: #FAFBFB; --surface: #FAFBFB; --surface-raised: #FFFFFF;
+  --bg: #E9EEED; --bg-subtle: #DFE6E4; --bg-card: #FBFCFC; --surface: #FBFCFC; --surface-raised: #FFFFFF;
   --surface-hover: rgba(20,50,50,.035);
-  --ink: #1D2A2D; --ink-secondary: #3D4D4E; --ink-muted: #667675; --ink-faint: #98A5A3;
-  --border: #D2DAD8; --border-light: #E1E7E5;
+  --ink: #18252A; --ink-secondary: #37474A; --ink-muted: #5A6A69; --ink-faint: #8C9A98;
+  --border: #C6D0CE; --border-light: #D7DFDD;
   --soft: #6f7f80;
   --growth: #4F7A68; --growth-light: #DFEAE5; --redpen: #A5574F; --redpen-light: #F0E2E0;
   --success: #4F7A68; --success-light: #DFEAE5; --warning: #B08A45; --warning-light: #F0E8D6;
   --danger: #A5574F; --danger-light: #F0E2E0; --info: #5F6F8F; --info-light: #E2E7EF;
 }
 html.v3[data-look="kiln"] {
-  --bg: #F4EEE7; --bg-subtle: #ECE3D9; --bg-card: #FBF7F2; --surface: #FBF7F2; --surface-raised: #FFFCF8;
+  --bg: #EFE8DF; --bg-subtle: #E6DCD0; --bg-card: #FCF8F3; --surface: #FCF8F3; --surface-raised: #FFFCF8;
   --surface-hover: rgba(80,40,20,.035);
-  --ink: #2E2622; --ink-secondary: #51443D; --ink-muted: #7B6C63; --ink-faint: #AC9E94;
-  --border: #DDCFC2; --border-light: #E9DED3;
+  --ink: #29211D; --ink-secondary: #4B3F38; --ink-muted: #706158; --ink-faint: #A09187;
+  --border: #D2C2B3; --border-light: #E1D4C7;
   --soft: #8a7466;
   --growth: #667A52; --growth-light: #E6EADD; --redpen: #A9523F; --redpen-light: #F2E1DB;
   --success: #667A52; --success-light: #E6EADD; --warning: #B9853A; --warning-light: #F3E7D0;
@@ -198,9 +198,10 @@ html.v3 .v3-body .main-content { flex: 1; min-height: 0; height: auto; }
 .v3-strip { display: flex; align-items: center; gap: 4px; padding: 12px 48px 0; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
 .v3-strip::-webkit-scrollbar { display: none; }
 .v3-strip:empty { display: none; }
-.v3-strip a { padding: 6px 12px; border-radius: 999px; font-size: .8rem; color: var(--ink-muted); text-decoration: none; white-space: nowrap; border: 1px solid transparent; }
+.v3-strip a { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; font-size: .8rem; color: var(--ink-muted); text-decoration: none; white-space: nowrap; border: 1px solid transparent; }
 .v3-strip a:hover { color: var(--ink); background: var(--surface-hover); }
-.v3-strip a.on { color: var(--ink); border-color: var(--border); background: var(--bg-card); font-weight: 600; }
+.v3-strip a.on { color: var(--bg-card); border-color: var(--ink); background: var(--ink); font-weight: 500; }
+.v3-strip a svg { width: 12px; height: 12px; stroke-width: 1.5; margin-left: 6px; vertical-align: -1px; opacity: .7; }
 .v3-strip .where { font-size: .75rem; color: var(--ink-faint); padding-right: 10px; white-space: nowrap; }
 html.v3[data-density="compact"] .v3-strip { padding: 8px 28px 0; }
 
@@ -341,8 +342,10 @@ a.v3-row:hover .v3-row-t { text-decoration: underline; text-underline-offset: 3p
 .v3-demo-stage.empty { border-bottom: 1px dashed var(--border); text-align: center; padding: 24px; }
 .v3-demo-stage.empty b { display: block; font-size: 1rem; font-weight: 500; color: var(--ink); }
 .v3-demo-stage.empty span { color: var(--ink-muted); font-size: .88rem; }
-.v3-strip .demo { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
-.v3-strip .demo svg { width: 14px; height: 14px; stroke-width: 1.5; }
+.v3-strip .tools { margin-left: auto; display: inline-flex; gap: 4px; padding-left: 12px; }
+.v3-strip .tool { display: inline-flex; gap: 6px; align-items: center; padding: 6px 12px; border-radius: 999px; font: inherit; font-size: .8rem; color: var(--ink-muted); background: transparent; border: 1px solid transparent; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.v3-strip .tool:hover { color: var(--ink); background: var(--surface-hover); }
+.v3-strip .tool svg { width: 14px; height: 14px; stroke-width: 1.5; margin: 0; opacity: 1; }
 .v3-gate { max-width: 520px; margin: 18vh auto 0; padding: 0 24px; text-align: center; }
 
 /* Phone dock: ten places share the width; labels stay, utilities go to icons. */
@@ -355,3 +358,37 @@ a.v3-row:hover .v3-row-t { text-decoration: underline; text-underline-offset: 3p
   .v3-strip { padding: 8px 16px 0 !important; }
   .v3-title { font-size: 1.7rem; }
 }
+
+/* The teacher's own entries */
+.v3-entry { display: grid; grid-template-columns: 20px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border-light); }
+.v3-entry:first-of-type { border-top: 0; }
+.v3-entry .tick { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--ink-faint); background: transparent; cursor: pointer; padding: 0; position: relative; }
+.v3-entry .tick:hover { border-color: var(--ink); }
+.v3-entry .tick[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); }
+.v3-entry .tick[aria-pressed="true"]::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid var(--bg-card); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.v3-entry .body { text-align: left; border: 0; background: transparent; font: inherit; color: inherit; cursor: pointer; padding: 0; min-width: 0; }
+.v3-entry .t { display: block; font-weight: 600; font-size: .92rem; color: var(--ink); overflow-wrap: anywhere; }
+.v3-entry .s { display: block; font-size: .8rem; color: var(--ink-muted); }
+.v3-entry .s.late { color: var(--danger); }
+.v3-entry.done .t { color: var(--ink-muted); text-decoration: line-through; font-weight: 400; }
+.v3-entry .go { font: inherit; font-size: .8rem; color: var(--accent-dark); background: transparent; border: 0; cursor: pointer; text-decoration: none; white-space: nowrap; padding: 0; }
+.v3-entry .go:hover, .v3-entry .body:hover .t { text-decoration: underline; text-underline-offset: 3px; }
+.v3-entry.compact { grid-template-columns: 16px 1fr; gap: 8px; padding: 8px; margin-bottom: 8px; border: 1px solid var(--second); border-radius: var(--radius-md); background: var(--second-light); }
+.v3-entry.compact .tick { width: 16px; height: 16px; border-radius: 4px; }
+.v3-entry.compact .tick[aria-pressed="true"]::after { left: 4px; top: 1px; width: 4px; height: 8px; }
+.v3-entry.compact .t { font-size: .8125rem; }
+.v3-entry.compact .go { grid-column: 2; justify-self: start; }
+.v3-add { width: 100%; padding: 6px 8px; border: 1px dashed var(--border); border-radius: var(--radius-md); background: transparent; color: var(--ink-muted); font: inherit; font-size: .8rem; cursor: pointer; text-align: left; }
+.v3-add:hover { border-color: var(--ink-faint); color: var(--ink); }
+.v3-h .btn { margin: -6px 0; }
+
+/* Hubs: larger tiles, filling the row */
+.v3-board.big { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.v3-board.big .v3-tile { padding: 24px; min-height: 112px; font: inherit; text-align: left; cursor: pointer; }
+.v3-board.big .v3-tile b { font-size: 1.0625rem; margin-bottom: 4px; }
+.v3-board.big .v3-tile span { font-size: .875rem; }
+
+/* 5. Use the width: existing screens were capped for a sidebar that is gone. */
+html.v3:not([data-look="classic"]) .page-container { max-width: 1360px; }
+html.v3:not([data-look="classic"]) .page-container[style*="max-width"] { max-width: 1120px !important; }
+html.v3:not([data-look="classic"]) .cce-content { max-width: 1200px !important; }
