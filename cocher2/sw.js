@@ -19,9 +19,14 @@
  * and a single bad precache entry never aborts install.
  */
 
-const VERSION = 'v2.5';                        // match APP_VERSION in js/version.js
+const VERSION = 'v2.6';                        // match APP_VERSION in js/version.js
 const CACHE_PREFIX = 'cocher2-';
 const CACHE_NAME = CACHE_PREFIX + VERSION;  // e.g. 'cocher2-v1.0'
+
+/* Pages showing the Co-Cher 3 preview, by client id. Held in memory: if the
+ * worker restarts mid-visit, the referrer check in the fetch handler still
+ * catches the shell's own files. */
+const previewClients = new Set();
 
 /* The app shell, relative to this worker (scope = the app/ directory). Only
  * the essentials — the rest of the module graph and assets populate at
@@ -113,6 +118,12 @@ self.addEventListener('fetch', (event) => {
   const isHTML = req.mode === 'navigate' || accept.includes('text/html');
 
   // 1) Navigations / HTML → network-first (fresh deploy wins), shell fallback.
+  //    A navigation to the Co-Cher 3 preview marks its page, so that page's
+  //    assets are fetched network first (see step 4).
+  if (req.mode === 'navigate' && isSameOrigin) {
+    const id = event.resultingClientId || event.clientId;
+    if (id) { if (/\/cocher3\.html$/.test(url.pathname)) previewClients.add(id); else previewClients.delete(id); }
+  }
   if (isHTML) {
     event.respondWith(networkFirst(event));
     return;
@@ -134,8 +145,16 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 4) Same-origin static assets (js/css/csv/json/webmanifest/…) → SWR.
+  //    Except for the Co-Cher 3 preview: it changes often, and serving the
+  //    previous copy first meant a teacher kept seeing the old preview after a
+  //    release. Pages opened from cocher3.html get the network first for every
+  //    asset (the shell's own files and the engine files it shares), and the
+  //    cached copy only when the network is unreachable.
   if (isStaticAsset(url.pathname)) {
-    event.respondWith(staleWhileRevalidate(event));
+    const preview = previewClients.has(event.clientId)
+      || /\/cocher3\.html|\/v3\//.test(req.referrer || '');
+    if (preview && event.clientId) previewClients.add(event.clientId);
+    event.respondWith(preview ? assetNetworkFirst(event) : staleWhileRevalidate(event));
     return;
   }
 
@@ -236,6 +255,20 @@ async function staleWhileRevalidate(event) {
   }
   const res = await networkPromise;
   return res || new Response('', { status: 504, statusText: 'Offline' });
+}
+
+/* Network first for an asset; the cached copy only when offline. */
+async function assetNetworkFirst(event) {
+  const req = event.request;
+  const cache = await caches.open(CACHE_NAME).catch(() => null);
+  try {
+    const res = await fetch(req, { cache: 'no-cache' });
+    if (cache && res && res.ok && res.status === 200) cache.put(req, res.clone()).catch(() => {});
+    return res;
+  } catch (e) {
+    const hit = cache ? await cache.match(req).catch(() => null) : null;
+    return hit || new Response('', { status: 504, statusText: 'Offline' });
+  }
 }
 
 /* ── helpers ── */
