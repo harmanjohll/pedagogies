@@ -20,6 +20,7 @@ export const ICONS = {
   assess: I('<path d="M5 4h14v16H5zM8.5 9h7M8.5 13h7M8.5 17h4"/>'),
   resources: I('<path d="M4 7.5 12 4l8 3.5-8 3.5zM4 12l8 3.5 8-3.5M4 16.5 12 20l8-3.5"/>'),
   personal: I('<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c.8-3.8 3.6-5.5 7-5.5s6.2 1.7 7 5.5"/>'),
+  admin: I('<path d="M8 4h8v3H8zM6 5.5H5v15h14v-15h-1M9 12l2 2 4-4"/>'),
   school: I('<path d="M3 10 12 4l9 6M5 10v9h14v-9M10 19v-5h4v5"/>'),
   search: I('<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>'),
   look: I('<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M12 12h8.5"/>'),
@@ -31,9 +32,8 @@ export const ICONS = {
 /* `match` lists route prefixes that belong to the place (first hit wins).
  * `demo` names a slot in v3/demos.js. `tag` marks beta tools, as v2 did. */
 export const PLACES = [
-  { id: 'school', group: 'Home', label: 'School', route: '/school', match: ['/school', '/admin', '/demos'], screens: [
+  { id: 'school', group: 'Home', label: 'School', route: '/school', match: ['/school', '/demos'], screens: [
     { route: '/school', label: 'My School', desc: 'Every place in Co-Cher, from one page' },
-    { route: '/admin', label: 'Admin', desc: 'Find a teacher, Student Finder, forms and events', demo: 'student-finder' },
     { route: '/demos', label: 'How it works', desc: 'Short demos of what Co-Cher can do' },
   ] },
   { id: 'now', group: 'Time', label: 'Now', route: '/now', match: ['/now', '/dashboard'], screens: [
@@ -77,6 +77,9 @@ export const PLACES = [
     { route: '/library', label: 'Library', desc: 'Everything you have saved' },
     { route: '/knowledge', label: 'Knowledge bases', desc: 'Frameworks, references and your uploads' },
     { route: '/math-sandbox', label: 'Formula Lab', desc: 'Typeset STEM lessons', tag: 'beta' },
+  ] },
+  { id: 'admin', group: 'Work', label: 'Admin', route: '/admin', match: ['/admin'], screens: [
+    { route: '/admin', label: 'Admin', desc: 'Find a teacher, Student Finder, forms and events', demo: 'student-finder' },
   ] },
   { id: 'personal', group: 'You', label: 'Personal', route: '/personal', match: ['/personal', '/my-timetable', '/my-growth', '/settings'], screens: [
     { route: '/personal', label: 'Personal', desc: 'What is yours' },

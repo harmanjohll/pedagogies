@@ -412,3 +412,7 @@ html.v3:not([data-look="classic"]) .cce-content { max-width: 1200px !important; 
 .v3-home-tile.now > div { flex: 1; display: flex; flex-direction: column; }
 @media (max-width: 1000px) { .v3-home { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 520px) { .v3-home { grid-template-columns: 1fr; } .v3-home-tile.now { grid-column: span 1; } }
+
+/* My School has no menu of its own: its tiles are the menu. */
+html.v3[data-home]:not(.v3-arriving) .v3-nav { display: none; }
+html.v3[data-home] .v3-strip .where { display: none; }
