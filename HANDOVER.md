@@ -7,7 +7,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 ## 0. Opening message to paste into the new chat
 
-> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.4, with a Co-Cher 3 preview). First read
+> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.5, with a Co-Cher 3.1 preview). First read
 > `HANDOVER.md` at the repo root. The next work is in section 2. Don't copy any
 > student data into this repo.
 
@@ -20,7 +20,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 | Line | Folder | Live address | Who it's for | Status |
 |---|---|---|---|---|
 | **Co-Cher 1** | `app/` (`app/cocher.html`) | `harmanjohll.github.io/pedagogies/` (the root redirects here) | **Beatty only.** | **Frozen at v8.9.** Emergency fixes only. |
-| **Co-Cher 2** | `cocher2/` (`cocher2/cocher2.html`) | `harmanjohll.github.io/pedagogies/cocher2/` | **Every school**: Beatty, Park View Primary, Opera Estate Primary, SAJC | **Active, v2.4.** All new work goes here. |
+| **Co-Cher 2** | `cocher2/` (`cocher2/cocher2.html`) | `harmanjohll.github.io/pedagogies/cocher2/` | **Every school**: Beatty, Park View Primary, Opera Estate Primary, SAJC | **Active, v2.5.** All new work goes here. |
 
 - Each school has a pack (`cocher2/schools/<id>.json`), an optional roster
   (`cocher2/schools/<id>/staff.json`) and its own storage on the device
@@ -31,7 +31,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 ### Shipping a Co-Cher 2 version
 
-1. `cocher2/js/version.js`: bump `APP_VERSION` (next is **v2.5**).
+1. `cocher2/js/version.js`: bump `APP_VERSION` (next is **v2.6**).
 2. `cocher2/sw.js`: set `VERSION` to the same value.
 3. `cocher2/js/components/whats-new.js`: add an entry at the top.
 4. `VERSIONS.md`: new row **Current (active)**, old row **Superseded**.
@@ -61,6 +61,12 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 - **Beatty only** (`OPEN_TO`). Other schools see a notice and a link to v2.
 - **Safety:** first open copies the teacher's store to IndexedDB
   (`media`, key `v3backup__<school>`).
+- **3.1 added:** `v3/agenda.js` (teacher's entries; Store key `agenda`;
+  `planFrom` fills the planner's `#chat-input`), the Personal place, teacher
+  links (`getLinks`, `setLinks`, `screensIn` in `v3/places.js`; the shell keeps
+  the teacher in the place a linked screen was opened from), `/paths`.
+- **Open question with the user:** whether School (or a "My School" page)
+  should be the landing page, with the dock's places as large tiles there.
 - **Not yet done:** v2 screens are restyled, not redesigned; colour coded data
   chips (E21CC levels, CCE tabs) keep v2's brighter colours; v2's workflow
   modes are not in the v3 menu; demo slots are empty; fonts and default look

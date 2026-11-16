@@ -30,6 +30,7 @@ export const CHOICES = {
     { id: 'dock', label: 'Dock', note: 'Menu at the bottom' },
   ],
   home: [
+    { id: 'school', label: 'My School', note: 'Every place as a tile, with Now large and live' },
     { id: 'flow', label: 'Flow', note: 'Your day in order: now, next, what needs you' },
     { id: 'board', label: 'Board', note: 'Everything laid out, grouped by place' },
     { id: 'ask', label: 'Ask', note: 'One search box; type where you want to go' },
@@ -41,18 +42,21 @@ export const CHOICES = {
 };
 
 /* The owner's chosen starting point (A2 B1 C3 D1). Every teacher can change all of it in Look and feel. */
-export const DEFAULTS = { look: 'fjord', night: 'off', type: 'mincho', nav: 'dock', home: 'flow', density: 'airy' };
+export const DEFAULTS = { look: 'fjord', night: 'off', type: 'mincho', nav: 'dock', home: 'school', density: 'airy' };
 
 export function getPrefs() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch { saved = {}; }
   const out = { ...DEFAULTS };
   Object.keys(DEFAULTS).forEach(k => { if (CHOICES[k].some(c => c.id === saved[k])) out[k] = saved[k]; });
+  // 3.1 made My School the landing page. A start mode saved before that was
+  // never a choice (the app saved it by itself), so it moves once.
+  if (saved.rev !== 2) out.home = 'school';
   return out;
 }
 
 export function setPref(key, value) {
-  const p = { ...getPrefs(), [key]: value };
+  const p = { ...getPrefs(), [key]: value, rev: 2 };
   try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* private mode: lasts this visit */ }
   applyPrefs(p);
   return p;

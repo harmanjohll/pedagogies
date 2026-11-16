@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v2.5', items: [
+    { icon: '\u{1F33F}', title: 'Co-Cher 3 preview moves to 3.1', text: 'Beatty: add your own entries to Now, Week and Term and link them to a class or a lesson; a Personal place for your timetable, learning and settings; link any screen under another place; wider pages and a touch more contrast.' },
+  ] },
   { version: 'v2.4', items: [
     { icon: '\u{1F33F}', title: 'Beatty: try the Co-Cher 3 preview', text: 'A calmer look and a new layout built around your day, week and term, on the same classes and lessons. Open harmanjohll.github.io/pedagogies/cocher3/ and choose your own look, type and menu. Co-Cher 2 stays exactly as it is.' },
   ] },
