@@ -4,7 +4,7 @@
  * Space for short animations that show how a feature works, kept inside
  * Co-Cher. Each slot has an id that a screen can point to (places.js `demo`).
  *
- * To fill a slot, put the file in v3/demos/ and set `src`:
+ * To fill a slot, put the file in cocher3/demos/ and set `src`:
  *   .mp4 / .webm  plays as a looping, muted video
  *   .html         runs in a frame (an animated page, a Lottie player, ...)
  *   .svg / .gif   shows as an image
@@ -35,7 +35,7 @@ export function demoPlayerHTML(d) {
       <b>Not made yet</b><span>This space is kept for a short animation of ${esc(d?.title || 'this feature').toLowerCase()}</span>
     </div></div>`;
   }
-  const url = `v3/demos/${d.src}`;
+  const url = new URL(`../demos/${d.src}`, import.meta.url).href;
   if (/\.(mp4|webm)$/i.test(d.src)) return `<div class="v3-demo-stage"><video src="${esc(url)}" autoplay loop muted playsinline controls></video></div>`;
   if (/\.html?$/i.test(d.src)) return `<div class="v3-demo-stage"><iframe src="${esc(url)}" title="${esc(d.title)}" loading="lazy"></iframe></div>`;
   return `<div class="v3-demo-stage"><img src="${esc(url)}" alt="${esc(d.title)}"></div>`;

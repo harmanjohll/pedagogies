@@ -11,9 +11,9 @@
  * Settings, Data, Export.
  */
 
-import { Store, generateId } from '../js/state.js';
-import { openModal } from '../js/components/modals.js';
-import { lessonStage, LIFECYCLE_STAGES } from '../js/views/lessons.js';
+import { Store, generateId } from '../../cocher2/js/state.js';
+import { openModal } from '../../cocher2/js/components/modals.js';
+import { lessonStage, LIFECYCLE_STAGES } from '../../cocher2/js/views/lessons.js';
 
 const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 export const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -28,6 +28,11 @@ export const KINDS = {
 
 export const allEntries = () => (Store.get('agenda') || []).slice();
 const save = (list) => Store.set('agenda', list);
+
+/** Add an entry from elsewhere in Co-Cher (a free slot, say). */
+export function addEntry(e) {
+  save([...allEntries(), { kind: 'other', title: '', date: '', classId: '', lessonId: '', goalId: '', ...e, id: generateId(), done: false, createdAt: Date.now() }]);
+}
 
 export function entriesBetween(from, to) {          // inclusive 'YYYY-MM-DD' strings
   return allEntries().filter(e => e.date && e.date >= from && e.date <= to).sort((a, b) => a.date.localeCompare(b.date));
@@ -102,7 +107,8 @@ function planFrom(e) {
 /** Add or edit an entry. */
 export function openEntry(entry, redraw) {
   const isNew = !entry.id;
-  const e = { kind: 'lesson', title: '', date: '', classId: '', lessonId: '', ...entry };
+  const e = { kind: 'lesson', title: '', date: '', classId: '', lessonId: '', goalId: '', ...entry };
+  const goals = (Store.get('goals') || []).filter(g => !g.done || g.id === e.goalId);
   const classes = Store.getClasses();
   const lessons = Store.getLessons();
   const { backdrop, close } = openModal({
@@ -120,6 +126,8 @@ export function openEntry(entry, redraw) {
         </div>
         <div><label class="input-label" for="ag-class">Class (optional)</label>
           <select class="input" id="ag-class"><option value="">None</option>${classes.map(c => `<option value="${esc(c.id)}"${c.id === e.classId ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+        ${goals.length ? `<div><label class="input-label" for="ag-goal">Towards a goal (optional)</label>
+          <select class="input" id="ag-goal"><option value="">None</option>${goals.map(g => `<option value="${esc(g.id)}"${g.id === e.goalId ? ' selected' : ''}>${esc(g.title)}</option>`).join('')}</select></div>` : ''}
         <div id="ag-lesson-wrap"><label class="input-label" for="ag-lesson">Lesson (once it exists)</label>
           <select class="input" id="ag-lesson"><option value="">Not linked yet</option>${lessons.map(l => `<option value="${esc(l.id)}"${l.id === e.lessonId ? ' selected' : ''}>${esc(l.title)}</option>`).join('')}</select></div>
       </div>`,
@@ -136,7 +144,7 @@ export function openEntry(entry, redraw) {
     if (!title) { q('#ag-title').focus(); return; }
     const kind = q('#ag-kind').value;
     const next = { ...e, title, kind, date: q('#ag-date').value || '', classId: q('#ag-class').value || '',
-      lessonId: kind === 'lesson' ? (q('#ag-lesson').value || '') : '' };
+      lessonId: kind === 'lesson' ? (q('#ag-lesson').value || '') : '', goalId: q('#ag-goal')?.value || '' };
     const list = allEntries();
     if (isNew) list.push({ ...next, id: generateId(), done: false, createdAt: Date.now() });
     else { const i = list.findIndex(x => x.id === e.id); if (i >= 0) list[i] = next; }

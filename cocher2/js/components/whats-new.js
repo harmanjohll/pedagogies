@@ -17,15 +17,6 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
-  { version: 'v2.6', items: [
-    { icon: '\u{1F504}', title: 'The Co-Cher 3 preview now updates at once', text: 'It used to show its previous copy first, so a new release could take two or three refreshes to appear. It now fetches the newest files every time you open it, and uses the saved copy only when you are offline.' },
-  ] },
-  { version: 'v2.5', items: [
-    { icon: '\u{1F33F}', title: 'Co-Cher 3 preview moves to 3.1', text: 'Beatty: add your own entries to Now, Week and Term and link them to a class or a lesson; a Personal place for your timetable, learning and settings; link any screen under another place; wider pages and a touch more contrast.' },
-  ] },
-  { version: 'v2.4', items: [
-    { icon: '\u{1F33F}', title: 'Beatty: try the Co-Cher 3 preview', text: 'A calmer look and a new layout built around your day, week and term, on the same classes and lessons. Open harmanjohll.github.io/pedagogies/cocher3/ and choose your own look, type and menu. Co-Cher 2 stays exactly as it is.' },
-  ] },
   { version: 'v2.3', items: [
     { icon: '\u{1F527}', title: 'Older accounts find their school', text: 'If you signed in before Co-Cher knew about schools, your school now comes from your email, once. Find a Teacher, your timetable and your school\u2019s own words appear. Your saved work stays.' },
   ] },
@@ -137,7 +128,9 @@ export function maybeShowWhatsNew() {
 
   // Only the releases newer than what the teacher last saw, newest first.
   const missed = RELEASES.filter(r => cmpVer(r.version, seen) > 0);
-  const releases = missed.length ? missed : RELEASES.slice(0, 1); // fallback: at least the latest
+  // A release with nothing to tell teachers (an engine change, say) stays silent.
+  if (!missed.length) { try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch {} return; }
+  const releases = missed;
   const shown = releases.slice(0, MAX_RELEASES_SHOWN);
   const trimmed = releases.length - shown.length;
 

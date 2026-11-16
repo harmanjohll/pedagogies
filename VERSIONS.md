@@ -32,24 +32,33 @@ neither version can read the other's data.
 
 ---
 
-## Co-Cher 3 (preview: a new shell on Co-Cher 2's engine)
+## Co-Cher 3 (preview: its own folder, on Co-Cher 2's engine)
 
-Not a third copy. `cocher2/cocher3.html` plus `cocher2/v3/` supply a new layout,
-navigation and look; sign in, schools, data and every view are Co-Cher 2's own
-files. Same storage (`cocher2_*`), so a teacher sees their real classes and
-lessons. `/pedagogies/cocher3/` forwards there. Beatty only for now
-(`OPEN_TO` in `v3/shell.js`). Removing the preview is deleting those three paths.
+**Where it lives.** `cocher3/` holds everything that is Co-Cher 3's own: the page
+(`index.html`), its scripts (`js/`), its stylesheet (`css/cocher3.css`) and its
+demo slots (`demos/`). Sign in, schools, data and every existing screen are still
+Co-Cher 2's files in `cocher2/`, loaded from there: the page sets a base address
+of `../cocher2/`, and `js/shell.js` keeps `#` links on the page. Same storage
+(`cocher2_*`), so a teacher sees their real classes and lessons. No service
+worker: Co-Cher 3 always loads its current files. Beatty only (`OPEN_TO` in
+`js/shell.js`); other schools move across later.
 
-| Version | Location | Live URL | Status |
-|---------|----------|----------|--------|
-| v3.1 preview | `cocher2/cocher3.html`, `cocher2/v3/` | `/pedagogies/cocher3/` | **Preview (Beatty)**. Teacher's own entries on Now, Week and Term (`v3/agenda.js`, Store `agenda`), each linkable to a class or lesson; "Plan it" opens the planner with the title ready. A Personal place (timetable, learning, settings, look). Teacher links: any screen can also show under other places (`cocher3_links`). Paths as its own screen (`/paths`). Current strip pill filled; pages use more width; slightly deeper ground and firmer lines. **My School is the landing page** (`renderSchool`): every place as a tile, Now large with a live summary; a tapped tile travels to its menu item; Now moves to `/now`; start mode `school` is the default (`rev: 2` in `cocher3_prefs` moves earlier users once). Build 5: School first in the menu and Admin its own place; no menu on My School, tiles fly down to form it and back up on return (Motion switch in Look and feel; plays regardless of the device's reduced motion setting); C3 tab icon; build label from `BUILD` in `v3/shell.js`; API key notice moved clear of the dock |
-| v3.0 preview | `cocher2/cocher3.html`, `cocher2/v3/` | `/pedagogies/cocher3/` | Superseded. Time spine (Now, Week, Term) and five places (Classes, Lessons, Assess, Resources, School) holding every v2 screen; a strip of sibling screens; teacher chosen look (Washi, Fjord, Kiln, Classic; day or night), type, menu (rail, bar, dock), start mode (Flow, Board, Ask) and spacing, kept in `cocher3_prefs`; school colours softened by rule; demo slots (`v3/demos.js`) for in app animations |
+**Its own number.** `cocher3/js/version.js`, three parts: product.release.fix.
+It moves with every change to `cocher3/`. Notes for teachers go in `NOTES` there
+and show in Co-Cher 3 only. Co-Cher 2's version moves only when `cocher2/` changes.
+
+| Version | Live URL | Status |
+|---------|----------|--------|
+| 3.2.0 | `/pedagogies/cocher3/` | **Preview (Beatty)**. Moved into `cocher3/`; old address `cocher2/cocher3.html` forwards. Own version and notes. Common free time (`/free-time`, from the published staff timetable), Student handover (`/handover`, evidence by file, merged by student, nothing doubled), Term goals (Store `goals`; entries link to a goal). All three in `js/together.js` and `js/goals.js` |
+| 3.1 (builds 1 to 5) | was `cocher2/cocher3.html` | Superseded. Own entries on Now, Week, Term; Personal; teacher links; My School as the landing page with tiles that fly to the menu and back; Admin as a place; Motion switch |
+| 3.0 | was `cocher2/cocher3.html` | Superseded. Time spine, five places, teacher chosen look, type, menu and start mode; school colours softened by rule; demo slots |
 
 ## Co-Cher 2 (multi-school line)
 
 | Version | Location | Live URL | Storage namespace | Status |
 |---------|----------|----------|-------------------|--------|
-| v2.6 | Fix: the Co-Cher 3 preview kept showing its previous files after a release, because `sw.js` served same-origin assets cache first and its `VERSION` was not bumped for v3 only changes. Pages opened from `cocher3.html` now get every asset network first (cache only offline). Co-Cher 2 pages keep stale-while-revalidate | `/pedagogies/cocher2/` | `cocher2_*` | **Current (active)** |
+| v2.7 | Housekeeping for the split from Co-Cher 3. `sw.js` returns to plain stale-while-revalidate (Co-Cher 3 no longer runs under it). `whats-new.js`: the three notes that were about Co-Cher 3 (v2.4 to v2.6) are removed, and a release with no note now stays silent. `app.js` leaves What's New to a shell when one is present. Store gains `goals` (persisted, exported, imported, reset). `cocher2/cocher3.html` is now only a forwarder | `/pedagogies/cocher2/` | `cocher2_*` | **Current (active)** |
+| v2.6 | Fix: the Co-Cher 3 preview kept showing its previous files after a release, because `sw.js` served same-origin assets cache first and its `VERSION` was not bumped for v3 only changes. Pages opened from `cocher3.html` now get every asset network first (cache only offline). Co-Cher 2 pages keep stale-while-revalidate | `/pedagogies/cocher2/` | `cocher2_*` | Superseded |
 | v2.5 | Store gains `agenda` (a teacher's own entries, used by Co-Cher 3.1): persisted, exported, imported, reset. No change to Co-Cher 2's screens | `/pedagogies/cocher2/` | `cocher2_*` | Superseded |
 | v2.4 | Engine hook for a second shell: `js/app.js` hands layout to `window.__cocherShell` when one is registered (Co-Cher 3), otherwise behaves exactly as before. Beatty pack gains `theme.secondary` | `/pedagogies/cocher2/` | `cocher2_*` | Superseded |
 | v2.3 | Fix: an account made before schools existed (no `schoolId`) showed "Nothing loaded yet" in Find a Teacher and got no timetable. At boot, `upgradeLegacyAccount()` (`components/login.js`) sets the school from the email domain once and reloads; the store adopts the pre-split data under the school's key, so nothing is lost | `/pedagogies/cocher2/` | `cocher2_*` | Superseded |

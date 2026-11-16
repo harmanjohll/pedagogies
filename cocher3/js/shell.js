@@ -5,21 +5,23 @@
  * sibling screens, the look panel and the v3 screens; js/app.js does the rest
  * exactly as it does for Co-Cher 2 (sign in, school, data, every view).
  *
- * It registers itself as window.__cocherShell before app.js runs (v3/boot.js).
+ * It registers itself as window.__cocherShell before app.js runs (js/boot.js).
  * Same data as Co-Cher 2: a teacher sees their own classes and lessons here.
  * The first time v3 opens, a copy of their saved work is set aside on this
  * device (IndexedDB), in case a preview bug ever damages it.
  */
 
 import { getPrefs, setPref, applyPrefs, CHOICES } from './prefs.js';
+import { VERSION, NOTES } from './version.js';
 import { PLACES, ICONS, placeFor, screensIn, getLinks, setLinks, ALL_SCREENS } from './places.js';
 import { renderHome, renderNow, renderSchool, renderWeek, renderTerm, renderHub, renderPaths } from './screens.js';
-import { openModal } from '../js/components/modals.js';
+import { renderFreeTime, renderHandover } from './together.js';
+import { openModal } from '../../cocher2/js/components/modals.js';
 import { renderDemos, demoById } from './demos.js';
-import { openSearch } from '../js/components/unified-search.js';
-import { currentSchoolId, getCurrentUser } from '../js/components/login.js';
-import { Store, storageKeyFor } from '../js/state.js';
-import { idbGet, idbPut } from '../js/utils/storage.js';
+import { openSearch } from '../../cocher2/js/components/unified-search.js';
+import { currentSchoolId, getCurrentUser } from '../../cocher2/js/components/login.js';
+import { Store, storageKeyFor } from '../../cocher2/js/state.js';
+import { idbGet, idbPut } from '../../cocher2/js/utils/storage.js';
 
 const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 /* '/' is the landing page: My School, unless the teacher chose to start elsewhere. */
@@ -34,8 +36,32 @@ const route = () => {
 const OPEN_TO = ['bty'];
 
 /* Shown in Look and feel and at the foot of My School, so anyone can tell
- * which build their browser is running. Raise it with every v3 change. */
-export const BUILD = '3.1 build 5';
+ * which version their browser is running. Set in js/version.js. */
+export const BUILD = VERSION;
+
+/* This page has a base address (the engine's folder), so a link written as
+ * "#/classes" would leave for that folder. Keep every such link here. */
+document.addEventListener('click', (e) => {
+  if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target.closest && e.target.closest('a[href^="#"]');
+  if (!a || a.target === '_blank') return;
+  e.preventDefault();
+  const h = a.getAttribute('href');
+  if (h.length > 1) { if (location.hash === h) window.dispatchEvent(new HashChangeEvent('hashchange')); else location.hash = h; }
+});
+
+/* What changed, once, to a returning teacher. Co-Cher 3's own notes only. */
+function whatsNew() {
+  const KEY = 'cocher3_seen_version';
+  let seen = ''; try { seen = localStorage.getItem(KEY) || ''; } catch { /* private mode */ }
+  try { localStorage.setItem(KEY, VERSION); } catch { /* private mode */ }
+  if (!seen || seen === VERSION) return;
+  const cmp = (a, b) => { const A = a.split('.').map(Number), B = b.split('.').map(Number); for (let i = 0; i < 3; i++) { const d = (A[i] || 0) - (B[i] || 0); if (d) return d; } return 0; };
+  const fresh = NOTES.filter(n => cmp(n.version, seen) > 0);
+  if (!fresh.length) return;
+  openModal({ title: `New in Co-Cher ${VERSION}`, width: 480,
+    body: fresh.map(n => n.items.map(([t, d]) => `<p style="margin:0 0 12px;font-size:.875rem;line-height:1.55;"><b>${esc(t)}</b><br><span style="color:var(--ink-secondary);">${esc(d)}</span></p>`).join('')).join('') });
+}
 
 let schoolPack = null;
 let lastPlace = null;       // the place the teacher is working in; a linked screen keeps it
@@ -230,10 +256,13 @@ window.__cocherShell = {
     registerRoute('/school', renderSchool);
     registerRoute('/personal', (c) => renderHub(c, 'personal'));
     registerRoute('/paths', renderPaths);
+    registerRoute('/free-time', renderFreeTime);
+    registerRoute('/handover', renderHandover);
     registerRoute('/demos', renderDemos);
     registerRoute('/demos/:id', renderDemos);
   },
 
   openLook,
+  whatsNew,
   build: BUILD,
 };

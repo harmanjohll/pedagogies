@@ -244,7 +244,8 @@ async function init() {
   // One-time "what's new" for RETURNING users after a version bump. For genuine
   // first-run users this records the current version silently and shows nothing,
   // so it never stacks on top of onboarding/tour.
-  maybeShowWhatsNew();
+  // A shell keeps its own notes; Co-Cher 2's are for Co-Cher 2.
+  if (shell) shell.whatsNew?.(); else maybeShowWhatsNew();
 
   // Show API key reminder banner if key was deferred
   if (isApiKeyMissing()) {
