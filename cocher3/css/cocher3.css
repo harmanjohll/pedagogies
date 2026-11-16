@@ -449,3 +449,4 @@ html.v3[data-nav="dock"]:not([data-home]) #api-key-banner { bottom: calc(76px + 
 .v3-goal .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
 .v3-goal.done .t { color: var(--ink-muted); }
 .v3-goal.done .bar i { background: var(--growth); }
+.v3-home-tile:hover, .v3-home-tile:hover *, .v3-tile:hover, .v3-tile:hover * { text-decoration: none; }

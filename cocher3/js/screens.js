@@ -9,7 +9,7 @@
 import { Store } from '../../cocher2/js/state.js';
 import { getPrefs } from './prefs.js';
 import { PLACES, ICONS, visible, screensIn } from './places.js';
-import { currentSchoolId } from '../../cocher2/js/components/login.js';
+import { currentSchoolId, getCurrentUser, getPreferredName, guessFirstName } from '../../cocher2/js/components/login.js';
 import { getMyTimetable, entriesForDate, rangeLabel } from '../../cocher2/js/utils/timetable.js';
 import { loadPack, cycleForDate } from '../../cocher2/js/utils/school.js';
 import { lessonStage } from '../../cocher2/js/views/lessons.js';
@@ -150,6 +150,10 @@ export function renderHome(container) {
   return renderSchool(container);
 }
 
+/* The greeting Co-Cher has always opened with, in the same words. */
+const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
+const firstName = () => getPreferredName() || guessFirstName(getCurrentUser()?.name || '');
+
 /* ── My School: every place as a tile, Now large and live ── */
 
 const FACT = {
@@ -163,8 +167,9 @@ export function renderSchool(container) {
   const tiles = PLACES.filter(p => p.id !== 'now' && p.id !== 'school');
   container.innerHTML = `<div class="main-scroll"><div class="v3-page">
     <div class="v3-head"><div>
-      <div class="v3-eyebrow">${dateLine(new Date())}</div>
-      <h1 class="v3-title" id="v3-school-name">My School</h1>
+      <div class="v3-eyebrow"><span id="v3-school-name">My School</span> · ${dateLine(new Date())}</div>
+      <h1 class="v3-title">${greeting()}, Cher!</h1>
+      <p class="v3-lede">What would you like to do today${firstName() ? ', ' + esc(firstName()) : ''}?</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-ghost" id="v3-find">Find a student</button>
