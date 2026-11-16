@@ -17,6 +17,9 @@ const SEEN_KEY = 'cocher2_whatsnew_seen';
 // Newest first. Each release: a few concise highlights (not paragraphs).
 // Keep entries SHORT — this is a "since you were away" digest, not release notes.
 const RELEASES = [
+  { version: 'v2.6', items: [
+    { icon: '\u{1F504}', title: 'The Co-Cher 3 preview now updates at once', text: 'It used to show its previous copy first, so a new release could take two or three refreshes to appear. It now fetches the newest files every time you open it, and uses the saved copy only when you are offline.' },
+  ] },
   { version: 'v2.5', items: [
     { icon: '\u{1F33F}', title: 'Co-Cher 3 preview moves to 3.1', text: 'Beatty: add your own entries to Now, Week and Term and link them to a class or a lesson; a Personal place for your timetable, learning and settings; link any screen under another place; wider pages and a touch more contrast.' },
   ] },
