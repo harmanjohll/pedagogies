@@ -48,7 +48,8 @@ and show in Co-Cher 3 only. Co-Cher 2's version moves only when `cocher2/` chang
 
 | Version | Live URL | Status |
 |---------|----------|--------|
-| 3.2.2 | `/pedagogies/cocher3/` | **Preview, open to all schools**. The greeting is back on My School: "Good morning, Cher!" and "What would you like to do today, <name>?", as in Co-Cher 1 and 2 |
+| 3.3.0 | `/pedagogies/cocher3/` | **Preview, open to all schools**. Phone mode: the dock holds five places (School, Now, Week, Classes, Lessons) and a More sheet holds the rest with Search, Look and Settings; My School tiles go compact. Daily quote (or the teacher's mantra) and the milestone note on My School, read from Co-Cher 2's own lists (`dashboard.js` now exports `getDailyQuote`, `pickMilestone`, `markMilestoneSeen`; no change to Co-Cher 2's behaviour or number). Fix: the lesson planner's first save rewrote the address to `/cocher2/`, so a reload left Co-Cher 3; the shell now keeps `history.replaceState`, new tab and middle clicks on this address |
+| 3.2.2 | `/pedagogies/cocher3/` | Superseded. The greeting is back on My School: "Good morning, Cher!" and "What would you like to do today, <name>?", as in Co-Cher 1 and 2 |
 | 3.2.1 | `/pedagogies/cocher3/` | Superseded. The Beatty only gate is removed. |
 | 3.2.0 | `/pedagogies/cocher3/` | Superseded. Moved into `cocher3/`; old address `cocher2/cocher3.html` forwards. Own version and notes. Common free time (`/free-time`, from the published staff timetable), Student handover (`/handover`, evidence by file, merged by student, nothing doubled), Term goals (Store `goals`; entries link to a goal). All three in `js/together.js` and `js/goals.js` |
 | 3.1 (builds 1 to 5) | was `cocher2/cocher3.html` | Superseded. Own entries on Now, Week, Term; Personal; teacher links; My School as the landing page with tiles that fly to the menu and back; Admin as a place; Motion switch |

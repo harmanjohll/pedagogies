@@ -348,15 +348,26 @@ a.v3-row:hover .v3-row-t { text-decoration: underline; text-underline-offset: 3p
 .v3-strip .tool svg { width: 14px; height: 14px; stroke-width: 1.5; margin: 0; opacity: 1; }
 .v3-gate { max-width: 520px; margin: 18vh auto 0; padding: 0 24px; text-align: center; }
 
-/* Phone dock: ten places share the width; labels stay, utilities go to icons. */
+/* Phone. The screen is small, so the menu holds the five places a teacher
+ * reaches for most; the rest, with Search and Look, sit behind More. */
+.v3-more { display: none; }
+.v3-more-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.v3-more-list > * { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 16px; border: 1px solid var(--border-light); border-radius: var(--radius-lg); background: var(--bg-card); color: var(--ink); font: inherit; font-size: .9375rem; text-decoration: none; cursor: pointer; text-align: left; }
+.v3-more-list > .on { border-color: var(--ink-faint); }
+.v3-more-list svg { width: 20px; height: 20px; stroke-width: 1.5; color: var(--ink-muted); flex-shrink: 0; }
+.v3-more-list b { font-weight: 500; }
 @media (max-width: 760px) {
-  html.v3[data-nav="dock"] .v3-nav { justify-content: space-between; padding-left: 4px; padding-right: 4px; gap: 0; }
-  html.v3[data-nav="dock"] .v3-link { flex: 1 1 0; min-width: 0; padding: 6px 1px; font-size: .56rem; letter-spacing: -.01em; }
+  html.v3[data-nav="dock"] .v3-nav { justify-content: space-between; padding-left: 8px; padding-right: 8px; gap: 0; overflow: hidden; }
+  html.v3[data-nav="dock"] .v3-link { flex: 1 1 0; min-width: 0; min-height: 48px; padding: 6px 2px; font-size: .6875rem; justify-content: center; }
+  html.v3[data-nav="dock"] .v3-link svg { width: 22px; height: 22px; }
   html.v3[data-nav="dock"] .v3-link span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  html.v3[data-nav="dock"] .v3-util span { display: none; }
-  html.v3[data-nav="dock"] .v3-util { flex: 0 0 34px; }
+  html.v3[data-nav="dock"] .v3-rest, html.v3[data-nav="dock"] .v3-util, html.v3[data-nav="dock"] .v3-sep { display: none; }
+  html.v3[data-nav="dock"] .v3-more { display: flex; }
   .v3-strip { padding: 8px 16px 0 !important; }
-  .v3-title { font-size: 1.7rem; }
+  .v3-strip .tool { font-size: 0; gap: 0; padding: 8px; }            /* Link and Demo keep their icon, lose the word */
+  .v3-strip .tool svg { width: 18px; height: 18px; }
+  .v3-title { font-size: 1.625rem; }
+  .v3-head { gap: 12px; margin-bottom: 16px; }
 }
 
 /* The teacher's own entries */
@@ -410,8 +421,14 @@ html.v3:not([data-look="classic"]) .cce-content { max-width: 1200px !important; 
 .v3-home-tile.now .facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
 .v3-home-tile.now .go { margin-top: auto; font-size: .875rem; color: var(--accent-dark); }
 .v3-home-tile.now > div { flex: 1; display: flex; flex-direction: column; }
-@media (max-width: 1000px) { .v3-home { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 520px) { .v3-home { grid-template-columns: 1fr; } .v3-home-tile.now { grid-column: span 1; } }
+@media (max-width: 1000px) and (min-width: 761px) { .v3-home { grid-template-columns: repeat(2, 1fr); } }
+
+/* The day's line, and a note when the teacher passes a mark. */
+.v3-quote { margin: 12px 0 0; max-width: 62ch; font-family: var(--font-serif); font-style: italic; font-size: .9375rem; line-height: 1.5; color: var(--ink-secondary); }
+.v3-quote span { font-family: var(--font-sans, inherit); font-style: normal; font-size: .8125rem; color: var(--ink-muted); margin-left: 4px; }
+.v3-mile { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; margin-bottom: 16px; padding: 12px 16px; border: 1px solid var(--border-light); border-left: 2px solid var(--accent); border-radius: var(--radius-lg); background: var(--bg-card); }
+.v3-mile b { display: block; font-weight: 600; color: var(--ink); }
+.v3-mile span { font-size: .875rem; color: var(--ink-muted); }
 
 /* My School has no menu of its own: its tiles are the menu. */
 html.v3[data-home]:not(.v3-arriving) .v3-nav { display: none; }
@@ -450,3 +467,21 @@ html.v3[data-nav="dock"]:not([data-home]) #api-key-banner { bottom: calc(76px + 
 .v3-goal.done .t { color: var(--ink-muted); }
 .v3-goal.done .bar i { background: var(--growth); }
 .v3-home-tile:hover, .v3-home-tile:hover *, .v3-tile:hover, .v3-tile:hover * { text-decoration: none; }
+
+/* Phone, My School (after the rules above, so it wins). */
+@media (max-width: 760px) {
+  /* My School: Now first and whole; the places as a compact grid, name and icon only. */
+  .v3-home { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; gap: 8px; }
+  .v3-home-tile { flex-direction: row; align-items: center; gap: 12px; min-height: 56px; padding: 12px 16px; border-radius: var(--radius-lg); }
+  .v3-home-tile .ic { margin: 0; }
+  .v3-home-tile b { font-size: 1rem; font-weight: 500; }
+  .v3-home-tile .d { display: none; }
+  .v3-home-tile.now { grid-column: span 2; grid-row: auto; flex-direction: column; align-items: stretch; padding: 16px; gap: 4px; border-radius: var(--radius-xl); }
+  .v3-home-tile.now .t { font-size: 1.375rem; }
+  .v3-home-tile.now .v3-day { margin: 12px 0 4px; }
+  .v3-home-tile.now .facts { gap: 4px 16px; font-size: .8125rem; }
+  .v3-home-tile.now .go { margin-top: 8px; }
+  .v3-quote { font-size: .875rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .v3-mile { grid-template-columns: 1fr 1fr; }
+  .v3-mile > div { grid-column: span 2; }
+}

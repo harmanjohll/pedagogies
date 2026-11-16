@@ -7,7 +7,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 ## 0. Opening message to paste into the new chat
 
-> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.7; Co-Cher 3 is 3.2.2 in `cocher3/`). First read
+> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.7; Co-Cher 3 is 3.3.0 in `cocher3/`). First read
 > `HANDOVER.md` at the repo root. The next work is in section 2. Don't copy any
 > student data into this repo.
 
@@ -43,13 +43,19 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 - Signing in is a routing step, not real security. Anything that truly needs
   access control needs `backend/`.
 
-### Co-Cher 3 (3.2.2, preview, open to every school)
+### Co-Cher 3 (3.3.0, preview, open to every school)
 
 - **Where:** `cocher3/` (`index.html`, `js/`, `css/cocher3.css`, `demos/`).
   The engine stays in `cocher2/`. `index.html` sets `<base href="../cocher2/">`
   so the engine's relative addresses resolve; `js/shell.js` intercepts clicks on
   `a[href^="#"]` so they stay on the page. Co-Cher 3's own files are referenced
   as `../cocher3/...` in the page and by module relative imports in scripts.
+  **The base address trap:** anything that resolves a bare `#/...` against the
+  page (a link, `history.replaceState`, `location.href = '#...'`) lands in
+  `/cocher2/`. The shell patches clicks, new tab clicks, `pushState` and
+  `replaceState`. `location.hash = ...` is safe. Never write `location.href = '#...'`.
+  **Phone (760px and under):** the dock shows `PRIME` places (shell.js) and a
+  More sheet; other places carry `.v3-rest`.
 - **Boot:** `js/boot.js` imports `shell.js` (registers `window.__cocherShell`)
   then `cocher2/js/app.js`. app.js calls `shell.mount`, `themed`, `routes`,
   `whatsNew`. Any engine change must still be tested in `cocher2.html`.
