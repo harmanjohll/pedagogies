@@ -7,7 +7,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 ## 0. Opening message to paste into the new chat
 
-> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.7; Co-Cher 3 is 3.2.1 in `cocher3/`). First read
+> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.7; Co-Cher 3 is 3.2.2 in `cocher3/`). First read
 > `HANDOVER.md` at the repo root. The next work is in section 2. Don't copy any
 > student data into this repo.
 
@@ -43,7 +43,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 - Signing in is a routing step, not real security. Anything that truly needs
   access control needs `backend/`.
 
-### Co-Cher 3 (3.2.1, preview, open to every school)
+### Co-Cher 3 (3.2.2, preview, open to every school)
 
 - **Where:** `cocher3/` (`index.html`, `js/`, `css/cocher3.css`, `demos/`).
   The engine stays in `cocher2/`. `index.html` sets `<base href="../cocher2/">`
@@ -65,6 +65,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
   `fetchBundledRoster`; Student handover by file), `prefs.js` (look, night,
   type, nav, home, density, motion; key `cocher3_prefs`, mirrored by the inline
   script in `index.html`), `demos.js` + `demos/` (slots for in app animations).
+- **Keep the greeting.** My School opens with "Good morning, Cher!" and the teacher's name. A design pass removed it once (a rule against greeting headlines); the user wants that warmth kept. Do not strip personal touches for style reasons without asking.
 - **Decided with the user:** My School is the landing page and shows no menu;
   tiles fly down to form the menu and back up; the flight plays even when the
   device asks for reduced motion (Motion switch turns it off); default look

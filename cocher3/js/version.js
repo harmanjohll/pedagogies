@@ -8,7 +8,7 @@
  * engine or Co-Cher 2 itself changes.
  */
 
-export const VERSION = '3.2.1';
+export const VERSION = '3.2.2';
 
 /* Newest first. Shown once to a returning teacher, in Co-Cher 3 only. */
 export const NOTES = [
