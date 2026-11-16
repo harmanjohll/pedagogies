@@ -103,6 +103,8 @@ function openLink(routeToLink) {
 }
 
 function paint() {
+  // My School is the menu, laid out large: the dock, rail or bar stays away there.
+  document.documentElement.toggleAttribute('data-home', route() === '/school');
   const nav = document.querySelector('.v3-nav');
   const strip = document.querySelector('.v3-strip');
   if (nav) nav.innerHTML = navHTML();

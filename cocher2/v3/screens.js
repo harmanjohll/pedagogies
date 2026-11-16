@@ -157,7 +157,6 @@ const FACT = {
 
 export function renderSchool(container) {
   const tiles = PLACES.filter(p => p.id !== 'now' && p.id !== 'school');
-  const school = PLACES.find(p => p.id === 'school');
   container.innerHTML = `<div class="main-scroll"><div class="v3-page">
     <div class="v3-head"><div>
       <div class="v3-eyebrow">${dateLine(new Date())}</div>
@@ -171,7 +170,6 @@ export function renderSchool(container) {
       <a class="v3-home-tile now" href="#/now" data-place="now"><span class="k">Now</span><div id="v3-home-now"><span class="v3-row-s">Reading your day…</span></div><span class="go">Open Now →</span></a>
       ${tiles.map(p => { const f = FACT[p.id] ? FACT[p.id]() : ''; const s = visible(p.screens)[0];
         return `<a class="v3-home-tile" href="#${p.route}" data-place="${p.id}"><span class="ic">${ICONS[p.id]}</span><b>${esc(p.label)}</b><span class="d">${esc(f || s.desc)}</span></a>`; }).join('')}
-      ${visible(school.screens).filter(s => s.route !== '/school' && s.route !== '/demos').map(s => `<a class="v3-home-tile" href="#${s.route}" data-place="school"><span class="ic">${ICONS.school}</span><b>${esc(s.label)}</b><span class="d">${esc(s.desc)}</span></a>`).join('')}
     </div></div></div>`;
   let alive = true;
   loadPack(currentSchoolId()).then(pack => { if (alive && pack?.name) container.querySelector('#v3-school-name').textContent = pack.name; }).catch(() => {});
@@ -192,26 +190,47 @@ export function renderSchool(container) {
   return () => { alive = false; };
 }
 
-/* A tapped tile travels to its place in the menu, then the place opens.
- * One short move; skipped for anyone who asks for reduced motion. */
+/* My School shows no menu: the tiles are the menu. When one is tapped, every
+ * tile flies down into its place and the menu forms from them; then the chosen
+ * place opens. Skipped for anyone who asks for reduced motion. */
 function wireTileFlight(container) {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const root = document.documentElement;
+  const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
   container.querySelectorAll('.v3-home-tile[data-place]').forEach(tile => tile.addEventListener('click', (ev) => {
     if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
-    const target = document.querySelector(`.v3-nav [data-place="${tile.dataset.place}"]`);
-    if (!target || !tile.animate) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !tile.animate) return;
+    if (root.classList.contains('v3-arriving')) { ev.preventDefault(); return; }
     ev.preventDefault();
-    const a = tile.getBoundingClientRect(), b = target.getBoundingClientRect();
-    const ghost = tile.cloneNode(true);
-    Object.assign(ghost.style, { position: 'fixed', left: a.left + 'px', top: a.top + 'px', width: a.width + 'px', height: a.height + 'px', margin: 0, zIndex: 500, pointerEvents: 'none', transformOrigin: 'top left' });
-    document.body.appendChild(ghost);
-    tile.style.visibility = 'hidden';
-    const done = () => { ghost.remove(); location.hash = tile.getAttribute('href'); };
-    ghost.animate([
-      { transform: 'none', opacity: 1 },
-      { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: .4 },
-    ], { duration: 480, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }).onfinish = done;
-    target.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }], { duration: 420, delay: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+    const tiles = [...container.querySelectorAll('.v3-home-tile[data-place]')];
+    const from = tiles.map(t => t.getBoundingClientRect());       // before the menu takes its space
+    root.classList.add('v3-arriving');                             // menu laid out, its items still unseen
+    const nav = document.querySelector('.v3-nav');
+    const ghosts = tiles.map((t, i) => {
+      const g = t.cloneNode(true); const a = from[i];
+      Object.assign(g.style, { position: 'fixed', left: a.left + 'px', top: a.top + 'px', width: a.width + 'px', height: a.height + 'px', margin: 0, zIndex: 500, pointerEvents: 'none', transformOrigin: 'top left' });
+      document.body.appendChild(g); return g;
+    });
+    container.querySelector('.v3-home').style.visibility = 'hidden';
+    nav.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: EASE });
+    let last = null;
+    tiles.forEach((t, i) => {
+      const link = nav.querySelector(`[data-place="${t.dataset.place}"]`);
+      const a = from[i], b = (link || nav).getBoundingClientRect();
+      const delay = i * 35;
+      last = ghosts[i].animate([
+        { transform: 'none', opacity: 1 },
+        { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: 0 },
+      ], { duration: 560, delay, easing: EASE, fill: 'forwards' });
+      if (link) link.animate([{ opacity: 0, transform: 'scale(.8)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 320, delay: delay + 300, easing: EASE, fill: 'backwards' });
+    });
+    nav.querySelectorAll('.v3-link:not([data-place]), .v3-link[data-place]').forEach(l => {
+      if (!tiles.some(t => t.dataset.place === l.dataset.place)) l.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 420, easing: EASE, fill: 'backwards' });
+    });
+    last.onfinish = () => {
+      ghosts.forEach(g => g.remove());
+      location.hash = tile.getAttribute('href');
+      setTimeout(() => root.classList.remove('v3-arriving'), 60);
+    };
   }));
 }
 
