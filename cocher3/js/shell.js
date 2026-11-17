@@ -103,7 +103,7 @@ function navHTML() {
   }).join('') + `<button class="v3-link v3-more${here && !PRIME.has(here.id) ? ' on' : ''}" data-act="more" aria-haspopup="dialog">${ICONS.more}<span>${here && !PRIME.has(here.id) ? esc(here.label) : 'More'}</span></button>`;
   const user = getCurrentUser();
   return `
-    <a class="v3-brand" href="#/"><b>Co-Cher</b><span>${BUILD}</span></a>
+    <a class="v3-brand" href="#/" title="My School">${ICONS.mark}<b>Co-Cher</b><span>${BUILD}</span></a>
     ${items}
     <div class="v3-spacer"></div>
     <span class="v3-sep"></span>
@@ -129,7 +129,10 @@ function openMore() {
 function stripHTML() {
   const r = route();
   const place = currentPlace();
-  if (!place) return '';
+  // Top left, where people look for it: the mark, which always leads home to My School.
+  // (With the menu at the side or along the top, the mark sits in the menu instead.)
+  const mark = `<a class="v3-mark" href="#/" title="My School" aria-label="Co-Cher: go to My School">${ICONS.mark}</a>`;
+  if (!place) return mark;
   const screens = screensIn(place);
   const current = screens.filter(s => r === s.route || (s.route !== '/' && r.startsWith(s.route))).sort((a, b) => b.route.length - a.route.length)[0];
   const demo = current?.demo ? demoById(current.demo) : null;
@@ -139,7 +142,7 @@ function stripHTML() {
       ${demo ? `<a class="tool" href="#/demos/${demo.id}" title="A short demo of this screen">${ICONS.play}Demo</a>` : ''}
       <button class="tool" data-act="link" data-route="${esc(current.route)}" title="Also show this screen under another place">${ICONS.link}Link</button>
     </span>` : '';
-  return tabs + tools;
+  return mark + tabs + tools;
 }
 
 /* "Also show this screen under...": the teacher's own tagging. */
