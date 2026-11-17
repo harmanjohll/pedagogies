@@ -26,7 +26,7 @@ const ENC = ['-c:v', 'libx264', '-preset', 'slow', '-crf', '19', '-pix_fmt', 'yu
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 1440, height: 810 }, deviceScaleFactor: 4 / 3 });
   const rec = fs.readFileSync(path.join(__dirname, 'rec.cjs'), 'utf8');
-  const overlay = rec.slice(rec.indexOf('const OVERLAY = `') + 17, rec.indexOf('`;\n\nasync function newContext'));
+  const overlay = rec.slice(rec.indexOf('const OVERLAY = `') + 17, rec.indexOf('\n`;\n', rec.indexOf('const OVERLAY = `')));
   await p.setContent('<html><body style="margin:0;background:#1C2733"></body></html>');
   await p.addScriptTag({ content: overlay.replace(/\\`/g, '`') });
   const card = async (file, k, t, d) => {
