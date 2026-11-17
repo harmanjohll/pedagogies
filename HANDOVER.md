@@ -7,7 +7,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 ## 0. Opening message to paste into the new chat
 
-> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.7; Co-Cher 3 is 3.4.0 in `cocher3/`). First read
+> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.7; Co-Cher 3 is 3.4.1 in `cocher3/`). First read
 > `HANDOVER.md` at the repo root. The next work is in section 2. Don't copy any
 > student data into this repo.
 
@@ -43,7 +43,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 - Signing in is a routing step, not real security. Anything that truly needs
   access control needs `backend/`.
 
-### Co-Cher 3 (3.4.0, preview, open to every school)
+### Co-Cher 3 (3.4.1, preview, open to every school)
 
 - **Where:** `cocher3/` (`index.html`, `js/`, `css/cocher3.css`, `demos/`).
   The engine stays in `cocher2/`. `index.html` sets `<base href="../cocher2/">`
