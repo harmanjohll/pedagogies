@@ -84,10 +84,27 @@ const OVERLAY = `
 })();
 `;
 
+function madeUpTimetableCsv() {
+  const real = path.resolve(__dirname, '../../../cocher2/btyrelief/BTYTT_2026Sem2_v1.csv');
+  const head = fs.readFileSync(real, 'utf8').split('\n')[0].replace(/^\uFEFF/, '').trim().split(',');   // the header line only
+  const P = { '07:55': 1, '08:30': 2, '09:05': 3, '09:40': 4, '10:50': 6, '11:25': 7, '12:00': 8, '12:35': 9, '13:10': 10, '13:45': 11 };
+  const rows = require('./roster.cjs').teachers.map(t => {
+    const row = Object.fromEntries(head.map(h => [h, '']));
+    row.DEPARTMENT = t.department; row.SUBJECT = t.department; row.NAME = t.name.toUpperCase(); row["Teacher's Email"] = t.email;
+    t.entries.forEach(e => { let p = P[e.start]; const last = Object.keys(P).find(k => P[k] === p);
+      for (let st = e.start; p && st < e.end; ) { const col = `${e.cycle}${e.day}P${String(p).padStart(2, '0')}`; if (col in row) row[col] = `${e.class} / ${e.room}`;
+        const [h, m] = st.split(':').map(Number); const n = h * 60 + m + 35; st = `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`; p = P[st]; } });
+    return head.map(h => row[h]).join(',');
+  });
+  return [head.join(','), ...rows].join('\n') + '\n';
+}
+
 async function newContext(browser, user) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DSF, timezoneId: 'Asia/Singapore', locale: 'en-SG', acceptDownloads: true });
   // A made up staff roster stands in for the school's published one: no real names or timetables on screen.
   await ctx.route(/\/schools\/bty\/staff\.json/, r => r.fulfill({ body: JSON.stringify(require('./roster.cjs')), contentType: 'application/json' }));
+  // The same for the timetable file behind Find a Teacher: its header is kept, its rows are built from the made up roster.
+  await ctx.route(/\/btyrelief\/[^/]+\.csv/, r => r.fulfill({ body: madeUpTimetableCsv(), contentType: 'text/csv' }));
   if (FONTCSS) await ctx.route(/^https:\/\/fonts\.googleapis\.com\//, r => r.fulfill({ body: FONTCSS, contentType: 'text/css' }));
   // A fixed school morning, so the timetable always has a lesson on.
   await ctx.addInitScript(at => { const T = new Date(at).getTime(), D = Date; const off = T - D.now();

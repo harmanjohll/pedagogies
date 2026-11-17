@@ -200,6 +200,21 @@ const S = {
     await d.click('.v3-opt[data-key="look"][data-val="fjord"]'); await d.wait(1200);
     await d.endCard('Make it yours', 'Personal, then Look and feel.');
   }],
+  '12-admin': [BTY, '#/admin', async (page, d) => {
+    await d.card('Admin', 'What is in Admin?', 'Forms, colleagues, students and events, in one place.');
+    await d.cap('Quick tools', 'The forms and links your school uses most, one tap away.');
+    await d.ring('#admin-tools'); await d.wait(2600); await d.unring();
+    await d.scroll(null, 500, 20, 900); await d.wait(300);
+    await d.cap('Find a teacher', 'Pick a department and a name: where they are now, and their day.');
+    await d.move('#ft-dept'); await page.selectOption('#ft-dept', { label: 'Mathematics' }); await d.wait(600);
+    await d.move('#ft-teacher'); await page.selectOption('#ft-teacher', { index: 1 }); await d.wait(700);
+    await d.ring('#ft-result'); await d.wait(2600); await d.unring();
+    await d.scroll(null, 760, 24, 1100); await d.wait(300);
+    await d.cap('Events and activities', 'Plan an event with its approvals, tasks and people.');
+    await d.move(page.locator('#events-list h3').first()); await d.wait(1200);
+    await d.move(page.locator('#events-list h3').nth(1)); await d.wait(1600);
+    await d.endCard('Admin', 'Student Finder and Common free time have their own videos.');
+  }],
 };
 
 (async () => {
