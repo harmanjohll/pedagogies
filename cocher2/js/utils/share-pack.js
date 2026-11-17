@@ -90,7 +90,7 @@ function dedupeKey(title, author) {
  * (full record incl. html + spec, pulled from IndexedDB — hence async).
  * Returns the pack object so callers can preview or test it.
  */
-export async function exportPack({ title, lessons = [], stimulus = [], sources = [], layouts = [], uploads = [] }) {
+export async function exportPack({ title, lessons = [], stimulus = [], sources = [], layouts = [], uploads = [], download = true }) {
   const simIds = new Set();
   lessons.forEach(l => (l.attachedResources || []).forEach(r => {
     if (r.type === 'simulation' && r.id) simIds.add(r.id);
@@ -134,6 +134,7 @@ export async function exportPack({ title, lessons = [], stimulus = [], sources =
       frameworks
     }
   };
+  if (!download) return pack;   // the caller wraps the pack in its own file (Co-Cher 3, Send to a colleague)
   const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

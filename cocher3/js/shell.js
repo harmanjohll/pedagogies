@@ -15,7 +15,7 @@ import { getPrefs, setPref, applyPrefs, CHOICES } from './prefs.js';
 import { VERSION, NOTES } from './version.js';
 import { PLACES, ICONS, placeFor, screensIn, getLinks, setLinks, ALL_SCREENS } from './places.js';
 import { renderHome, renderNow, renderSchool, renderWeek, renderTerm, renderHub, renderPaths } from './screens.js';
-import { renderFreeTime, renderHandover } from './together.js';
+import { renderFreeTime, renderHandover, renderSend } from './together.js';
 import { openModal } from '../../cocher2/js/components/modals.js';
 import { renderDemos, demoById } from './demos.js';
 import { openSearch } from '../../cocher2/js/components/unified-search.js';
@@ -282,6 +282,7 @@ window.__cocherShell = {
     registerRoute('/paths', renderPaths);
     registerRoute('/free-time', renderFreeTime);
     registerRoute('/handover', renderHandover);
+    registerRoute('/send', renderSend);
     registerRoute('/demos', renderDemos);
     registerRoute('/demos/:id', renderDemos);
   },

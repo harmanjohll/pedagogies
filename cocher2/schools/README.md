@@ -16,6 +16,7 @@ schools/
   <id>/staff.json    that school's roster (see "colleague list" below)
   demo-timetables/   invented weeks for the demo accounts, clearly labelled
   _template.json     blank — copy this to start a new school
+  ONBOARDING.md      the form a new school fills in; its answers become the pack
   README.md          this file
 ```
 

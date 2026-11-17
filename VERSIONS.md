@@ -48,7 +48,8 @@ and show in Co-Cher 3 only. Co-Cher 2's version moves only when `cocher2/` chang
 
 | Version | Live URL | Status |
 |---------|----------|--------|
-| 3.3.0 | `/pedagogies/cocher3/` | **Preview, open to all schools**. Phone mode: the dock holds five places (School, Now, Week, Classes, Lessons) and a More sheet holds the rest with Search, Look and Settings; My School tiles go compact. Daily quote (or the teacher's mantra) and the milestone note on My School, read from Co-Cher 2's own lists (`dashboard.js` now exports `getDailyQuote`, `pickMilestone`, `markMilestoneSeen`; no change to Co-Cher 2's behaviour or number). Fix: the lesson planner's first save rewrote the address to `/cocher2/`, so a reload left Co-Cher 3; the shell now keeps `history.replaceState`, new tab and middle clicks on this address |
+| 3.4.0 | `/pedagogies/cocher3/` | **Preview, open to all schools**. Send to a colleague (`/send`, in `js/together.js`): the teacher ticks lessons, room layouts, entries and term goals; one file of kind `cocher-send`. Lessons and layouts ride in a Department Pack (`exportPack` gained `download: false`), entries and goals beside it. Receive skips what is already held; a Department Pack file loads there too |
+| 3.3.0 | `/pedagogies/cocher3/` | Superseded. Phone mode: the dock holds five places (School, Now, Week, Classes, Lessons) and a More sheet holds the rest with Search, Look and Settings; My School tiles go compact. Daily quote (or the teacher's mantra) and the milestone note on My School, read from Co-Cher 2's own lists (`dashboard.js` now exports `getDailyQuote`, `pickMilestone`, `markMilestoneSeen`; no change to Co-Cher 2's behaviour or number). Fix: the lesson planner's first save rewrote the address to `/cocher2/`, so a reload left Co-Cher 3; the shell now keeps `history.replaceState`, new tab and middle clicks on this address |
 | 3.2.2 | `/pedagogies/cocher3/` | Superseded. The greeting is back on My School: "Good morning, Cher!" and "What would you like to do today, <name>?", as in Co-Cher 1 and 2 |
 | 3.2.1 | `/pedagogies/cocher3/` | Superseded. The Beatty only gate is removed. |
 | 3.2.0 | `/pedagogies/cocher3/` | Superseded. Moved into `cocher3/`; old address `cocher2/cocher3.html` forwards. Own version and notes. Common free time (`/free-time`, from the published staff timetable), Student handover (`/handover`, evidence by file, merged by student, nothing doubled), Term goals (Store `goals`; entries link to a goal). All three in `js/together.js` and `js/goals.js` |
@@ -104,9 +105,9 @@ The canonical root URL serves this line:
   at freeze time — opening the archive will never read or corrupt current data. The archive
   therefore starts "empty" (fresh login/API key) by design.
 - The v2 archive still reports usage events to the same analytics Google Sheet as the live app.
-- `backup.html` in the repo root is a backup of the **Spatial Pedagogy Planner v6.0**, not Co-Cher.
-  The `spatialplanner*.html` files follow the same convention as this table: the unversioned
-  file is the latest, versioned files are archives.
+- The early Spatial Pedagogy Planner pages live in `archive/spatialplanner/` (`backup.html` there is
+  v6.0; the unversioned `spatialplanner.html` is the latest, versioned files are older). The files of
+  the same names in the repo root only forward to them, so old bookmarks still work.
 - Sign-in in all versions is a client-side roster check (timetable CSV), not real authentication.
 
 ## Archiving a future version (e.g. freezing v5.1 before the next release)

@@ -8,10 +8,13 @@
  * engine or Co-Cher 2 itself changes.
  */
 
-export const VERSION = '3.3.0';
+export const VERSION = '3.4.0';
 
 /* Newest first. Shown once to a returning teacher, in Co-Cher 3 only. */
 export const NOTES = [
+  { version: '3.4.0', items: [
+    ['Send to a colleague', 'In Lessons, under Send: tick lessons, room layouts, entries or term goals, and pass on one file. Your colleague loads it in the same place. No student data goes in it.'],
+  ] },
   { version: '3.3.0', items: [
     ['On your phone', 'The menu holds five places: School, Now, Week, Classes, Lessons. Everything else is one tap away under More. My School fits one screen.'],
     ['A line for the day', 'My School carries the day\u2019s quote, or your own mantra if you have set one.'],

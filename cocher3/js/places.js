@@ -55,7 +55,7 @@ export const PLACES = [
     { route: '/handover', label: 'Handover', desc: 'Pass evidence on a class to a colleague, and take in theirs' },
     { route: '/report-comments', label: 'Report comments', desc: 'Draft holistic comments from levels and evidence', tag: 'beta' },
   ] },
-  { id: 'lessons', group: 'Work', label: 'Lessons', route: '/lessons', match: ['/lessons', '/lesson-planner', '/spatial', '/lesson-rehearsal', '/cce', '/autopilot', '/relief-kit', '/present', '/deck', '/live'], screens: [
+  { id: 'lessons', group: 'Work', label: 'Lessons', route: '/lessons', match: ['/lessons', '/lesson-planner', '/spatial', '/lesson-rehearsal', '/cce', '/autopilot', '/relief-kit', '/present', '/deck', '/live', '/send'], screens: [
     { route: '/lessons', label: 'All lessons', desc: 'Every lesson, and where it is in the cycle', demo: 'lesson-cycle' },
     { route: '/lesson-planner', label: 'Plan', desc: 'Design a lesson with Co-Cher', demo: 'plan' },
     { route: '/spatial', label: 'Room', desc: 'Lay out the room for the learning', demo: 'room' },
@@ -63,6 +63,7 @@ export const PLACES = [
     { route: '/cce', label: 'CCE2021', desc: 'Six content areas, discussions, and Paths in ECG', demo: 'paths' },
     { route: '/autopilot', label: 'Auto-Lesson', desc: 'Scheme of work to reflection in one pass', tag: 'beta' },
     { route: '/relief-kit', label: 'Relief kit', desc: 'A one period lesson any relief teacher can run', tag: 'beta' },
+    { route: '/send', label: 'Send', desc: 'Send lessons, layouts, entries or goals to a colleague, and take in theirs' },
   ] },
   { id: 'assess', group: 'Work', label: 'Assess', route: '/assessment/afl', match: ['/assessment', '/question-bank'], screens: [
     { route: '/assessment/afl', label: 'For learning', desc: 'Formative strategies, from intentions and success criteria' },

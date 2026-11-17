@@ -16,7 +16,8 @@ This repository is public and is served by GitHub Pages at
 | `live/` | Live session pages for students | | |
 | `briefing-videos/tools/` | Scripts that record demo and briefing videos. Videos themselves stay out of the repo | | |
 | `archive/` | Old Co-Cher 1 builds. Its subfolders `v2` to `v7` are **Co-Cher 1 versions**, not Co-Cher 2 or 3 | | Read only |
-| `spatialplanner*.html`, `backup.html`, `cocher.html` | Early standalone pages, kept because their addresses may be bookmarked | | Legacy |
+| `archive/spatialplanner/` | The early standalone Spatial Planner pages | | Read only |
+| `spatialplanner*.html`, `backup.html`, `cocher.html` (root) | Forwarders only, so old bookmarks still open the archived pages | | Forwarders |
 
 ## Versions
 
