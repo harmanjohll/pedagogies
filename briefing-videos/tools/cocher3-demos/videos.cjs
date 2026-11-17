@@ -1,6 +1,8 @@
 // Co-Cher 3 instructional videos. Run: node videos.cjs [name ...]   (no names = all)
 // One task per clip, 20 to 40 seconds: a question card, three steps at most, ends on the result.
-const { take } = require('./rec.cjs');
+const { take, AT } = require('./rec.cjs');
+// Dates typed on screen follow the recording day (two days on: a Thursday).
+const IN_TWO_DAYS = new Date(new Date(AT).getTime() + (8 + 48) * 3600e3).toISOString().slice(0, 10);
 const path = require('path'), fs = require('fs');
 const OUT = process.env.OUT_DIR || path.join(__dirname, 'out');
 fs.mkdirSync(OUT, { recursive: true });
@@ -45,7 +47,7 @@ const S = {
     await d.click(page.locator('[data-add-entry]').first()); await d.wait(500);
     await page.locator('#ag-title').pressSequentially('Mark 4A titration reports', { delay: 45 });
     await d.move('#ag-kind'); await page.selectOption('#ag-kind', 'assess'); await d.wait(400);
-    await page.fill('#ag-date', '2026-10-22'); await d.wait(500);
+    await page.fill('#ag-date', IN_TWO_DAYS); await d.wait(500);
     await d.click('.modal [data-act="save"]'); await d.wait(900);
     await d.cap('It sits on its day in Week', 'Beside your timetable, so the week shows all of your work.');
     await d.click('.v3-nav [data-place="week"]'); await d.wait(900);

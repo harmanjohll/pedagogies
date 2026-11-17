@@ -8,7 +8,8 @@ const { execFileSync } = require('child_process');
 
 const BASE = process.env.BASE_URL || 'http://localhost:8765/pedagogies/cocher3/';
 const CDN = path.resolve(process.env.CDN_DIR || path.join(__dirname, '../cocher2-demos/cdn/node_modules'));
-const AT = process.env.AT || '2026-10-20T09:20:00+08:00';
+// A Tuesday in the middle of Term 3: ordinary teaching, no exams or holidays near, so what is on screen makes sense.
+const AT = process.env.AT || '2026-07-21T09:20:00+08:00';
 const FONTCSS = process.env.FONT_CSS && fs.existsSync(process.env.FONT_CSS) ? fs.readFileSync(process.env.FONT_CSS, 'utf8') : '';   // local copy of the web fonts, for a sandbox
 const W = 1440, H = 810, DSF = 4 / 3;               // 1920 x 1080 frames
 
@@ -234,4 +235,4 @@ async function take(name, user, hash, script, outDir, pre) {
   } finally { await browser.close(); }
 }
 
-module.exports = { take, newContext, boot, Recorder, director, BASE, W, H };
+module.exports = { take, newContext, boot, Recorder, director, BASE, W, H, AT };
