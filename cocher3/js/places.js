@@ -26,6 +26,7 @@ export const ICONS = {
   look: I('<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M12 12h8.5"/>'),
   settings: I('<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>'),
   link: I('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/>'),
+  more: I('<circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/>'),
   play: I('<circle cx="12" cy="12" r="8.5"/><path d="m10 8.5 5.5 3.5-5.5 3.5z"/>'),
 };
 
@@ -54,7 +55,7 @@ export const PLACES = [
     { route: '/handover', label: 'Handover', desc: 'Pass evidence on a class to a colleague, and take in theirs' },
     { route: '/report-comments', label: 'Report comments', desc: 'Draft holistic comments from levels and evidence', tag: 'beta' },
   ] },
-  { id: 'lessons', group: 'Work', label: 'Lessons', route: '/lessons', match: ['/lessons', '/lesson-planner', '/spatial', '/lesson-rehearsal', '/cce', '/autopilot', '/relief-kit', '/present', '/deck', '/live'], screens: [
+  { id: 'lessons', group: 'Work', label: 'Lessons', route: '/lessons', match: ['/lessons', '/lesson-planner', '/spatial', '/lesson-rehearsal', '/cce', '/autopilot', '/relief-kit', '/present', '/deck', '/live', '/send'], screens: [
     { route: '/lessons', label: 'All lessons', desc: 'Every lesson, and where it is in the cycle', demo: 'lesson-cycle' },
     { route: '/lesson-planner', label: 'Plan', desc: 'Design a lesson with Co-Cher', demo: 'plan' },
     { route: '/spatial', label: 'Room', desc: 'Lay out the room for the learning', demo: 'room' },
@@ -62,6 +63,7 @@ export const PLACES = [
     { route: '/cce', label: 'CCE2021', desc: 'Six content areas, discussions, and Paths in ECG', demo: 'paths' },
     { route: '/autopilot', label: 'Auto-Lesson', desc: 'Scheme of work to reflection in one pass', tag: 'beta' },
     { route: '/relief-kit', label: 'Relief kit', desc: 'A one period lesson any relief teacher can run', tag: 'beta' },
+    { route: '/send', label: 'Send', desc: 'Send lessons, layouts, entries or goals to a colleague, and take in theirs' },
   ] },
   { id: 'assess', group: 'Work', label: 'Assess', route: '/assessment/afl', match: ['/assessment', '/question-bank'], screens: [
     { route: '/assessment/afl', label: 'For learning', desc: 'Formative strategies, from intentions and success criteria' },

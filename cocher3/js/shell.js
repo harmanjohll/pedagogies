@@ -15,7 +15,7 @@ import { getPrefs, setPref, applyPrefs, CHOICES } from './prefs.js';
 import { VERSION, NOTES } from './version.js';
 import { PLACES, ICONS, placeFor, screensIn, getLinks, setLinks, ALL_SCREENS } from './places.js';
 import { renderHome, renderNow, renderSchool, renderWeek, renderTerm, renderHub, renderPaths } from './screens.js';
-import { renderFreeTime, renderHandover } from './together.js';
+import { renderFreeTime, renderHandover, renderSend } from './together.js';
 import { openModal } from '../../cocher2/js/components/modals.js';
 import { renderDemos, demoById } from './demos.js';
 import { openSearch } from '../../cocher2/js/components/unified-search.js';
@@ -23,6 +23,8 @@ import { currentSchoolId, getCurrentUser } from '../../cocher2/js/components/log
 import { Store, storageKeyFor } from '../../cocher2/js/state.js';
 import { idbGet, idbPut } from '../../cocher2/js/utils/storage.js';
 
+/* On a phone the menu holds these five; the rest sit behind More. */
+const PRIME = new Set(['school', 'now', 'week', 'classes', 'lessons']);
 const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 /* '/' is the landing page: My School, unless the teacher chose to start elsewhere. */
 const route = () => {
@@ -41,14 +43,29 @@ export const BUILD = VERSION;
 
 /* This page has a base address (the engine's folder), so a link written as
  * "#/classes" would leave for that folder. Keep every such link here. */
+const here = (hash) => location.pathname + location.search + hash;
 document.addEventListener('click', (e) => {
-  if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  if (e.defaultPrevented) return;
   const a = e.target.closest && e.target.closest('a[href^="#"]');
-  if (!a || a.target === '_blank') return;
-  e.preventDefault();
+  if (!a) return;
   const h = a.getAttribute('href');
+  // A new tab or window (Ctrl, Cmd, Shift, or target) must open Co-Cher 3 too.
+  if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target === '_blank') {
+    e.preventDefault(); window.open(here(h), '_blank', 'noopener'); return;
+  }
+  e.preventDefault();
   if (h.length > 1) { if (location.hash === h) window.dispatchEvent(new HashChangeEvent('hashchange')); else location.hash = h; }
 });
+document.addEventListener('auxclick', (e) => {
+  const a = e.button === 1 && e.target.closest && e.target.closest('a[href^="#"]');
+  if (a) { e.preventDefault(); window.open(here(a.getAttribute('href')), '_blank', 'noopener'); }
+});
+/* The same for code that rewrites the address bar: the lesson planner does it
+ * on its first save, and without this the address became a Co-Cher 2 one. */
+for (const k of ['pushState', 'replaceState']) {
+  const f = history[k].bind(history);
+  history[k] = (state, title, url) => f(state, title, typeof url === 'string' && url.startsWith('#') ? here(url) : url);
+}
 
 /* What changed, once, to a returning teacher. Co-Cher 3's own notes only. */
 function whatsNew() {
@@ -82,8 +99,8 @@ function navHTML() {
   const items = PLACES.map(p => {
     const head = p.group !== group ? `${group ? '<span class="v3-sep"></span>' : ''}<div class="v3-group">${p.group}</div>` : '';
     group = p.group;
-    return `${head}<a class="v3-link${here && here.id === p.id ? ' on' : ''}" href="#${p.route}" data-place="${p.id}">${ICONS[p.id]}<span>${p.label}</span></a>`;
-  }).join('');
+    return `${head}<a class="v3-link${PRIME.has(p.id) ? '' : ' v3-rest'}${here && here.id === p.id ? ' on' : ''}" href="#${p.route}" data-place="${p.id}">${ICONS[p.id]}<span>${p.label}</span></a>`;
+  }).join('') + `<button class="v3-link v3-more${here && !PRIME.has(here.id) ? ' on' : ''}" data-act="more" aria-haspopup="dialog">${ICONS.more}<span>${here && !PRIME.has(here.id) ? esc(here.label) : 'More'}</span></button>`;
   const user = getCurrentUser();
   return `
     <a class="v3-brand" href="#/"><b>Co-Cher</b><span>${BUILD}</span></a>
@@ -92,6 +109,21 @@ function navHTML() {
     <span class="v3-sep"></span>
     <button class="v3-link v3-util" data-act="search">${ICONS.search}<span>Search</span><kbd>Ctrl K</kbd></button>
     <div class="v3-school"><i></i><b>${esc(schoolPack?.name || user?.schoolName || 'Your school')}</b>${esc(user?.preferredName || user?.name || user?.email || '')}</div>`;
+}
+
+/* Phone: everything that is not in the five, one tap away. */
+function openMore() {
+  const here = currentPlace();
+  const { backdrop, close } = openModal({ title: 'More', width: 420,
+    body: `<div class="v3-more-list">
+      ${PLACES.filter(p => !PRIME.has(p.id)).map(p => `<a href="#${p.route}" class="${here && here.id === p.id ? 'on' : ''}">${ICONS[p.id]}<b>${esc(p.label)}</b></a>`).join('')}
+      <button data-more="search">${ICONS.search}<b>Search</b></button>
+      <button data-more="look">${ICONS.look}<b>Look and feel</b></button>
+      <a href="#/settings">${ICONS.settings}<b>Settings</b></a>
+    </div>` });
+  backdrop.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setTimeout(close, 0)));
+  backdrop.querySelector('[data-more="search"]').onclick = () => { close(); openSearch(); };
+  backdrop.querySelector('[data-more="look"]').onclick = () => { close(); openLook(); };
 }
 
 function stripHTML() {
@@ -138,7 +170,8 @@ function paint() {
   const root = document.documentElement, toHome = route() === '/school';
   if (toHome && !root.hasAttribute('data-home')) {
     const rects = {};
-    document.querySelectorAll('.v3-nav [data-place]').forEach(l => { const r = l.getBoundingClientRect(); if (r.width) rects[l.dataset.place] = { left: r.left, top: r.top, width: r.width, height: r.height }; });
+    const more = document.querySelector('.v3-nav .v3-more');
+    document.querySelectorAll('.v3-nav [data-place]').forEach(l => { let r = l.getBoundingClientRect(); if (!r.width && more) r = more.getBoundingClientRect(); if (r.width) rects[l.dataset.place] = { left: r.left, top: r.top, width: r.width, height: r.height }; });
     window.__v3DockRects = Object.keys(rects).length ? rects : null;
   }
   root.toggleAttribute('data-home', toHome);
@@ -221,6 +254,7 @@ window.__cocherShell = {
       if (!b) return;
       if (b.dataset.act === 'search') openSearch();
       if (b.dataset.act === 'look') openLook();
+      if (b.dataset.act === 'more') openMore();
       if (b.dataset.act === 'link') openLink(b.dataset.route);
     });
     backupOnce();
@@ -248,6 +282,7 @@ window.__cocherShell = {
     registerRoute('/paths', renderPaths);
     registerRoute('/free-time', renderFreeTime);
     registerRoute('/handover', renderHandover);
+    registerRoute('/send', renderSend);
     registerRoute('/demos', renderDemos);
     registerRoute('/demos/:id', renderDemos);
   },

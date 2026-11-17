@@ -1,7 +1,7 @@
 /*
  * Co-Cher 3: working with colleagues
  * ==================================
- * Two screens that need no server.
+ * Three screens that need no server.
  *
  * Common free time (/free-time): pick colleagues and see when everyone,
  * including you, is free. Read from the staff timetable the school published
@@ -14,6 +14,12 @@
  * Student Finder key, else by name within the same form class. Nothing is
  * doubled: an observation already held is skipped. The file holds student
  * names, so it travels by the school's own channels and never into this repo.
+ *
+ * Send to a colleague (/send): the teacher ticks what to send (lessons, room
+ * layouts, entries, term goals) and gets one file. Lessons and layouts ride in
+ * a Department Pack (cocher2/js/utils/share-pack.js), so everything a lesson
+ * needs comes along and the receiver's copy is a draft that names its author.
+ * No student data is in this file: lessons lose their class link on the way.
  */
 
 import { Store } from '../../cocher2/js/state.js';
@@ -23,7 +29,10 @@ import { getMyTimetable } from '../../cocher2/js/utils/timetable.js';
 import { cycleForDate } from '../../cocher2/js/utils/school.js';
 import { showToast } from '../../cocher2/js/components/toast.js';
 import { classCode } from '../../cocher2/js/utils/evidence.js';
-import { ymd, addEntry } from './agenda.js';
+import { ymd, addEntry, allEntries, KINDS } from './agenda.js';
+import { allGoals } from './goals.js';
+import { exportPack, importPack } from '../../cocher2/js/utils/share-pack.js';
+import { generateId } from '../../cocher2/js/state.js';
 
 const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const toMin = (t) => { const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? +m[1] * 60 + +m[2] : null; };
@@ -234,6 +243,122 @@ export function renderHandover(container) {
     });
     incoming = null; matches = [];
     draw(`Added ${plural(n, 'observation')} on ${plural(kids, 'student')}. They show on each student’s profile.`);
+  }
+
+  draw();
+}
+
+
+/* ══════════ Send to a colleague ══════════ */
+
+const SEND_KIND = 'cocher-send';
+const who = () => { const u = getCurrentUser() || {}; return getPreferredName() || u.name || u.email || 'A colleague'; };
+const same = (a, b) => norm(a) === norm(b);
+
+export function renderSend(container) {
+  let incoming = null;           // { doc, pack: { summary, apply } | null, entries, goals }
+
+  const groups = () => [
+    { key: 'lessons', label: 'Lessons', items: Store.getLessons().map(l => ({ id: l.id, t: l.title || 'Untitled lesson', s: Store.getClass(l.classId)?.name || '' })) },
+    { key: 'layouts', label: 'Room layouts', items: Store.getSavedLayouts().map(l => ({ id: l.id, t: l.name || 'Untitled layout', s: '' })) },
+    { key: 'entries', label: 'Entries', items: allEntries().filter(e => !e.done).map(e => ({ id: e.id, t: e.title || 'Untitled entry', s: [(KINDS[e.kind] || KINDS.other).label, e.date].filter(Boolean).join(', ') })) },
+    { key: 'goals', label: 'Term goals', items: allGoals().map(g => ({ id: g.id, t: g.title, s: g.note || '' })) },
+  ];
+
+  function draw(note = '') {
+    const gs = groups(); const any = gs.some(g => g.items.length);
+    container.innerHTML = `<div class="main-scroll"><div class="v3-page">
+      <div class="v3-head"><div><div class="v3-eyebrow">With colleagues</div><h1 class="v3-title">Send to a colleague</h1>
+        <p class="v3-lede">Tick what to send. You get one file to pass on; your colleague loads it here and it joins their own work</p></div></div>
+      <div class="v3-grid">
+        <div class="v3-col-7"><div class="v3-panel">
+          <div class="v3-h">Send <span id="sd-count" class="v3-row-s"></span></div>
+          ${any ? gs.filter(g => g.items.length).map((g, i) => `<details class="v3-pick"${i === 0 ? ' open' : ''}>
+              <summary><b>${g.label}</b><span data-n="${g.key}">${g.items.length}</span></summary>
+              ${g.items.map(x => `<label><input type="checkbox" data-g="${g.key}" value="${esc(x.id)}"><span><span class="t">${esc(x.t)}</span>${x.s ? `<span class="s">${esc(x.s)}</span>` : ''}</span></label>`).join('')}
+            </details>`).join('') + `<button class="btn btn-primary" id="sd-send" style="margin-top:16px;" disabled>Download the file</button>
+            <p class="v3-row-s" style="margin-top:12px;">No student data goes in this file. A lesson leaves its class behind; your reflections stay with you.</p>`
+          : '<p class="v3-empty">Nothing to send yet. Lessons, room layouts, entries and term goals show here once you have some.</p>'}
+        </div></div>
+        <div class="v3-col-5"><div class="v3-panel">
+          <div class="v3-h">Receive</div>
+          <input type="file" id="sd-file" accept=".json,application/json" hidden>
+          <button class="btn btn-secondary" id="sd-pick">Load a file from a colleague</button>
+          <div id="sd-in" style="margin-top:12px;">${note ? `<p class="v3-row-t">${esc(note)}</p>` : ''}${incoming ? preview() : ''}</div>
+        </div></div>
+      </div></div></div>`;
+    const picked = () => [...container.querySelectorAll('input[data-g]:checked')];
+    container.querySelectorAll('input[data-g]').forEach(i => i.addEventListener('change', () => {
+      const n = picked().length;
+      container.querySelector('#sd-send').disabled = !n;
+      container.querySelector('#sd-count').textContent = n ? `${n} chosen` : '';
+    }));
+    container.querySelector('#sd-send')?.addEventListener('click', () => send(picked()));
+    container.querySelector('#sd-pick').addEventListener('click', () => container.querySelector('#sd-file').click());
+    container.querySelector('#sd-file').addEventListener('change', load);
+    container.querySelector('#sd-add')?.addEventListener('click', take);
+  }
+
+  async function send(boxes) {
+    const ids = (g) => new Set(boxes.filter(b => b.dataset.g === g).map(b => b.value));
+    const L = ids('lessons'), Y = ids('layouts'), E = ids('entries'), G = ids('goals');
+    const lessons = Store.getLessons().filter(l => L.has(l.id)), layouts = Store.getSavedLayouts().filter(l => Y.has(l.id));
+    const pack = (lessons.length || layouts.length) ? await exportPack({ title: `From ${who()}`, lessons, layouts, download: false }) : null;
+    const doc = { kind: SEND_KIND, v: 1, at: Date.now(), from: { name: who() }, pack,
+      // an entry's links to a class or a lesson are local, so they stay behind; its goal comes along if the goal does
+      entries: allEntries().filter(e => E.has(e.id)).map(e => ({ kind: e.kind, title: e.title, date: e.date || '', goalId: G.has(e.goalId) ? e.goalId : '' })),
+      goals: allGoals().filter(g => G.has(g.id)).map(g => ({ id: g.id, title: g.title, note: g.note || '' })) };
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(doc)], { type: 'application/json' }));
+    a.download = `from ${who()} ${ymd(new Date())}.cocher.json`.replace(/[\\/:*?"<>|]/g, ' ');
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    showToast(`${plural(boxes.length, 'item')} in the file`, 'success');
+  }
+
+  async function load(ev) {
+    const f = ev.target.files[0]; if (!f) return;
+    try {
+      let doc = JSON.parse(await f.text());
+      if (doc?.deptpack) doc = { kind: SEND_KIND, from: doc.sharedBy, pack: doc, entries: [], goals: [] };   // a Department Pack is welcome too
+      if (doc?.kind !== SEND_KIND) throw new Error('not ours');
+      const mine = allEntries(), goals = allGoals();
+      // what the pack would really add: the same title from the same author is already held
+      const by = doc.pack?.sharedBy?.name || 'A colleague';
+      const held = (list, name) => (x) => !list.some(m => same(m[name] || m.title, x[name] || x.title) && same(m.sharedBy, by));
+      const fresh = doc.pack ? { lessons: (doc.pack.items?.lessons || []).filter(held(Store.getLessons(), 'title')).length,
+        layouts: (doc.pack.items?.layouts || []).filter(held(Store.getSavedLayouts(), 'name')).length } : { lessons: 0, layouts: 0 };
+      incoming = { doc, fresh, pack: doc.pack ? importPack(doc.pack) : null,
+        entries: (doc.entries || []).filter(e => e && e.title && !mine.some(m => same(m.title, e.title) && (m.date || '') === (e.date || ''))),
+        goals: (doc.goals || []).filter(g => g && g.title && !goals.some(m => same(m.title, g.title))) };
+      draw();
+    } catch { incoming = null; draw('That file is not from Co-Cher, or it is empty.'); }
+  }
+
+  function preview() {
+    const { doc, fresh, entries, goals } = incoming;
+    const parts = [fresh.lessons ? plural(fresh.lessons, 'lesson') : '', fresh.layouts ? plural(fresh.layouts, 'room layout') : '', entries.length ? plural(entries.length, 'entry').replace('entrys', 'entries') : '', goals.length ? plural(goals.length, 'term goal') : ''].filter(Boolean);
+    return `<p class="v3-row-t">From ${esc(doc.from?.name || 'a colleague')}</p>
+      ${parts.length ? `<p class="v3-row-s">${esc(parts.join(', '))}. Lessons arrive as drafts. Anything you already hold is skipped.</p>
+        <button class="btn btn-primary" id="sd-add" style="margin-top:12px;">Add to my work</button>`
+      : '<p class="v3-row-s">Nothing new to add: you already hold these.</p>'}`;
+  }
+
+  function take() {
+    const { doc, pack, entries, goals } = incoming; const from = doc.from?.name || 'a colleague';
+    const done = [];
+    if (pack) { const r = pack.apply(); done.push(r.addedTotal ? r.breakdown : ''); if (r.skipped) done.push(`${r.skipped} already held`); }
+    const goalIds = {};
+    if (goals.length) {
+      Store.set('goals', [...allGoals(), ...goals.map(g => { const id = generateId(); goalIds[g.id] = id; return { id, title: g.title, note: g.note || '', done: false, createdAt: Date.now(), from }; })]);
+      done.push(plural(goals.length, 'term goal'));
+    }
+    // a goal the receiver already holds keeps its entries linked to it
+    (doc.goals || []).forEach(g => { if (!goalIds[g.id]) { const m = allGoals().find(x => same(x.title, g.title)); if (m) goalIds[g.id] = m.id; } });
+    entries.forEach(e => addEntry({ kind: KINDS[e.kind] ? e.kind : 'other', title: e.title, date: e.date || '', goalId: goalIds[e.goalId] || '', from }));
+    if (entries.length) done.push(plural(entries.length, 'entry').replace('entrys', 'entries'));
+    incoming = null;
+    draw(`Added: ${done.filter(Boolean).join(', ') || 'nothing new'}.`);
   }
 
   draw();

@@ -238,7 +238,7 @@ const QUOTES_EVENING = [
   { text: 'The impact you made today may not be visible yet, but it is real.', attr: '' },
 ];
 
-function getDailyQuote() {
+export function getDailyQuote() {
   const now = new Date();
   const h = now.getHours();
   const pool = h < 12 ? QUOTES_MORNING : h < 17 ? QUOTES_AFTERNOON : QUOTES_EVENING;
@@ -1344,7 +1344,7 @@ function getMilestonesSeen() {
     return new Set(Array.isArray(arr) ? arr : []);
   } catch { return new Set(); }
 }
-function markMilestoneSeen(key) {
+export function markMilestoneSeen(key) {
   if (!key) return;
   const seen = getMilestonesSeen();
   seen.add(key);
@@ -1352,7 +1352,7 @@ function markMilestoneSeen(key) {
 }
 
 /* The single highest unseen, achieved milestone — or null. */
-function pickMilestone(stats) {
+export function pickMilestone(stats) {
   const seen = getMilestonesSeen();
   let pick = null;
   for (const m of MILESTONES) {

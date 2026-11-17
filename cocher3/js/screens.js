@@ -18,6 +18,8 @@ import { openSearch } from '../../cocher2/js/components/unified-search.js';
 import { mountEmbed, GENAPP } from '../../cocher2/js/components/app-embed.js';
 import { ymd, entriesForNow, entriesBetween, entryHTML, wireEntries } from './agenda.js';
 import { goalsHTML, wireGoals, allGoals } from './goals.js';
+import { getDailyQuote, pickMilestone, markMilestoneSeen } from '../../cocher2/js/views/dashboard.js';
+import { getIdentity } from '../../cocher2/js/utils/identity.js';
 
 /* The shell's build label, read late to avoid an import cycle. */
 const BUILD_LABEL = () => window.__cocherShell?.build || '';
@@ -154,6 +156,27 @@ export function renderHome(container) {
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
 const firstName = () => getPreferredName() || guessFirstName(getCurrentUser()?.name || '');
 
+/* The teacher's own mantra if they have set one, else the day's line: the
+ * same words, from the same list, as Co-Cher 2's dashboard. */
+function quoteHTML() {
+  let mantra = ''; try { mantra = getIdentity().chosenMantra || ''; } catch { /* no identity yet */ }
+  if (mantra) return `<p class="v3-quote">${esc(mantra)}</p>`;
+  const q = getDailyQuote();
+  return q ? `<p class="v3-quote">\u201c${esc(q.text)}\u201d${q.attr ? ` <span>${esc(q.attr)}</span>` : ''}</p>` : '';
+}
+
+/* One note when the teacher passes a mark (first lesson presented, ten
+ * reflections...). Shown once; Co-Cher 2 and 3 share what has been seen. */
+function milestoneHTML() {
+  let m = null; try { m = pickMilestone(Store.getLifetimeStats()); } catch { /* no stats yet */ }
+  if (!m) return '';
+  return `<div class="v3-mile" data-key="${esc(m.key)}">
+    <div><b>${m.headline}</b><span>${m.note}</span></div>
+    <a class="btn btn-secondary" href="#/my-growth" data-mile="go">See my growth</a>
+    <button class="btn btn-ghost" data-mile="x">Dismiss</button>
+  </div>`;
+}
+
 /* ── My School: every place as a tile, Now large and live ── */
 
 const FACT = {
@@ -170,11 +193,13 @@ export function renderSchool(container) {
       <div class="v3-eyebrow"><span id="v3-school-name">My School</span> · ${dateLine(new Date())}</div>
       <h1 class="v3-title">${greeting()}, Cher!</h1>
       <p class="v3-lede">What would you like to do today${firstName() ? ', ' + esc(firstName()) : ''}?</p>
+      ${quoteHTML()}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-ghost" id="v3-find">Find a student</button>
       <button class="btn btn-primary" data-add-entry="${ymd(new Date())}">Add entry</button>
     </div></div>
+    ${milestoneHTML()}
     <div class="v3-home">
       <a class="v3-home-tile now" href="#/now" data-place="now"><span class="k">Now</span><div id="v3-home-now"><span class="v3-row-s">Reading your day…</span></div><span class="go">Open Now →</span></a>
       ${tiles.map(p => { const f = FACT[p.id] ? FACT[p.id]() : ''; const s = visible(p.screens)[0];
@@ -195,6 +220,11 @@ export function renderSchool(container) {
       <div class="facts"><span><b>${t.list.filter(x => x.kind === 'lesson').length}</b> lessons today</span><span><b>${mine}</b> of your entries open</span><span><b>${need}</b> lessons need a next step</span></div>`;
   });
   container.querySelector('#v3-find').addEventListener('click', openSearch);
+  container.querySelector('.v3-mile')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mile]'); if (!b) return;
+    const card = e.currentTarget; markMilestoneSeen(card.dataset.key);   // either answer settles it: it never comes back
+    if (b.dataset.mile === 'x') card.remove();
+  });
   wireEntries(container, redraw);
   wireTileFlight(container);
   tilesFromDock(container);
@@ -244,7 +274,8 @@ function wireTileFlight(container) {
     let last = null;
     tiles.forEach((t, i) => {
       const link = nav.querySelector(`[data-place="${t.dataset.place}"]`);
-      const a = from[i], b = (link || nav).getBoundingClientRect();
+      const seen = link && link.getBoundingClientRect().width ? link : (nav.querySelector('.v3-more') || nav);
+      const a = from[i], b = seen.getBoundingClientRect();
       const delay = i * 35;
       last = ghosts[i].animate([
         { transform: 'none', opacity: 1 },
