@@ -7,79 +7,102 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 ## 0. Opening message to paste into the new chat
 
-> We're continuing **Co-Cher 2** (`cocher2/`, currently v2.7; Co-Cher 3 is 3.5.0 in `cocher3/`). First read
-> `HANDOVER.md` at the repo root. The next work is in section 2. Don't copy any
-> student data into this repo.
+> We're continuing **Co-Cher 3** (`cocher3/`, currently 3.6.0). It is the main
+> line. Co-Cher 1 (`app/`) and Co-Cher 2 (`cocher2/`) are frozen: do not edit
+> them. First read `HANDOVER.md` at the repo root. Don't copy any student data
+> into this repo.
 
 ---
 
 ## 1. Where things stand
 
-### Two lines, deliberately kept apart
+### Three lines, each in its own folder
 
-| Line | Folder | Live address | Who it's for | Status |
-|---|---|---|---|---|
-| **Co-Cher 1** | `app/` (`app/cocher.html`) | `harmanjohll.github.io/pedagogies/` (the root redirects here) | **Beatty only.** | **Frozen at v8.9.** Emergency fixes only. |
-| **Co-Cher 2** | `cocher2/` (`cocher2/cocher2.html`) | `harmanjohll.github.io/pedagogies/cocher2/` | **Every school**: Beatty, Park View Primary, Opera Estate Primary, SAJC | **Active, v2.7.** All new work goes here. |
+| Line | Folder | Live address | Status |
+|---|---|---|---|
+| **Co-Cher 3** | `cocher3/` | `harmanjohll.github.io/pedagogies/` (the root opens it) and `/pedagogies/cocher3/` | **The main line, 3.6.0.** Every school. All new work goes here. |
+| **Co-Cher 2** | `cocher2/` (`cocher2.html`) | `/pedagogies/cocher2/` | **Frozen at v2.7** (17 Nov 2026). Still works; the fallback. |
+| **Co-Cher 1** | `app/` (`cocher.html`) | `/pedagogies/app/cocher.html` | **Frozen at v8.9.** Beatty only. |
 
-- Each school has a pack (`cocher2/schools/<id>.json`), an optional roster
-  (`cocher2/schools/<id>/staff.json`) and its own storage on the device
-  (`cocher2_app_data__<id>`). `cocher2/schools/registry.json` routes sign ins by
-  email domain.
-- Keep the two lines apart: `cocher_*` and `cocher2_*` keys, IndexedDB `cocher`
-  and `cocher2`, caches `cocher-` and `cocher2-`. Never cross these.
+- **Frozen means do not edit.** Co-Cher 3 took its own copy of the engine on
+  17 Nov 2026 (every file identical at that moment except `js/version.js`), so
+  nothing in `cocher3/` loads from `cocher2/` any more.
+- **Saved work is shared between Co-Cher 2 and 3, on purpose.** Both use the
+  keys `cocher2_*` (per school `cocher2_app_data__<id>`) and the database
+  `cocher2`. A teacher sees the same classes and lessons in either, so Co-Cher 2
+  is a real fallback. **So only ADD to saved data in Co-Cher 3.** Renaming or
+  reshaping a field breaks Co-Cher 2 for that teacher. If a breaking change is
+  ever needed, first give Co-Cher 3 its own keys and copy the data across.
+- Co-Cher 1 keeps its own data (`cocher_*`, database `cocher`). Teachers bring
+  it over with Settings, Data, Export there, then Import in Co-Cher 3.
+- **The root address** (`index.html`) opens Co-Cher 3. One exception:
+  `/pedagogies/#/join/ROOM` still lands in Co-Cher 1, whose projector shows
+  that short link for its Live lessons.
+- Each school has a pack (`cocher3/schools/<id>.json`), an optional roster
+  (`cocher3/schools/<id>/staff.json`) and `cocher3/schools/registry.json`
+  routes sign ins by email domain. A new school fills in
+  `cocher3/schools/ONBOARDING.md`. The copies under `cocher2/schools/` are
+  frozen with Co-Cher 2: a new school or a new timetable goes in `cocher3/`
+  only, and Co-Cher 2 will not see it.
 
-### Shipping a Co-Cher 2 version
+### Shipping a Co-Cher 3 version
 
-1. `cocher2/js/version.js`: bump `APP_VERSION` (next is **v2.8**).
-2. `cocher2/sw.js`: set `VERSION` to the same value.
-3. `cocher2/js/components/whats-new.js`: add an entry at the top.
-4. `VERSIONS.md`: new row **Current (active)**, old row **Superseded**.
+1. `cocher3/js/v3/version.js`: raise `VERSION`; add to `NOTES` if teachers should hear.
+2. `cocher3/sw.js`: raise `CACHE` (clears the old offline copies).
+3. `VERSIONS.md`: new row at the top of the Co-Cher 3 table.
+4. Test in a browser: every school signs in (see `VERSIONS.md` 3.6.0 for the list), phone width, offline.
 
 ### Rules that hold everywhere
 
 - **This repo is public.** Student names, class lists and registers must never
-  be committed. Made up demo students only.
+  be committed. Made up demo students only. Staff rosters only for a school
+  that has agreed.
 - Signing in is a routing step, not real security. Anything that truly needs
   access control needs `backend/`.
+- **Nothing is deleted.** Old pages move to `archive/` and leave a forwarder.
 
-### Co-Cher 3 (3.5.0, preview, open to every school)
+### Co-Cher 3: how it is built
 
-- **Where:** `cocher3/` (`index.html`, `js/`, `css/cocher3.css`, `demos/`).
-  The engine stays in `cocher2/`. `index.html` sets `<base href="../cocher2/">`
-  so the engine's relative addresses resolve; `js/shell.js` intercepts clicks on
-  `a[href^="#"]` so they stay on the page. Co-Cher 3's own files are referenced
-  as `../cocher3/...` in the page and by module relative imports in scripts.
-  **The base address trap:** anything that resolves a bare `#/...` against the
-  page (a link, `history.replaceState`, `location.href = '#...'`) lands in
-  `/cocher2/`. The shell patches clicks, new tab clicks, `pushState` and
-  `replaceState`. `location.hash = ...` is safe. Never write `location.href = '#...'`.
-  **Phone (760px and under):** the dock shows `PRIME` places (shell.js) and a
+- **Layout of `cocher3/`:**
+  - `index.html`, `sw.js`, `manifest.webmanifest`
+  - `js/` the engine (sign in, schools, data, every view), copied from Co-Cher 2
+  - `js/v3/` Co-Cher 3's own: `boot.js`, `shell.js`, `places.js`, `screens.js`,
+    `agenda.js`, `goals.js`, `together.js`, `prefs.js`, `demos.js`, `version.js`
+  - `css/` the engine's three stylesheets, then `cocher3.css` (the look)
+  - `schools/`, `btyrelief/`, `simulations/` school files and simulations
+  - `demos/` the 13 videos
+- **Boot:** `js/v3/boot.js` imports `shell.js` (registers `window.__cocherShell`)
+  then `js/app.js`. app.js calls `shell.mount`, `themed`, `routes`, `whatsNew`.
+  The engine is now Co-Cher 3's to change freely; the old sidebar, tour and
+  What's New in it are unused and can be removed in a later clean up.
+- **Version:** `js/v3/version.js` is the one number. `js/version.js` hands it
+  to the engine's Settings page.
+- **Offline:** `sw.js` asks the network first, always, and falls back to its
+  kept copy only when the network fails or takes over 4 seconds. Videos are not
+  kept. An earlier cache first worker served stale files; do not go back to that.
+- **Phone (760px and under):** the dock shows `PRIME` places (shell.js) and a
   More sheet; other places carry `.v3-rest`.
-- **Boot:** `js/boot.js` imports `shell.js` (registers `window.__cocherShell`)
-  then `cocher2/js/app.js`. app.js calls `shell.mount`, `themed`, `routes`,
-  `whatsNew`. Any engine change must still be tested in `cocher2.html`.
-- **Version:** `js/version.js` (`VERSION`, `NOTES`). Shown at the foot of My
-  School and in Look and feel. Bump it with every change to `cocher3/`.
-  **Do not bump Co-Cher 2 or add to its What's New for a Co-Cher 3 change.**
-- **No service worker** for Co-Cher 3, so it has no offline copy and is never
-  stale beyond GitHub Pages' own ten minute cache.
 - **Files:** `places.js` (the ONE list of places and screens, plus teacher
   links), `screens.js` (My School, Now, Week, Term, hubs, Paths, the tile
-  flights), `agenda.js` (own entries; Store `agenda`), `goals.js` (term goals;
-  Store `goals`), `together.js` (Common free time from
-  `fetchBundledRoster`; Student handover by file), `prefs.js` (look, night,
-  type, nav, home, density, motion; key `cocher3_prefs`, mirrored by the inline
-  script in `index.html`), `demos.js` + `demos/` (slots for in app animations).
-- **Keep the greeting.** My School opens with "Good morning, Cher!" and the teacher's name. A design pass removed it once (a rule against greeting headlines); the user wants that warmth kept. Do not strip personal touches for style reasons without asking.
+  flights, quote, milestone note), `agenda.js` (own entries; Store `agenda`),
+  `goals.js` (term goals; Store `goals`), `together.js` (Common free time,
+  Student handover, Send to a colleague), `prefs.js` (key `cocher3_prefs`,
+  mirrored by the inline script in `index.html`), `demos.js` + `demos/`
+  (videos; `only: 'bty'` hides one from other schools).
+- **Videos** are recorded by `briefing-videos/tools/cocher3-demos/` on made up
+  people. When a screen changes, rerecord its clip and replace it in `demos/`.
+- **Keep the greeting.** My School opens with "Good morning, Cher!" and the
+  teacher's name. A design pass removed it once; do not strip personal touches
+  without asking.
 - **Decided with the user:** My School is the landing page and shows no menu;
   tiles fly down to form the menu and back up; the flight plays even when the
   device asks for reduced motion (Motion switch turns it off); default look
-  Fjord, Mincho, dock.
-- **Not yet done:** v2 screens are restyled, not redesigned; coloured chips
-  keep v2's colours; demo slots are empty; other schools not yet moved;
-  the two collaborative features not chosen (Send to a colleague, Make My
-  School yours); shared storage (OneDrive) is still parked by the user.
+  Fjord, Mincho, dock; the mark is the open circle, top left, leading home.
+- **Not yet done:** older screens are restyled, not redesigned; Make My School
+  yours; a first run guide (the old tour is off; the videos stand in); videos
+  for Plan, Room, Assess, Resources and for phone; sample events carry fixed
+  dates; Term 1 2027 timetables for every school; shared storage (OneDrive) is
+  parked by the user.
 
 ### What v2.2 added
 

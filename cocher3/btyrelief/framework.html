@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cycle Arrow Generator</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --muted:#6b7280;
+      --accent:#2563eb;
+    }
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--ink);
+      background:var(--bg);
+    }
+    .app{
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:16px;
+      height:100vh;
+      padding:16px;
+      box-sizing:border-box;
+    }
+    .panel{
+      background:var(--panel);
+      border-radius:16px;
+      box-shadow:0 6px 24px rgba(0,0,0,.06);
+      overflow:auto;
+    }
+    .panel h2{margin:0 0 8px 0;font-size:18px}
+    .panel .section{padding:16px;border-bottom:1px solid #eef0f4}
+    .panel .row{display:grid;grid-template-columns: 1fr auto;align-items:center;gap:10px;margin:10px 0}
+    label{font-size:13px;color:var(--muted)}
+    input[type="number"], input[type="text"], select{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;font:inherit}
+    input[type="range"]{width:100%}
+    input[type="color"]{width:42px;height:32px;border:0;background:none}
+    .chip{display:inline-block;padding:6px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px}
+    .btn{
+      appearance:none;border:0;background:var(--accent);color:#fff;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:600
+    }
+    .btn.secondary{background:#0f172a}
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .preview{
+      display:grid;place-items:center;position:relative
+    }
+    #stageWrap{
+      background:var(--panel);border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.06);width:100%;height:100%;display:grid;place-items:center
+    }
+    #stage{ width:min(92vmin, 900px);height:min(92vmin, 900px)}
+    .credits{font-size:12px;color:var(--muted)}
+    details summary{cursor:pointer;}
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@400;600&display=swap');
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Controls -->
+    <div class="panel" id="controls">
+      <div class="section">
+        <h2>Cycle Arrow Generator</h2>
+        <div class="credits">Adjust controls, then export as SVG/PNG/JPEG. Arrows are generated from SVG so exports are crisp.</div>
+      </div>
+      <div class="section">
+        <h3 style="margin:0 0 8px 0">Structure</h3>
+        <div class="row"><label>Number of arrows</label><input id="count" type="number" min="2" max="16" value="4"></div>
+        <div class="row"><label>Circle size (px)
+          <div class="credits">Overall SVG width/height</div></label>
+          <input id="size" type="number" min="240" max="1200" step="10" value="640"></div>
+        <div class="row"><label>Arrow thickness</label><input id="thickness" type="range" min="20" max="240" value="120"></div>
+        <div class="row"><label>Gap between segments (°)</label><input id="gap" type="range" min="0" max="16" value="6"></div>
+        <div class="row"><label>Arrow tip length (°)</label><input id="tip" type="range" min="0" max="18" value="8"></div>
+        <div class="row"><label>Rotation (°)</label><input id="rotation" type="range" min="0" max="359" value="0"></div>
+      </div>
+      <div class="section">
+        <h3 style="margin:0 0 8px 0">Colors</h3>
+        <div class="row"><label>Text color</label><input id="textColor" type="color" value="#111827"></div>
+        <div class="row"><label>Outline color</label><input id="strokeColor" type="color" value="#ffffff"></div>
+        <div class="row"><label>Outline width</label><input id="strokeWidth" type="range" min="0" max="12" value="2"></div>
+        <div class="row"><label>Background</label><input id="bgColor" type="color" value="#ffffff"></div>
+        <div class="row"><label>Transparent background</label><input id="transparentBg" type="checkbox"></div>
+      </div>
+      <div class="section">
+        <h3 style="margin:0 0 8px 0">Labels</h3>
+        <div class="row"><label>Font size (px)</label><input id="fontSize" type="number" min="8" max="48" value="18"></div>
+        <div class="row"><label>Font family</label>
+          <select id="fontFamily">
+            <option value="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial">System UI</option>
+            <option value="Calibri, Arial, Helvetica, sans-serif">Calibri</option>
+            <option value="Arial, Helvetica, sans-serif">Arial</option>
+            <option value="'Times New Roman', Times, serif">Times New Roman</option>
+            <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+            <option value="'Trebuchet MS', Arial, Helvetica, sans-serif">Trebuchet MS</option>
+            <option value="'Inter', Segoe UI, Roboto, Helvetica, Arial">Inter (modern)</option>
+            <option value="'Montserrat', 'Poppins', Segoe UI, Roboto, Helvetica, Arial">Montserrat (modern)</option>
+          </select>
+        </div>
+        <div class="row"><label>Show label guides</label><input id="showGuides" type="checkbox"></div>
+        <div class="row"><label>Curve labels along arc</label><input id="curvedText" type="checkbox"></div>
+        <div class="row"><label>Follow gravity (avoid upside‑down)</label><input id="followGravity" type="checkbox" checked></div>
+        <div class="row"><label>Label radius offset (px)</label><input id="labelOffset" type="range" min="-60" max="60" value="0"></div>
+        <div class="list" id="labels"></div>
+      </div>
+      <div class="section">
+        <h3 style="margin:0 0 8px 0">Per-Segment Colors</h3>
+        <div class="list" id="segmentColors"></div>
+      </div>
+      <div class="section">
+        <details>
+          <summary><strong>Concentric circles (optional)</strong></summary>
+          <div class="row"><label>How many</label><input id="rings" type="number" min="0" max="8" value="0"></div>
+          <div class="row"><label>First ring radius offset (px)</label><input id="ringStart" type="number" min="-400" max="400" value="-20"></div>
+          <div class="row"><label>Spacing between rings (px)</label><input id="ringStep" type="number" min="1" max="200" value="24"></div>
+          <div class="row"><label>Ring stroke</label><input id="ringColor" type="color" value="#cbd5e1"></div>
+          <div class="row"><label>Ring width</label><input id="ringWidth" type="range" min="1" max="12" value="2"></div>
+        </details>
+      </div>
+      <div class="section">
+        <div class="btn-row">
+          <button class="btn" id="downloadSVG">Download SVG</button>
+          <button class="btn secondary" id="downloadPNG">Download PNG</button>
+          <button class="btn secondary" id="downloadJPG">Download JPEG</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="panel preview">
+      <div id="stageWrap">
+        <svg id="stage" xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640"></svg>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const $ = (id)=>document.getElementById(id);
+  const stage = $("stage");
+
+  const controls = [
+    "count","size","thickness","gap","tip","rotation","textColor","strokeColor","strokeWidth","fontSize","fontFamily","bgColor","transparentBg","showGuides","curvedText","followGravity","labelOffset","rings","ringStart","ringStep","ringColor","ringWidth"
+  ].map($);
+
+  function deg2rad(d){return d*Math.PI/180}
+  function pol(xc,yc,r,ang){return [xc + r*Math.cos(ang), yc + r*Math.sin(ang)]}
+
+  function pathForAnnularSector(cx,cy,rIn,rOut,a0,a1){
+    const largeArc = (a1-a0) % (Math.PI*2) > Math.PI ? 1:0;
+    const [x0o,y0o] = pol(cx,cy,rOut,a0);
+    const [x1o,y1o] = pol(cx,cy,rOut,a1);
+    const [x1i,y1i] = pol(cx,cy,rIn,a1);
+    const [x0i,y0i] = pol(cx,cy,rIn,a0);
+    return `M ${x0o} ${y0o} A ${rOut} ${rOut} 0 ${largeArc} 1 ${x1o} ${y1o} L ${x1i} ${y1i} A ${rIn} ${rIn} 0 ${largeArc} 0 ${x0i} ${y0i} Z`;
+  }
+
+  function makeSegmentPath(cx,cy,rIn,rOut,a0,a1,tipDeg, gapDeg){
+    // Interlocking chevron style: a notch at the start and an arrow tip at the end
+    // Both features live in the gap between segments so neighbors visually interlock.
+    const tip = deg2rad(Math.max(0, tipDeg));
+    const gap = deg2rad(Math.max(0, gapDeg ?? +$("gap").value));
+
+    const s = a0 + gap/2; // effective start (after removing half gap)
+    const e = a1 - gap/2; // effective end (after removing half gap)
+
+    const midR = (rIn + rOut)/2;
+
+    // Key points
+    const [OSx, OSy] = pol(cx,cy,rOut,s); // outer start
+    const [ISx, ISy] = pol(cx,cy,rIn,s); // inner start
+    const [OEx, OEy] = pol(cx,cy,rOut,e); // outer end
+    const [IEx, IEy] = pol(cx,cy,rIn,e); // inner end
+
+    // Chevron apex points
+    const [SNx, SNy] = pol(cx,cy,midR, s - tip/2); // start notch (backwards into previous gap)
+    const [EAx, EAy] = pol(cx,cy,midR, e + tip/2); // end arrow (forwards into next gap)
+
+    const arcAngle = (e - s) % (Math.PI*2);
+    const largeArc = arcAngle > Math.PI ? 1 : 0;
+
+    const d = [
+      `M ${OSx} ${OSy}`,
+      `L ${SNx} ${SNy}`,
+      `L ${ISx} ${ISy}`,
+      `A ${rIn} ${rIn} 0 ${largeArc} 1 ${IEx} ${IEy}`,
+      `L ${EAx} ${EAy}`,
+      `L ${OEx} ${OEy}`,
+      `A ${rOut} ${rOut} 0 ${largeArc} 0 ${OSx} ${OSy}`,
+      'Z'
+    ].join(' ');
+
+    return d;
+  }
+
+  function clear(el){while(el.firstChild) el.removeChild(el.firstChild)}
+
+  function rebuildLabelInputs(){
+    const n = +$("count").value;
+    const labels = $("labels");
+    const segColors = $("segmentColors");
+    if(labels.childElementCount === n && segColors.childElementCount === n) return;
+    clear(labels); clear(segColors);
+    for(let i=0;i<n;i++){
+      const wrap = document.createElement('div');
+      wrap.className='row';
+      const lab = document.createElement('label'); lab.textContent=`Label ${i+1}`;
+      const stack = document.createElement('div');
+      stack.style.display='grid';
+      stack.style.gridTemplateColumns='1fr auto';
+      stack.style.gap='8px';
+      const inp = document.createElement('input'); inp.type='text'; inp.value = `Title ${i+1}`; inp.dataset.index=i; inp.addEventListener('input', draw);
+
+      const rightCol = document.createElement('div');
+      rightCol.style.display='grid'; rightCol.style.gap='6px'; rightCol.style.alignItems='center';
+
+      const flipWrap = document.createElement('label'); flipWrap.style.display='flex'; flipWrap.style.alignItems='center'; flipWrap.style.gap='6px'; flipWrap.style.fontSize='12px'; flipWrap.style.color='#6b7280';
+      const flip = document.createElement('input'); flip.type='checkbox'; flip.className='label-flip'; flip.dataset.index=i; flip.addEventListener('change', draw);
+      flipWrap.appendChild(flip); flipWrap.appendChild(document.createTextNode('Flip label'));
+
+      const offWrap = document.createElement('label'); offWrap.style.display='grid'; offWrap.style.gridTemplateColumns='auto 1fr'; offWrap.style.gap='8px'; offWrap.style.fontSize='12px'; offWrap.style.color='#6b7280';
+      offWrap.appendChild(document.createTextNode('Offset'));
+      const off = document.createElement('input'); off.type='range'; off.min='-60'; off.max='60'; off.value='0'; off.className='label-offset'; off.dataset.index=i; off.addEventListener('input', draw);
+      offWrap.appendChild(off);
+
+      rightCol.appendChild(flipWrap);
+      rightCol.appendChild(offWrap);
+
+      stack.appendChild(inp); stack.appendChild(rightCol);
+      wrap.appendChild(lab); wrap.appendChild(stack); labels.appendChild(wrap);
+
+      const colorRow = document.createElement('div'); colorRow.className='row';
+      const lab2 = document.createElement('label'); lab2.textContent=`Segment ${i+1} color`;
+      const col = document.createElement('input'); col.type='color';
+      const hues = [0,30,200,150,270,330,80,210,120,10,300,45];
+      const h = hues[i%hues.length];
+      col.value = hslToHex(h,70,55);
+      col.dataset.index=i; col.addEventListener('input', draw);
+      colorRow.appendChild(lab2); colorRow.appendChild(col); segColors.appendChild(colorRow);
+    }
+  }
+
+
+  function hslToHex(h,s,l){
+    s/=100; l/=100; const k = n=> (n + h/30) % 12; const a = s*Math.min(l,1-l);
+    const f = n => l - a*Math.max(-1, Math.min(k(n)-3, Math.min(9-k(n),1)));
+    const toHex = x=> Math.round(255*x).toString(16).padStart(2,'0');
+    return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+  }
+
+  function draw(){
+    rebuildLabelInputs();
+    const N = +$("count").value;
+    const S = +$("size").value;
+    const thick = +$("thickness").value;
+    const gap = deg2rad(+$("gap").value);
+    const tip = +$("tip").value;
+    const strokeColor = $("strokeColor").value;
+    const strokeWidth = +$("strokeWidth").value;
+    const textColor = $("textColor").value;
+    const fontSize = +$("fontSize").value;
+    const fontFamily = $("fontFamily").value;
+    const curvedText = $("curvedText").checked;
+    const followGravity = $("followGravity").checked;
+    const rotation = +$("rotation").value;
+    const rotationRad = deg2rad(rotation);
+    const labelOffset = +$("labelOffset").value;
+    const bgColor = $("bgColor").value;
+    const transparentBg = $("transparentBg").checked;
+
+    // Set stage size & bg
+    stage.setAttribute('width', S); stage.setAttribute('height', S);
+    stage.setAttribute('viewBox', `0 0 ${S} ${S}`);
+    stage.style.background = transparentBg? 'transparent' : bgColor;
+
+    clear(stage);
+
+    // Background rect (only visible when exporting SVG or if bg not transparent)
+    const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x',0); bg.setAttribute('y',0); bg.setAttribute('width',S); bg.setAttribute('height',S);
+    bg.setAttribute('fill', transparentBg? 'none' : bgColor);
+    stage.appendChild(bg);
+
+    // defs container for text paths
+    const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+    stage.appendChild(defs);
+
+    // content group (for rotation)
+    const contentG = document.createElementNS('http://www.w3.org/2000/svg','g');
+    contentG.setAttribute('transform', `rotate(${rotation} ${S/2} ${S/2})`);
+    stage.appendChild(contentG);
+
+    const cx = S/2, cy = S/2;
+
+    const rOut = S/2 - 24; // padding
+    const rIn = rOut - thick;
+
+    // Concentric rings (optional)
+    const rings = +$("rings").value;
+    const ringStart = +$("ringStart").value;
+    const ringStep = +$("ringStep").value;
+    const ringColor = $("ringColor").value;
+    const ringWidth = +$("ringWidth").value;
+    if(rings>0){
+      for(let i=0;i<rings;i++){
+        const rr = (rIn + ringStart + i*ringStep);
+        if(rr>8){
+          const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          c.setAttribute('cx',cx); c.setAttribute('cy',cy); c.setAttribute('r', rr);
+          c.setAttribute('fill','none'); c.setAttribute('stroke', ringColor); c.setAttribute('stroke-width', ringWidth);
+          contentG.appendChild(c);
+        }
+      }
+    }
+
+    // Guides
+    if($("showGuides").checked){
+      const guide = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      guide.setAttribute('cx',cx); guide.setAttribute('cy',cy); guide.setAttribute('r',(rIn+rOut)/2);
+      guide.setAttribute('fill','none'); guide.setAttribute('stroke','#e5e7eb'); guide.setAttribute('stroke-dasharray','4 6');
+      contentG.appendChild(guide);
+    }
+
+    const labelInputs = Array.from($("labels").querySelectorAll('input[type="text"]'));
+    const flipInputs = Array.from($("labels").querySelectorAll('input.label-flip'));
+    const offsetInputs = Array.from($("labels").querySelectorAll('input.label-offset'));
+    const colorInputs = Array.from($("segmentColors").querySelectorAll('input[type="color"]'));
+    // placeholder to ensure change vs prior line
+
+    const totalAngle = Math.PI*2;
+    const segAngle = totalAngle / N;
+
+    for(let i=0;i<N;i++){
+      const col = colorInputs[i].value;
+      const a0 = i*segAngle + gap/2;
+      const a1 = (i+1)*segAngle - gap/2;
+      const dPath = makeSegmentPath(cx,cy,rIn,rOut,a0,a1, tip, $("gap").value);
+
+      const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+      const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d', dPath);
+      p.setAttribute('fill', col);
+      p.setAttribute('stroke', strokeColor);
+      p.setAttribute('stroke-width', strokeWidth);
+      g.appendChild(p);
+
+      // label
+      const label = (labelInputs[i] && labelInputs[i].value) || '';
+      if(label){
+        const midAng = (a0+a1)/2;
+        const perOff = offsetInputs[i] ? +offsetInputs[i].value : 0;
+        const lr = (rIn+rOut)/2 + labelOffset + perOff; // global + per-label offset, independent between labels
+        if(curvedText){
+          // Create a path that follows the mid-radius arc between s and e (post-gap)
+          const s = i*segAngle + gap/2; // start angle used in geometry
+          const e = (i+1)*segAngle - gap/2; // end angle used in geometry
+          const largeArcLabel = (e - s) % (Math.PI*2) > Math.PI ? 1 : 0;
+          const [sx,sy] = pol(cx,cy, lr, s);
+          const [ex,ey] = pol(cx,cy, lr, e);
+          const pathId = `labelArc-${i}-${S}`;
+          const lp = document.createElementNS('http://www.w3.org/2000/svg','path');
+          lp.setAttribute('id', pathId);
+          lp.setAttribute('fill','none');
+          lp.setAttribute('stroke','none');
+          // Flip direction for bottom-half labels if followGravity is on
+          const mid = (s+e)/2;
+          const mm = (mid + rotationRad) % (Math.PI*2);
+          const bottomHalf = (mm > Math.PI/2) && (mm < 3*Math.PI/2);
+          const manualFlip = !!(flipInputs[i] && flipInputs[i].checked);
+          const shouldFlip = manualFlip ? true : (followGravity ? bottomHalf : false);
+          if(shouldFlip){
+            const [sx2,sy2] = [ex,ey];
+            const [ex2,ey2] = [sx,sy];
+            const sweep = 0; // reverse sweep
+            lp.setAttribute('d', `M ${sx2} ${sy2} A ${lr} ${lr} 0 ${largeArcLabel} ${sweep} ${ex2} ${ey2}`);
+          } else {
+            const sweep = 1;
+            lp.setAttribute('d', `M ${sx} ${sy} A ${lr} ${lr} 0 ${largeArcLabel} ${sweep} ${ex}` + ` ${ey}`);
+          }
+          defs.appendChild(lp);
+
+          const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+          text.setAttribute('fill', textColor);
+          text.setAttribute('font-size', fontSize);
+          text.setAttribute('font-weight', 600);
+          text.setAttribute('font-family', fontFamily);
+          const tp = document.createElementNS('http://www.w3.org/2000/svg','textPath');
+          tp.setAttribute('href', `#${pathId}`);
+          tp.setAttribute('startOffset','50%');
+          tp.setAttribute('text-anchor','middle');
+          tp.textContent = label;
+          text.appendChild(tp);
+          g.appendChild(text);
+        } else {
+          const [lx,ly] = pol(cx,cy, lr, midAng);
+          const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+          t.setAttribute('x', lx);
+          t.setAttribute('y', ly);
+          t.setAttribute('fill', textColor);
+          t.setAttribute('font-size', fontSize);
+          t.setAttribute('font-weight', 600);
+          t.setAttribute('font-family', fontFamily);
+          t.setAttribute('text-anchor','middle');
+          t.setAttribute('dominant-baseline','middle');
+          t.textContent = label;
+          g.appendChild(t);
+        }
+      }
+
+      contentG.appendChild(g);
+    }
+  }
+
+  function svgToDataURL(svgEl){
+    const serializer = new XMLSerializer();
+    let src = serializer.serializeToString(svgEl);
+    // Ensure xmlns present
+    if(!src.match(/^<svg[^>]+xmlns="http:\/\/www.w3.org\/2000\/svg"/)){
+      src = src.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
+  }
+
+  function download(href, name){
+    const a = document.createElement('a'); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  function exportRaster(type){
+    const url = svgToDataURL(stage);
+    const img = new Image();
+    img.onload = function(){
+      const canvas = document.createElement('canvas');
+      canvas.width = stage.width.baseVal.value; canvas.height = stage.height.baseVal.value;
+      const ctx = canvas.getContext('2d');
+      // Optional: if background transparent is requested, keep it; else paint bg
+      const transparent = $("transparentBg").checked;
+      if(!transparent){
+        ctx.fillStyle = $("bgColor").value; ctx.fillRect(0,0,canvas.width, canvas.height);
+      }
+      ctx.drawImage(img,0,0);
+      const mime = (type==='jpg')? 'image/jpeg':'image/png';
+      const href = canvas.toDataURL(mime, 0.95);
+      download(href, `cycle-${Date.now()}.${type==='jpg'?'jpg':'png'}`);
+    };
+    img.src = url;
+  }
+
+  $("downloadSVG").addEventListener('click', ()=> download(svgToDataURL(stage), `cycle-${Date.now()}.svg`));
+  $("downloadPNG").addEventListener('click', ()=> exportRaster('png'));
+  $("downloadJPG").addEventListener('click', ()=> exportRaster('jpg'));
+
+  // Bind all inputs to redraw
+  controls.forEach(el=>{ const evt = (el.type==='range'||el.type==='number'||el.type==='text'||el.type==='color'||el.tagName==='SELECT') ? 'input' : 'change'; el.addEventListener(evt, draw); });
+
+  // Also rebuild when count changes
+  $("count").addEventListener('change', ()=>{ rebuildLabelInputs(); draw(); });
+
+  // Initial
+  rebuildLabelInputs();
+  draw();
+})();
+</script>
+</body>
+</html>

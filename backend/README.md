@@ -88,7 +88,7 @@ timetable changes next semester.
 4. **Deploy → New deployment → Web app**, *Execute as: Me*, *Who has access: Anyone*.
    "Anyone" is required for a browser to fetch it; the join code gates the
    sensitive part.
-5. Copy the `/exec` URL into `cocher2/js/utils/backend.js`.
+5. Copy the `/exec` URL into `cocher3/js/utils/backend.js` (Co-Cher 2 is frozen).
 
 After any edit to `Code.gs`, deploy a **new version** — otherwise the old code
 keeps serving.

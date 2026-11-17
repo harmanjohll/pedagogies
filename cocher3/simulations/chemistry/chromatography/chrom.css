@@ -1,0 +1,971 @@
+/* ============================================================
+   Paper Chromatography Practical — Styles
+   ============================================================ */
+
+body {
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Layout --- */
+.practical-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.guide-panel {
+  padding: var(--sp-4);
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.workbench-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.data-panel {
+  padding: var(--sp-4);
+  overflow-y: auto;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+
+/* --- Sample Selector --- */
+.sample-selector {
+  margin-bottom: var(--sp-4);
+}
+.sample-selector label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: var(--sp-2);
+}
+.sample-group-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: var(--sp-1) 0;
+}
+.sample-select {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.sample-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+  outline: none;
+}
+.sample-info {
+  margin-top: var(--sp-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+}
+.sample-info .tag {
+  margin-left: var(--sp-1);
+}
+.sample-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: var(--sp-1);
+  border: 1px solid rgba(0,0,0,0.15);
+}
+
+
+/* --- Procedure Steps --- */
+.procedure-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.procedure-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  transition: all var(--dur-fast) ease;
+  cursor: default;
+}
+.procedure-step.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.15);
+}
+.procedure-step.completed {
+  border-color: var(--color-success);
+  opacity: 0.7;
+}
+.procedure-step.completed .step-num {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #fff;
+}
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  border: 2px solid var(--color-border);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  transition: all var(--dur-fast) ease;
+}
+.procedure-step.active .step-num {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+.step-content h4 {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.step-content p {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+}
+.step-why {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+  margin-top: var(--sp-2);
+  display: none;
+}
+.procedure-step.active .step-why {
+  display: block;
+}
+.step-why::before {
+  content: 'Why? ';
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+
+/* --- Workbench --- */
+.workbench {
+  flex: 1;
+  position: relative;
+  min-height: 400px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 50px;
+  padding: 0 40px 55px;
+  user-select: none;
+}
+
+.bench-surface {
+  border-top: 3px solid var(--bench-top-edge);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+}
+
+
+/* --- Beaker --- */
+.chrom-beaker {
+  position: relative;
+  z-index: 10;
+  width: 120px;
+  height: 160px;
+  cursor: pointer;
+  transition: filter var(--dur-fast) ease;
+}
+.chrom-beaker:hover {
+  filter: brightness(1.1);
+}
+.chrom-beaker.highlight {
+  filter: brightness(1.15) drop-shadow(0 0 10px rgba(67, 97, 238, 0.5));
+}
+.beaker-body {
+  width: 100%;
+  height: 100%;
+  border-radius: 0 0 8px 8px;
+  border-top: none;
+  overflow: hidden;
+  background: var(--glass-fill);
+  border: 2px solid var(--glass-stroke);
+  border-top: none;
+  position: relative;
+}
+.beaker-body::after {
+  content: '';
+  position: absolute;
+  top: 5%;
+  left: 12%;
+  width: 3px;
+  height: 40%;
+  background: var(--glass-highlight);
+  border-radius: var(--radius-full);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.beaker-solvent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 25%;
+  transition: height 0.8s var(--ease-out), background-color var(--dur-slow) ease;
+  box-shadow: var(--liquid-surface-shadow);
+}
+.beaker-solvent::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 2px;
+  right: 2px;
+  height: 6px;
+  background: inherit;
+  border-radius: 0 0 50% 50%;
+  filter: brightness(1.08);
+}
+.beaker-label {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--text-xs);
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+
+/* --- Chromatography Paper --- */
+.chrom-paper-assembly {
+  position: relative;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.paper-clip {
+  width: 40px;
+  height: 14px;
+  background: var(--metal-mid);
+  border-radius: 3px 3px 0 0;
+  position: relative;
+  z-index: 3;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.chrom-paper {
+  position: relative;
+  width: 80px;
+  height: 280px;
+  background: #f5f0e8;
+  border: 1px solid rgba(200, 190, 170, 0.6);
+  border-radius: 0 0 2px 2px;
+  box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  overflow: visible;
+  transition: transform 0.6s var(--ease-out);
+}
+.chrom-paper.in-beaker {
+  transform: translateY(40px);
+}
+
+/* Paper texture */
+.chrom-paper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(200, 190, 170, 0.08) 3px,
+      rgba(200, 190, 170, 0.08) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 3px,
+      rgba(200, 190, 170, 0.06) 3px,
+      rgba(200, 190, 170, 0.06) 4px
+    );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+
+/* --- Pencil Baseline --- */
+.pencil-baseline {
+  position: absolute;
+  bottom: 40px;
+  left: 6px;
+  right: 6px;
+  height: 1.5px;
+  background: #888;
+  opacity: 0;
+  transition: opacity var(--dur-base) ease;
+  pointer-events: none;
+  z-index: 2;
+}
+.pencil-baseline.visible {
+  opacity: 1;
+}
+.pencil-baseline::before {
+  content: 'baseline';
+  position: absolute;
+  right: -52px;
+  top: -6px;
+  font-size: 8px;
+  color: #888;
+  white-space: nowrap;
+}
+
+/* Baseline hover indicator */
+.chrom-paper.awaiting-baseline {
+  cursor: crosshair;
+}
+.chrom-paper.awaiting-baseline:hover::after {
+  content: '';
+  position: absolute;
+  bottom: 40px;
+  left: 6px;
+  right: 6px;
+  height: 1.5px;
+  background: rgba(136, 136, 136, 0.4);
+  pointer-events: none;
+}
+
+
+/* --- Sample Spots --- */
+.sample-spot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  transition: bottom 3s var(--ease-in-out),
+              width 2s var(--ease-in-out),
+              height 2s var(--ease-in-out),
+              opacity 0.4s ease;
+  pointer-events: none;
+}
+.sample-spot.origin {
+  bottom: 36px;
+  opacity: 0;
+}
+.sample-spot.origin.visible {
+  opacity: 1;
+}
+.sample-spot.separated {
+  opacity: 0.9;
+  width: 16px;
+  height: 10px;
+  border-radius: 40%;
+}
+
+/* Spot label (shown after separation) */
+.spot-label {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 7px;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.spot-label.visible {
+  opacity: 1;
+}
+
+
+/* --- Solvent Front --- */
+.solvent-front {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: rgba(180, 210, 255, 0.10);
+  border-top: 1.5px dashed rgba(100, 140, 200, 0.4);
+  transition: height 4s linear;
+  pointer-events: none;
+  z-index: 1;
+}
+.solvent-front-label {
+  position: absolute;
+  top: -14px;
+  right: -66px;
+  font-size: 8px;
+  color: rgba(100, 140, 200, 0.7);
+  white-space: nowrap;
+}
+
+/* Solvent wicking effect on paper */
+.solvent-wet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: linear-gradient(
+    to top,
+    rgba(180, 210, 255, 0.12) 0%,
+    rgba(180, 210, 255, 0.05) 80%,
+    transparent 100%
+  );
+  transition: height 4s linear;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 0 0 2px 2px;
+}
+
+
+/* --- Measurement Rulers --- */
+.measure-line {
+  position: absolute;
+  left: -30px;
+  width: 20px;
+  border-top: 1px solid var(--color-warning);
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-base) ease;
+}
+.measure-line.visible {
+  opacity: 1;
+}
+.measure-line::after {
+  content: attr(data-distance);
+  position: absolute;
+  right: calc(100% + 4px);
+  top: -6px;
+  font-size: 8px;
+  font-family: var(--font-mono);
+  color: var(--color-warning);
+  white-space: nowrap;
+}
+.measure-bracket {
+  position: absolute;
+  left: -18px;
+  width: 1px;
+  background: var(--color-warning);
+  z-index: 19;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-base) ease;
+}
+.measure-bracket.visible {
+  opacity: 0.6;
+}
+
+
+/* --- Workbench Controls --- */
+.workbench-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.action-hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+.solvent-display {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.solvent-display .solvent-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+}
+
+
+/* --- Results Table --- */
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.results-table th,
+.results-table td {
+  border: 1px solid var(--color-border);
+  padding: var(--sp-2) var(--sp-3);
+  text-align: center;
+}
+.results-table th {
+  background: var(--color-surface-alt);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+}
+.results-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+  background: var(--color-surface-alt);
+  white-space: nowrap;
+}
+.results-table .colour-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+}
+.colour-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.1);
+  flex-shrink: 0;
+}
+.results-table input {
+  width: 100%;
+  border: none;
+  outline: none;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background: transparent;
+  padding: var(--sp-1);
+  color: inherit;
+}
+.results-table input:focus {
+  background: var(--color-primary-light);
+  border-radius: var(--radius-sm);
+}
+.results-table input[readonly] {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+.results-table .match-cell {
+  font-size: var(--text-xs);
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+/* Empty results state */
+.results-empty {
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+
+/* --- Rf Calculation Area --- */
+.rf-calc-area {
+  margin-top: var(--sp-4);
+}
+.rf-formula {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-align: center;
+  padding: var(--sp-3);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  margin-bottom: var(--sp-3);
+}
+.rf-formula .fraction {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0 var(--sp-2);
+}
+.rf-formula .numerator,
+.rf-formula .denominator {
+  padding: 2px var(--sp-2);
+}
+.rf-formula .fraction-bar {
+  width: 100%;
+  height: 1px;
+  background: var(--color-text);
+}
+
+.calc-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.calc-line {
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  line-height: 1.8;
+  color: var(--color-text);
+}
+.calc-label {
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  display: block;
+  margin-top: var(--sp-2);
+}
+.calc-result {
+  font-weight: 700;
+  color: var(--color-primary);
+  font-size: var(--text-base);
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-sm);
+}
+
+
+/* --- Analysis Questions --- */
+.analysis-section {
+  margin-top: var(--sp-4);
+}
+.analysis-question {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--sp-3);
+  overflow: hidden;
+}
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  cursor: pointer;
+  transition: background var(--dur-fast) ease;
+  background: var(--color-surface);
+}
+.question-header:hover {
+  background: var(--color-surface-alt);
+}
+.question-num {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  background: var(--chem-bg);
+  color: var(--chem-color);
+  flex-shrink: 0;
+}
+.question-text {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  flex: 1;
+}
+.question-marks {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.question-chevron {
+  transition: transform var(--dur-fast) ease;
+  color: var(--color-text-muted);
+}
+.analysis-question.open .question-chevron {
+  transform: rotate(180deg);
+}
+.question-body {
+  padding: 0 var(--sp-3);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height var(--dur-slow) var(--ease-out),
+              padding var(--dur-slow) var(--ease-out);
+}
+.analysis-question.open .question-body {
+  max-height: 200px;
+  padding: var(--sp-3);
+}
+.question-answer {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-success);
+}
+
+
+/* --- Reference Dyes Panel --- */
+.reference-section {
+  margin-top: var(--sp-4);
+}
+.ref-dye-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.ref-dye-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-sm);
+}
+.ref-dye-item:hover {
+  background: var(--color-surface-alt);
+}
+.ref-dye-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+.ref-dye-name {
+  flex: 1;
+  color: var(--color-text-secondary);
+}
+.ref-dye-rf {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+
+/* --- Comparison Mode --- */
+.compare-toggle {
+  margin-top: var(--sp-3);
+}
+.compare-select {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+
+/* --- Toast --- */
+.toast-container {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s var(--ease-out);
+  pointer-events: auto;
+  white-space: nowrap;
+  max-width: 500px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.toast.visible { opacity: 1; transform: translateY(0); }
+.toast-info { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); }
+.toast-warn { background: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
+.toast-success { background: #d1fae5; color: #065f46; border: 1px solid #34d399; }
+
+
+/* --- Chromatography Animations --- */
+
+/* Solvent front rising */
+@keyframes solventRise {
+  from { height: 0; }
+  to { height: var(--solvent-target-height, 80%); }
+}
+
+/* Spot separation */
+@keyframes spotTravel {
+  from { bottom: var(--spot-origin, 36px); }
+  to { bottom: var(--spot-target, 100px); }
+}
+
+/* Pencil draw */
+@keyframes pencilDraw {
+  from { width: 0; opacity: 0; }
+  to { width: calc(100% - 12px); opacity: 1; }
+}
+.pencil-baseline.drawing {
+  animation: pencilDraw 0.4s var(--ease-out) forwards;
+}
+
+/* Spot application */
+@keyframes spotApply {
+  0% { transform: translateX(-50%) scale(0); opacity: 0; }
+  50% { transform: translateX(-50%) scale(1.3); opacity: 0.8; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+.sample-spot.applying {
+  animation: spotApply 0.5s var(--ease-out) forwards;
+}
+
+/* Paper dipping into beaker */
+@keyframes paperDip {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(40px); }
+}
+
+/* Solvent capillary wicking */
+@keyframes wick {
+  0% { height: 0; }
+  100% { height: var(--wick-height, 80%); }
+}
+
+/* Colour band spreading */
+@keyframes spotSpread {
+  0% { width: 10px; height: 10px; border-radius: 50%; }
+  100% { width: 16px; height: 10px; border-radius: 40%; }
+}
+
+/* Gentle shimmer on wet paper */
+@keyframes wetShimmer {
+  0%, 100% { opacity: 0.08; }
+  50% { opacity: 0.15; }
+}
+.solvent-wet.active {
+  animation: wetShimmer 3s ease-in-out infinite;
+}
+
+/* Pulsing hint for interactive elements */
+@keyframes hintPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(67, 97, 238, 0); }
+}
+.hint-pulse {
+  animation: hintPulse 2s ease-in-out infinite;
+}
+
+
+/* --- Dark mode overrides --- */
+[data-theme="dark"] .chrom-paper {
+  background: #d4cfc5;
+  border-color: rgba(150, 140, 120, 0.5);
+}
+[data-theme="dark"] .pencil-baseline {
+  background: #666;
+}
+[data-theme="dark"] .pencil-baseline::before {
+  color: #666;
+}
+[data-theme="dark"] .sample-select {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+[data-theme="dark"] .sample-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.25);
+}
+[data-theme="dark"] .compare-select {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+[data-theme="dark"] .results-table input {
+  color: var(--color-text);
+}
+
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+  .practical-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+  .guide-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--sp-3) var(--sp-4);
+    overflow-y: visible;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .data-panel {
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+  .procedure-steps {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .procedure-step {
+    flex: 1;
+    min-width: 140px;
+  }
+  .step-content p,
+  .step-why {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    overflow: auto;
+    height: auto;
+    min-height: 100vh;
+  }
+  .chrom-paper-assembly {
+    transform: scale(0.8);
+    transform-origin: bottom center;
+  }
+  .chrom-beaker {
+    width: 90px;
+    height: 120px;
+  }
+  .workbench-controls {
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+  }
+}

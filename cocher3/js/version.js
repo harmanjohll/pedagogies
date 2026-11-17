@@ -1,33 +1,28 @@
 /*
- * Co-Cher 3: version
- * ==================
- * Co-Cher 3 has its own number, apart from Co-Cher 2's. Three parts:
- * product . release . fix. Raise it with every change to cocher3/, and add a
- * note at the top of NOTES when teachers should hear about it.
- * Co-Cher 2's version (cocher2/js/version.js) moves only when the shared
- * engine or Co-Cher 2 itself changes.
+ * Co-Cher 3: the version the engine reports
+ * =========================================
+ * Co-Cher 3 keeps one number, in js/v3/version.js. This file hands it to the
+ * engine's own screens (Settings, About), so they never show another.
+ *
+ * The three lines, each in its own folder and each frozen except this one:
+ *   Co-Cher 1 (v8.9)  app/       its own saved data (keys `cocher_`, database `cocher`)
+ *   Co-Cher 2 (v2.7)  cocher2/   frozen when Co-Cher 3 took its own copy of the engine
+ *   Co-Cher 3         cocher3/   the main line
+ *
+ * Co-Cher 2 and 3 share saved work ON PURPOSE: both read and write the keys
+ * prefixed `cocher2_` and the database `cocher2`, so a teacher finds the same
+ * classes and lessons in either, and Co-Cher 2 stays a working fallback.
+ * Because of that, change saved data here only by ADDING to it; a renamed or
+ * reshaped field would break Co-Cher 2 for the same teacher. Teachers move
+ * work from Co-Cher 1 with its Settings, Data, Export, then Import here.
  */
 
-export const VERSION = '3.5.0';
+import { VERSION } from './v3/version.js';
 
-/* Newest first. Shown once to a returning teacher, in Co-Cher 3 only. */
-export const NOTES = [
-  { version: '3.5.0', items: [
-    ['Short videos', 'Under My School, How it works: one question each, about twenty seconds. Most screens also have a Demo button, top right.'],
-    ['The mark, top left', 'Tap it from anywhere to go back to My School.'],
-  ] },
-  { version: '3.4.0', items: [
-    ['Send to a colleague', 'In Lessons, under Send: tick lessons, room layouts, entries or term goals, and pass on one file. Your colleague loads it in the same place. No student data goes in it.'],
-  ] },
-  { version: '3.3.0', items: [
-    ['On your phone', 'The menu holds five places: School, Now, Week, Classes, Lessons. Everything else is one tap away under More. My School fits one screen.'],
-    ['A line for the day', 'My School carries the day\u2019s quote, or your own mantra if you have set one.'],
-    ['Marks you pass', 'A short note when you reach one, such as ten lessons designed. It shows once.'],
-  ] },
-  { version: '3.2.0', items: [
-    ['Common free time', 'In Admin: pick colleagues and see when you are all free this week or next. Add the slot as an entry.'],
-    ['Student handover', 'In Classes: send a colleague your evidence on a class as a file. Theirs joins yours on the same student, with nothing doubled.'],
-    ['Term goals', 'On Term: set two or three goals, link your entries to them, and watch them move.'],
-    ['Its own address', 'Co-Cher 3 now lives at /pedagogies/cocher3/. Old links still work.'],
-  ] },
+export const APP_VERSION = 'v' + VERSION;
+
+/* The earlier lines, still live. */
+export const PREVIOUS_VERSIONS = [
+  { version: 'Co-Cher 2 (v2.7, the same saved work)', url: '../cocher2/cocher2.html' },
+  { version: 'Co-Cher 1 (v8.9, its own saved work)', url: '../app/cocher.html' },
 ];

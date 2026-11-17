@@ -1,0 +1,514 @@
+/* ============================================================
+   LabSim – Diffusion Practical Styles
+   3-column layout with animated workbench simulations
+   ============================================================ */
+
+/* --- 3-Column Grid Layout --- */
+.diff-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr 320px;
+  gap: var(--sp-4);
+  padding-top: var(--sp-4);
+  padding-bottom: var(--sp-6);
+  min-height: calc(100vh - 56px);
+}
+
+/* --- Left Panel: Guide & Experiment Selector --- */
+.diff-guide-panel {
+  align-self: start;
+  position: sticky;
+  top: 72px;
+}
+
+.experiment-selector {
+  margin-bottom: var(--sp-4);
+}
+.experiment-selector label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--sp-1);
+}
+.experiment-select {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' fill='none' stroke='%235a5f6d' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+.experiment-select:hover {
+  border-color: var(--color-border-strong);
+}
+.experiment-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+  outline: none;
+}
+
+/* Procedure list (shared from osmosis pattern) */
+.procedure-list {
+  list-style: none;
+  counter-reset: proc;
+  padding: 0;
+  margin: 0 0 var(--sp-4);
+}
+.procedure-step {
+  counter-increment: proc;
+  position: relative;
+  padding: var(--sp-2) 0 var(--sp-2) 32px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  border-left: 2px solid var(--color-border);
+  margin-left: 11px;
+}
+.procedure-step::before {
+  content: counter(proc);
+  position: absolute;
+  left: -12px;
+  top: var(--sp-2);
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+.procedure-step.active {
+  color: var(--color-text);
+  font-weight: 500;
+}
+.procedure-step.active::before {
+  border-color: var(--bio-color);
+  color: var(--bio-color);
+  background: var(--bio-bg);
+}
+.procedure-step.done::before {
+  border-color: var(--color-success);
+  background: var(--color-success);
+  color: #fff;
+  content: '\2713';
+}
+
+/* Temperature selector chips */
+.temp-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0;
+}
+.temp-chip {
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--dur-fast) ease;
+  font-family: var(--font-sans);
+}
+.temp-chip:hover {
+  border-color: var(--bio-color);
+  color: var(--bio-color);
+}
+.temp-chip.active {
+  border-color: var(--bio-color);
+  background: var(--bio-bg);
+  color: var(--bio-color);
+}
+.temp-chip.completed {
+  border-color: var(--color-success);
+  background: rgba(6, 214, 160, 0.1);
+  color: var(--color-success);
+}
+
+/* Info box */
+.info-box {
+  background: var(--bio-bg);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2) var(--sp-3);
+  margin-top: var(--sp-3);
+}
+.info-box-title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--bio-color);
+  margin-bottom: var(--sp-1);
+}
+.info-box-text {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+}
+
+
+/* --- Centre Panel: Workbench --- */
+.diff-workbench-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.workbench-area {
+  position: relative;
+  min-height: 420px;
+  background: var(--bench-bg);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Bench surface at bottom */
+.workbench-area .bench-surface {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: var(--bench-surface);
+  border-top: 2px solid var(--bench-top-edge);
+  z-index: 1;
+}
+
+/* Canvas overlay for simulation rendering */
+.sim-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+/* Action bar */
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  justify-content: center;
+  padding: var(--sp-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+/* Timer / stopwatch display */
+.stopwatch-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+.stopwatch-time {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--bio-color);
+  min-width: 80px;
+  text-align: center;
+}
+.stopwatch-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+.stopwatch-radius {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Measurement line indicator on canvas */
+.measurement-line {
+  stroke: rgba(255, 255, 100, 0.8);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+/* Temperature indicator label on workbench */
+.temp-indicator {
+  position: absolute;
+  top: var(--sp-3);
+  left: var(--sp-3);
+  z-index: 3;
+  padding: var(--sp-1) var(--sp-3);
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: #fff;
+}
+.temp-indicator .temp-value {
+  color: var(--bio-color);
+}
+
+/* Crystal animation */
+@keyframes crystalDrop {
+  0%   { transform: translateY(-60px); opacity: 0; }
+  60%  { transform: translateY(0px); opacity: 1; }
+  80%  { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+.crystal-dropping {
+  animation: crystalDrop 0.5s var(--ease-out) forwards;
+}
+
+/* Radial spread animation (applied via canvas, these are fallback CSS) */
+@keyframes spreadPulse {
+  0%   { transform: scale(0); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* Agar cube styles */
+.agar-cubes-container {
+  display: flex;
+  gap: var(--sp-6);
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--sp-4);
+}
+
+/* Progress bar for agar decolourisation */
+.decolour-progress {
+  position: relative;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: var(--sp-1);
+}
+.decolour-progress-fill {
+  height: 100%;
+  background: var(--bio-color);
+  border-radius: var(--radius-full);
+  transition: width 0.3s linear;
+}
+
+
+/* --- Right Panel: Data & Analysis --- */
+.diff-data-panel {
+  align-self: start;
+  position: sticky;
+  top: 72px;
+  max-height: calc(100vh - 88px);
+  overflow-y: auto;
+}
+
+.table-scroll {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.section-sub {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+
+.graph-container {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.graph-container canvas {
+  width: 100%;
+  height: 220px;
+  display: block;
+}
+
+/* SA:V ratio table */
+.sav-table td.sav-highlight {
+  color: var(--bio-color);
+  font-weight: 600;
+}
+
+/* Analysis section */
+.analysis-section {
+  margin-top: var(--sp-4);
+}
+.analysis-question {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--bio-color);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.analysis-question-text {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--sp-2);
+}
+.analysis-answer {
+  width: 100%;
+  min-height: 60px;
+  padding: var(--sp-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+  resize: vertical;
+  line-height: var(--leading-relaxed);
+}
+.analysis-answer:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+}
+.analysis-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--sp-1);
+  cursor: pointer;
+}
+.analysis-hint:hover {
+  color: var(--color-text-secondary);
+}
+.analysis-model-answer {
+  font-size: var(--text-xs);
+  color: var(--bio-color);
+  background: var(--bio-bg);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2);
+  margin-top: var(--sp-2);
+  line-height: var(--leading-relaxed);
+  display: none;
+}
+.analysis-model-answer.visible {
+  display: block;
+}
+
+/* Calc panel */
+.calc-panel {
+  background: var(--bio-bg);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3);
+}
+.calc-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  padding: 2px 0;
+}
+.calc-label { color: var(--color-text-secondary); }
+.calc-result {
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--bio-color);
+}
+.calc-note {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--sp-2);
+  line-height: var(--leading-relaxed);
+}
+
+/* --- Toast --- */
+.toast-container {
+  position: fixed;
+  bottom: var(--sp-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  pointer-events: none;
+}
+.toast {
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  background: var(--color-text);
+  color: #fff;
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn 0.2s ease;
+  pointer-events: auto;
+}
+.toast-info    { background: var(--bio-color); }
+.toast-warn    { background: #d97706; }
+.toast-success { background: var(--color-success); }
+
+
+/* --- Dark Mode Overrides --- */
+[data-theme="dark"] .graph-container {
+  background: var(--color-surface);
+}
+[data-theme="dark"] .workbench-area {
+  background: var(--bench-bg);
+}
+[data-theme="dark"] .analysis-answer {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+[data-theme="dark"] .experiment-select {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' fill='none' stroke='%239a9dab' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] .experiment-select:hover {
+  border-color: #50526a;
+}
+[data-theme="dark"] .experiment-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.25);
+}
+[data-theme="dark"] .experiment-select option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+[data-theme="dark"] .temp-chip {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-strong);
+}
+
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+  .diff-layout {
+    grid-template-columns: 1fr;
+  }
+  .diff-guide-panel,
+  .diff-data-panel {
+    position: static;
+    max-height: none;
+  }
+  .workbench-area {
+    min-height: 350px;
+  }
+}

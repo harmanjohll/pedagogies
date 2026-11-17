@@ -1,0 +1,464 @@
+/* ============================================================
+   Electromagnets Practical — Styles
+   3-column grid layout with animated electromagnet simulation.
+   ============================================================ */
+
+body {
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Layout --- */
+.em-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr 320px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.em-guide-panel {
+  padding: var(--sp-4);
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.em-workbench-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.em-data-panel {
+  padding: var(--sp-4);
+  overflow-y: auto;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+
+/* --- Variable selector --- */
+.var-selector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.var-option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: var(--color-surface);
+  transition: all var(--dur-fast) ease;
+  font-size: var(--text-sm);
+}
+.var-option:hover {
+  border-color: var(--phys-color);
+  background: var(--phys-bg);
+}
+.var-option.selected {
+  border-color: var(--phys-color);
+  background: var(--phys-bg);
+  font-weight: 600;
+}
+.var-option .var-radio {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-border-strong);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--dur-fast) ease;
+}
+.var-option.selected .var-radio {
+  border-color: var(--phys-color);
+}
+.var-option.selected .var-radio::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--phys-color);
+}
+
+
+/* --- Config controls --- */
+.config-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.config-row label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.slider {
+  flex: 1;
+  accent-color: var(--phys-color);
+}
+.config-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  min-width: 60px;
+  text-align: right;
+}
+.config-select {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+.controlled-vars {
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.controlled-vars strong {
+  color: var(--color-text-secondary);
+}
+
+
+/* --- Procedure list --- */
+.procedure-list {
+  list-style: none;
+  counter-reset: procedure;
+  padding: 0;
+}
+.procedure-step {
+  counter-increment: procedure;
+  position: relative;
+  padding: var(--sp-2) 0 var(--sp-2) var(--sp-8);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  border-left: 2px solid var(--color-border);
+  margin-left: var(--sp-3);
+}
+.procedure-step::before {
+  content: counter(procedure);
+  position: absolute;
+  left: calc(-1 * var(--sp-3) - 10px);
+  top: var(--sp-2);
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.procedure-step.active {
+  color: var(--color-text);
+  border-left-color: var(--phys-color);
+}
+.procedure-step.active::before {
+  background: var(--phys-color);
+  color: #fff;
+}
+.procedure-step.done {
+  color: var(--color-text-secondary);
+}
+.procedure-step.done::before {
+  background: var(--color-success);
+  color: #fff;
+}
+
+
+/* --- Workbench --- */
+.em-workbench {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bench-bg);
+  position: relative;
+  padding: var(--sp-4);
+  min-height: 420px;
+  gap: var(--sp-3);
+}
+.em-workbench canvas {
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #1e1f2b 0%, #252638 60%, #2d2e42 100%);
+}
+
+
+/* --- Workbench controls overlay --- */
+.bench-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-5);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+}
+.bench-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  min-width: 120px;
+}
+.bench-info.ammeter-display {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.bench-info.clip-count-display {
+  background: rgba(247, 127, 0, 0.1);
+  border: 1px solid rgba(247, 127, 0, 0.3);
+}
+.bench-info-label {
+  font-size: var(--text-xs);
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bench-info-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: #fff;
+}
+
+/* --- Clip input (independent mode) --- */
+.clip-input-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.clip-input {
+  width: 60px;
+  padding: var(--sp-2);
+  border: 1px solid rgba(247, 127, 0, 0.4);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  text-align: center;
+}
+.clip-input:focus {
+  outline: none;
+  border-color: var(--phys-color);
+  box-shadow: 0 0 0 3px rgba(247, 127, 0, 0.2);
+}
+
+
+/* --- Graph --- */
+.graph-container {
+  display: flex;
+  justify-content: center;
+}
+.graph-container canvas {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+[data-theme="dark"] .graph-container canvas {
+  background: var(--color-surface);
+}
+
+
+/* --- Analysis questions --- */
+.analysis-section {
+  margin-top: var(--sp-3);
+}
+.analysis-question {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--phys-color);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.analysis-question-text {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--sp-2);
+}
+.analysis-answer {
+  width: 100%;
+  min-height: 60px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  resize: vertical;
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  line-height: var(--leading-relaxed);
+}
+.analysis-answer:focus {
+  outline: none;
+  border-color: var(--phys-color);
+  box-shadow: 0 0 0 3px rgba(247, 127, 0, 0.15);
+}
+.analysis-reveal {
+  margin-top: var(--sp-2);
+}
+.model-answer {
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: rgba(6, 214, 160, 0.08);
+  border: 1px solid rgba(6, 214, 160, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  animation: fadeIn var(--dur-slow) var(--ease-out) both;
+}
+.model-answer::before {
+  content: 'Model answer: ';
+  font-weight: 600;
+  color: var(--color-success);
+}
+.marks-badge {
+  display: inline-block;
+  padding: 1px var(--sp-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: var(--phys-bg);
+  color: var(--phys-color);
+  border-radius: var(--radius-full);
+  margin-left: var(--sp-2);
+}
+
+
+/* --- Toast --- */
+.toast-container {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s var(--ease-out);
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.toast.visible { opacity: 1; transform: translateY(0); }
+.toast-info { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); }
+.toast-warn { background: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
+.toast-success { background: #d1fae5; color: #065f46; border: 1px solid #34d399; }
+
+
+/* ── Animations ── */
+
+/* Current flow: moving dots along wire */
+@keyframes currentFlow {
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -20; }
+}
+
+/* Magnetic field lines pulsing */
+@keyframes fieldPulse {
+  0%   { opacity: 0; transform: scale(0.9); }
+  50%  { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+/* Paper clips being attracted */
+@keyframes clipAttract {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  30%  { transform: translateY(-5px) rotate(-5deg); }
+  60%  { transform: translateY(-30px) rotate(10deg); opacity: 1; }
+  100% { transform: translateY(-60px) rotate(-3deg); opacity: 0; }
+}
+
+/* Paper clip settling onto nail */
+@keyframes clipStick {
+  0%   { transform: scale(0.3) rotate(20deg); opacity: 0; }
+  60%  { transform: scale(1.1) rotate(-3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Power on glow */
+@keyframes powerGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(247, 127, 0, 0.3); }
+  50%      { box-shadow: 0 0 20px rgba(247, 127, 0, 0.6); }
+}
+
+/* Wire hum vibration */
+@keyframes wireHum {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(0.5px); }
+  50%  { transform: translateX(0); }
+  75%  { transform: translateX(-0.5px); }
+  100% { transform: translateX(0); }
+}
+
+.power-on-glow {
+  animation: powerGlow 2s ease-in-out infinite;
+}
+
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+  .em-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+  .em-guide-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    max-height: 200px;
+    padding: var(--sp-3);
+  }
+  .em-data-panel {
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+@media (max-width: 768px) {
+  .bench-controls {
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .var-selector {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .var-option {
+    flex: 1;
+    min-width: 120px;
+  }
+}

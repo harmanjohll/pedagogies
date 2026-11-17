@@ -1,0 +1,177 @@
+/*
+ * Co-Cher "What's New" — version-aware changelog
+ * ==============================================
+ * Shows once per version bump so returning teachers see what changed —
+ * SUMMARISED across the versions they actually missed, not an ever-growing
+ * list. If a teacher last saw v7.3 and opens v7.8, they get the highlights of
+ * v7.4–v7.8 (newest first), each release trimmed to a few concise lines.
+ *
+ * Keyed to APP_VERSION; dismissing records the seen version.
+ */
+
+import { APP_VERSION } from '../version.js';
+import { openModal } from './modals.js';
+
+const SEEN_KEY = 'cocher2_whatsnew_seen';
+
+// Newest first. Each release: a few concise highlights (not paragraphs).
+// Keep entries SHORT — this is a "since you were away" digest, not release notes.
+const RELEASES = [
+  { version: 'v2.3', items: [
+    { icon: '\u{1F527}', title: 'Older accounts find their school', text: 'If you signed in before Co-Cher knew about schools, your school now comes from your email, once. Find a Teacher, your timetable and your school\u2019s own words appear. Your saved work stays.' },
+  ] },
+  { version: 'v2.2', items: [
+    { icon: '\u{1F441}', title: 'Observe, while you teach', text: 'In Present, press O (or tap Observe). Pick students, tap \u201cShowed it\u201d or \u201cWorking towards it\u201d for a competency, and it is saved to each student, linked to the lesson. Show initials instead of names when the projector is on.' },
+    { icon: '\u{1F9D1}\u200D\u{1F393}', title: 'A profile for every student', text: 'Tap a name in My Classes, or search for it. One page: E21CC levels in each of your classes, the trend, the evidence behind it, who teaches them each subject, and the pathway they are working towards from their Paths link.' },
+    { icon: '\u{1F4C5}', title: 'Beatty: your week is already here', text: 'Sign in with your btyss email and My Timetable fills itself from the school timetable. Not matched? Pick your name once.' },
+    { icon: '\u{1F512}', title: 'Your sign in decides your school', text: 'Each school\u2019s space opens only from its own email domain. Other addresses are no longer offered a school to pick.' },
+  ] },
+  { version: 'v2.1', items: [
+    { icon: '\u{1F9ED}', title: 'Paths, inside ECG', text: 'CCE2021 \u2192 ECG now has a Paths view: the live Pathways app, answering ECG\u2019s third question, \u201cHow do I get there?\u201d Every update to Paths shows here, and Open full screen gives it a tab of its own.' },
+    { icon: '\u{1F4DD}', title: 'The E21CC Learning Log, under My Classes', text: 'For Beatty: the student app, your teacher console and the demo, in one place beside your classes. The Log keeps its own data, the same whether you open it here or on its own.' },
+    { icon: '\u{1F50E}', title: 'Student Finder, in Admin One-Stop', text: 'Load your school\u2019s student timetable and find any student: who teaches them each subject, where they are now, and which of your classes they are in. The file stays on this device, and only the columns Co-Cher needs are kept; remarks and the like are left out.' },
+    { icon: '\u2705', title: 'Commit class', text: 'Turn a teaching group or a form class into a My Classes class in one tap, ready for seating, E21CC tracking, lessons and assessment. Committing again updates it: nobody is doubled, and what you already hold on a student is kept. Try it with the demo data first.' },
+  ] },
+  { version: 'v1.16', items: [
+    { icon: '\u{1F4D6}', title: 'Opera Estate speaks in its own words now', text: 'The school sent its full site, so the guesses are gone. Its vision, mission, R2IGHT values, crest and 40th-anniversary theme are quoted exactly; so are the curriculum stances of all eight departments — C-P-A in Maths, EL Syllabus 2020, the seven PE Learning Areas, CCE@OEPS on Identity/Relationships/Choices — and every one of them now reaches the AI when you plan.' },
+    { icon: '\u{1F552}', title: 'The bell knows Wednesday is short', text: 'Wednesday dismisses at 12.30, not 1.30. Recess is staggered by level (P1 & P4 at 9.30, P2 & P5 at 10.00, P3 & P6 at 10.30) and is not marked on the staff timetable, so a slot that looks free may be a duty. Both are recorded, along with CCA and remedial times.' },
+    { icon: '\u{1F464}', title: 'Find a Teacher shows who does what', text: 'A colleague’s published designation — HOD, Year Head, Subject Head, Senior Teacher — now rides on their name, so you can tell whether you have found the right person to ask. Their teaching areas are still worked out from the timetable, because a job title is not a subject.' },
+  ] },
+  { version: 'v1.15', items: [
+    { icon: '\u{1F3EB}', title: 'Opera Estate Primary joins', text: 'Its own bubble, from its own timetable: twelve 30-minute periods from 7:30 to 1:30, its real class codes across P1–P6 including the P6 Foundation class, and all 81 colleagues listed on first sign-in. Sign-in is name@oeps. Its learning routines are not in yet, so Opera Estate opens on Assessment FOR and AS Learning rather than a school-specific frame that nobody has confirmed.' },
+    { icon: '\u{1F4C5}', title: 'Your own week is already loaded', text: 'If your school published its roster with the app and your sign-in matches a row in it, your timetable is simply there — no import, no picker, nothing to be told to do. Anything less than an exact match still asks, because a near-miss would put you in a colleague’s week.' },
+  ] },
+  { version: 'v1.13', items: [
+    { icon: '\u{1F511}', title: 'Park View signs in as name@pvps', text: 'A short pilot handle \u2014 adeline@pvps \u2014 deliberately not an MOE address, so it cannot be confused with or collide with a real one. The school is in beta: only names on its list get in, and it no longer appears in the \u201cwhich school are you at?\u201d picker, so nobody can select their way into a school they do not work at.' },
+    { icon: '\u{1F4CB}', title: 'The admin decides who tests', text: 'All 92 handles are generated from the staff timetable and listed in the school\u2019s own registry entry. Trimming that list is how access is controlled \u2014 no code change, no separate account system.' },
+  ] },
+  { version: 'v1.12', items: [
+    { icon: '\u{1F5C2}', title: 'Find a Teacher groups by teaching area', text: 'A primary staff timetable has no department column, so everyone arrived unassigned and the picker was one list of ninety-odd names. Areas are now worked out from what each person is timetabled to teach \u2014 and because most primary teachers teach three or four subjects, a teacher of English and Maths appears under both. Called \u201cteaching area\u201d, not \u201cdepartment\u201d, because it is what the timetable proves rather than a reporting line the school has published.' },
+    { icon: '\u{1F4DA}', title: 'Primary starters for a primary generalist', text: 'The starter gallery keyed off one class subject, so a Park View teacher got Maths prompts only \u2014 while also teaching Social Studies, PAL and Art that same morning. Primary teachers now get those too, on top of whatever their class matched.' },
+  ] },
+  { version: 'v1.11', items: [
+    { icon: '\u{1F465}', title: 'Your colleagues are already there', text: 'Find a Teacher used to need somebody to load a file on their own laptop \u2014 not something you can ask a whole staffroom to do. Park View\u2019s roster now ships with the app: sign in and all 92 colleagues are listed, with real availability from their timetables. Nothing to upload, and it works offline.' },
+    { icon: '\u{1F3EB}', title: 'Everything follows your sign-in', text: 'Sign in with a Beatty address and you get Beatty \u2014 its levels, CCAs, forms, routines and colleague list. Sign in with Park View and you get Park View\u2019s. Each school has its own store, its own folder and its own sources; nothing crosses.' },
+  ] },
+  { version: 'v1.10', items: [
+    { icon: '\u{1F510}', title: 'Each school gets its own Co-Cher', text: 'Browser storage is tied to the website, not to who is signed in \u2014 so on a shared staffroom machine, the next teacher inherited the last one\u2019s classes, CCAs and pedagogy routines. Every school now has its own separate store. Sign out, sign in as another school, and nothing crosses; come back and your own work is exactly where you left it.' },
+    { icon: '\u{1F3A8}', title: 'Framework chips have colours', text: 'The pedagogy chips above the planner box were a row of identical grey pills. Each routine now keeps its own colour, and hovering one tells you what it is for.' },
+    { icon: '\u{1F4DA}', title: 'Starter prompts for YOUR level', text: 'A P3 teacher was being offered \u201cQuadratic Equations\u201d and \u201cOrganic Chemistry\u201d. Topic examples now follow your school\u2019s stage, and primary teachers get starters for Social Studies, Mother Tongue, PAL, Art, Music and PE \u2014 the subjects actually on their timetable.' },
+  ] },
+  { version: 'v1.9', items: [
+    { icon: '\u{1F3AF}', title: 'The learning practice is your school\u2019s, not Beatty\u2019s', text: 'GROW, ACT, MAP and ASK were built into the app and seeded into every install \u2014 four routines belonging to one school, that nobody else could delete. They now live in Beatty\u2019s own pack. Every other school opens on Assessment FOR Learning and Assessment AS Learning, which genuinely are everyone\u2019s, plus whatever routines its own pack names.' },
+    { icon: '\u{1F504}', title: 'Park View opens on its own routines', text: 'The ASK approach and Sense-Think-Act were sitting in Park View\u2019s pack, unused, while the app showed another school\u2019s. They now appear in Assessment as Learning, and the AfL/AaL ring quotes Park View\u2019s own words \u2014 questioning, feedback, peer and self-assessment.' },
+    { icon: '\u{1F4DD}', title: 'Your routines reach the AI, everywhere', text: 'Lesson plans, schemes of work and every other AI surface now receive your school\u2019s named routines and its own split of what Assessment FOR and AS Learning mean there \u2014 so a plan comes back in your school\u2019s language instead of a plausible invention.' },
+    { icon: '\u{1F4C5}', title: 'Park View\u2019s real period grid', text: 'Fifteen 30-minute periods from 7:00 to 2:30, its real class codes across P1\u2013P6, its room names and its subject list \u2014 all read from the school\u2019s own timetable. Naming a class now offers the real codes.' },
+  ] },
+  { version: 'v1.8', items: [
+    { icon: '\u{1F465}', title: 'Colleagues you have no timetable for are still listed', text: 'Find a Teacher used to show only the people whose week Co-Cher knew. Paste your school\u2019s staff page and everyone appears \u2014 but anyone without an uploaded timetable is greyed out and labelled, because listing them as selectable would promise an availability answer Co-Cher cannot give, and leaving them out would suggest they do not work here.' },
+    { icon: '\u{1F512}', title: 'The demo accounts no longer carry anyone\u2019s real week', text: 'The sample timetables shipped with Co-Cher were real teachers\u2019 actual timetables \u2014 their duty posts, their rooms, their Tuesday mornings \u2014 with the source file named alongside. They have been replaced with invented ones. A weekly pattern identifies a person even under a different name, so the entries had to go, not just the labels.' },
+    { icon: '\u{1F4C5}', title: 'Your timetable is ready the moment you sign in', text: 'Open My Timetable quickly enough and it used to say \u201cNo timetable yet\u201d and stay that way until you navigated off and back. Sign-in now waits for the timetable before letting you through.' },
+  ] },
+  { version: 'v1.7', items: [
+    { icon: '\u{1F5D3}', title: 'Your timetable is on the dashboard', text: 'Today\u2019s lessons now show on the dashboard for every school, not just the one Co-Cher was originally built for \u2014 read from your own imported timetable, with the current lesson marked. The sidebar\u2019s My Timetable link also stopped printing a stray word before its name.' },
+    { icon: '\u{1F3EB}', title: 'Settings shows what Co-Cher knows about your school', text: 'Your school\u2019s motto, vision, mission, values, levels and named teaching approaches now appear in Settings, quoted from your school\u2019s own material \u2014 along with an honest list of what Co-Cher could not confirm and has left blank rather than invented.' },
+    { icon: '\u{1F4CB}', title: 'Admin events match your school', text: 'The one-stop\u2019s sample events were secondary \u2014 a Sec 2 cohort camp, a Sec 3 fieldwork trip. Primary schools now get primary ones: a P4 learning journey, a P5 camp, a P6 Values-in-Action visit, with the supervision ratios and venues that actually apply.' },
+    { icon: '\u{1F3D0}', title: 'My CCA opens on your school\u2019s CCAs', text: 'Not a generic list. Park View teachers find Football, Wushu, Show Choir, Guzheng, Scouts \u2014 the twelve their school actually runs. If you have already edited your CCA list, it is left exactly as you left it.' },
+    { icon: '\u{1F4EC}', title: 'Nothing addressed to another school', text: 'The all-staff address, the approval and bus-booking forms and the relief planner belonged to one school and were shown to everyone. They now appear only at the school they belong to, and your school\u2019s own forms can be added to its pack.' },
+    { icon: '\u{1F3AF}', title: 'Suggestions pitched at your learners', text: 'Video recommendations, worksheets and every other AI surface stop defaulting to \u201cSecondary\u201d. A primary teacher gets primary channels and primary reading levels; CCE quotes your school\u2019s own wording of the values.' },
+  ] },
+  { version: 'v1.6', items: [
+    { icon: '\u{1F465}', title: 'A colleague list you can actually fill', text: 'Find a Teacher no longer waits on anything: load your school\u2019s staff timetable and the dropdown works on your device straight away. Publish the same file to the school\u2019s folder and it works for everyone.' },
+    { icon: '\u{1F4CB}', title: 'Admin forms in your school\u2019s words', text: 'The one-stop\u2019s examples used to be another school\u2019s \u2014 \u201c4A, 4B Pure Chemistry\u201d, \u201cNUS Science Faculty\u201d. They now quote your own classes and your own level, and the drafted letters and risk assessments are written for the right stage of schooling.' },
+  ] },
+  { version: 'v1.5', items: [
+    { icon: '\u{1F393}', title: 'Co-Cher knows what level you teach', text: 'Every level picker, sample class and AI prompt now uses YOUR school\u2019s levels. A primary teacher is offered Primary 1\u20136, not Sec 1\u2013JC 2, and the sample lessons that come with Co-Cher are primary lessons \u2014 bar models, the celery experiment, personal recount \u2014 not O-Level chemistry.' },
+    { icon: '\u{1F465}', title: 'Find a Teacher works at any school', text: 'Looking up a colleague\u2019s free periods no longer needs one particular school\u2019s timetable file. It reads whatever your school has published, using real clock times \u2014 and if your school hasn\u2019t published anything yet, it says so plainly instead of loading forever.' },
+  ] },
+  { version: 'v1.4', items: [
+    { icon: '\u{1F3AF}', title: 'Co-Cher speaks your school\u2019s language', text: 'Lesson design now draws on your school\u2019s OWN teaching approaches, quoted word-for-word from what your school has published \u2014 its vision, values, named subject approaches and frameworks. Where your school hasn\u2019t defined something, Co-Cher says so rather than inventing it.' },
+  ] },
+  { version: 'v1.3', items: [
+    { icon: '\u{1F3EB}', title: 'Your school can set you up in one tap', text: 'When your school publishes its timetable, Co-Cher offers it to you on sign-in \u2014 find your name in the list, tap once, and your whole week is there. No file to hunt for, no retyping. If your school hasn\u2019t published one, nothing changes and you import your own.' },
+  ] },
+  { version: 'v1.2', items: [
+    { icon: '\u{1F3A8}', title: 'A look of its own \u2014 and of your school', text: 'Co-Cher 2 has its own identity now, deliberately neutral rather than any one school\u2019s colours. Your school\u2019s own accent colour tints the app, and its name sits under the Co-Cher 2 wordmark, so you can see at a glance whose setup you\u2019re running.' },
+  ] },
+  { version: 'v1.1', items: [
+    { icon: '\u{1F511}', title: 'Sign in from any school', text: 'Co-Cher no longer checks you against one school\u2019s staff list. Your email address tells it which school you\u2019re at, and if your school isn\u2019t set up yet you simply pick it from a list \u2014 or carry on without one. Colleague lists (Find a Teacher, the staff picker) now only ever show people from your own school.' },
+  ] },
+  { version: 'v1.0', items: [
+    { icon: '\u{1F3EB}', title: 'Co-Cher 2 — built for any school', text: 'This is a new line of Co-Cher. Everything from Co-Cher 1 is here, and the work from now on makes it usable beyond one school: your own timetable, your own calendar and bell schedule, your own frameworks. Co-Cher 1 is still running and untouched — bring your lessons across with Settings → Data → Export there, then Import here.' },
+  ] },
+];
+
+/* ── version compare: 'v7.10' > 'v7.8', 'v7' treated as 'v7.0' ── */
+function parseVer(v) { return String(v || '').replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0); }
+function cmpVer(a, b) {
+  const A = parseVer(a), B = parseVer(b), n = Math.max(A.length, B.length);
+  for (let i = 0; i < n; i++) { const d = (A[i] || 0) - (B[i] || 0); if (d) return d; }
+  return 0;
+}
+
+// Cap how many missed versions we spell out, so a long absence still reads as a
+// tidy digest rather than a wall.
+const MAX_RELEASES_SHOWN = 5;
+
+export function maybeShowWhatsNew() {
+  let seen = '';
+  try { seen = localStorage.getItem(SEEN_KEY) || ''; } catch { /* ignore */ }
+  if (seen === APP_VERSION) return;
+  // First-ever run (no version recorded): onboarding covers new users — record
+  // the current version silently so what's-new only surfaces for RETURNING
+  // users after a real version bump.
+  if (!seen) {
+    try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch {}
+    return;
+  }
+
+  // Only the releases newer than what the teacher last saw, newest first.
+  const missed = RELEASES.filter(r => cmpVer(r.version, seen) > 0);
+  // A release with nothing to tell teachers (an engine change, say) stays silent.
+  if (!missed.length) { try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch {} return; }
+  const releases = missed;
+  const shown = releases.slice(0, MAX_RELEASES_SHOWN);
+  const trimmed = releases.length - shown.length;
+
+  const intro = shown.length > 1
+    ? `A quick digest of what changed since you were last here (you were on ${seenLabel(seen)}):`
+    : `Here's what's new in Co-Cher ${APP_VERSION}:`;
+
+  const body = `
+    <p style="font-size:0.8125rem;color:var(--ink-muted);margin:0 0 var(--sp-4);line-height:1.5;">${intro}</p>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-4);">
+      ${shown.map(rel => `
+        <div>
+          <div style="display:inline-block;font-size:0.6875rem;font-weight:700;letter-spacing:0.04em;color:var(--accent);background:var(--accent-light,rgba(67,97,238,0.1));border-radius:999px;padding:2px 10px;margin-bottom:var(--sp-2);">${rel.version}</div>
+          <div style="display:flex;flex-direction:column;gap:var(--sp-3);">
+            ${rel.items.map(c => `
+              <div style="display:flex;gap:var(--sp-3);align-items:flex-start;">
+                <span style="font-size:1.15rem;line-height:1.2;flex-shrink:0;">${c.icon}</span>
+                <div>
+                  <div style="font-weight:600;font-size:0.875rem;color:var(--ink);">${c.title}</div>
+                  <div style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">${c.text}</div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>`).join('')}
+      ${trimmed > 0 ? `<p style="font-size:0.75rem;color:var(--ink-faint);margin:0;">…and ${trimmed} earlier update${trimmed > 1 ? 's' : ''}.</p>` : ''}
+    </div>`;
+
+  const { backdrop, close } = openModal({
+    title: `What's new in Co-Cher ${APP_VERSION}`,
+    body,
+    width: 520,
+    footer: `<button class="btn btn-primary" data-action="got-it">Got it</button>`,
+    // Record the seen version on ANY close (Got it, X, Esc, backdrop) so the
+    // digest never re-appears on the next launch just because it wasn't
+    // dismissed via the primary button.
+    onClose: () => { try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch {} },
+  });
+  backdrop.querySelector('[data-action="got-it"]').addEventListener('click', close);
+}
+
+/* A tidy label for the last-seen version (falls back to the raw value). */
+function seenLabel(seen) {
+  return /^v/i.test(seen) ? seen : `v${seen}`;
+}
