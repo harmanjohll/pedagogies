@@ -8,10 +8,14 @@
  * engine or Co-Cher 2 itself changes.
  */
 
-export const VERSION = '3.4.1';
+export const VERSION = '3.5.0';
 
 /* Newest first. Shown once to a returning teacher, in Co-Cher 3 only. */
 export const NOTES = [
+  { version: '3.5.0', items: [
+    ['Short videos', 'Under My School, How it works: one question each, about twenty seconds. Most screens also have a Demo button, top right.'],
+    ['The mark, top left', 'Tap it from anywhere to go back to My School.'],
+  ] },
   { version: '3.4.0', items: [
     ['Send to a colleague', 'In Lessons, under Send: tick lessons, room layouts, entries or term goals, and pass on one file. Your colleague loads it in the same place. No student data goes in it.'],
   ] },

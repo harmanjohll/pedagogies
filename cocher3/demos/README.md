@@ -1,5 +1,10 @@
-# Demo animations
+# Demo videos
 
-Put a demo file here and name it in `../demos.js` (`src`). Accepted: `.mp4`, `.webm`
-(looping, muted), `.html` (runs in a frame), `.svg`, `.gif`. Keep each one short
-and made up: no real staff or student names.
+The short videos shown under My School, How it works, and behind each screen's
+Demo button. Named in `../js/demos.js` (`src`).
+
+They are recorded by `briefing-videos/tools/cocher3-demos/` on a made up
+teacher, classes and staff list: no real staff or student names. When a screen
+changes, rerecord its clip there and replace the file here.
+
+Also accepted: `.webm`, `.html` (runs in a frame), `.svg`, `.gif`.
