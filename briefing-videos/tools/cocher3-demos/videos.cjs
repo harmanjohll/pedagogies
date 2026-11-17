@@ -179,6 +179,7 @@ const S = {
     await d.click(page.locator('input[data-g="layouts"]').first()); await d.wait(900);
     await d.cap('Download one file', 'No student data goes in it. Pass it on by Teams or OneDrive.');
     await d.click('#sd-send'); await d.wait(2200);
+    await d.scroll(null, -2000, 16, 700); await d.wait(300);
     await d.cap('Your colleague loads it here', 'Lessons arrive as drafts with your name. Anything they already hold is skipped.');
     await d.ring(page.locator('#sd-pick').locator('xpath=ancestor::div[contains(@class,"v3-panel")][1]')); await d.wait(3000); await d.unring();
     await d.endCard('Send to a colleague', 'In Lessons, under Send.');
