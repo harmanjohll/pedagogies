@@ -438,6 +438,14 @@ html.v3:not([data-look="classic"]) .cce-content { max-width: 1200px !important; 
 .v3-home-tile.now > div { flex: 1; display: flex; flex-direction: column; }
 @media (max-width: 1000px) and (min-width: 761px) { .v3-home { grid-template-columns: repeat(2, 1fr); } }
 
+/* The planner: one third to write in, two thirds for the lesson. The teacher can
+ * drag the line between them, and the top edge of the writing box. */
+@media (min-width: 1025px) { html.v3 .lp-chat-col { flex: 0 0 33.333%; } html.v3 .lp-plan-col { flex: 1 1 0; } }
+.lp-vresize { position: relative; height: 12px; flex-shrink: 0; cursor: row-resize; touch-action: none; background: transparent; }
+.lp-vresize::after { content: ''; position: absolute; left: 50%; top: 4px; width: 44px; height: 4px; margin-left: -22px; border-radius: 2px; background: var(--border); }
+.lp-vresize:hover::after, .lp-vresize.active::after, .lp-vresize:focus-visible::after { background: var(--accent); }
+.lp-vresize:focus-visible { outline: none; }
+
 /* New Lesson: one screen, a few choices. */
 .v3-plan { max-width: 860px; }
 .v3-plan .v3-panel { margin-bottom: 16px; }

@@ -7,7 +7,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 ## 0. Opening message to paste into the new chat
 
-> We're continuing **Co-Cher 3** (`cocher3/`, currently 3.11.0). It is the main
+> We're continuing **Co-Cher 3** (`cocher3/`, currently 3.12.0). It is the main
 > line. Co-Cher 1 (`app/`) and Co-Cher 2 (`cocher2/`) are frozen: do not edit
 > them. First read `HANDOVER.md` at the repo root. Don't copy any student data
 > into this repo.
@@ -20,7 +20,7 @@ v2.1 follows v1.16; there was no v1.17 or v1.18 release. Read this first, then `
 
 | Line | Folder | Live address | Status |
 |---|---|---|---|
-| **Co-Cher 3** | `cocher3/` | `harmanjohll.github.io/pedagogies/` (the root opens it) and `/pedagogies/cocher3/` | **The main line, 3.11.0.** Every school. All new work goes here. |
+| **Co-Cher 3** | `cocher3/` | `harmanjohll.github.io/pedagogies/` (the root opens it) and `/pedagogies/cocher3/` | **The main line, 3.12.0.** Every school. All new work goes here. |
 | **Co-Cher 2** | `cocher2/` (`cocher2.html`) | `/pedagogies/cocher2/` | **Frozen at v2.7** (17 Nov 2026). Still works; the fallback. |
 | **Co-Cher 1** | `app/` (`cocher.html`) | `/pedagogies/app/cocher.html` | **Frozen at v8.9.** Beatty only. |
 
