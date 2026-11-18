@@ -19,6 +19,15 @@
 
 /* ── Looks: neutrals ─────────────────────────────────────────────── */
 
+/* Sharp text. The engine asks the browser for thinned ("antialiased") letters;
+ * with the light strokes of Zen Kaku Gothic and Shippori Mincho that reads as
+ * soft, more so on ordinary (non retina) screens. Co-Cher 3 lets the browser
+ * draw letters at full strength, sets the Mincho pairing's body text one step
+ * heavier, keeps every size at 12px or more, and holds quiet text to a
+ * contrast of at least 4.6 to 1 (muted text 6 to 1). */
+html.v3, html.v3 body { -webkit-font-smoothing: auto; -moz-osx-font-smoothing: auto; text-rendering: optimizeLegibility; }
+html.v3[data-type="mincho"] body { font-weight: 500; }
+
 html.v3 {
   --school: #1D3FA8;
   --school-2: #E0B030;
@@ -38,7 +47,7 @@ html.v3 {
 html.v3[data-look="washi"] {
   --bg: #EEEAE0; --bg-subtle: #E5E0D3; --bg-card: #FBF9F4; --surface: #FBF9F4; --surface-raised: #FFFDF8;
   --surface-hover: rgba(60,50,30,.035);
-  --ink: #25241F; --ink-secondary: #45423A; --ink-muted: #686357; --ink-faint: #999384;
+  --ink: #25241F; --ink-secondary: #45423A; --ink-muted: #5B564C; --ink-faint: #6C685D;
   --border: #CFC7B5; --border-light: #DED7C7;
   --soft: #7d776a;
   --growth: #5E7A5A; --growth-light: #E4EAE0; --redpen: #A8554A; --redpen-light: #F1E3DF;
@@ -48,7 +57,7 @@ html.v3[data-look="washi"] {
 html.v3[data-look="fjord"] {
   --bg: #E9EEED; --bg-subtle: #DFE6E4; --bg-card: #FBFCFC; --surface: #FBFCFC; --surface-raised: #FFFFFF;
   --surface-hover: rgba(20,50,50,.035);
-  --ink: #18252A; --ink-secondary: #37474A; --ink-muted: #5A6A69; --ink-faint: #8C9A98;
+  --ink: #18252A; --ink-secondary: #37474A; --ink-muted: #4C5C5C; --ink-faint: #5F6C6D;
   --border: #C6D0CE; --border-light: #D7DFDD;
   --soft: #6f7f80;
   --growth: #4F7A68; --growth-light: #DFEAE5; --redpen: #A5574F; --redpen-light: #F0E2E0;
@@ -58,7 +67,7 @@ html.v3[data-look="fjord"] {
 html.v3[data-look="kiln"] {
   --bg: #EFE8DF; --bg-subtle: #E6DCD0; --bg-card: #FCF8F3; --surface: #FCF8F3; --surface-raised: #FFFCF8;
   --surface-hover: rgba(80,40,20,.035);
-  --ink: #29211D; --ink-secondary: #4B3F38; --ink-muted: #706158; --ink-faint: #A09187;
+  --ink: #29211D; --ink-secondary: #4B3F38; --ink-muted: #61544C; --ink-faint: #72655E;
   --border: #D2C2B3; --border-light: #E1D4C7;
   --soft: #8a7466;
   --growth: #667A52; --growth-light: #E6EADD; --redpen: #A9523F; --redpen-light: #F2E1DB;
@@ -70,7 +79,7 @@ html.v3[data-look="kiln"] {
 html.v3.dark[data-look="washi"], html.v3.dark[data-look="kiln"] {
   --bg: #1C1B18; --bg-subtle: #23211E; --bg-card: #262420; --surface: #262420; --surface-raised: #2E2B27;
   --surface-hover: rgba(255,245,225,.04);
-  --ink: #ECE7DB; --ink-secondary: #CBC4B5; --ink-muted: #989183; --ink-faint: #6C665B;
+  --ink: #ECE7DB; --ink-secondary: #CBC4B5; --ink-muted: #9F988A; --ink-faint: #898478;
   --border: #3A3731; --border-light: #302E29; --soft: #b4ad9d; --soft-amt: 38%;
   --growth-light: #26301F; --redpen-light: #3A2420; --success-light: #26301F; --warning-light: #3A3018;
   --danger-light: #3A2420; --info-light: #2A2A3A;
@@ -78,7 +87,7 @@ html.v3.dark[data-look="washi"], html.v3.dark[data-look="kiln"] {
 html.v3.dark[data-look="fjord"] {
   --bg: #171C1D; --bg-subtle: #1D2425; --bg-card: #20282A; --surface: #20282A; --surface-raised: #283234;
   --surface-hover: rgba(225,245,245,.04);
-  --ink: #E3EAE9; --ink-secondary: #BDC9C8; --ink-muted: #879695; --ink-faint: #5C6968;
+  --ink: #E3EAE9; --ink-secondary: #BDC9C8; --ink-muted: #8D9C9B; --ink-faint: #7B8786;
   --border: #323D3F; --border-light: #2A3436; --soft: #a3b3b3; --soft-amt: 38%;
   --growth-light: #1E302A; --redpen-light: #3A2422; --success-light: #1E302A; --warning-light: #383019;
   --danger-light: #3A2422; --info-light: #232C3C;
@@ -181,16 +190,16 @@ html.v3 .v3-body .main-content { flex: 1; min-height: 0; height: auto; }
 .v3-nav { display: flex; flex-direction: column; gap: 2px; width: var(--nav-w); flex-shrink: 0; padding: 24px 16px 16px; border-right: 1px solid var(--border-light); background: var(--bg); overflow-y: auto; }
 .v3-brand { display: flex; align-items: baseline; gap: 8px; padding: 0 12px 16px; text-decoration: none; color: var(--ink); }
 .v3-brand b { font-weight: 600; font-size: 1.0625rem; }
-.v3-brand span { font-size: .72rem; color: var(--ink-muted); }
+.v3-brand span { font-size: .75rem; color: var(--ink-muted); }
 .v3-group { font-size: .75rem; color: var(--ink-faint); padding: 24px 12px 8px; }
 .v3-link { position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--radius-md); color: var(--ink-secondary); text-decoration: none; font-size: .9rem; border: 0; background: transparent; font-family: inherit; cursor: pointer; text-align: left; width: 100%; }
 .v3-link svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.5; opacity: .8; }
 .v3-link:hover { background: var(--surface-hover); color: var(--ink); }
 .v3-link.on { color: var(--ink); font-weight: 600; background: var(--bg-card); box-shadow: inset 0 0 0 1px var(--border-light); }
 .v3-link.on::before { content: ''; position: absolute; left: -16px; top: 8px; bottom: 8px; width: 2px; background: var(--accent); border-radius: 0 2px 2px 0; }
-.v3-link kbd { margin-left: auto; font: inherit; font-size: .68rem; color: var(--ink-faint); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
+.v3-link kbd { margin-left: auto; font: inherit; font-size: .75rem; color: var(--ink-faint); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
 .v3-spacer { flex: 1; min-height: 12px; }
-.v3-school { padding: 12px 12px 0; border-top: 1px solid var(--border-light); margin-top: 8px; font-size: .74rem; color: var(--ink-muted); line-height: 1.45; }
+.v3-school { padding: 12px 12px 0; border-top: 1px solid var(--border-light); margin-top: 8px; font-size: .75rem; color: var(--ink-muted); line-height: 1.45; }
 .v3-school b { display: block; color: var(--ink); font-weight: 600; font-size: .8rem; }
 .v3-school i { display: inline-block; width: 12px; height: 4px; border-radius: 2px; background: var(--accent); box-shadow: 14px 0 0 var(--second); margin: 0 14px 8px 0; }
 
@@ -252,7 +261,7 @@ a.v3-row:hover .v3-row-t { text-decoration: underline; text-underline-offset: 3p
 .v3-row-t { font-weight: 600; color: var(--ink); font-size: .92rem; }
 .v3-row-s { font-size: .8rem; color: var(--ink-muted); }
 .v3-row .go { margin-left: auto; font-size: .8rem; color: var(--accent-dark); white-space: nowrap; }
-.v3-chip { display: inline-block; font-size: .7rem; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--bg-subtle); color: var(--ink-secondary); white-space: nowrap; }
+.v3-chip { display: inline-block; font-size: .75rem; padding: 2px 8px; border-radius: var(--radius-sm); background: var(--bg-subtle); color: var(--ink-secondary); white-space: nowrap; }
 .v3-chip.a { background: var(--accent-light); color: var(--accent-dark); }
 .v3-chip.s { background: var(--second-light); color: var(--marker-ink); }
 .v3-time { font-variant-numeric: tabular-nums; font-size: .8rem; color: var(--ink-muted); width: 92px; flex-shrink: 0; }
@@ -314,7 +323,7 @@ a.v3-row:hover .v3-row-t { text-decoration: underline; text-underline-offset: 3p
 .v3-ask { max-width: 640px; margin: 8vh auto 0; text-align: center; }
 .v3-askbox { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 20px; margin-top: 24px; border: 1px solid var(--border); border-radius: var(--radius-2xl); background: var(--surface-raised); color: var(--ink-muted); font: inherit; font-size: 1rem; cursor: text; text-align: left; }
 .v3-askbox:hover { border-color: var(--ink-faint); }
-.v3-askbox kbd { margin-left: auto; font: inherit; font-size: .72rem; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; color: var(--ink-faint); }
+.v3-askbox kbd { margin-left: auto; font: inherit; font-size: .75rem; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; color: var(--ink-faint); }
 .v3-quick { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; }
 .v3-quick a { padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; font-size: .8rem; color: var(--ink-secondary); text-decoration: none; }
 .v3-quick a:hover { border-color: var(--ink-faint); color: var(--ink); }
@@ -329,7 +338,7 @@ a.v3-row:hover .v3-row-t { text-decoration: underline; text-underline-offset: 3p
 .v3-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .v3-opts.three { grid-template-columns: repeat(3, 1fr); }
 .v3-opt { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: transparent; font: inherit; color: var(--ink); cursor: pointer; text-align: left; font-size: .84rem; line-height: 1.35; }
-.v3-opt small { display: block; color: var(--ink-muted); font-size: .72rem; margin-top: 2px; }
+.v3-opt small { display: block; color: var(--ink-muted); font-size: .75rem; margin-top: 2px; }
 .v3-opt:hover { border-color: var(--ink-faint); }
 .v3-opt[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 .v3-sw { display: flex; height: 20px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; border: 1px solid rgba(0,0,0,.08); }
@@ -358,7 +367,7 @@ a.v3-row:hover .v3-row-t { text-decoration: underline; text-underline-offset: 3p
 .v3-more-list b { font-weight: 500; }
 @media (max-width: 760px) {
   html.v3[data-nav="dock"] .v3-nav { justify-content: space-between; padding-left: 8px; padding-right: 8px; gap: 0; overflow: hidden; }
-  html.v3[data-nav="dock"] .v3-link { flex: 1 1 0; min-width: 0; min-height: 48px; padding: 6px 2px; font-size: .6875rem; justify-content: center; }
+  html.v3[data-nav="dock"] .v3-link { flex: 1 1 0; min-width: 0; min-height: 48px; padding: 6px 2px; font-size: .75rem; justify-content: center; }
   html.v3[data-nav="dock"] .v3-link svg { width: 22px; height: 22px; }
   html.v3[data-nav="dock"] .v3-link span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   html.v3[data-nav="dock"] .v3-rest, html.v3[data-nav="dock"] .v3-util, html.v3[data-nav="dock"] .v3-sep { display: none; }
