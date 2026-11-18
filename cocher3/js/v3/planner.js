@@ -69,6 +69,7 @@ export function renderNewLesson(container) {
       `Make it a lesson students enjoy and remember. It should feel like: ${feel}. Open with a hook of that kind.`,
       `Keep the plan to one screen: the hook in one or two lines, three or four parts with times, and one check for learning at the end. No long prose.`,
     ];
+    if (cls() && lastReflection(cls().id)) lines.push(`${lastReflection(cls().id)}. Keep what worked and act on what to change.`);
     if (mode === 'ask') lines.push('Before you plan, ask me up to three short questions, one line each, that would most improve the lesson. Then wait for my answers.');
     const focus = sow && st.row >= 0 && rows[st.row]
       ? [`This lesson: ${rows[st.row]}`, st.row > 0 ? `Before it: ${rows[st.row - 1]}` : '', rows[st.row + 1] ? `After it: ${rows[st.row + 1]}` : ''].filter(Boolean).join('\n') : '';
@@ -90,6 +91,7 @@ export function renderNewLesson(container) {
         <div class="v3-plan-row">
           <div><label class="input-label" for="pl-class">Class</label>
             <select class="input" id="pl-class"><option value="">No class: I will say</option>${classes.map(k => `<option value="${esc(k.id)}"${k.id === st.classId ? ' selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>
+          ${c && lastReflection(c.id) ? `<p class="v3-row-s v3-last" style="grid-column:1/-1;order:9;">${esc(lastReflection(c.id))}. Co-Cher will build on this.</p>` : ''}
           ${c ? `<p class="v3-row-s" style="align-self:end;padding-bottom:10px;">${esc([c.level, c.subject].filter(Boolean).join(', ') || 'No subject or level set on this class')}${(c.students || []).length ? `, ${c.students.length} students` : ''}</p>`
             : `<div><label class="input-label" for="pl-subject">Subject</label><input class="input" id="pl-subject" value="${esc(st.subject)}" placeholder="Subject" autocomplete="off"></div>
                <div><label class="input-label" for="pl-level">Level</label><input class="input" id="pl-level" value="${esc(st.level)}" placeholder="${esc(exampleLevel())}" autocomplete="off"></div>`}
@@ -132,6 +134,57 @@ export function renderNewLesson(container) {
     container.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
   }
   draw();
+}
+
+/* ══════════ The two tap reflection ══════════
+ * After a lesson: one tap for what worked, one for what to change. A few
+ * words if the teacher wants. Saved in the shape the engine already uses for
+ * reflections (`whatWorked`, `whatToAdjust`), so the class portrait carries it
+ * and the next plan for that class reads it with nothing more to do.
+ */
+const WORKED = ['The hook', 'Group work', 'The pace', 'Student talk', 'The check for learning', 'The activity itself'];
+const CHANGE = ['Slower pace', 'Faster pace', 'Clearer instructions', 'More challenge', 'More support', 'Less teacher talk'];
+
+export function openQuickReflect(lessonId, done) {
+  const lesson = Store.getLesson(lessonId); if (!lesson) return;
+  const prev = lesson.reflection && typeof lesson.reflection === 'object' ? lesson.reflection : {};
+  const pick = { worked: new Set(), change: new Set() };
+  const chips = (key, list) => `<div class="v3-feels v3-ticks">${list.map(t => `<button class="v3-feel" data-${key}="${esc(t)}" aria-pressed="false"><b>${esc(t)}</b></button>`).join('')}</div>`;
+  const { backdrop, close } = openModal({ title: 'How Did It Go', width: 560,
+    body: `<p style="font-size:.875rem;color:var(--ink-secondary);margin:0 0 16px;line-height:1.5;">${esc(lesson.title || 'This lesson')}. Two taps are enough; your next plan for this class will read them.</p>
+      <div class="input-label">What worked</div>${chips('worked', WORKED)}
+      <div class="input-label" style="margin-top:16px;">What to change next time</div>${chips('change', CHANGE)}
+      <label class="input-label" for="qr-note" style="margin-top:16px;display:block;">Anything else (optional)</label>
+      <input class="input" id="qr-note" maxlength="200" autocomplete="off" placeholder="A few words">`,
+    footer: '<button class="btn btn-secondary" data-act="cancel">Not now</button><button class="btn btn-primary" data-act="save" disabled>Save</button>' });
+  const save = backdrop.querySelector('[data-act="save"]');
+  backdrop.querySelectorAll('.v3-feel').forEach(b => b.addEventListener('click', () => {
+    const key = b.dataset.worked != null ? 'worked' : 'change', val = b.dataset[key];
+    pick[key].has(val) ? pick[key].delete(val) : pick[key].add(val);
+    b.setAttribute('aria-pressed', pick[key].has(val));
+    save.disabled = !(pick.worked.size || pick.change.size);
+  }));
+  backdrop.querySelector('#qr-note').addEventListener('input', (e) => { if (e.target.value.trim()) save.disabled = false; });
+  backdrop.querySelector('[data-act="cancel"]').onclick = close;
+  save.onclick = () => {
+    const note = backdrop.querySelector('#qr-note').value.trim();
+    const join = (old, set) => [String(old || '').trim(), [...set].join(', ')].filter(Boolean).join('. ');
+    Store.updateLesson(lessonId, { status: 'completed', reflection: { engagement: 0, e21ccObservations: '', ...prev,
+      whatWorked: join(prev.whatWorked, pick.worked), whatToAdjust: join(prev.whatToAdjust, pick.change),
+      freeform: [String(prev.freeform || '').trim(), note].filter(Boolean).join(' ') } });
+    close();
+    if (done) done();
+  };
+}
+
+/** The last reflection on a class, in one line, or ''. Shown where the next lesson begins. */
+export function lastReflection(classId) {
+  if (!classId) return '';
+  const l = Store.getLessons().filter(x => x.classId === classId && x.reflection && typeof x.reflection === 'object' && (x.reflection.whatWorked || x.reflection.whatToAdjust))
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+  if (!l) return '';
+  const r = l.reflection;
+  return [`Last time (${l.title || 'your last lesson'})`, r.whatWorked ? `worked: ${r.whatWorked}` : '', r.whatToAdjust ? `to change: ${r.whatToAdjust}` : ''].filter(Boolean).join('; ');
 }
 
 /* ══════════ The planner's tools: six in view, the rest one tap away ══════════ */

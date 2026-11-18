@@ -18,6 +18,7 @@ import { openSearch } from '../components/unified-search.js';
 import { mountEmbed, GENAPP } from '../components/app-embed.js';
 import { ymd, entriesForNow, entriesBetween, entryHTML, wireEntries } from './agenda.js';
 import { goalsHTML, wireGoals, allGoals } from './goals.js';
+import { openQuickReflect } from './planner.js';
 import { getDailyQuote, pickMilestone, markMilestoneSeen } from '../views/dashboard.js';
 import { getIdentity } from '../utils/identity.js';
 
@@ -385,7 +386,12 @@ export function renderNow(container) {
       <div class="v3-grid" style="margin-top:var(--gap);">
         <div class="v3-col-7"><div class="v3-panel">
           <div class="v3-h">Needs You <a href="#/lessons">All lessons</a></div>
-          ${rowsHTML(pipe.slice(0, 6).map(x => `<a class="v3-row" href="${lessonHref(x)}">
+          ${rowsHTML(pipe.slice(0, 6).map(x => x.stage === 'taught'
+            ? `<button class="v3-row" data-reflect="${esc(x.l.id)}" style="width:100%;text-align:left;font:inherit;background:none;border-left:0;border-right:0;cursor:pointer;">
+            <span><span class="v3-row-s">Taught: how did it go?</span><br><span class="v3-row-t">${esc(x.l.title)}</span></span>
+            ${x.cls ? `<span class="v3-chip">${esc(x.cls.name)}</span>` : ''}
+            <span class="go">Reflect, two taps →</span></button>`
+            : `<a class="v3-row" href="${lessonHref(x)}">
             <span><span class="v3-row-s">${STAGE[x.stage].verb}</span><br><span class="v3-row-t">${esc(x.l.title)}</span></span>
             ${x.cls ? `<span class="v3-chip">${esc(x.cls.name)}</span>` : ''}
             <span class="go">${STAGE[x.stage].go} →</span></a>`),
@@ -412,6 +418,7 @@ export function renderNow(container) {
       </div>`;
     container.querySelector('#v3-find')?.addEventListener('click', openSearch);
     wireEntries(container, redraw);
+    container.querySelectorAll('[data-reflect]').forEach(b => b.addEventListener('click', () => openQuickReflect(b.dataset.reflect, redraw)));
   });
   return () => { alive = false; };
 }
