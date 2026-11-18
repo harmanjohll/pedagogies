@@ -1736,6 +1736,8 @@ Design rules:
   · "quote" — a quotation or a provocative question ("quote" + optional "attribution").
   · "visual" — the slide is carried by a chart/diagram/image (see below), minimal text.
   · "exit" — closing check-for-understanding / exit ticket. Use for the last slide.
+- THE HOOK COMES SECOND. Slide 2 is the lesson's opening hook, taken from the plan: a "quote" or "statement" slide that poses the puzzle, challenge or question and gives NO answer. It is what students see as they walk in. Never bury the hook under the learning intentions.
+- Carry the lesson's feel through the deck: if the plan is built on a game, movement, a real problem or student choice, the slides say what students DO at each part, not only what they should know.
 - TLDR discipline: each bullet is ONE short line (≤12 words), ≤4 per slide. Slides are prompts, not paragraphs.
 - ENGAGE with ONE visual on a slide ONLY where it genuinely aids understanding (not every slide):
   · "chart" — for data, quantities, proportions or trends. type bar/line/donut, 2-8 {label,value} points, short title.
@@ -1844,7 +1846,7 @@ export async function editDeck({ deck, edits } = {}) {
     k === 0 ? `${t}]` : (/^\d+$/.test(t) ? `[${t}]` : `.${t}`)).join('');
   const editLines = list.map((e, n) =>
     `${n + 1}. ${e.path != null && e.path !== '' ? `Target: ${prettyPath(e.path)}` : 'Target: the whole deck'}` +
-    `${e.anchor ? ` (currently: "${String(e.anchor).slice(0, 120)}")` : ''} — ${String(e.instruction).slice(0, 500)}`).join('\n');
+    `${e.anchor ? ` (currently: "${String(e.anchor).slice(0, 120)}")` : ''} — ${String(e.instruction).slice(0, e.path != null && e.path !== '' ? 500 : 8000)}`).join('\n');   // a whole deck instruction may carry the lesson plan
 
   const raw = await sendChat([{
     role: 'user',

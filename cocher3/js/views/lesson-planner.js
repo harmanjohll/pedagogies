@@ -8,7 +8,7 @@
 import { Store } from '../state.js';
 import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, mapSegmentsToSTP, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech, generateSVGDiagram, generateImage } from '../api.js';
 import { cceContextBlock } from './cce.js';
-import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, getDeckModel, openDeckById, downloadBlob } from '../utils/deck.js';
+import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, getDeckModel, openDeckById, downloadBlob, schoolDeckLook } from '../utils/deck.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -5251,6 +5251,7 @@ async function generateDeckFlow(container) {
   }
   try {
     const deck = await generateDeck(args);
+    Object.assign(deck, await schoolDeckLook());   // the school's colours and Co-Cher's type, from the start
     await resolveDeckMedia(deck, resultEl); // fill svgPrompt/imagePrompt slides with real visuals
     if (resultEl) resultEl.innerHTML = '';
     showDeckPreviewModal(container, deck, args);
@@ -5338,6 +5339,7 @@ function showDeckPreviewModal(container, deck, args) {
     btn.textContent = 'Regenerating…';
     try {
       const fresh = await generateDeck(args);
+      Object.assign(fresh, await schoolDeckLook());
       close();
       showDeckPreviewModal(container, fresh, args);
     } catch (err) {

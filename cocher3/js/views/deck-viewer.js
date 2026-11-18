@@ -22,7 +22,9 @@
  *     always returns to how the deck looked when editing began (and toggles).
  */
 
-import { getMediaContent, listDeckMeta, getDeckModel, updateDeckMaterial, revertDeckMaterial, compileDeckHTML } from '../utils/deck.js';
+import { getMediaContent, listDeckMeta, getDeckModel, updateDeckMaterial, revertDeckMaterial, compileDeckHTML, DECK_STYLES, schoolDeckLook } from '../utils/deck.js';
+import { downloadDeckPptx } from '../utils/deck-pptx.js';
+import { Store } from '../state.js';
 import { editDeck } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { escapeHtml } from '../utils/markdown.js';
@@ -165,6 +167,8 @@ export function renderDeckViewer(container, params) {
   let busy = false;
   let saveTimer = null;
   let statusTimer = null;
+  let cur = 0;               // the slide showing (the deck tells us)
+  let scope = 'slide';       // talk to edit: this slide, or the whole deck
 
   container.innerHTML = `
     <div id="deck-viewer" style="position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;background:#0b0d1a;">
@@ -183,7 +187,34 @@ export function renderDeckViewer(container, params) {
         .dv-pin-input { flex:1 1 180px; min-width:0; font:inherit; font-size:0.8125rem; padding:7px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.07); color:#fff; }
         .dv-pin-input::placeholder { color:rgba(255,255,255,0.45); }
         .dv-pin-x { flex-shrink:0; background:none; border:none; color:#fda4af; cursor:pointer; font-size:1rem; padding:2px 6px; min-height:32px; }
+        /* The editing workspace: slides down the side, the slide in the middle, "tell Co-Cher" beneath it. */
+        #dv-work { flex:1; min-height:0; display:flex; }
+        #dv-stage { flex:1; min-width:0; display:flex; flex-direction:column; }
+        #dv-strip { display:none; width:216px; flex-shrink:0; overflow-y:auto; background:#12122a; border-right:1px solid rgba(255,255,255,0.08); padding:8px; color:#fff; }
+        .dv-th { display:flex; gap:8px; align-items:flex-start; width:100%; text-align:left; font:inherit; color:#e5e7fb; background:transparent; border:1px solid transparent; border-radius:8px; padding:8px; cursor:pointer; min-height:44px; }
+        .dv-th:hover { background:rgba(255,255,255,0.06); }
+        .dv-th[aria-current="true"] { background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.35); }
+        .dv-th i { font-style:normal; font-size:.72rem; color:#a5b4fc; min-width:1.4em; font-variant-numeric:tabular-nums; }
+        .dv-th b { display:block; font-weight:600; font-size:.8125rem; line-height:1.3; }
+        .dv-th small { display:block; font-size:.7rem; color:#a5b4fc; }
+        .dv-ops { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin:4px 0 8px; }
+        .dv-ops button, #dv-add { font:inherit; font-size:.75rem; color:#fff; background:none; border:1px solid rgba(255,255,255,0.25); border-radius:6px; min-height:32px; cursor:pointer; }
+        .dv-ops button:hover, #dv-add:hover { border-color:rgba(255,255,255,0.6); }
+        .dv-ops button:disabled { opacity:.35; cursor:default; }
+        #dv-add { width:100%; margin-top:4px; }
+        #dv-talk { display:none; flex-shrink:0; background:#181834; color:#fff; padding:8px 14px 10px; border-top:1px solid rgba(255,255,255,0.08); }
+        #dv-talk .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+        #dv-say { flex:1 1 260px; min-width:0; font:inherit; font-size:.875rem; padding:9px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.08); color:#fff; }
+        #dv-say::placeholder { color:rgba(255,255,255,0.55); }
+        #dv-talk select, #dv-talk button { font:inherit; font-size:.8125rem; color:#fff; background:none; border:1px solid rgba(255,255,255,0.25); border-radius:8px; padding:6px 12px; min-height:36px; cursor:pointer; }
+        #dv-talk select option { color:#111; }
+        #dv-go { background:#fff !important; color:#12122a !important; font-weight:700; border-color:#fff !important; }
+        #dv-go:disabled { opacity:.5; cursor:default; }
+        .dv-quick { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+        .dv-quick button { font-size:.75rem !important; padding:4px 10px !important; min-height:30px !important; color:#c7d2fe !important; }
         @media (max-width:720px) {
+          #dv-strip { width:100%; max-height:26vh; border-right:0; border-bottom:1px solid rgba(255,255,255,0.08); }
+          #dv-work { flex-direction:column; }
           #dv-bar { gap:6px; padding:6px 8px; }
           #dv-bar button { min-height:40px; padding:6px 12px; }
           #dv-title { display:none; }
@@ -193,9 +224,12 @@ export function renderDeckViewer(container, params) {
       </style>
       <div id="dv-bar"></div>
       <div id="dv-tray"></div>
+      <div id="dv-work"><div id="dv-strip"></div><div id="dv-stage">
       <iframe id="deck-viewer-frame" title="${escapeHtml(meta?.title || 'Slide deck')}"
         style="flex:1;min-height:0;border:none;width:100%;background:#fff;"
         allow="fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      <div id="dv-talk"></div>
+      </div></div>
     </div>`;
 
   const frame = container.querySelector('#deck-viewer-frame');
@@ -216,11 +250,15 @@ export function renderDeckViewer(container, params) {
     if (mode === 'view') {
       bar.innerHTML = `
         <span id="dv-title" style="font-weight:600;font-size:0.9375rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:60px;">${escapeHtml(meta?.title || 'Slide deck')}</span>
-        ${meta?.hasModel ? `<button id="dv-edit" title="Edit this deck — tap text to change it, or pin AI edits">&#9998; Edit</button>` : ''}
+        ${meta?.hasModel ? `<button id="dv-edit" title="Change slides by typing, by telling Co-Cher, or by moving them">Edit with Co-Cher</button>
+        <button id="dv-pptx" title="Download as an editable PowerPoint file">PowerPoint</button>` : ''}
         <button id="dv-close">&times; Close</button>`;
       bar.querySelector('#dv-close').addEventListener('click', goBack);
       bar.querySelector('#dv-edit')?.addEventListener('click', enterEdit);
+      bar.querySelector('#dv-pptx')?.addEventListener('click', toPowerPoint);
       tray.style.display = 'none';
+      container.querySelector('#dv-strip').style.display = 'none';
+      container.querySelector('#dv-talk').style.display = 'none';
     } else {
       bar.innerHTML = `
         <button id="dv-prev" title="Previous slide">&#8249;</button>
@@ -229,6 +267,10 @@ export function renderDeckViewer(container, params) {
         <span id="dv-status" style="flex:1;"></span>
         <button id="dv-brush" aria-pressed="false" title="Magic AI brush — tap what should change, describe the change, Apply once">&#128396;&#65039; AI brush</button>
         <button id="dv-apply" style="display:none;">&#10024; Apply</button>
+        <select id="dv-style" title="The look of this deck" style="font:inherit;font-size:0.8125rem;background:none;color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:4px 8px;min-height:32px;">
+          ${DECK_STYLES.map(x => `<option value="${x.id}" style="color:#111;"${(model?.style || 'classic') === x.id ? ' selected' : ''}>Look: ${x.label}</option>`).join('')}</select>
+        ${planOf() ? `<button id="dv-sync" title="The lesson plan has changed? Update only the slides it affects">Update from plan</button>` : ''}
+        <button id="dv-pptx" title="Download as an editable PowerPoint file">PowerPoint</button>
         ${(meta?.hasPrev || stashed) ? `<button id="dv-revert" title="Swap back to how the deck looked before this editing session (press again to redo)">&#8630; Revert</button>` : ''}
         <button id="dv-done" style="font-weight:700;">Done</button>`;
       bar.querySelector('#dv-prev').addEventListener('click', () => post({ type: 'cocher-ed-nav', dir: -1 }));
@@ -242,7 +284,16 @@ export function renderDeckViewer(container, params) {
       bar.querySelector('#dv-apply').addEventListener('click', applyPins);
       bar.querySelector('#dv-revert')?.addEventListener('click', doRevert);
       bar.querySelector('#dv-done').addEventListener('click', exitEdit);
+      bar.querySelector('#dv-pptx').addEventListener('click', toPowerPoint);
+      bar.querySelector('#dv-sync')?.addEventListener('click', updateFromPlan);
+      bar.querySelector('#dv-style').addEventListener('change', async (e) => {
+        model.style = e.target.value;
+        if (model.style !== 'classic' && !model.theme) model.theme = (await schoolDeckLook()).theme;
+        await doSave(); loadEditFrame(); flashStatus('Look changed');
+      });
       renderTray();
+      renderStrip();
+      renderTalk();
     }
   }
 
@@ -280,7 +331,100 @@ export function renderDeckViewer(container, params) {
   }
 
   function loadEditFrame() {
+    cur = Math.max(0, Math.min((model?.slides?.length || 1) - 1, cur));
+    frame.onload = () => { post({ type: 'cocher-deck-goto', i: cur }); };
     frame.srcdoc = instrument(compileDeckHTML(model));
+    renderStrip();
+  }
+
+  /* An AI edit returns slides only; the deck's look and colours stay as they were. */
+  const keepLook = (d) => { if (model?.style) d.style = model.style; if (model?.theme) d.theme = model.theme; return d; };
+  /* The lesson this deck belongs to, if it still holds a plan. */
+  function planOf() {
+    const l = meta?.lessonId ? Store.getLesson(meta.lessonId) : null;
+    const text = l ? (l.plan || (l.chatHistory || []).filter(m => m.role === 'assistant').map(m => m.content).join('\n\n')) : '';
+    return text && text.trim().length > 40 ? text : '';
+  }
+  const slideName = (sl, i) => String(sl?.title || sl?.statement || sl?.quote || `Slide ${i + 1}`).slice(0, 60);
+
+  /* ── The slide strip: see them all; move, copy, add, remove ── */
+  function renderStrip() {
+    const strip = container.querySelector('#dv-strip');
+    if (mode !== 'edit' || !model) { strip.style.display = 'none'; return; }
+    strip.style.display = 'block';
+    const n = model.slides.length;
+    strip.innerHTML = model.slides.map((sl, i) => `<button class="dv-th" data-go="${i}" aria-current="${i === cur}"><i>${i + 1}</i><span><b>${escapeHtml(slideName(sl, i))}</b><small>${escapeHtml(sl?.layout || 'bullets')}</small></span></button>
+      ${i === cur ? `<div class="dv-ops"><button data-op="up" title="Move up"${i === 0 ? ' disabled' : ''}>&uarr;</button><button data-op="down" title="Move down"${i === n - 1 ? ' disabled' : ''}>&darr;</button><button data-op="copy" title="Duplicate this slide">Copy</button><button data-op="del" title="Delete this slide"${n <= 2 ? ' disabled' : ''}>Del</button></div>` : ''}`).join('')
+      + `<button id="dv-add" title="Add a blank slide after this one">+ Add a slide</button>`;
+    strip.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { cur = +b.dataset.go; post({ type: 'cocher-deck-goto', i: cur }); renderStrip(); renderTalk(); }));
+    strip.querySelectorAll('[data-op]').forEach(b => b.addEventListener('click', () => slideOp(b.dataset.op)));
+    strip.querySelector('#dv-add').addEventListener('click', () => slideOp('add'));
+    strip.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
+  }
+  async function slideOp(op) {
+    if (busy || !model) return;
+    const a = model.slides, i = cur;
+    if (op === 'up' && i > 0) { [a[i - 1], a[i]] = [a[i], a[i - 1]]; cur = i - 1; }
+    else if (op === 'down' && i < a.length - 1) { [a[i + 1], a[i]] = [a[i], a[i + 1]]; cur = i + 1; }
+    else if (op === 'copy') { a.splice(i + 1, 0, JSON.parse(JSON.stringify(a[i]))); cur = i + 1; }
+    else if (op === 'del' && a.length > 2) { a.splice(i, 1); cur = Math.min(i, a.length - 1); }
+    else if (op === 'add') { a.splice(i + 1, 0, { layout: 'bullets', title: 'New slide', bullets: ['Tap to write, or tell Co-Cher what this slide is for'] }); cur = i + 1; }
+    else return;
+    pins = []; renderTray();
+    await doSave(); loadEditFrame(); renderTalk();
+  }
+
+  /* ── Tell Co-Cher: change a slide, or the deck, in plain words ── */
+  const QUICK = ['Shorter', 'Simpler words', 'Add an example', 'Turn it into a question', 'Add a quick check'];
+  function renderTalk() {
+    const el = container.querySelector('#dv-talk');
+    if (mode !== 'edit' || !model) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    const keep = el.querySelector('#dv-say')?.value || '';
+    el.innerHTML = `<div class="row">
+        <select id="dv-scope" aria-label="What to change"><option value="slide"${scope === 'slide' ? ' selected' : ''}>This slide (${cur + 1})</option><option value="deck"${scope === 'deck' ? ' selected' : ''}>The whole deck</option></select>
+        <input id="dv-say" type="text" autocomplete="off" placeholder="Tell Co-Cher what to change, in your own words" ${busy ? 'disabled' : ''}>
+        <button id="dv-go" ${busy ? 'disabled' : ''}>${busy ? 'Working…' : 'Change it'}</button>
+      </div>
+      <div class="dv-quick">${QUICK.map(t => `<button data-quick="${escapeHtml(t)}" ${busy ? 'disabled' : ''}>${escapeHtml(t)}</button>`).join('')}</div>`;
+    const say = el.querySelector('#dv-say'); say.value = keep;
+    el.querySelector('#dv-scope').addEventListener('change', (e) => { scope = e.target.value; });
+    el.querySelector('#dv-go').addEventListener('click', () => tell(say.value));
+    say.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tell(say.value); } e.stopPropagation(); });
+    el.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', () => tell(b.dataset.quick)));
+  }
+  async function tell(words, whole = scope === 'deck', done = '') {
+    const instruction = String(words || '').trim();
+    if (busy || !model) return;
+    if (!instruction) { flashStatus('Say what should change first.', true); return; }
+    if (saveTimer) await doSave();
+    busy = true; renderTalk(); flashStatus('Co-Cher is changing it…');
+    try {
+      const before = model.slides.map(x => JSON.stringify(x));
+      const edit = whole ? { path: '', anchor: '', instruction } : { path: String(cur), anchor: slideName(model.slides[cur], cur), instruction };
+      model = keepLook(await editDeck({ deck: model, edits: [edit] }));
+      const changed = model.slides.filter((x, i) => JSON.stringify(x) !== before[i]).length + Math.abs(model.slides.length - before.length);
+      busy = false;
+      await doSave(); loadEditFrame(); renderBar();
+      const say = container.querySelector('#dv-say'); if (say) say.value = '';
+      flashStatus(done || `Changed ${changed} slide${changed === 1 ? '' : 's'}. Revert brings the old version back.`);
+    } catch (err) {
+      busy = false; renderTalk();
+      flashStatus(err?.message || 'That change did not work. Please try again.', true);
+    }
+  }
+  function updateFromPlan() {
+    const plan = planOf(); if (!plan) return;
+    tell(`The lesson plan has changed. Bring the deck in line with it. Change ONLY the slides the new plan affects, add or remove a slide only if the plan now needs it, and leave every other slide exactly as it is. The new plan:\n${plan.slice(0, 6000)}`, true, 'Deck brought in line with the plan. Revert brings the old version back.');
+  }
+  async function toPowerPoint() {
+    try {
+      flashStatus('Making the PowerPoint file…');
+      const d = model || await getDeckModel(id);
+      if (!d) { showToast('This deck has no slide model to export. Regenerate it in the Lesson Planner.', 'warning'); return; }
+      await downloadDeckPptx(d);
+      flashStatus('PowerPoint file saved');
+    } catch (err) { showToast(err?.message || 'Could not make the PowerPoint file.', 'danger'); flashStatus(''); }
   }
 
   /* Auto-save: recompile + overwrite the SAME deck id. The first save of the
@@ -313,7 +457,7 @@ export function renderDeckViewer(container, params) {
     flashStatus('Applying AI edits…');
     try {
       const updated = await editDeck({ deck: model, edits });
-      model = updated;
+      model = keepLook(updated);
       pins = [];
       busy = false;
       await doSave();
@@ -359,13 +503,16 @@ export function renderDeckViewer(container, params) {
     mode = 'view';
     pins = [];
     renderBar();
+    frame.onload = null;
     frame.srcdoc = compileDeckHTML(model);   // pure document, no editor layer
   }
 
   /* Messages from the deck document. */
   const onMsg = (e) => {
     const d = e?.data || {};
-    if (d.type === 'cocher-deck-exit') {
+    if (d.type === 'cocher-deck-slide') {
+      if (mode === 'edit' && Number.isInteger(d.i) && d.i !== cur) { cur = d.i; renderStrip(); renderTalk(); }
+    } else if (d.type === 'cocher-deck-exit') {
       if (mode === 'edit') exitEdit(); else goBack();
     } else if (d.type === 'cocher-deck-edit' && mode === 'edit' && model) {
       if (setByPath(model, d.path, d.text)) scheduleSave();
