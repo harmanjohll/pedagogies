@@ -2,15 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <!-- Hash-preserving redirect: …/pedagogies/#/join/ROOM must land on
-       app/cocher.html#/join/ROOM (the typable Live join link shown on the
-       projector). A meta refresh would drop the hash, so it lives in
-       <noscript> as the no-JS fallback only. -->
-  <script>location.replace('app/cocher.html' + location.hash);</script>
-  <noscript><meta http-equiv="refresh" content="0;url=app/cocher.html" /></noscript>
-  <title>Redirecting to Co-Cher...</title>
+  <!-- The front door. Co-Cher 3 is the main line, so this address opens it.
+
+       One exception, kept from before: …/pedagogies/#/join/ROOM is the short
+       link Co-Cher 1 shows on the projector for its Live lessons. That link
+       must still land in Co-Cher 1, whose Live engine is its own, so students
+       joining a Co-Cher 1 lesson are not sent elsewhere.
+
+       Co-Cher 1: app/cocher.html    Co-Cher 2: cocher2/cocher2.html -->
+  <script>
+    location.replace((/^#\/join(\/|$)/.test(location.hash) ? 'app/cocher.html' : 'cocher3/') + location.hash);
+  </script>
+  <noscript><meta http-equiv="refresh" content="0;url=cocher3/" /></noscript>
+  <title>Co-Cher</title>
 </head>
 <body>
-  <p>Redirecting to <a href="app/cocher.html">Co-Cher</a>...</p>
+  <p>Opening <a href="cocher3/">Co-Cher</a>. Earlier versions: <a href="cocher2/cocher2.html">Co-Cher 2</a>, <a href="app/cocher.html">Co-Cher 1</a>.</p>
 </body>
 </html>

@@ -1,13 +1,14 @@
 # Co-Cher Version Lineage
 
-There are now **two live lines**, deliberately isolated from each other:
+There are **three lines**, each in its own folder. Only Co-Cher 3 moves.
 
 | Line | Entry | Live URL | Status |
 |------|-------|----------|--------|
-| **Co-Cher 1** | `app/cocher.html` | `/pedagogies/` (root redirect) | **Live & frozen** — the version teachers are using today. Single-school (Beatty). Feature-complete at v8.9; changed only for genuine emergencies. |
-| **Co-Cher 2** | `cocher2/cocher2.html` | `/pedagogies/cocher2/` | **Active development** — the multi-school line, starting at v1.0. |
+| **Co-Cher 3** | `cocher3/` | `/pedagogies/` (the root opens it) and `/pedagogies/cocher3/` | **The main line.** Every school. All new work. |
+| **Co-Cher 2** | `cocher2/cocher2.html` | `/pedagogies/cocher2/` | **Frozen at v2.7** on 17 Nov 2026. Still works, on the same saved work as Co-Cher 3: the fallback. |
+| **Co-Cher 1** | `app/cocher.html` | `/pedagogies/app/cocher.html` | **Frozen at v8.9.** Single school (Beatty), its own saved work. |
 
-**Why two lines.** The multi-school shift rewrites identity, login and the timetable
+**Why Co-Cher 1 and 2 were kept apart (history).** The multi-school shift rewrites identity, login and the timetable
 spine. In Co-Cher 1, sign-in *is* a lookup against Beatty's timetable CSV
 (`login.js`), and a failed fetch there leaves the allowlist empty so *every* login
 fails — refactoring that under teachers mid-year risks locking a whole school out.
@@ -34,21 +35,20 @@ neither version can read the other's data.
 
 ## Co-Cher 3 (preview: its own folder, on Co-Cher 2's engine)
 
-**Where it lives.** `cocher3/` holds everything that is Co-Cher 3's own: the page
-(`index.html`), its scripts (`js/`), its stylesheet (`css/cocher3.css`) and its
-demo slots (`demos/`). Sign in, schools, data and every existing screen are still
-Co-Cher 2's files in `cocher2/`, loaded from there: the page sets a base address
-of `../cocher2/`, and `js/shell.js` keeps `#` links on the page. Same storage
-(`cocher2_*`), so a teacher sees their real classes and lessons. No service
-worker: Co-Cher 3 always loads its current files. Open to every signed in teacher since 3.2.1; what they see follows their school.
+**Where it lives.** `cocher3/` holds everything Co-Cher 3 needs: its own copy of
+the engine (`js/`, `css/`, `schools/`, `btyrelief/`, `simulations/`), its own
+files (`js/v3/`, `css/cocher3.css`, `demos/`), a service worker and a manifest.
+Nothing loads from `cocher2/`. Saved work is shared with Co-Cher 2 on purpose
+(`cocher2_*` keys), so Co-Cher 2 stays a working fallback.
 
-**Its own number.** `cocher3/js/version.js`, three parts: product.release.fix.
-It moves with every change to `cocher3/`. Notes for teachers go in `NOTES` there
-and show in Co-Cher 3 only. Co-Cher 2's version moves only when `cocher2/` changes.
+**Its own number.** `cocher3/js/v3/version.js`, three parts: product.release.fix.
+Notes for teachers go in `NOTES` there.
 
 | Version | Live URL | Status |
 |---------|----------|--------|
-| 3.5.0 | `/pedagogies/cocher3/` | **Preview, open to all schools**. The demo slots are filled: 13 videos in `cocher3/demos/` (about 21 MB), listed in `js/demos.js`, behind How it works and each screen's Demo button; a video starts when the teacher plays it. The mark sits top left on every screen and leads to My School (`ICONS.mark`; in the strip for the dock and on phones, in the menu for rail and bar) |
+| 3.7.0 | `/pedagogies/` and `/pedagogies/cocher3/` | **The main line, every school.** AI model heals itself: on a 404 for the model, `api.js` lists the models the key can use, picks the best settled one, remembers it (`cocher3_model_auto`, one week) and repeats the request; Settings says when a stand in is in use. Word, PowerPoint, Excel and text files: attachable in the lesson planner (`utils/attachments.js`, kind `doc-text`) and accepted by the shared upload box (`components/pdf-upload.js`); old `.doc` and `.ppt` get a plain message. Scheme of work downloads as Word and Excel (`views/autopilot.js`, `downloadSoW`). Lesson prompts name a subject or level only when a class is chosen or all classes share it; otherwise `[subject]` and `[level]` (it used to take the first class's subject) |
+| 3.6.0 | `/pedagogies/` and `/pedagogies/cocher3/` | Superseded. Co-Cher 3 took its own copy of the engine and of every school's files (identical to Co-Cher 2's at that moment, apart from `js/version.js`); its own files moved to `js/v3/`; the base address is gone. Co-Cher 2 is frozen at v2.7. The root address opens Co-Cher 3 (`#/join/...` still goes to Co-Cher 1). Offline: a network first service worker. The Learning Log video shows to Beatty only. Checked in a browser: Beatty, Opera Estate, Park View and SAJC each sign in and open 25 screens with no error and no request to `cocher2/`; a new visitor reaches the school picker; a student Live join link opens the join page with no menu; Co-Cher 3 reopens offline |
+| 3.5.0 | `/pedagogies/cocher3/` | Superseded. The demo slots are filled: 13 videos in `cocher3/demos/` (about 21 MB), listed in `js/demos.js`, behind How it works and each screen's Demo button; a video starts when the teacher plays it. The mark sits top left on every screen and leads to My School (`ICONS.mark`; in the strip for the dock and on phones, in the menu for rail and bar) |
 | 3.4.1 | `/pedagogies/cocher3/` | Superseded. New browser icon: an open circle (it also reads as a C), with no numeral |
 | 3.4.0 | `/pedagogies/cocher3/` | Superseded. Send to a colleague (`/send`, in `js/together.js`): the teacher ticks lessons, room layouts, entries and term goals; one file of kind `cocher-send`. Lessons and layouts ride in a Department Pack (`exportPack` gained `download: false`), entries and goals beside it. Receive skips what is already held; a Department Pack file loads there too |
 | 3.3.0 | `/pedagogies/cocher3/` | Superseded. Phone mode: the dock holds five places (School, Now, Week, Classes, Lessons) and a More sheet holds the rest with Search, Look and Settings; My School tiles go compact. Daily quote (or the teacher's mantra) and the milestone note on My School, read from Co-Cher 2's own lists (`dashboard.js` now exports `getDailyQuote`, `pickMilestone`, `markMilestoneSeen`; no change to Co-Cher 2's behaviour or number). Fix: the lesson planner's first save rewrote the address to `/cocher2/`, so a reload left Co-Cher 3; the shell now keeps `history.replaceState`, new tab and middle clicks on this address |

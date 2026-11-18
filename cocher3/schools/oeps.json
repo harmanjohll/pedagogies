@@ -1,0 +1,754 @@
+{
+  "id": "oeps",
+  "name": "Opera Estate Primary School",
+  "shortName": "Opera Estate",
+  "domains": [
+    "oeps"
+  ],
+  "identity": {
+    "vision": "Confident Learners, Caring Contributors",
+    "visionVerbatim": "Our Vision \"Confident Learners, Caring Contributors\" is a clear representation of our dedication to foster a supportive and vibrant learning environment where students grow as Effective Communicators, Self-directed learners, Creative and Critical Thinkers, and Civic-Minded Rooted citizens. We want to inculcate in our students a sense of gratitude, develop the confidence to embrace changes and instill in them a genuine desire to make a positive impact.",
+    "visionOutcomes": [
+      "Effective Communicators",
+      "Self-directed Learners",
+      "Creative and Critical Thinkers",
+      "Civic-Minded Rooted Citizens"
+    ],
+    "mission": "To empower every OPERA Gem to drive meaningful impact and be ready for the future",
+    "motto": "TOWARDS HIGHER GOALS",
+    "philosophy": "We value every child as a unique individual who wants to and can learn. Every child is thus a Gem that can be and will be polished through the holistic experiences in OEPS.",
+    "valuesAcronym": "R2IGHT",
+    "valuesNote": "Values form the core of one’s character. Our new school values are presented in the acronym \"R2IGHT\" which stands for \"Respect, Responsibility, Integrity, Gratitude, Humility and Tenacity\". We aim to create opportunities to learn and meaningfully apply these values to form a strong sense of identity and to make good choices within various contexts.",
+    "crest": [
+      {
+        "element": "Two circles",
+        "meaning": "unity"
+      },
+      {
+        "element": "The outer green circle",
+        "meaning": "Opera Estate Girls’ School"
+      },
+      {
+        "element": "The blue letters",
+        "meaning": "Opera Estate Boys’ School"
+      },
+      {
+        "element": "The white centre",
+        "meaning": "a bright future for the school"
+      }
+    ],
+    "flag": "White, with the school crest centred.",
+    "foundedNote": "Founded in 1985 with the amalgamation of Opera Estate Boys’ Primary School and Opera Estate Girls’ Primary School. Held at a New Upper Changi Road holding site for two and a half years before returning to Fidelio Street in June 2003. A single-session government co-educational school.",
+    "selfDescription": "A Happy, Loving, Learning School.",
+    "anniversary": {
+      "year": 2025,
+      "milestone": "40th",
+      "theme": "Celebrating our Past, Shaping our Future"
+    },
+    "principal": "Mrs Tan Wai Ling",
+    "viceprincipals": [
+      "Mr Raymond Tay",
+      "Mr Goh Leng Seng"
+    ],
+    "source": "https://www.operaestatepri.moe.edu.sg/principals-message/ , https://www.operaestatepri.moe.edu.sg/history/ , https://www.operaestatepri.moe.edu.sg/school-crest-and-school-song/ (supplied by the school as a full site capture)"
+  },
+  "values": [
+    "Respect",
+    "Responsibility",
+    "Integrity",
+    "Gratitude",
+    "Humility",
+    "Tenacity"
+  ],
+  "slotMinutes": 30,
+  "calendar": {
+    "cycle": "week",
+    "weeks": []
+  },
+  "levels": [
+    "Primary 1",
+    "Primary 2",
+    "Primary 3",
+    "Primary 4",
+    "Primary 5",
+    "Primary 6"
+  ],
+  "levelBands": {
+    "lower": [
+      "Primary 1",
+      "Primary 2",
+      "Primary 3"
+    ],
+    "upper": [
+      "Primary 4",
+      "Primary 5",
+      "Primary 6"
+    ]
+  },
+  "streams": [],
+  "departments": [
+    "English",
+    "Mathematics",
+    "Science",
+    "Mother Tongue",
+    "Social Studies",
+    "Aesthetics",
+    "Physical Education",
+    "Character & Citizenship Education",
+    "Information & Communications Technology",
+    "Student Management",
+    "Programme for Active Learning",
+    "Learning Support"
+  ],
+  "subjects": [
+    "English",
+    "Mathematics",
+    "Science",
+    "Social Studies",
+    "Mother Tongue",
+    "Physical Education",
+    "Music",
+    "Art & Craft",
+    "Character & Citizenship Education",
+    "Programme for Active Learning (PAL)"
+  ],
+  "sampleClasses": [
+    {
+      "name": "5D Mathematics",
+      "level": "Primary 5",
+      "subject": "Mathematics"
+    },
+    {
+      "name": "5D Science",
+      "level": "Primary 5",
+      "subject": "Science"
+    },
+    {
+      "name": "1G English",
+      "level": "Primary 1",
+      "subject": "English"
+    }
+  ],
+  "sampleClassesNote": "Class codes are Opera Estate’s own, read from the staff timetable. Sample classes are starting points a teacher can rename or delete.",
+  "teachingApproaches": [
+    {
+      "subject": "English",
+      "name": "EL Syllabus 2020",
+      "verbatim": "From 2020, a new English Language Syllabus has been introduced, starting from Primary One. The EL Syllabus 2020 focuses on the skills needed for the 21st Century, developing students as critical inquirers, discerning readers and empathetic communicators.",
+      "strategies": "P1–P2 learners use EL skills to share their passion and personal experiences through OPERAXpress, Reader’s Theatre and learning journeys.",
+      "source": "https://www.operaestatepri.moe.edu.sg/english-language/"
+    },
+    {
+      "subject": "Mathematics",
+      "name": "Concrete-Pictorial-Abstract (C-P-A)",
+      "verbatim": "The central focus of Mathematics is mathematical problem solving. In the teaching and learning of mathematics, our school believes in building a strong foundation in the mathematical concepts in our students. Our students acquire mathematical concepts and skills using the Concrete-Pictorial-Abstract (C-P-A) approach. Students are given concrete experiences to help them develop their numeracy skills, make connections and subsequently become better problem-solvers.",
+      "grounding": "Singapore Mathematics Framework — problem solving at the centre",
+      "source": "https://www.operaestatepri.moe.edu.sg/mathematics/"
+    },
+    {
+      "subject": "Science",
+      "name": "Explore, investigate and discover",
+      "verbatim": "Our Science programmes are structured to provide opportunities for our students to explore, investigate and discover knowledge. We want our students to be curious and concerned about their surroundings. We seek to fuel this spirit of inquiry and ultimately want our students to enjoy Science and value this discipline as an important tool in understanding and relating to their natural and physical world.",
+      "source": "https://www.operaestatepri.moe.edu.sg/science/"
+    },
+    {
+      "subject": "Mother Tongue",
+      "name": "Primary MTL curriculum — the joy of learning MTL",
+      "verbatim": "The new Primary MTL curriculum enables young learners to experience the joy of learning MTL, so as to motivate them to like and learn MTL for life. The Primary MTL curriculum equips learners with the essential communication and language competencies, culture & values and 21st Century Competencies, and helps them become confident MTL users.",
+      "processSkills": [
+        "Communication — foundational language skills for effective communication",
+        "Culture & Values — appreciating their own MTLs, culture and traditions",
+        "21st Century Competencies — civic literacy, global awareness, cross-cultural skills, critical and inventive thinking"
+      ],
+      "source": "https://www.operaestatepri.moe.edu.sg/mother-tongue-languages/"
+    },
+    {
+      "subject": "Physical Education",
+      "name": "Seven Learning Areas, with emphasis on Fundamental Movement Skills",
+      "verbatim": "The seven Learning Areas for our PE Programme (with emphasis on Fundamental Movement Skills) includes: Athletics, Dance, Games & Sports, Gymnastics, Outdoor Education, Physical Health & Fitness and Swimming.",
+      "processSkills": [
+        "Acquire a range of movement skills",
+        "Understand and apply movement concepts, principles and strategies",
+        "Demonstrate safe practices",
+        "Display positive personal and social behaviour",
+        "Acquire and maintain health-enhancing fitness",
+        "Enjoy and value a physically active and healthy life"
+      ],
+      "levelBadges": {
+        "Primary 1–2": "four PE periods weekly",
+        "Primary 3–6": "five PE periods weekly"
+      },
+      "source": "https://www.operaestatepri.moe.edu.sg/physical-education/"
+    },
+    {
+      "subject": "Music",
+      "name": "Listening, Creating and Performing",
+      "verbatim": "The Music Syllabus aims to enable students to acquire and apply musical skills, knowledge and understanding through Listening, Creating and Performing; develop abilities for creative expression and communication; develop an understanding and appreciation of music in local and global cultures; and cultivate a life-long enjoyment and involvement in music.",
+      "source": "https://www.operaestatepri.moe.edu.sg/art-and-music/"
+    },
+    {
+      "subject": "Art",
+      "name": "Enjoy art, communicate visually, make meaning",
+      "verbatim": "The aims of art education in our schools are to enable every child to enjoy art, communicate visually, and make meaning through connecting with society and culture.",
+      "processSkills": [
+        "visual inquiry skills to discover and explore their surroundings",
+        "curiosity, imagination and enjoyment in art making and art discussion",
+        "confidence in working individually and in groups to focus ideas and create artworks",
+        "awareness of and respect for histories and cultures of key artworks and artists"
+      ],
+      "source": "https://www.operaestatepri.moe.edu.sg/art-and-music/"
+    },
+    {
+      "subject": "Character & Citizenship Education",
+      "name": "CCE @ OEPS",
+      "verbatim": "CCE@OEPS aims to guide our students to learn to be responsible to self, family and community, and to understand their roles in shaping their futures and the future of the community around them. CCE@OEPS supports the development of good character, resilience and social-emotional well-being, future readiness and active citizenship in each child.",
+      "grounding": "MOE’s CCE 2021 Curriculum Frame — the big ideas of Identity, Relationships and Choices, across Education and Career Guidance, Cyber Wellness, National Education, Sexuality Education, Mental Health and Family Education",
+      "ftgp": "CCE-FTGP lessons are scheduled once per week and are customised to meet the needs of our students.",
+      "strategies": "Beyond FTGP: the weekly Good Things@Opera morning assembly programme, termly positive tone setting sessions, Values-in-Action level programmes, commemoration of National Education events, Student Leadership Development, Social Studies Cohort Learning Journeys and the Attitude of Gratitude initiative.",
+      "source": "https://www.operaestatepri.moe.edu.sg/character-citizenship-education/"
+    }
+  ],
+  "frameworks": [],
+  "programmes": {
+    "alp": {
+      "name": "Opera Goes Green (OPG)",
+      "verbatim": "The school’s Applied Learning Programme (ALP) \"Opera Goes Green\" seeks to instill in our students the importance of responsible actions towards environmental care and sustainability and to take actions through critical thinking and innovating practical solutions to advocate a more sustainable way of life within and beyond the school. Besides the 21CC, the ALP aims to inculcate values such as empathy and responsibility to maintain their own wellbeing and that of the larger community in an increasingly interconnected world.",
+      "prongs": [
+        {
+          "key": "Awareness",
+          "blurb": "Create awareness of environmental sustainability issues"
+        },
+        {
+          "key": "Action",
+          "blurb": "Motivate students in taking environmentally-conscious actions"
+        },
+        {
+          "key": "Advocacy",
+          "blurb": "Empower students to advocate for environmental causes"
+        }
+      ],
+      "prongsNote": "The three prongs of OPG are described by the school as the 3 As.",
+      "source": "https://www.operaestatepri.moe.edu.sg/environmental-sustainability/ and the Principal’s Message",
+      "activities": [
+        "World Water Day",
+        "Less Food Waste — COMPOST VIA",
+        "Less E-Waste — Recycling Drive",
+        "Biodiversity Day @ OEPS",
+        "Plastic Recycling Drive"
+      ]
+    },
+    "digitalMaker": {
+      "name": "Digital Maker Programme",
+      "levels": [
+        "Primary 4",
+        "Primary 5"
+      ],
+      "verbatim": "In line with Smart Nation and a need to inculcate entrepreneurial dare and lifelong learning, the P4 and P5 levels go through a Digital Maker Programme which integrates STEM with Sustainability education. Students learn coding and computational thinking using a micro:bit. They then go through a Design Thinking process to create prototypes using recycled materials to tackle real-life environmental problems.",
+      "source": "NOT FETCHED — assembled from search-engine summaries of https://www.moe.gov.sg/schoolfinder/schooldetail/opera-estate-primary-school, which refuses direct fetches. Confirm against the page itself."
+    },
+    "llp": {
+      "name": "Ignite D' Arts @ OEPS",
+      "verbatim": "Ignite De Arts @ OEPS is a distinctive aesthetics programme that provides opportunities for students to have a deeper appreciation for the Arts and Music and it is also one of the platforms of the school to emphasize the importance of holistic education in OEPS. Throughout the 6 years of education in OEPS, all students will progress through the 4 Arts domains: Learn Arts, Explore Arts, Collaborative Arts and Fun Arts.",
+      "domains": [
+        "Learn Arts — fundamental skills and concepts in music and art, based on the school’s GMP (General Music Programme) and GAP (General Art Programme) syllabus",
+        "Explore Arts — appreciation through PAL modules, Modular Arts Programmes and Arts Exposure Programmes",
+        "Collaborative Arts — applying Art and Music skills in inter-department projects and with external organisations",
+        "Fun Arts — celebrating students’ work through exhibitions, performances, recess programmes and outreach"
+      ],
+      "source": "https://www.operaestatepri.moe.edu.sg/ignite-darts/"
+    },
+    "pal": {
+      "name": "Programme for Active Learning (PAL)",
+      "verbatim": "All P1 and P2 students participate in Programme for Active Learning (PAL) during curriculum hours, engaging in fun and diverse learning experiences across four modules: Sports and Games; Performing Arts (Music, Creative Dance and Drama); Visual Arts; Outdoor Education.",
+      "levels": [
+        "Primary 1",
+        "Primary 2"
+      ],
+      "fosters": [
+        "Curiosity — exploring the world with enthusiasm",
+        "Confidence — embracing challenges with a growth mindset",
+        "Collaboration — working positively with peers",
+        "Expression — communicating confidently"
+      ],
+      "modules": {
+        "Primary 1": [
+          "T1 Lego Art",
+          "T2 Sports and Games",
+          "T3 Creative Dance",
+          "T4 Art with Design Thinking"
+        ],
+        "Primary 2": [
+          "T1 Outdoor Education",
+          "T2 Sports and Games",
+          "T3 Art with Design Thinking",
+          "T4 Drama"
+        ]
+      },
+      "source": "https://www.operaestatepri.moe.edu.sg/pal/"
+    },
+    "wellbeing": {
+      "name": "PERMAH and Attitude of Gratitude (AOG)",
+      "verbatim": "Through our Character and Citizenship Education (CCE) structure, implementation of PERMAH (Positive Emotion, Engagement, Relationships, Meaning, Accomplishment, Health) and AOG (Attitude of Gratitude) programme, we aim to instill in our students the importance of empathy and to promote emotional well-being.",
+      "source": "https://www.operaestatepri.moe.edu.sg/principals-message/"
+    },
+    "relationships": {
+      "name": "A Caring and Enabling School Environment (TSR and PSR)",
+      "verbatim": "Students who experience positive Teacher Student Relationships in school are more engaged and motivated to learn. In OEPS, time is set aside for Form Teacher Interaction. Peer Support and Relationships is anchored on the domains of peer bonding, helping and influencing, and taught through CCE-FTGP lessons, the P1-P4, P2-P5 and P3-P6 Buddy programmes, and platforms such as Opera Gems in Action. Our Cheer Champs also play a part by providing practical help and support to their classmates.",
+      "source": "https://www.operaestatepri.moe.edu.sg/character-citizenship-education/"
+    },
+    "ict": {
+      "name": "ICT and Data Management",
+      "verbatim": "Through our programmes, we hope to equip students with the skills, knowledge, attitudes and values (SKAV) that students should apply and demonstrate when harnessing technologies for learning.",
+      "source": "https://www.operaestatepri.moe.edu.sg/ict-and-data-management/"
+    }
+  },
+  "cca": [
+    {
+      "name": "Football",
+      "category": "sports",
+      "schedule": "Mon 2–4pm; Thu (school team) 3–5pm"
+    },
+    {
+      "name": "Netball",
+      "category": "sports",
+      "schedule": "Mon 2–4pm; Thu (school team) 3–5pm"
+    },
+    {
+      "name": "Floorball",
+      "category": "sports",
+      "schedule": "Mon 2–4pm; Thu (school team) 3–5pm"
+    },
+    {
+      "name": "Track and Field",
+      "category": "sports",
+      "schedule": "Mon 2–4pm"
+    },
+    {
+      "name": "Girl Guides (Brownies)",
+      "category": "uniformed",
+      "schedule": "Mon 2–4pm"
+    },
+    {
+      "name": "Scouts",
+      "category": "uniformed",
+      "schedule": "Mon 2–4pm"
+    },
+    {
+      "name": "Art and Crafts Club",
+      "category": "clubs",
+      "schedule": "Mon 2–4pm"
+    },
+    {
+      "name": "Infocomm Technology (Computing) and Robotics Club",
+      "category": "clubs",
+      "schedule": "Mon 2–4pm"
+    },
+    {
+      "name": "Strategy Games Society",
+      "category": "clubs",
+      "schedule": "Mon 2–4pm"
+    },
+    {
+      "name": "Angklung and Kulintang Ensemble",
+      "category": "performing",
+      "schedule": "Mon 2–4pm; Thu 3–5pm"
+    },
+    {
+      "name": "Dance International",
+      "category": "performing",
+      "schedule": "Mon 2–4pm; Thu 3–5pm"
+    },
+    {
+      "name": "English Drama",
+      "category": "performing",
+      "schedule": "Mon 2–4pm"
+    }
+  ],
+  "contacts": {
+    "allStaff": "",
+    "office": "oeps@moe.edu.sg",
+    "phone": "6241 0417",
+    "fax": "6449 3042",
+    "address": "48 Fidelio Street, Singapore 458436"
+  },
+  "theme": {
+    "accent": "#1D6FA3",
+    "provisional": true,
+    "note": "PLACEHOLDER. The school’s colours were not confirmable from this environment. Replace once the crest or the school confirms them."
+  },
+  "sourceNote": "Identity, curriculum frameworks, programmes, CCAs, school hours and key personnel are quoted from the school’s own website, supplied by the school as a full site capture (OEPS_Website_Content, Aug 2026). Levels, class codes, subject codes, the period grid and duty posts are read from the school’s OWN staff timetable (2026 Term 1, v6).",
+  "bell": {
+    "dayStart": "07:30",
+    "periodMinutes": 30,
+    "periods": [
+      {
+        "id": 1,
+        "start": "07:30",
+        "end": "08:00"
+      },
+      {
+        "id": 2,
+        "start": "08:00",
+        "end": "08:30"
+      },
+      {
+        "id": 3,
+        "start": "08:30",
+        "end": "09:00"
+      },
+      {
+        "id": 4,
+        "start": "09:00",
+        "end": "09:30"
+      },
+      {
+        "id": 5,
+        "start": "09:30",
+        "end": "10:00"
+      },
+      {
+        "id": 6,
+        "start": "10:00",
+        "end": "10:30"
+      },
+      {
+        "id": 7,
+        "start": "10:30",
+        "end": "11:00"
+      },
+      {
+        "id": 8,
+        "start": "11:00",
+        "end": "11:30"
+      },
+      {
+        "id": 9,
+        "start": "11:30",
+        "end": "12:00"
+      },
+      {
+        "id": 10,
+        "start": "12:00",
+        "end": "12:30"
+      },
+      {
+        "id": 11,
+        "start": "12:30",
+        "end": "13:00"
+      },
+      {
+        "id": 12,
+        "start": "13:00",
+        "end": "13:30"
+      }
+    ],
+    "dayEnd": "13:30",
+    "note": "Single session. Mon/Tue/Thu/Fri 7.30am–1.30pm; WEDNESDAY ENDS AT 12.30pm. The staff timetable grid runs to 1.30pm on every day — the few Wednesday entries past 12.30 are dismissal duties, not lessons.",
+    "earlyDismissal": [
+      {
+        "day": "Wed",
+        "end": "12:30"
+      }
+    ],
+    "recess": [
+      {
+        "levels": [
+          "Primary 1",
+          "Primary 4"
+        ],
+        "start": "09:30",
+        "end": "10:00"
+      },
+      {
+        "levels": [
+          "Primary 2",
+          "Primary 5"
+        ],
+        "start": "10:00",
+        "end": "10:30"
+      },
+      {
+        "levels": [
+          "Primary 3",
+          "Primary 6"
+        ],
+        "start": "10:30",
+        "end": "11:00"
+      }
+    ],
+    "recessNote": "Recess is staggered by level and is NOT marked in the staff timetable — a slot that looks free may be a recess duty.",
+    "snackBreak": {
+      "P1/P2/P4/P5": "12:00 (11:00 on Wednesday)",
+      "P3/P6": "09:00"
+    },
+    "afterSchool": {
+      "cca": "Mon 2.00–4.00pm; Thu (NSG & SYF) 3.00–5.00pm",
+      "remedialEnrichment": "Tue and Thu 2.00–3.15pm"
+    },
+    "source": "https://www.operaestatepri.moe.edu.sg/general-information/"
+  },
+  "classCodes": {
+    "Primary 1": [
+      "1C",
+      "1D",
+      "1G",
+      "1H",
+      "1I",
+      "1J"
+    ],
+    "Primary 2": [
+      "2C",
+      "2D",
+      "2G",
+      "2H",
+      "2I"
+    ],
+    "Primary 3": [
+      "3C",
+      "3D",
+      "3G",
+      "3H",
+      "3I"
+    ],
+    "Primary 4": [
+      "4C",
+      "4D",
+      "4G",
+      "4H",
+      "4I"
+    ],
+    "Primary 5": [
+      "5C",
+      "5D",
+      "5G",
+      "5H",
+      "5I"
+    ],
+    "Primary 6": [
+      "6C",
+      "6D",
+      "6FDN",
+      "6G",
+      "6H"
+    ]
+  },
+  "subjectDepartments": {
+    "EL": "English",
+    "EL*": "English",
+    "FEL": "English",
+    "MA": "Mathematics",
+    "FMA": "Mathematics",
+    "SCI": "Science",
+    "FSC": "Science",
+    "MT": "Mother Tongue",
+    "FMT": "Mother Tongue",
+    "FMT (EXTRA)": "Mother Tongue",
+    "SS": "Social Studies",
+    "PE": "Physical Education",
+    "AC": "Art",
+    "MU": "Music",
+    "PAL": "Programme for Active Learning",
+    "LSP1": "Learning Support",
+    "LSP2": "Learning Support",
+    "ENGLISH LANGUAGE": "English",
+    "FOUNDATION EL": "English",
+    "MATHEMATICS": "Mathematics",
+    "FOUNDATION MATH": "Mathematics",
+    "SCIENCE": "Science",
+    "FOUNDATION SCIENCE": "Science",
+    "MOTHER TONGUE": "Mother Tongue",
+    "FOUNDATION MT": "Mother Tongue",
+    "SOCIAL STUDIES": "Social Studies",
+    "PHYSICAL EDUCATION": "Physical Education",
+    "ART & CRAFT": "Art",
+    "MUSIC": "Music",
+    "PROGRAMME FOR ACTIVE LEARNING": "Programme for Active Learning",
+    "LSP FOR P1": "Learning Support",
+    "LSP FOR P2": "Learning Support"
+  },
+  "supportProgrammes": [
+    {
+      "code": "LSP1",
+      "name": "Learning Support Programme (English), Primary 1",
+      "verbatim": "A specialised early intervention programme aimed at providing learning support to pupils who enter Primary 1 with weak English language and literacy skills. Pupils are identified for LSP through a systematic screening process carried out at the beginning of Primary 1."
+    },
+    {
+      "code": "LSP2",
+      "name": "Learning Support Programme (English), Primary 2"
+    },
+    {
+      "code": "SDR",
+      "name": "School-based Dyslexia Remediation Programme (P3–P4)",
+      "verbatim": "A two-year intervention for Primary 3 and 4 students who are identified through a systematic screening process for dyslexia conducted at the end of Primary 2, conducted in small groups by trained school personnel using a remediation curriculum designed by MOE Reading Specialists."
+    },
+    {
+      "code": "RRP",
+      "name": "Reading Remediation Programme (P3–P4)",
+      "verbatim": "An intervention for P3 and P4 students who did not meet the discharge criteria for LSP and who do not have dyslexia. RRP focuses on word recognition and spelling, fluency, vocabulary and reading comprehension."
+    },
+    {
+      "code": "LSM",
+      "name": "Learning Support for Mathematics (P1–P4) — class codes P1LSM–P4LSM"
+    },
+    {
+      "code": "FEL",
+      "name": "Foundation English"
+    },
+    {
+      "code": "FMA",
+      "name": "Foundation Mathematics"
+    },
+    {
+      "code": "FMT",
+      "name": "Foundation Mother Tongue"
+    },
+    {
+      "code": "FSC",
+      "name": "Foundation Science"
+    },
+    {
+      "code": "ECCE",
+      "name": "CCE taught in English"
+    }
+  ],
+  "needsConfirmation": [
+    "PRINCIPAL’S NAME — the school’s own site says \"Mrs Tan Wai Ling\" (Principal’s Message signature AND the 2026 School Staff table). Co-Cher was told \"Hoo Wai Ling\". Same given name, different surname. The site’s version is used here; confirm which is right, then the roster row and the sign-in label follow.",
+    "LEARNING IMPERATIVES — the school publishes an \"Opera Learning Disposition\" (OPERA LD), but that page is SIX IMAGES and no text (ld1–ld6.jpg), so the disposition itself could not be read. It is the one substantive gap left. Send those six images or their wording and it drops into learningPractice and frameworks.",
+    "School Vision/Mission/Values page is also image-only (newvmv2024.jpeg); the wording used here is quoted from the Principal’s Message instead, which states all three in prose.",
+    "Curriculum framework diagrams for EL, Maths, Science, MT, PE, Art and ICT are images (el1.png, math1.png, art2.gif, ict1.jpg …). The prose around them is captured; the diagrams are not.",
+    "School colours — the accent is a placeholder. The crest is described as green outer circle and blue letters, which is a lead, not a spec.",
+    "Two workbook sheets (ELIZA and ELIZA (2)) carry the same name, Mrs Eliza Lim, and hold two different weeks for the same class 1J. Confirm which is current, or whether these are two people.",
+    "The staff timetable grid runs to 1.30pm on all five days, but the school publishes a 12.30pm Wednesday dismissal. Five Wednesday entries past 12.30 are all duties, consistent with that — but confirm no Wednesday LESSON runs late.",
+    "Class-letter scheme C/D/G/H/I/J — the naming rationale is not published. 6FDN is the P6 Foundation class.",
+    "Term dates — the site publishes none.",
+    "HODs are published, but the workbook has no department column, so the teaching areas used by Find a Teacher are still DERIVED from what each person is timetabled to teach."
+  ],
+  "ccaSource": "https://www.operaestatepri.moe.edu.sg/ (Physical Sports, Uniformed Groups, Clubs and Societies, Visual and Performing Arts)",
+  "extensionProgrammes": [
+    {
+      "name": "E2K Mathematics (P4 and P5)"
+    },
+    {
+      "name": "E2K Science (P4 and P5)",
+      "verbatim": "Selected Primary 4 and 5 students dive deeper into scientific investigations, developing scientific habits of mind such as curiosity, perseverance and precision."
+    },
+    {
+      "name": "Digital Maker Programme (P4 and P5)",
+      "verbatim": "Students are introduced to coding and computational thinking through the micro:bit. Guided by the Design Thinking process, students work in teams to design and develop prototypes that address authentic, everyday problems."
+    },
+    {
+      "name": "English Enrichment — P4 Oracy Programme, P5 Writing Programme",
+      "verbatim": "Targeting mainly P4 and P5 students who display strong language skills. P4 pupils are introduced to public-speaking and broadcast journalism, showcasing learning through the school’s bi-weekly news programme, Good Morning OPERA. P5 pupils are introduced to different forms of writing."
+    },
+    {
+      "name": "Mother Tongue competitions and P4–P6 remediation"
+    },
+    {
+      "name": "e-THINK© Challenge — an annual digital video competition in Science organised by Temasek Junior College"
+    }
+  ],
+  "departmentsNote": "The first ten are the school’s own departments, from its published HOD/LH/SH structure. The teaching areas used by Find a Teacher are DERIVED from the timetable and are a different, narrower thing — see subjectDepartments.",
+  "keyPersonnel": [
+    {
+      "name": "Mrs Tan Wai Ling",
+      "role": "Principal"
+    },
+    {
+      "name": "Mr Raymond Tay",
+      "role": "Vice-Principal"
+    },
+    {
+      "name": "Mr Goh Leng Seng",
+      "role": "Vice-Principal"
+    },
+    {
+      "name": "Mdm Noraini Binte Abdul Rahim",
+      "role": "Year Head — Lower Primary"
+    },
+    {
+      "name": "Mdm Aruna",
+      "role": "Year Head — Middle Primary"
+    },
+    {
+      "name": "Ms Yu Xinyi",
+      "role": "Assistant Year Head — Middle Primary"
+    },
+    {
+      "name": "Mdm Rajima d/o Sevathamaricar (Mrs Rafiq)",
+      "role": "Year Head — Upper Primary"
+    },
+    {
+      "name": "Mdm Siti Haszilah Bte Mohd Hanafiah (Mdm Zi)",
+      "role": "HOD — English"
+    },
+    {
+      "name": "Ms Lee Pei Ling (Mrs Sng)",
+      "role": "HOD — Mathematics"
+    },
+    {
+      "name": "Ms Tan Chay Tin Jasmine",
+      "role": "HOD — Science"
+    },
+    {
+      "name": "Ms Chow Wai Mun Felicia",
+      "role": "HOD — Mother Tongue Languages"
+    },
+    {
+      "name": "Ms Chua Jin Xun",
+      "role": "HOD — CCE"
+    },
+    {
+      "name": "Mr Tong Chin Hong",
+      "role": "HOD — Information & Communications Technology"
+    },
+    {
+      "name": "Ms Chia Hui Min",
+      "role": "HOD — Student Management"
+    },
+    {
+      "name": "Ms Chan Sook Fen Elvenia (Mrs Poh)",
+      "role": "School Staff Developer"
+    },
+    {
+      "name": "Mr Bunawar Bin Md Ali",
+      "role": "LH — Science"
+    },
+    {
+      "name": "Mrs Tan Chor Kheng Christine (Mrs Yap)",
+      "role": "SH — CCE"
+    },
+    {
+      "name": "Ms Shaikha Maimunah binte Shaikh Fuad Mattar",
+      "role": "SH — Information & Communications Technology"
+    },
+    {
+      "name": "Mdm Siti Suhaila Binte Md Raihan",
+      "role": "SH — Malay Language"
+    },
+    {
+      "name": "Ms Dawn Sim Ee Szu",
+      "role": "SH — Aesthetics"
+    },
+    {
+      "name": "Mr Omar Azahari Bin Mohammed Ali",
+      "role": "SH — Discipline"
+    },
+    {
+      "name": "Ms Manickam Sumathi (Mrs Balan)",
+      "role": "Lead Teacher — Science"
+    },
+    {
+      "name": "Mrs Hema Kumari Welkers",
+      "role": "Senior Teacher — English"
+    },
+    {
+      "name": "Mr Yeo Lim Khun Lincoln",
+      "role": "Senior Teacher — Physical Education"
+    },
+    {
+      "name": "Mr Ray Aziz",
+      "role": "Senior Teacher — Music"
+    }
+  ],
+  "keyPersonnelSource": "https://www.operaestatepri.moe.edu.sg/school-staff/ (School Staff 2026)"
+}

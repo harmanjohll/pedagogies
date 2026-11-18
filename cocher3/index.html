@@ -2,12 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <!-- Co-Cher 3 is its own page on Co-Cher 2's engine. Every relative address
-       the engine uses (school packs, timetables, simulations, stylesheets)
-       resolves from the engine's folder; Co-Cher 3's own files are named in
-       full below. Links that start with # are kept on this page by
-       js/shell.js, because a base address would otherwise send them away. -->
-  <base href="../cocher2/" />
+  <!-- Co-Cher 3, the main line. Everything it needs is in this folder: its
+       own copy of the engine (js/, css/, schools/, simulations/, btyrelief/)
+       and its own shell (js/v3/, css/cocher3.css, demos/). Co-Cher 2 and
+       Co-Cher 1 are frozen in their own folders. -->
+  <link rel="manifest" href="manifest.webmanifest" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Co-Cher 3</title>
   <meta name="description" content="AI-powered lesson planning, spatial classroom design, and E21CC framework integration for Singapore educators." />
@@ -59,7 +58,7 @@
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
-  <link rel="stylesheet" href="../cocher3/css/cocher3.css" />
+  <link rel="stylesheet" href="css/cocher3.css" />
 
   <!-- Favicon (inline SVG data URL) -->
   <!-- The mark: an open circle, drawn in one stroke and left open (practice is never
@@ -71,12 +70,16 @@
   <div id="app"></div>
 
   <!-- App Entry (ES Module) -->
-  <script type="module" src="../cocher3/js/boot.js"></script>
+  <script type="module" src="js/v3/boot.js"></script>
 
-  <!-- Service worker: offline shell + network-first HTML (fresh on Pages).
-       Registered after load so it never blocks boot; fails silently where the
-       Service Worker API is unsupported or blocked. -->
-  <!-- No service worker here: Co-Cher 3 always loads its current files. -->
+  <!-- Service worker: lets Co-Cher 3 open without wifi. It always asks the
+       network first, so a teacher online never sees an old file; the saved
+       copy is used only when the network does not answer. -->
+  <script>
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+      window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function () {}); });
+    }
+  </script>
 
   <!--
     Co-Cher — Lesson Design Assistant
@@ -85,7 +88,7 @@
 
     To run locally:
       python3 -m http.server 8000
-    Then open http://localhost:8000/cocher2/
+    Then open http://localhost:8000/cocher3/
 
     ES modules require a local server (file:// won't work due to CORS).
     VS Code Live Server extension also works great.

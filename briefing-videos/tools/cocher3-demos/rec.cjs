@@ -86,7 +86,7 @@ const OVERLAY = `
 `;
 
 function madeUpTimetableCsv() {
-  const real = path.resolve(__dirname, '../../../cocher2/btyrelief/BTYTT_2026Sem2_v1.csv');
+  const real = path.resolve(__dirname, '../../../cocher3/btyrelief/BTYTT_2026Sem2_v1.csv');
   const head = fs.readFileSync(real, 'utf8').split('\n')[0].replace(/^\uFEFF/, '').trim().split(',');   // the header line only
   const P = { '07:55': 1, '08:30': 2, '09:05': 3, '09:40': 4, '10:50': 6, '11:25': 7, '12:00': 8, '12:35': 9, '13:10': 10, '13:45': 11 };
   const rows = require('./roster.cjs').teachers.map(t => {
