@@ -42,6 +42,21 @@ let chatMessages = [];
 let isGenerating = false;
 let currentLessonId = null;  // if editing a saved lesson
 let planClassContext = null;  // class context from "Plan from Class"
+/* How the teacher has sized the planner, kept on the device:
+ *   split      the width of the left (writing) pane, as a share of the planner. One third to start.
+ *   composerH  the height of the writing box, when the teacher has dragged it. Otherwise it grows with the text. */
+const LP_SIZE_KEY = 'cocher3_lp_size';
+const lpSize = (() => { try { return JSON.parse(localStorage.getItem(LP_SIZE_KEY) || '{}') || {}; } catch { return {}; } })();
+const saveLpSize = () => { try { localStorage.setItem(LP_SIZE_KEY, JSON.stringify(lpSize)); } catch { /* private mode */ } };
+const LP_SPLIT_DEFAULT = 100 / 3;
+/** Size the writing box: the teacher's own height if set, else as tall as its text (up to a limit). */
+function fitComposer(el) {
+  if (!el) return;
+  el.style.maxHeight = 'none';
+  if (lpSize.composerH) { el.style.height = lpSize.composerH + 'px'; return; }
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, Math.max(120, Math.round(window.innerHeight * 0.32))) + 'px';   // never so tall that Send leaves the screen
+}
 /* The brief from Co-Cher 3's "New Lesson" screen (js/v3/planner.js): the class,
  * the words to send, which scheme of work the lesson stands on and where in
  * it, and whether to send at once. Read once, when a fresh conversation opens. */
@@ -817,105 +832,101 @@ function buildQuickPrompts(classes) {
   const level = levels.length === 1 ? levels[0] : `[level e.g. ${exampleLevel()}]`;
   const hasSub = subjects.length === 1;
 
-  // Subject-specific prompts — each with label, desc (card hint), and prompt (full editable text)
-  const subjectBank = {
-    'Mathematics': [
-      { label: 'Plan a Maths lesson', desc: 'Hands-on activities, real-world applications, collaborative problem-solving', prompt: `Plan a ${level} Mathematics lesson on [topic e.g. ${topicExample('Mathematics')}]. Include hands-on activities, real-world applications, and opportunities for collaborative problem-solving. The lesson is [40/60] minutes.` },
-      { label: 'Maths with E21CC focus', desc: 'Intentional CAIT development with formative checks', prompt: `Design a ${level} Mathematics lesson on [topic] that intentionally develops CAIT through [open-ended problem solving / pattern recognition]. Include a formative check and an EdTech-enhanced activity.` },
-    ],
-    'Science': [
-      { label: 'Plan a Science lesson', desc: 'Inquiry-based learning with investigation and real-world links', prompt: `Plan a ${level} Science lesson on [topic e.g. ${topicExample('Science')}]. Use inquiry-based learning with a hands-on investigation and a clear link to real-world phenomena. The lesson is [40/60] minutes.` },
-      { label: 'Design a practical lesson', desc: 'Pre-lab discussion, guided investigation, POE framework', prompt: `Design a ${level} Science practical lesson on [topic]. Include pre-lab discussion, safety briefing, guided investigation with prediction-observation-explanation, and a debrief.` },
-    ],
-    'Chemistry': [
-      { label: 'Plan a Chemistry lesson', desc: 'Concept-to-application with molecular visualisation', prompt: `Plan a ${level} Chemistry lesson on [topic e.g. ${topicExample('Chemistry')}]. Connect concepts to real-world applications and include opportunities for molecular visualisation. The lesson is [40/60] minutes.` },
-      { label: 'Chemistry with simulations', desc: 'PhET/virtual labs with scaffolded inquiry', prompt: `Design a ${level} Chemistry lesson on [topic] incorporating interactive simulations (PhET/virtual labs). Include scaffolded inquiry questions and an E21CC focus on CAIT.` },
-    ],
-    'Physics': [
-      { label: 'Plan a Physics lesson', desc: 'Demonstrations, problem-solving, and data analysis', prompt: `Plan a ${level} Physics lesson on [topic e.g. ${topicExample('Physics')}]. Include demonstrations, collaborative problem-solving, and data analysis activities. The lesson is [40/60] minutes.` },
-    ],
-    'Biology': [
-      { label: 'Plan a Biology lesson', desc: 'Visual models, investigation, real-world health/ecology links', prompt: `Plan a ${level} Biology lesson on [topic e.g. ${topicExample('Biology')}]. Include visual models, collaborative investigation, and real-world applications in health or ecology. The lesson is [40/60] minutes.` },
-    ],
-    'English': [
-      { label: 'Plan an English lesson', desc: 'Model texts, peer feedback, differentiated scaffolding', prompt: `Plan a ${level} English Language lesson on [topic e.g. ${topicExample('English')}]. Include model texts, collaborative peer feedback, and differentiated scaffolding. The lesson is [40/60] minutes.` },
-      { label: 'English with structured discussion', desc: 'Socratic seminar, think-pair-share, sentence frames', prompt: `Design a ${level} English lesson on [text/theme] that develops CCI through structured academic discussion (e.g. Socratic seminar, think-pair-share). Include sentence frames for different ability levels.` },
-    ],
-    'History': [
-      { label: 'Plan a History lesson', desc: 'Source-based inquiry, multiple perspectives, SBQ practice', prompt: `Plan a ${level} History lesson on [topic e.g. ${topicExample('History')}]. Use source-based inquiry, structured discussion, and multiple perspectives. Include an SBQ-style activity. The lesson is [40/60] minutes.` },
-    ],
-    'Geography': [
-      { label: 'Plan a Geography lesson', desc: 'Data analysis, fieldwork skills, sustainability links', prompt: `Plan a ${level} Geography lesson on [topic e.g. ${topicExample('Geography')}]. Include data analysis, fieldwork skills, and connections to sustainability (CGC). The lesson is [40/60] minutes.` },
-    ],
-    'Social Studies': [
-      { label: 'Plan a Social Studies lesson', desc: 'Structured inquiry, source analysis, perspective-taking', prompt: `Plan a ${level} Social Studies lesson on [issue e.g. Governance / Diversity]. Use structured inquiry, source analysis, and develop CGC through perspective-taking activities. The lesson is [40/60] minutes.` },
-    ],
-    'Chinese': [
-      { label: 'Plan a Chinese lesson', desc: 'Vocabulary building, model texts, peer interaction', prompt: `Plan a ${level} Chinese Language lesson on [topic e.g. ${topicExample('Chinese')}]. Include vocabulary building, model texts, and peer interaction activities. The lesson is [40/60] minutes.` },
-    ],
-    'Malay': [
-      { label: 'Plan a Malay lesson', desc: 'Vocabulary enrichment, collaborative writing, cultural links', prompt: `Plan a ${level} Malay Language lesson on [topic e.g. ${topicExample('Malay')}]. Include vocabulary enrichment, collaborative writing, and cultural connections. The lesson is [40/60] minutes.` },
-    ],
-    'Tamil': [
-      { label: 'Plan a Tamil lesson', desc: 'Vocabulary strategies, model responses, peer review', prompt: `Plan a ${level} Tamil Language lesson on [topic e.g. ${topicExample('Tamil')}]. Include vocabulary strategies, model responses, and peer review activities. The lesson is [40/60] minutes.` },
-    ],
-    'CCE': [
-      { label: 'Plan a CCE lesson', desc: 'Values discussion, contemporary issues, SEL, CCE2021 Big Ideas', prompt: `Plan a ${level} CCE lesson on [topic e.g. Cyber Wellness / Responsible Decision-Making / National Identity]. Use the CCE2021 framework (Big Ideas: Identity, Relationships, Choices). Include a values-based discussion with facilitation strategies and an SEL component. The lesson is [40/60] minutes.` },
-      { label: 'CCE contemporary issues discussion', desc: 'Structured discussion on a real-world issue with multiple perspectives', prompt: `Design a ${level} CCE discussion on [contemporary issue e.g. AI & Ethics / Social Media & Mental Health / Climate Change]. Use Structured Academic Controversy or Four Corners. Connect to R3ICH values and NE dispositions. Include a scenario set in Singapore.` },
-      { label: 'CCE with NE focus', desc: 'National Education — Sense of Belonging, Hope, Reality, Will to Act', prompt: `Plan a ${level} CCE lesson with a National Education focus for [NE Commemorative Day e.g. Total Defence Day / Racial Harmony Day / International Friendship Day / National Day]. Develop NE dispositions: Sense of Belonging, Sense of Hope, Sense of Reality, and The Will to Act. The lesson is [40/60] minutes.` },
-      { label: 'CCE Cyber Wellness lesson', desc: 'Digital citizenship, online safety, responsible tech use', prompt: `Plan a ${level} CCE Cyber Wellness lesson on [topic e.g. Digital Footprint / Cyberbullying / Screen Time Management / Online Scams]. Address the Sense, Think and Act processes and the Cyber Wellness principles (Respect for Self and Others; Safe and Responsible Use). Include a realistic scenario involving social media or online interactions in a Singapore school context. Connect to R3ICH values (Responsibility, Respect) and E21CC (CGC). The lesson is [40/60] minutes.` },
-      { label: 'CCE Mental Health & SEL', desc: 'Resilience, peer support, help-seeking, emotional regulation', prompt: `Plan a ${level} CCE Mental Health lesson on [topic e.g. Managing Exam Stress / Peer Support / Help-Seeking / Building Resilience]. Develop SEL competencies: Self-Awareness and Self-Management. Include a mindfulness or reflective activity, a scenario-based discussion, and strategies students can apply. Connect to R3ICH value of Resilience. The lesson is [40/60] minutes.` },
-      { label: 'CCE Education & Career Guidance', desc: 'Self-discovery, career exploration, MySkillsFuture', prompt: `Plan a ${level} CCE ECG lesson on [topic e.g. Discovering My Strengths / Exploring Career Pathways / Work Values / Post-Secondary Options]. Help students develop self-awareness of interests, abilities, and values. Include a reflective activity (e.g. strengths inventory or values card sort) and connect to MySkillsFuture portal. The lesson is [40/60] minutes.` },
-    ],
-  };
+  /* ── Guided starters ──
+   * Each starter is a brief the teacher completes, not a one line ask. Every
+   * [placeholder] names a thing worth deciding before a lesson is planned:
+   * what students already know, where they get stuck, what they will be able
+   * to do, how the teacher will know, how the lesson should feel. The hints
+   * inside the brackets are prompts to thinking; the teacher overwrites them.
+   * A subject, when known, changes the "anchor": the thing the lesson is
+   * built around in that discipline. */
+  const ANCHORS = [
+    [/math/i, 'a concrete or pictorial way in, before the abstract: e.g. a pattern, a diagram, a real quantity'],
+    [/chem|phys|bio|science/i, 'a phenomenon, demonstration or practical students can see and question'],
+    [/english|literature|general paper/i, 'the text or text type, and the reading or writing move you want'],
+    [/history|social studies/i, 'the sources and the inquiry question they answer'],
+    [/geograph/i, 'the place, the data or the fieldwork skill'],
+    [/chinese|malay|tamil|mother tongue/i, 'the speaking or writing task, and the vocabulary it needs'],
+    [/cce|character/i, 'the value or issue, and a scenario close to students\u2019 lives'],
+    [/art|music|drama|design|d&t/i, 'the technique, the work to look at or listen to, and what students make'],
+    [/physical|pe\b/i, 'the skill, the game form, and how everyone stays active'],
+    [/food|nutrition/i, 'the dish or the investigation, and the principle behind it'],
+    [/econ|business|accounts/i, 'the case, the data or the decision to be made'],
+  ];
+  const anchor = (ANCHORS.find(([re]) => re.test(subj)) || [null, 'the example, text, problem or activity the lesson is built around'])[1];
+  const who = `${level} ${subj}`;
+  const topic = `[topic, e.g. ${topicExample(hasSub ? subj : '')}]`;
+  const FEEL = '[how it should feel: curiosity / a game / movement / real world stakes / student choice]';
+  const SHAPE = 'Keep the plan to one screen: a hook, three or four parts with times, and one check for learning. No long prose.';
 
-  /* Primary-only subjects. A P4 teacher's timetable is full of Social Studies,
-   * Mother Tongue, PAL, Art, Music and PE; the bank above was built for a
-   * secondary specialist and offered them nothing. Added rather than swapped,
-   * because the shared subjects (English, Maths, Science) already match. */
-  if (isPrimary()) {
-    Object.assign(subjectBank, {
-      'Social Studies': [
-        { label: 'Plan a Social Studies lesson', desc: 'Inquiry from a familiar place, then out to Singapore',
-          prompt: `Plan a ${level} Social Studies lesson on [topic e.g. ${topicExample('Social Studies')}]. Start from something the pupils already know in their own neighbourhood, use one clear source or artefact, and finish with a whole-class inquiry question. The lesson is [30/60] minutes.` },
-      ],
-      'Programme for Active Learning': [
-        { label: 'Plan a PAL module', desc: 'Experiential, non-examinable, confidence-building',
-          prompt: `Plan a ${level} PAL (Programme for Active Learning) session on [Sports & Games / Outdoor Education / Performing Arts / Visual Arts]. It is experiential and non-examinable: no worksheets. Build confidence and social-emotional skills, and include a short reflection.` },
-      ],
-      'Art': [
-        { label: 'Plan an Art lesson', desc: 'Make, look, talk — one skill at a time',
-          prompt: `Plan a ${level} Art & Craft lesson on [topic e.g. ${topicExample('Art')}]. One technique, materials a primary classroom actually has, and time to look at and talk about each other's work. The lesson is [60] minutes.` },
-      ],
-      'Music': [
-        { label: 'Plan a Music lesson', desc: 'Sing, move, play — participation over performance',
-          prompt: `Plan a ${level} Music lesson on [topic e.g. ${topicExample('Music')}]. Everyone participates; nobody performs alone unless they want to. Include singing or movement, a simple classroom instrument, and a listening moment.` },
-      ],
-      'Physical Education': [
-        { label: 'Plan a PE lesson', desc: 'Maximum activity time, minimum queueing',
-          prompt: `Plan a ${level} PE lesson on [topic e.g. ${topicExample('Physical Education')}]. Maximise moving time and minimise queueing — small-sided, everyone active. Include a safety check and a differentiated option for pupils still developing the skill.` },
-      ],
-      'Chinese': [
-        { label: 'Plan a Mother Tongue lesson', desc: 'Speak first, then read, then write',
-          prompt: `Plan a ${level} Chinese Language lesson on [topic e.g. ${topicExample('Chinese')}]. Speaking before reading before writing, with a game or picture prompt to get every pupil talking. The lesson is [30/60] minutes.` },
-      ],
-    });
-  }
+  prompts.push({ label: hasSub ? `Plan a ${subj} Lesson, Guided` : 'Plan a Lesson, Guided', desc: 'Fill in what you know; Co-Cher builds the lesson around it',
+    prompt: `Plan a [minutes, e.g. 60] minute ${who} lesson on ${topic}.
 
-  // Match subject-specific prompts
-  if (hasSub) {
-    for (const [key, bank] of Object.entries(subjectBank)) {
-      if (subj.toLowerCase().includes(key.toLowerCase())) {
-        prompts.push(...bank);
-        break;
-      }
-    }
-  }
+Where students are now
+- They already know: [what they can build on from earlier lessons]
+- They usually get stuck on: [the misconception, or the step that trips them]
 
-  // Default subject prompt if no match
-  if (prompts.length === 0) {
-    prompts.push({ label: 'Plan a lesson', desc: 'Engaging activities, clear outcomes, E21CC development', prompt: `Plan a ${level} ${subj} lesson on [topic e.g. ${topicExample(subj)}]. Include engaging activities, clear learning outcomes, and opportunities for pupil collaboration and E21CC development. The lesson is [${isPrimary() ? '30/60' : '40/60'}] minutes.` });
-  }
+Where I want them to be
+- By the end they can: [one thing they can do or explain that they could not before]
+- I will know because: [what I will see or hear: an answer, a product, an exit ticket]
+
+The lesson
+- It should feel like: ${FEEL}
+- Build it around: [${anchor}]
+- My class: [mixed readiness / needs stretch / needs support / lively / quiet]
+- I have: [devices / mini whiteboards / a lab or special room / none of these]
+
+${SHAPE}` });
+
+  prompts.push({ label: 'Fix a Sticking Point', desc: 'A lesson aimed at one misconception or hard step',
+    prompt: `My ${who} students keep getting stuck on [the misconception or hard step, in your own words] when we do ${topic}.
+
+- What they say or write that shows it: [a typical wrong answer or comment]
+- Why I think it happens: [e.g. a rule over applied, a missing idea, everyday language getting in the way]
+- What I have tried: [what did not work, so Co-Cher does not repeat it]
+
+Plan a [minutes, e.g. 40] minute lesson that surfaces the misconception, lets students see for themselves why it fails, and then builds the right idea. It should feel like: ${FEEL}.
+End with one question that would catch a student who still holds the misconception.
+
+${SHAPE}` });
+
+  prompts.push({ label: 'An Opening They Remember', desc: 'Three hooks to choose from, each tied to the learning',
+    prompt: `Give me three ways to open a ${who} lesson on ${topic}.
+
+- The big idea the hook must lead into: [the one idea of the lesson]
+- What my students care about: [their interests, their world, something current]
+- It should feel like: ${FEEL}
+- I have [3 to 5] minutes and [what you have: a projector / objects to bring / nothing]
+
+For each hook: one line on what I do, one line on what students do, and the question it leaves hanging. No answers given away.` });
+
+  prompts.push({ label: 'Differentiate for My Class', desc: 'One lesson, three ways in, no extra worksheets to mark',
+    prompt: `I am teaching ${topic} to ${who}.
+
+- Most of the class: [where most students are]
+- Students who need more support: [how many, and what they find hard]
+- Students who need more stretch: [how many, and what they find easy]
+- Everyone must be able to: [the core outcome nobody leaves without]
+
+Suggest how to run one lesson that serves all three, with the same task where possible and different ways in, levels of help or depth of question. Keep my marking and preparation light. ${SHAPE}` });
+
+  prompts.push({ label: 'Check They Learnt It', desc: 'Hinge questions and an exit ticket that tell you what to do next',
+    prompt: `For a ${who} lesson on ${topic}:
+
+- The one thing they must be able to do: [the outcome]
+- The mistake I most expect: [the likely error]
+- How I check during lessons: [mini whiteboards / hands up / cold call / a device poll / none yet]
+
+Give me two hinge questions to ask midway, where each wrong answer points to a specific misunderstanding, and a three question exit ticket. For each, say what I should do next if most of the class gets it wrong.` });
+
+  prompts.push({ label: 'Grow a Competency (E21CC)', desc: 'Build CAIT, CCI or CGC into the lesson, visibly',
+    prompt: `In a ${who} lesson on ${topic}, I want students to grow in [the competency: critical thinking / inventive thinking / communication / collaboration / civic literacy / self directed learning].
+
+- What it looks like when a student shows it: [the behaviour I would point to]
+- Where it fits in the lesson: [the task or discussion where they would need it]
+- It should feel like: ${FEEL}
+
+Suggest two or three activities where the competency is needed to succeed, not added on, and one sentence I can use to name it for students. Say what I should watch for, so I can note who showed it.` });
 
   /* A primary teacher is a generalist. Park View's timetable has every teacher
    * on between two and six subjects, so keying the gallery off one class
@@ -930,12 +941,6 @@ function buildQuickPrompts(classes) {
       prompt: `I teach ${subj} and other subjects to the same ${level} class. Suggest how to connect [topic] across two or three of my subjects this week so the learning reinforces itself — without making every lesson about the same thing.` });
   }
 
-  // Universal prompts (always available)
-  prompts.push({ label: 'Develop CAIT in my lesson', desc: 'Critical & Inventive Thinking with concrete activities', prompt: `How can I intentionally develop Critical, Adaptive & Inventive Thinking (CAIT) in a ${level} ${subj} lesson on [topic]? Suggest 2-3 concrete activities with EdTech integration.` });
-  prompts.push({ label: 'Differentiate for my class', desc: 'Scaffolding for weaker + extension for stronger learners', prompt: `Suggest differentiation strategies for a ${level} ${subj} lesson on [topic]. I have students who [need more scaffolding / are advanced / have specific learning needs]. Include both support and extension options.` });
-  prompts.push({ label: 'E21CC across all domains', desc: 'Activities that build CAIT, CCI, and CGC together', prompt: `Suggest classroom activities for ${level} ${subj} that build all three E21CC domains: CAIT, CCI, and CGC. The topic is [topic]. Make activities practical for a [40/60]-minute lesson.` });
-  prompts.push({ label: 'Lesson starter hooks', desc: 'Real-world "What if..." openers that spark curiosity', prompt: `Suggest 3 lesson starter hooks for ${level} ${subj} on [topic]. Each hook must be rooted in a real-world context or application. Use provocative framing like "What if I told you...", "Did you ever wonder...", or "Why do you think...". Make them vivid and relevant to students' lives. Include at least one EdTech-enhanced option.` });
-
   // EEE-aware prompts
   const eeeSelections = getEEESelections();
   if (eeeSelections.includes('stimulus')) {
@@ -948,7 +953,7 @@ function buildQuickPrompts(classes) {
     prompts.push({ label: 'CCE values discussion', desc: 'Structured CCE discussion with R3ICH values and scenario', prompt: `Create a CCE values discussion for ${level} students on [topic/issue]. Include a Singapore-context scenario, guiding questions linked to R3ICH values, and a facilitation strategy (Four Corners / Hot Seat / Circle Structure).` });
   }
 
-  return prompts.slice(0, 6);
+  return prompts.slice(0, 8);
 }
 
 /* ══════════ Load existing lesson ══════════ */
@@ -1348,6 +1353,7 @@ export function render(container) {
 
         <div class="chat-messages" id="chat-messages" style="flex:1;min-height:0;overflow-y:auto;"></div>
 
+        <div class="lp-vresize" id="lp-vresize" role="separator" aria-orientation="horizontal" tabindex="0" title="Drag to make the writing box taller or shorter. Double click to let it size itself."></div>
         <div class="chat-input-row" style="flex-shrink:0;">
           <div class="chat-composer">
             <div class="chat-composer-toolbar">
@@ -1514,6 +1520,7 @@ export function render(container) {
   if (briefNow?.prompt && !chatInput.value) {
     chatInput.value = briefNow.prompt;
     chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+    fitComposer(chatInput);
     if (briefNow.send && Store.get('apiKey') && !/\[[^\]]+\]/.test(briefNow.prompt)) setTimeout(() => chatSend?.click(), 250);
     else chatInput.focus();
   }
@@ -1624,6 +1631,21 @@ export function render(container) {
   if (showChatBtn) {
     showChatBtn.addEventListener('click', () => layoutEl.classList.remove('show-plan'));
   }
+
+  // The writing box: drag its top edge to size it; double click to let it size itself again.
+  (() => {
+    const grip = container.querySelector('#lp-vresize'); if (!grip || !chatInput) return;
+    fitComposer(chatInput);
+    let on = false, y0 = 0, h0 = 0;
+    const limit = () => Math.max(120, Math.round((container.querySelector('.lp-chat-col')?.getBoundingClientRect().height || 600) * 0.7));
+    const set = (h) => { lpSize.composerH = Math.max(56, Math.min(limit(), Math.round(h))); fitComposer(chatInput); };
+    grip.addEventListener('pointerdown', (e) => { e.preventDefault(); on = true; y0 = e.clientY; h0 = chatInput.getBoundingClientRect().height; grip.classList.add('active'); grip.setPointerCapture(e.pointerId); });
+    grip.addEventListener('pointermove', (e) => { if (on) set(h0 - (e.clientY - y0)); });
+    const end = () => { if (!on) return; on = false; grip.classList.remove('active'); saveLpSize(); };
+    grip.addEventListener('pointerup', end); grip.addEventListener('lostpointercapture', end);
+    grip.addEventListener('dblclick', () => { delete lpSize.composerH; saveLpSize(); fitComposer(chatInput); });
+    grip.addEventListener('keydown', (e) => { if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return; e.preventDefault(); set(chatInput.getBoundingClientRect().height + (e.key === 'ArrowUp' ? 24 : -24)); saveLpSize(); });
+  })();
 
   // Resizable panels
   initResizeHandle(
@@ -1891,8 +1913,7 @@ export function render(container) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
   chatInput.addEventListener('input', () => {
-    chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+    fitComposer(chatInput);
   });
 
   // Class context banner
@@ -2024,6 +2045,8 @@ export function render(container) {
     const btn = e.target.closest('.quick-prompt');
     if (btn) {
       chatInput.value = btn.dataset.prompt;
+      fitComposer(chatInput);                 // a guided brief is many lines: open the box to show it
+      chatInput.scrollTop = 0;
       chatInput.focus();
       // Select the first [placeholder] for easy editing
       const match = btn.dataset.prompt.match(/\[([^\]]+)\]/);
@@ -2031,6 +2054,7 @@ export function render(container) {
         const idx = btn.dataset.prompt.indexOf(match[0]);
         chatInput.setSelectionRange(idx, idx + match[0].length);
       }
+      chatInput.scrollTop = 0;                // start at the top of the brief, on its first placeholder
     }
   });
 
@@ -2895,7 +2919,7 @@ function renderMessages(el, classes) {
       input.value = `${vigilanceState.prompt} — for my [class/level], who [what they enjoy / where they struggle]; they already know [prior knowledge].`;
       vigilanceState = null;
       input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+      fitComposer(input);
       input.focus();
       const start = input.value.indexOf('[');
       const end = input.value.indexOf(']', start);
@@ -2915,10 +2939,10 @@ function renderMessages(el, classes) {
             </div>
             <h3 style="font-size:1.0625rem;font-weight:600;margin-bottom:var(--sp-1);color:var(--ink);">What would you like to plan?</h3>
             <p style="font-size:0.8125rem;color:var(--ink-muted);line-height:1.5;">
-              Click a starter below to load it — edit the <span style="background:var(--accent-light);color:var(--accent);padding:0 4px;border-radius:3px;font-size:0.75rem;font-weight:500;">[placeholders]</span> before sending.
+              Pick a starter. It loads as a short brief: replace each <span style="background:var(--accent-light);color:var(--accent);padding:0 4px;border-radius:3px;font-size:0.75rem;font-weight:500;">[placeholder]</span> with your own words, or delete a line you do not need.
             </p>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2);">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:var(--sp-2);">
             ${prompts.map((p, i) => {
               const desc = p.desc || (p.prompt.length > 70 ? p.prompt.slice(0, 68).replace(/\s\S*$/, '') + '...' : p.prompt);
               const icons = ['<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
@@ -5628,6 +5652,13 @@ async function showAudioPlaybackModal(id, title) {
 function initResizeHandle(handle, leftPanel, rightPanel, parentContainer) {
   if (!handle || !leftPanel || !rightPanel || !parentContainer) return;
 
+  // Start where the teacher left it (one third for the writing pane if never moved). Wide screens only.
+  const applySplit = (pct) => {
+    if (window.innerWidth <= 1024) { leftPanel.style.flex = ''; rightPanel.style.flex = ''; return; }
+    leftPanel.style.flex = `0 0 ${pct}%`; rightPanel.style.flex = '1 1 0';
+  };
+  applySplit(lpSize.split || LP_SPLIT_DEFAULT);
+
   let isResizing = false;
   let startX = 0;
   let startLeftWidth = 0;
@@ -5656,10 +5687,12 @@ function initResizeHandle(handle, leftPanel, rightPanel, parentContainer) {
       const rightPct = ((containerWidth - newLeftWidth - handleWidth) / containerWidth) * 100;
       leftPanel.style.flex = `0 0 ${leftPct}%`;
       rightPanel.style.flex = `0 0 ${rightPct}%`;
+      lpSize.split = Math.round(leftPct * 10) / 10;
     }
   });
 
   handle.addEventListener('pointerup', () => {
+    if (isResizing) saveLpSize();
     isResizing = false;
     handle.classList.remove('active');
     document.body.classList.remove('resizing-panels');
@@ -5671,11 +5704,8 @@ function initResizeHandle(handle, leftPanel, rightPanel, parentContainer) {
     document.body.classList.remove('resizing-panels');
   });
 
-  // Double-click to reset to 50/50
-  handle.addEventListener('dblclick', () => {
-    leftPanel.style.flex = '1 1 50%';
-    rightPanel.style.flex = '1 1 50%';
-  });
+  // Double click: back to one third and two thirds
+  handle.addEventListener('dblclick', () => { delete lpSize.split; saveLpSize(); applySplit(LP_SPLIT_DEFAULT); });
 }
 
 /* ══════════ Share Modal (Export / Import lesson JSON) ══════════ */
