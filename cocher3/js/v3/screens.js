@@ -129,7 +129,7 @@ function nowCard(t) {
   const acts = e.kind !== 'lesson' ? '' : [
     ready ? `<a class="btn btn-primary" href="${lessonHref(ready)}">Present “${esc(ready.l.title.length > 34 ? ready.l.title.slice(0, 32) + '…' : ready.l.title)}”</a>` : '',
     cls ? `<a class="btn btn-secondary" href="#/classes/${cls.id}">Open ${esc(cls.name)}</a>` : '',
-    !ready ? `<a class="btn ${cls ? 'btn-ghost' : 'btn-primary'}" href="#/lesson-planner">Plan this lesson</a>` : '',
+    !ready ? `<a class="btn ${cls ? 'btn-ghost' : 'btn-primary'}" href="#/plan">Plan this lesson</a>` : '',
   ].join('');
   return `<div class="v3-now">
     <div><div class="k">${k}</div>
@@ -376,7 +376,7 @@ export function renderNow(container) {
         <p class="v3-lede">${lede}</p>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a class="btn btn-secondary" href="#/lesson-planner">New lesson</a>
+        <a class="btn btn-secondary" href="#/plan">New lesson</a>
         <button class="btn btn-ghost" id="v3-find">Find a student</button>
         <button class="btn btn-primary" data-add-entry="${ymd(new Date())}">Add entry</button>
       </div></div>
@@ -389,7 +389,7 @@ export function renderNow(container) {
             <span><span class="v3-row-s">${STAGE[x.stage].verb}</span><br><span class="v3-row-t">${esc(x.l.title)}</span></span>
             ${x.cls ? `<span class="v3-chip">${esc(x.cls.name)}</span>` : ''}
             <span class="go">${STAGE[x.stage].go} →</span></a>`),
-            'Nothing waiting. <a href="#/lesson-planner">Plan a lesson</a> and it will appear here, with its next step.')}
+            'Nothing waiting. <a href="#/plan">Plan a lesson</a> and it will appear here, with its next step.')}
         </div></div>
         <div class="v3-col-5">
           <div class="v3-panel" style="margin-bottom:var(--gap);">
@@ -438,7 +438,7 @@ function renderAsk(container) {
     <button class="v3-askbox" id="v3-ask"><span>A lesson, a class, a student, a tool…</span><kbd>Ctrl K</kbd></button>
     <div class="v3-quick">
       ${next ? `<a href="${lessonHref(next)}">Present “${esc(next.l.title.slice(0, 28))}${next.l.title.length > 28 ? '…' : ''}”</a>` : ''}
-      <a href="#/lesson-planner">Plan a lesson</a><a href="#/classes">My classes</a><a href="#/week">This week</a><a href="#/admin">Find a teacher</a><a href="#/resources">Resources</a>
+      <a href="#/plan">Plan a lesson</a><a href="#/classes">My classes</a><a href="#/week">This week</a><a href="#/admin">Find a teacher</a><a href="#/resources">Resources</a>
     </div></div></div>`;
   container.querySelector('#v3-ask').addEventListener('click', openSearch);
 }

@@ -6,10 +6,15 @@
  * teachers should hear about it. Raise CACHE in ../../sw.js with it.
  */
 
-export const VERSION = '3.9.0';
+export const VERSION = '3.10.0';
 
 /* Newest first. Shown once to a returning teacher, in Co-Cher 3 only. */
 export const NOTES = [
+  { version: '3.10.0', items: [
+    ['New Lesson', 'In Lessons: four quick choices (who, what, how it should feel, how to begin) and Co-Cher drafts a one screen lesson, or asks you a few questions first.'],
+    ['Your Scheme of Work, Followed', 'Pick the scheme of work and the week; the lesson stays inside it. With none, Co-Cher checks the lesson against the web.'],
+    ['Six Tools in View', 'The planner shows six tools. "More tools" opens the rest; tick any to keep it in view.'],
+  ] },
   { version: '3.9.0', items: [
     ['Text Size', 'Text is a touch larger. Change it under Personal, Look and Feel, Text Size.'],
     ['How Co-Cher Works', 'The videos under My School now carry that name, so no one takes it for how the school works.'],

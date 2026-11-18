@@ -16,6 +16,7 @@ import { VERSION, NOTES } from './version.js';
 import { PLACES, ICONS, placeFor, screensIn, getLinks, setLinks, ALL_SCREENS } from './places.js';
 import { renderHome, renderNow, renderSchool, renderWeek, renderTerm, renderHub, renderPaths } from './screens.js';
 import { renderFreeTime, renderHandover, renderSend } from './together.js';
+import { renderNewLesson, watchPlannerTools } from './planner.js';
 import { openModal } from '../components/modals.js';
 import { renderDemos, demoById } from './demos.js';
 import { openSearch } from '../components/unified-search.js';
@@ -262,6 +263,7 @@ window.__cocherShell = {
       if (b.dataset.act === 'link') openLink(b.dataset.route);
     });
     backupOnce();
+    watchPlannerTools();
   },
 
   /* The school's colours arrive: hand them to the look, which softens them. */
@@ -287,6 +289,7 @@ window.__cocherShell = {
     registerRoute('/free-time', renderFreeTime);
     registerRoute('/handover', renderHandover);
     registerRoute('/send', renderSend);
+    registerRoute('/plan', renderNewLesson);
     registerRoute('/demos', renderDemos);
     registerRoute('/demos/:id', renderDemos);
   },

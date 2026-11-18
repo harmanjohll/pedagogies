@@ -59,9 +59,10 @@ export const PLACES = [
     { route: '/handover', label: 'Handover', desc: 'Pass evidence on a class to a colleague, and take in theirs', demo: 'send' },
     { route: '/report-comments', label: 'Report Comments', desc: 'Draft holistic comments from levels and evidence', tag: 'beta' },
   ] },
-  { id: 'lessons', group: 'Work', label: 'Lessons', route: '/lessons', match: ['/lessons', '/lesson-planner', '/spatial', '/lesson-rehearsal', '/cce', '/autopilot', '/relief-kit', '/present', '/deck', '/live', '/send'], screens: [
+  { id: 'lessons', group: 'Work', label: 'Lessons', route: '/lessons', match: ['/lessons', '/lesson-planner', '/spatial', '/lesson-rehearsal', '/cce', '/autopilot', '/relief-kit', '/present', '/deck', '/live', '/send', '/plan'], screens: [
     { route: '/lessons', label: 'All Lessons', desc: 'Every lesson, and where it is in the cycle', demo: 'lesson-cycle' },
-    { route: '/lesson-planner', label: 'Plan', desc: 'Design a lesson with Co-Cher' },
+    { route: '/plan', label: 'New Lesson', desc: 'Four quick choices, then a lesson to adjust' },
+    { route: '/lesson-planner', label: 'Planner', desc: 'Design and refine a lesson with Co-Cher' },
     { route: '/spatial', label: 'Room', desc: 'Lay out the room for the learning' },
     { route: '/lesson-rehearsal', label: 'Rehearse', desc: 'Practise delivery with student personas' },
     { route: '/cce', label: 'CCE2021', desc: 'Six content areas, discussions, and Paths in ECG', demo: 'paths' },

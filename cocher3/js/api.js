@@ -323,6 +323,14 @@ export async function sendChat(messages, options = {}) {
     };
   }
 
+  /* Look to the web. When a lesson has no scheme of work to stand on, the
+   * caller asks for Google Search grounding, so the plan is checked against
+   * current syllabus pages and not only the model's memory. Text replies only.
+   * If the key or model will not take the tool, the request is repeated
+   * without it: a plan without the web beats no plan. */
+  const wantsWeb = !!options.webSearch && !options.jsonMode;
+  if (wantsWeb) body.tools = [{ google_search: {} }];
+
   // Key travels in a header (not the URL) so it can't leak into logs/history
   const call = (m) => fetchWithRetry(`${ENDPOINT}/${m}:generateContent`, {
     method: 'POST',
@@ -343,6 +351,11 @@ export async function sendChat(messages, options = {}) {
     }
   }
 
+  if (wantsWeb && res.status === 400) {             // the tool was refused: go without it
+    delete body.tools;
+    res = await call(model);
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const msg = err?.error?.message || `API error ${res.status}`;
@@ -351,6 +364,9 @@ export async function sendChat(messages, options = {}) {
 
   const data = await res.json();
   const parts = data?.candidates?.[0]?.content?.parts;
+  // Pages the answer leaned on, when the web was used: shown under the reply.
+  const webSources = (data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [])
+    .map(c => c?.web).filter(w => w && w.uri).slice(0, 5);
 
   if (!parts || parts.length === 0) {
     throw new Error('No response from model.');
@@ -363,6 +379,13 @@ export async function sendChat(messages, options = {}) {
 
   if (!text) {
     throw new Error('No response from model.');
+  }
+
+  if (wantsWeb && body.tools) {
+    // A web checked answer can arrive in several pieces; take them all, minus the model's own working.
+    const whole = parts.filter(p => p.text != null && !p.thought).map(p => p.text).join('').trim() || text;
+    const list = webSources.map(w => `[${String(w.title || 'source').replace(/[\[\]]/g, '')}](${w.uri})`).join(' · ');
+    return list ? `${whole}\n\n_Checked against the web:_ ${list}` : whole;
   }
 
   return text;
