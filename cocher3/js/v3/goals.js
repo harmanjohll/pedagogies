@@ -43,7 +43,7 @@ export function openGoal(goal, redraw) {
   const isNew = !goal.id;
   const g = { title: '', note: '', done: false, ...goal };
   const { backdrop, close } = openModal({
-    title: isNew ? 'Set a goal for the term' : 'Edit goal', width: 460,
+    title: isNew ? 'Set a Goal for the Term' : 'Edit Goal', width: 460,
     body: `<div style="display:flex;flex-direction:column;gap:14px;">
       <div><label class="input-label" for="gl-title">The goal</label>
         <input class="input" id="gl-title" maxlength="120" value="${esc(g.title)}" placeholder="Every 3E lesson ends with an exit ticket" autocomplete="off"></div>

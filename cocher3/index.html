@@ -23,10 +23,10 @@
   <!-- Co-Cher 3: apply the teacher's look before first paint. Mirrors js/prefs.js. -->
   <script>
     (function () {
-      var d = { look: 'fjord', night: 'off', type: 'mincho', nav: 'dock', home: 'flow', density: 'airy' }, p = {};
+      var d = { look: 'fjord', night: 'off', type: 'mincho', nav: 'dock', home: 'flow', text: 'larger', density: 'airy' }, p = {};
       try { p = JSON.parse(localStorage.getItem('cocher3_prefs') || '{}') || {}; } catch (e) {}
       var h = document.documentElement, g = function (k) { return typeof p[k] === 'string' ? p[k] : d[k]; };
-      h.classList.add('v3'); h.dataset.look = g('look'); h.dataset.type = g('type'); h.dataset.density = g('density');
+      h.classList.add('v3'); h.dataset.look = g('look'); h.dataset.type = g('type'); h.dataset.density = g('density'); h.dataset.text = g('text');
       h.dataset.nav = window.matchMedia('(max-width: 760px)').matches ? 'dock' : g('nav');
       if (g('night') === 'on') h.classList.add('dark');
     })();
@@ -64,7 +64,7 @@
   <!-- The mark: an open circle, drawn in one stroke and left open (practice is never
        finished), which also reads as a C. Ink and paper from the Fjord look; the dot is
        the school gold, softened. -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23FBFCFC'/><path d='M24.6 9.2A11 11 0 1 0 26.6 19' fill='none' stroke='%231C2733' stroke-width='4.2' stroke-linecap='round'/><path d='M24.6 9.2A11 11 0 0 0 12 5.8' fill='none' stroke='%23FBFCFC' stroke-width='1.6' stroke-linecap='round' opacity='.55'/><circle cx='25.6' cy='14.2' r='2.3' fill='%23C99A2E'/></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23FBFCFC'/><path d='M23.64 8.09A11 11 0 1 0 26.2 20.12' fill='none' stroke='%231C2733' stroke-width='4.2' stroke-linecap='round'/><circle cx='26.76' cy='13.71' r='2.3' fill='%23C99A2E'/></svg>" />
 </head>
 <body>
   <div id="app"></div>

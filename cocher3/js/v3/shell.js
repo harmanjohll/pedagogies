@@ -37,7 +37,7 @@ const route = () => {
 /* Co-Cher 3 is open to every signed in teacher. What a teacher sees still
  * follows their school (packs, timetable, school only tools), as in Co-Cher 2. */
 
-/* Shown in Look and feel and at the foot of My School, so anyone can tell
+/* Shown in Look and Feel and at the foot of My School, so anyone can tell
  * which version their browser is running. Set in js/version.js. */
 export const BUILD = VERSION;
 
@@ -118,7 +118,7 @@ function openMore() {
     body: `<div class="v3-more-list">
       ${PLACES.filter(p => !PRIME.has(p.id)).map(p => `<a href="#${p.route}" class="${here && here.id === p.id ? 'on' : ''}">${ICONS[p.id]}<b>${esc(p.label)}</b></a>`).join('')}
       <button data-more="search">${ICONS.search}<b>Search</b></button>
-      <button data-more="look">${ICONS.look}<b>Look and feel</b></button>
+      <button data-more="look">${ICONS.look}<b>Look and Feel</b></button>
       <a href="#/settings">${ICONS.settings}<b>Settings</b></a>
     </div>` });
   backdrop.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setTimeout(close, 0)));
@@ -184,11 +184,11 @@ function paint() {
   if (strip) strip.innerHTML = stripHTML();
 }
 
-/* ── Look and feel ── */
+/* ── Look and Feel ── */
 function openLook() {
   if (document.querySelector('.v3-look')) return;
   const back = document.createElement('div'); back.className = 'v3-look-back';
-  const panel = document.createElement('aside'); panel.className = 'v3-look'; panel.setAttribute('aria-label', 'Look and feel');
+  const panel = document.createElement('aside'); panel.className = 'v3-look'; panel.setAttribute('aria-label', 'Look and Feel');
   const close = () => { back.remove(); panel.remove(); document.removeEventListener('keydown', onKey); };
   const onKey = (e) => { if (e.key === 'Escape') close(); };
   const group = (key, title, cls = '') => {
@@ -202,13 +202,14 @@ function openLook() {
   const draw = () => {
     panel.innerHTML = `
       <button class="close" aria-label="Close">&times;</button>
-      <h2>Look and feel</h2>
+      <h2>Look and Feel</h2>
       <p>Make Co-Cher yours. Changes apply at once and stay on this device. Your school’s colours come with every look, softened to suit it.</p>
       ${group('look', 'Look')}
-      ${group('night', 'Day or night')}
+      ${group('night', 'Day or Night')}
       ${group('type', 'Type', 'three')}
+      ${group('text', 'Text Size', 'three')}
       ${group('nav', 'Menu', 'three')}
-      ${group('home', 'How you start')}
+      ${group('home', 'How You Start')}
       ${group('density', 'Spacing')}
       ${group('motion', 'Motion')}
       ${window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '<p style="margin-top:8px;">This device asks apps to reduce motion. Co-Cher\u2019s tile move is short, and plays unless you turn Motion off here.</p>' : ''}

@@ -231,63 +231,119 @@ export function renderSchool(container) {
   return () => { alive = false; };
 }
 
-/* The way back: arriving on My School from another place, each tile rises
- * from where its menu item was (the shell noted the positions), so the menu
- * is seen to open out into the page. */
+/* ── The tiles and the menu are the same things ──
+ * My School shows no menu: its tiles are the menu, laid out large. Tap a tile
+ * and each one travels to its own place in the menu; come back and each menu
+ * item travels out to its tile. The eye should be able to follow any one of
+ * them the whole way, so:
+ *   - what travels is the icon and name, at a steady size, never squashed;
+ *   - it starts exactly on the tile's icon and lands exactly on the menu
+ *     item's icon (and the reverse), where the real one then stands;
+ *   - the motion eases in and out evenly, and lasts long enough to watch;
+ *   - the tile's card shrinks away behind it, so nothing jumps.
+ * Plays unless the teacher turns Motion off in Look and Feel. */
+const FLY_MS = 720, FLY_GAP = 26;
+const FLY_EASE = 'cubic-bezier(0.45, 0, 0.2, 1)';
+const box = (el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; };
+/** The tile's own icon; the Now tile has none, so its small "Now" label stands in. */
+const tileMark = (tile) => tile.querySelector('.ic svg') || tile.querySelector('.k') || tile;
+
+/** A menu item that can travel: the real one's twin when it is on screen, else one drawn from the place. */
+function traveller(place, at, twin) {
+  const el = twin ? twin.cloneNode(true) : document.createElement('span');
+  if (!twin) { el.className = 'v3-link'; el.innerHTML = `${ICONS[place.id] || ''}<span>${esc(place.label)}</span>`; }
+  el.classList.remove('on'); el.classList.add('v3-fly'); el.removeAttribute('href');
+  Object.assign(el.style, { left: at.left + 'px', top: at.top + 'px', width: at.width + 'px', height: at.height + 'px' });
+  document.body.appendChild(el);
+  return el;
+}
+/** The move that puts `el`'s icon exactly on `target` (a box), as a transform. */
+function ontoMark(el, target) {
+  const m = box(el.querySelector('svg') || el);
+  const k = m.width ? Math.max(0.8, Math.min(1.5, target.height / m.height)) : 1;
+  const e = box(el);
+  // scale about the element's own top left corner, then shift so the icons' centres meet
+  const cx = (m.left - e.left + m.width / 2) * k, cy = (m.top - e.top + m.height / 2) * k;
+  return `translate(${target.left + target.width / 2 - e.left - cx}px, ${target.top + target.height / 2 - e.top - cy}px) scale(${k})`;
+}
+
+/* The way back: arriving on My School, each menu item travels out to its tile. */
 function tilesFromDock(container) {
   const rects = window.__v3DockRects; window.__v3DockRects = null;
   if (!rects || getPrefs().motion === 'off') return;
-  const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
   container.querySelectorAll('.v3-home-tile[data-place]').forEach((t, i) => {
     const b = rects[t.dataset.place]; if (!b || !t.animate) return;
-    const a = t.getBoundingClientRect();
+    const place = PLACES.find(p => p.id === t.dataset.place); if (!place) return;
+    const a = box(t), delay = i * FLY_GAP;
+    const fly = traveller(place, b, null);
+    fly.style.transformOrigin = 'top left';
+    fly.animate([
+      { transform: 'none', opacity: 1, offset: 0 },
+      { transform: ontoMark(fly, box(tileMark(t))), opacity: 1, offset: 0.82 },
+      { transform: ontoMark(fly, box(tileMark(t))), opacity: 0, offset: 1 },
+    ], { duration: FLY_MS, delay, easing: FLY_EASE, fill: 'both' }).onfinish = () => fly.remove();
+    // the card grows out of the menu item behind the traveller, and is whole as it lands
     t.style.transformOrigin = 'top left';
     t.animate([
-      { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: 0 },
-      { transform: 'none', opacity: 1 },
-    ], { duration: 560, delay: i * 35, easing: EASE, fill: 'backwards' });
+      { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: 0, offset: 0 },
+      { opacity: 0.35, offset: 0.45 },
+      { transform: 'none', opacity: 1, offset: 1 },
+    ], { duration: FLY_MS, delay, easing: FLY_EASE, fill: 'backwards' });
   });
 }
 
-/* My School shows no menu: the tiles are the menu. When one is tapped, every
- * tile flies down into its place and the menu forms from them; then the chosen
- * place opens. Plays unless the teacher turns Motion off in Look and feel. */
+/* The way out: tap a tile, and every tile travels to its place in the menu. */
 function wireTileFlight(container) {
   const root = document.documentElement;
-  const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
   container.querySelectorAll('.v3-home-tile[data-place]').forEach(tile => tile.addEventListener('click', (ev) => {
     if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
     if (getPrefs().motion === 'off' || !tile.animate) return;
     if (root.classList.contains('v3-arriving')) { ev.preventDefault(); return; }
     ev.preventDefault();
     const tiles = [...container.querySelectorAll('.v3-home-tile[data-place]')];
-    const from = tiles.map(t => t.getBoundingClientRect());       // before the menu takes its space
-    root.classList.add('v3-arriving');                             // menu laid out, its items still unseen
+    const from = tiles.map(box), marks = tiles.map(t => box(tileMark(t)));   // before the menu takes its space
+    root.classList.add('v3-arriving');                                         // the menu is laid out
     const nav = document.querySelector('.v3-nav');
-    const ghosts = tiles.map((t, i) => {
-      const g = t.cloneNode(true); const a = from[i];
-      Object.assign(g.style, { position: 'fixed', left: a.left + 'px', top: a.top + 'px', width: a.width + 'px', height: a.height + 'px', margin: 0, zIndex: 500, pointerEvents: 'none', transformOrigin: 'top left' });
-      document.body.appendChild(g); return g;
-    });
+    nav.classList.add('v3-landing');                                           // ...its items unseen until each one lands
+    nav.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, easing: 'ease-out' });
     container.querySelector('.v3-home').style.visibility = 'hidden';
-    nav.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: EASE });
+    const more = nav.querySelector('.v3-more');
     let last = null;
+    const leftovers = [];
     tiles.forEach((t, i) => {
-      const link = nav.querySelector(`[data-place="${t.dataset.place}"]`);
-      const seen = link && link.getBoundingClientRect().width ? link : (nav.querySelector('.v3-more') || nav);
-      const a = from[i], b = seen.getBoundingClientRect();
-      const delay = i * 35;
-      last = ghosts[i].animate([
-        { transform: 'none', opacity: 1 },
-        { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: 0 },
-      ], { duration: 560, delay, easing: EASE, fill: 'forwards' });
-      if (link) link.animate([{ opacity: 0, transform: 'scale(.8)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 320, delay: delay + 300, easing: EASE, fill: 'backwards' });
+      const place = PLACES.find(p => p.id === t.dataset.place);
+      const link = nav.querySelector(`.v3-link[data-place="${t.dataset.place}"]`);
+      const shown = link && link.getBoundingClientRect().width > 0;
+      const home = shown ? link : (more && more.getBoundingClientRect().width ? more : nav);   // on a phone, most places live under More
+      const a = from[i], b = box(home), delay = i * FLY_GAP;
+
+      // the card: its words go first, then it shrinks into the menu item's outline
+      const card = t.cloneNode(true);
+      Object.assign(card.style, { position: 'fixed', left: a.left + 'px', top: a.top + 'px', width: a.width + 'px', height: a.height + 'px', margin: 0, zIndex: 500, pointerEvents: 'none', transformOrigin: 'top left', overflow: 'hidden' });
+      [...card.children].forEach(c => c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, delay, fill: 'both' }));
+      document.body.appendChild(card);
+      card.animate([
+        { transform: 'none', opacity: 1, offset: 0 },
+        { opacity: 0.55, offset: 0.6 },
+        { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: 0, offset: 1 },
+      ], { duration: FLY_MS, delay, easing: FLY_EASE, fill: 'both' });
+
+      // the icon and name: from the tile's icon to the menu item's icon, in one unbroken move
+      const fly = traveller(place, b, shown ? link : null);
+      fly.style.transformOrigin = 'top left';
+      const start = ontoMark(fly, marks[i]);
+      last = fly.animate([
+        { transform: start, opacity: 0, offset: 0 },
+        { transform: start, opacity: 1, offset: 0.12 },
+        { transform: 'none', opacity: shown ? 1 : 0.2, offset: 1 },
+      ], { duration: FLY_MS, delay, easing: FLY_EASE, fill: 'both' });
+      leftovers.push(card, fly);
     });
-    nav.querySelectorAll('.v3-link:not([data-place]), .v3-link[data-place]').forEach(l => {
-      if (!tiles.some(t => t.dataset.place === l.dataset.place)) l.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 420, easing: EASE, fill: 'backwards' });
-    });
+    // items with no tile of their own (School, Search, More) come up quietly as the others land
+    nav.querySelectorAll('.v3-link').forEach(l => { if (!tiles.some(t => t.dataset.place === l.dataset.place)) l.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, delay: FLY_MS - 280, easing: 'ease-out', fill: 'forwards' }); });
     last.onfinish = () => {
-      ghosts.forEach(g => g.remove());
+      nav.classList.remove('v3-landing');          // the real items stand where the travellers landed
+      leftovers.forEach(g => g.remove());
       location.hash = tile.getAttribute('href');
       setTimeout(() => root.classList.remove('v3-arriving'), 60);
     };
@@ -328,7 +384,7 @@ export function renderNow(container) {
       ${nowCard(t)}
       <div class="v3-grid" style="margin-top:var(--gap);">
         <div class="v3-col-7"><div class="v3-panel">
-          <div class="v3-h">Needs you <a href="#/lessons">All lessons</a></div>
+          <div class="v3-h">Needs You <a href="#/lessons">All lessons</a></div>
           ${rowsHTML(pipe.slice(0, 6).map(x => `<a class="v3-row" href="${lessonHref(x)}">
             <span><span class="v3-row-s">${STAGE[x.stage].verb}</span><br><span class="v3-row-t">${esc(x.l.title)}</span></span>
             ${x.cls ? `<span class="v3-chip">${esc(x.cls.name)}</span>` : ''}
@@ -337,12 +393,12 @@ export function renderNow(container) {
         </div></div>
         <div class="v3-col-5">
           <div class="v3-panel" style="margin-bottom:var(--gap);">
-            <div class="v3-h">Your entries <a href="#/week">The week</a></div>
+            <div class="v3-h">Your Entries <a href="#/week">The week</a></div>
             ${rowsHTML(entriesForNow().slice(0, 7).map(e => entryHTML(e)),
               'Nothing added. Use Add entry for a lesson to develop, a paper to set or an admin task, and link it to a class or a lesson.')}
           </div>
           <div class="v3-panel" style="margin-bottom:var(--gap);">
-            <div class="v3-h">Worth a look</div>
+            <div class="v3-h">Worth a Look</div>
             ${rowsHTML(ins.map(i => `<a class="v3-row" href="${i.href}"><span><span class="v3-row-t">${esc(i.t)}</span><br><span class="v3-row-s">${esc(i.s)}</span></span></a>`),
               'Nothing stands out yet. As you observe students in lessons, patterns show here.')}
           </div>
@@ -364,7 +420,7 @@ function renderBoard(container) {
   container.innerHTML = `<div class="main-scroll"><div class="v3-page">
     <div class="v3-head"><div>
       <div class="v3-eyebrow">${dateLine(new Date())}</div>
-      <h1 class="v3-title">Everything, in its place</h1>
+      <h1 class="v3-title">Everything, in Its Place</h1>
       <p class="v3-lede">Each screen in Co-Cher, grouped by what you are doing</p>
     </div></div>
     ${PLACES.map(p => `<div style="margin-bottom:calc(var(--gap) * 1.2);">
@@ -408,7 +464,7 @@ export function renderWeek(container) {
     container.querySelector('#v3-week').innerHTML = `
       <div class="v3-head"><div>
         <div class="v3-eyebrow">Week of ${monday.toLocaleDateString('en-SG', { day: 'numeric', month: 'long' })}${cycle ? ' · ' + esc(cycle) + ' week' : ''}</div>
-        <h1 class="v3-title">This week</h1>
+        <h1 class="v3-title">This Week</h1>
         <p class="v3-lede">${tt ? `${plural(total, 'lesson')} on your timetable, ${plural(pipe.length, 'lesson')} in progress` : 'No timetable on this device yet, so the week starts from your lessons'}</p>
       </div><div style="display:flex;gap:8px;flex-wrap:wrap;"><a class="btn btn-secondary" href="#/my-timetable">Odd and even weeks</a><button class="btn btn-primary" data-add-entry="${ymd(now)}">Add entry</button></div></div>
       <div class="v3-week">${days.map((d, i) => { const mine = entriesBetween(ymd(d), ymd(d)); return `<div class="d${d.toDateString() === now.toDateString() ? ' today' : ''}">
@@ -418,12 +474,12 @@ export function renderWeek(container) {
         <button class="v3-add" data-add-entry="${ymd(d)}" aria-label="Add an entry on ${d.toLocaleDateString('en-SG', { weekday: 'long' })}">+ Add</button>
       </div>`; }).join('')}</div>
       <div class="v3-grid" style="margin-top:calc(var(--gap) * 1.2);">
-        <div class="v3-col-7"><div class="v3-panel"><div class="v3-h">Lessons in progress <a href="#/lessons">All lessons</a></div>
+        <div class="v3-col-7"><div class="v3-panel"><div class="v3-h">Lessons in Progress <a href="#/lessons">All lessons</a></div>
           ${rowsHTML(pipe.slice(0, 8).map(x => `<a class="v3-row" href="#/lessons/${x.l.id}">
             <span><span class="v3-row-t">${esc(x.l.title)}</span><br><span class="v3-row-s">${x.cls ? esc(x.cls.name) + ' · ' : ''}${STAGE[x.stage].go === 'Present' ? 'ready to teach' : x.stage === 'taught' ? 'taught, awaiting reflection' : 'in design'}</span></span>
             <span class="go">Open →</span></a>`), 'No lessons in progress')}
         </div></div>
-        <div class="v3-col-5"><div class="v3-panel"><div class="v3-h">Evidence, last 7 days</div>
+        <div class="v3-col-5"><div class="v3-panel"><div class="v3-h">Evidence, Last 7 Days</div>
           ${rowsHTML(ev.map(x => `<a class="v3-row" href="#/classes/${x.c.id}"><span class="v3-row-t">${esc(x.c.name)}</span><span class="go">${plural(x.n, 'observation')}</span></a>`),
             'None captured this week. In Present, press O to note who showed what.')}
         </div></div>
@@ -461,9 +517,9 @@ export function renderTerm(container) {
         <h1 class="v3-title">${inTerm ? `Week ${idx - a + 1} of ${b - a + 1}` : weeks.length ? 'Between terms' : 'This term'}</h1>
         <p class="v3-lede">${inTerm ? `${plural(b - idx, 'week')} left after this one` : weeks.length ? 'A good time to look back, and to plan the next stretch' : 'Your school has not published its calendar, so the term is shown by what you have built'}</p>
       </div></div>
-      ${weeks.length ? `<div class="v3-panel" style="margin-bottom:var(--gap);"><div class="v3-h">The year, week by week</div>
+      ${weeks.length ? `<div class="v3-panel" style="margin-bottom:var(--gap);"><div class="v3-h">The Year, Week by Week</div>
         <div class="v3-term">${weeks.map((w, i) => `<i class="${!w.cycle ? 'hol' : i === idx ? 'now' : i < idx ? 'past' : ''}" title="Week of ${w.start.toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}${w.cycle ? ', ' + w.cycle : ', no lessons'}"></i>`).join('')}</div></div>` : ''}
-      <div class="v3-panel" style="margin-bottom:var(--gap);"><div class="v3-h">What you have built</div><div class="v3-stats">
+      <div class="v3-panel" style="margin-bottom:var(--gap);"><div class="v3-h">What You Have Built</div><div class="v3-stats">
         ${stat(lessons.length, 'lessons designed')}
         ${stat(stages.filter(s => s === 'taught' || s === 'reflected').length, 'taught')}
         ${stat(stages.filter(s => s === 'reflected').length, 'reflected on')}
@@ -471,14 +527,14 @@ export function renderTerm(container) {
         ${stat(`${withEv}<small> of ${students.length}</small>`, 'student records with evidence')}
         ${stat(withPath, 'student records with a pathway')}
       </div></div>
-      <div class="v3-panel" style="margin-bottom:var(--gap);"><div class="v3-h">Your goals this term <button class="btn btn-ghost btn-sm" data-add-goal>${allGoals().length ? 'Add a goal' : 'Set a goal'}</button></div>
+      <div class="v3-panel" style="margin-bottom:var(--gap);"><div class="v3-h">Your Goals This Term <button class="btn btn-ghost btn-sm" data-add-goal>${allGoals().length ? 'Add a goal' : 'Set a goal'}</button></div>
         <div class="v3-goals">${goalsHTML()}</div></div>
       <div class="v3-grid">
-        <div class="v3-col-5 v3-panel"><div class="v3-h">Your entries ahead <button class="btn btn-ghost btn-sm" data-add-entry="">Add entry</button></div>
+        <div class="v3-col-5 v3-panel"><div class="v3-h">Your Entries Ahead <button class="btn btn-ghost btn-sm" data-add-entry="">Add entry</button></div>
           ${rowsHTML(entriesBetween(ymd(new Date()), '9999').filter(e => !e.done).slice(0, 10).map(e => entryHTML(e)),
             'Nothing dated ahead. Add the term’s deadlines here: papers to set, reports, events.')}
         </div>
-        <div class="v3-col-7 v3-panel"><div class="v3-h">The term’s larger jobs</div>
+        <div class="v3-col-7 v3-panel"><div class="v3-h">The Term’s Larger Jobs</div>
           <a class="v3-row" href="#/assessment/aol"><span><span class="v3-row-t">Set a paper</span><br><span class="v3-row-s">Table of Specifications, then draft questions</span></span><span class="go">Assess →</span></a>
           <a class="v3-row" href="#/report-comments"><span><span class="v3-row-t">Write report comments</span><br><span class="v3-row-s">Drafted from each student’s levels and evidence</span></span><span class="go">Classes →</span></a>
           <a class="v3-row" href="#/cce"><span><span class="v3-row-t">ECG conversations</span><br><span class="v3-row-s">Paths, inside CCE2021; add a student’s plan to their profile</span></span><span class="go">Lessons →</span></a>
@@ -503,7 +559,7 @@ export function renderHub(container, placeId) {
   container.innerHTML = `<div class="main-scroll"><div class="v3-page">
     <div class="v3-head"><div><div class="v3-eyebrow">${esc(p.group)}</div><h1 class="v3-title">${esc(p.label)}</h1><p class="v3-lede">${lede}</p></div></div>
     <div class="v3-board big">${screensIn(p).filter(s => s.route !== p.route).map(tile).join('')}
-      ${placeId === 'personal' ? `<button class="v3-tile" data-act="look"><b>Look and feel</b><span>Look, day or night, type, menu, how you start, spacing</span></button>` : ''}
+      ${placeId === 'personal' ? `<button class="v3-tile" data-act="look"><b>Look and Feel</b><span>Look, day or night, type, menu, how you start, spacing</span></button>` : ''}
       ${placeId === 'school' ? `<a class="v3-tile" href="../cocher2/cocher2.html"><b>Co-Cher 2</b><span>The current version, with the same classes and lessons</span></a>` : ''}
     </div></div></div>`;
 }
@@ -512,7 +568,7 @@ export function renderHub(container, placeId) {
 
 export function renderPaths(container) {
   container.innerHTML = `<div class="main-scroll"><div class="v3-page">
-    <div class="v3-head"><div><div class="v3-eyebrow">For students</div><h1 class="v3-title">Paths</h1>
+    <div class="v3-head"><div><div class="v3-eyebrow">For Students</div><h1 class="v3-title">Paths</h1>
       <p class="v3-lede">How do I get there? The live Pathways app. A student’s shared plan can be added to their profile in My classes</p></div></div>
     <div id="v3-paths"></div></div></div>`;
   return mountEmbed(container.querySelector('#v3-paths'), { src: `${GENAPP}/pathways/index.html?s=path`, title: 'Paths', note: 'Every update to Paths shows here.' });

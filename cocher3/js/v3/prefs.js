@@ -35,6 +35,11 @@ export const CHOICES = {
     { id: 'board', label: 'Board', note: 'Everything laid out, grouped by place' },
     { id: 'ask', label: 'Ask', note: 'One search box; type where you want to go' },
   ],
+  text: [
+    { id: 'standard', label: 'Standard' },
+    { id: 'larger', label: 'Larger', note: 'A touch bigger' },
+    { id: 'largest', label: 'Largest' },
+  ],
   density: [
     { id: 'airy', label: 'Airy' },
     { id: 'compact', label: 'Compact' },
@@ -45,8 +50,9 @@ export const CHOICES = {
   ],
 };
 
-/* The owner's chosen starting point (A2 B1 C3 D1). Every teacher can change all of it in Look and feel. */
-export const DEFAULTS = { look: 'fjord', night: 'off', type: 'mincho', nav: 'dock', home: 'school', density: 'airy', motion: 'on' };
+/* The owner's chosen starting point (A2 B1 C3 D1). Every teacher can change all of it in Look and Feel. */
+/* Text starts at Larger: the owner asked for a touch more size than the first build had. */
+export const DEFAULTS = { look: 'fjord', night: 'off', type: 'mincho', nav: 'dock', home: 'school', text: 'larger', density: 'airy', motion: 'on' };
 
 export function getPrefs() {
   let saved = {};
@@ -72,6 +78,7 @@ export function applyPrefs(p = getPrefs()) {
   h.dataset.look = p.look;
   h.dataset.type = p.type;
   h.dataset.density = p.density;
+  h.dataset.text = p.text;
   // A phone always gets the dock: a side rail has nowhere to live at that width.
   h.dataset.nav = window.matchMedia('(max-width: 760px)').matches ? 'dock' : p.nav;
   h.classList.toggle('dark', p.night === 'on');

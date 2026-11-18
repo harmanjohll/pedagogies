@@ -28,8 +28,9 @@ export const ICONS = {
   link: I('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/>'),
   more: I('<circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/>'),
   /* The Co-Cher mark: an open circle drawn in one stroke (practice is never finished), which
-   * also reads as a C. Ink from the look; the dot is the school's second colour, softened. */
-  mark: '<svg class="v3-mark-svg" viewBox="0 0 32 32" aria-hidden="true"><path d="M24.6 9.2A11 11 0 1 0 26.600 19" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round"/><circle cx="25.6" cy="14.2" r="2.5" fill="var(--second, #C99A2E)"/></svg>',
+   * also reads as a C. The dot sits in the opening, clear of both ends of the stroke.
+   * Ink from the look; the dot is the school's second colour, softened. */
+  mark: '<svg class="v3-mark-svg" viewBox="0 0 32 32" aria-hidden="true"><path d="M23.64 8.09A11 11 0 1 0 26.2 20.12" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round"/><circle cx="26.76" cy="13.71" r="2.3" fill="var(--second, #C99A2E)"/></svg>',
   play: I('<circle cx="12" cy="12" r="8.5"/><path d="m10 8.5 5.5 3.5-5.5 3.5z"/>'),
 };
 
@@ -38,60 +39,60 @@ export const ICONS = {
 export const PLACES = [
   { id: 'school', group: 'Home', label: 'School', route: '/school', match: ['/school', '/demos'], screens: [
     { route: '/school', label: 'My School', desc: 'Every place in Co-Cher, from one page', demo: 'school' },
-    { route: '/demos', label: 'How it works', desc: 'Short demos of what Co-Cher can do' },
+    { route: '/demos', label: 'How Co-Cher Works', desc: 'Short demos of what Co-Cher can do' },
   ] },
   { id: 'now', group: 'Time', label: 'Now', route: '/now', match: ['/now', '/dashboard'], screens: [
     { route: '/now', label: 'Now', desc: 'What is on, what is next, what needs you', demo: 'now' },
-    { route: '/dashboard', label: 'Classic dashboard', desc: 'The Co-Cher 2 dashboard, with its widgets' },
+    { route: '/dashboard', label: 'Classic Dashboard', desc: 'The Co-Cher 2 dashboard, with its widgets' },
   ] },
   { id: 'week', group: 'Time', label: 'Week', route: '/week', match: ['/week'], screens: [
-    { route: '/week', label: 'This week', desc: 'Your week, with your entries and the lessons in progress', demo: 'now' },
+    { route: '/week', label: 'This Week', desc: 'Your week, with your entries and the lessons in progress', demo: 'now' },
   ] },
   { id: 'term', group: 'Time', label: 'Term', route: '/term', match: ['/term'], screens: [
-    { route: '/term', label: 'This term', desc: 'Where the term is, and what you have built', demo: 'now' },
+    { route: '/term', label: 'This Term', desc: 'Where the term is, and what you have built', demo: 'now' },
   ] },
   { id: 'classes', group: 'Work', label: 'Classes', route: '/classes', match: ['/classes', '/learning-log', '/paths', '/my-cca', '/report-comments', '/handover'], screens: [
-    { route: '/classes', label: 'My classes', desc: 'Students, E21CC profiles, evidence and pathways', demo: 'classes' },
+    { route: '/classes', label: 'My Classes', desc: 'Students, E21CC profiles, evidence and pathways', demo: 'classes' },
     { route: '/learning-log', label: 'Learning Log', desc: 'Students’ own evidence for the competencies you track', when: learningLogOpen, demo: 'learning-log' },
     { route: '/paths', label: 'Paths', desc: 'Education and career pathways, for students', demo: 'paths' },
     { route: '/my-cca', label: 'My CCA', desc: 'Co-curricular activities and LEAPS 2.0' },
     { route: '/handover', label: 'Handover', desc: 'Pass evidence on a class to a colleague, and take in theirs', demo: 'send' },
-    { route: '/report-comments', label: 'Report comments', desc: 'Draft holistic comments from levels and evidence', tag: 'beta' },
+    { route: '/report-comments', label: 'Report Comments', desc: 'Draft holistic comments from levels and evidence', tag: 'beta' },
   ] },
   { id: 'lessons', group: 'Work', label: 'Lessons', route: '/lessons', match: ['/lessons', '/lesson-planner', '/spatial', '/lesson-rehearsal', '/cce', '/autopilot', '/relief-kit', '/present', '/deck', '/live', '/send'], screens: [
-    { route: '/lessons', label: 'All lessons', desc: 'Every lesson, and where it is in the cycle', demo: 'lesson-cycle' },
+    { route: '/lessons', label: 'All Lessons', desc: 'Every lesson, and where it is in the cycle', demo: 'lesson-cycle' },
     { route: '/lesson-planner', label: 'Plan', desc: 'Design a lesson with Co-Cher' },
     { route: '/spatial', label: 'Room', desc: 'Lay out the room for the learning' },
     { route: '/lesson-rehearsal', label: 'Rehearse', desc: 'Practise delivery with student personas' },
     { route: '/cce', label: 'CCE2021', desc: 'Six content areas, discussions, and Paths in ECG', demo: 'paths' },
     { route: '/autopilot', label: 'Auto-Lesson', desc: 'Scheme of work to reflection in one pass', tag: 'beta' },
-    { route: '/relief-kit', label: 'Relief kit', desc: 'A one period lesson any relief teacher can run', tag: 'beta' },
+    { route: '/relief-kit', label: 'Relief Kit', desc: 'A one period lesson any relief teacher can run', tag: 'beta' },
     { route: '/send', label: 'Send', desc: 'Send lessons, layouts, entries or goals to a colleague, and take in theirs', demo: 'send' },
   ] },
   { id: 'assess', group: 'Work', label: 'Assess', route: '/assessment/afl', match: ['/assessment', '/question-bank'], screens: [
-    { route: '/assessment/afl', label: 'For learning', desc: 'Formative strategies, from intentions and success criteria' },
-    { route: '/assessment/aal', label: 'As learning', desc: 'Metacognition and self regulated learning' },
-    { route: '/assessment/aol', label: 'Of learning', desc: 'Summative design: Table of Specifications' },
-    { route: '/question-bank', label: 'Question bank', desc: 'Question sets across Bloom’s levels', tag: 'beta' },
+    { route: '/assessment/afl', label: 'For Learning', desc: 'Formative strategies, from intentions and success criteria' },
+    { route: '/assessment/aal', label: 'As Learning', desc: 'Metacognition and self regulated learning' },
+    { route: '/assessment/aol', label: 'Of Learning', desc: 'Summative design: Table of Specifications' },
+    { route: '/question-bank', label: 'Question Bank', desc: 'Question sets across Bloom’s levels', tag: 'beta' },
   ] },
   { id: 'resources', group: 'Work', label: 'Resources', route: '/resources', match: ['/resources', '/simulations', '/subject-tools', '/stimulus-material', '/source-analysis', '/library', '/knowledge', '/math-sandbox', '/rhythm-tool', '/stave-notation', '/art-critique', '/design-process', '/kitchen-layout'], screens: [
-    { route: '/resources', label: 'All resources', desc: 'Everything you can bring into a lesson' },
+    { route: '/resources', label: 'All Resources', desc: 'Everything you can bring into a lesson' },
     { route: '/simulations', label: 'Simulations', desc: 'Interactive practicals for the sciences and more' },
-    { route: '/subject-tools', label: 'Subject tools', desc: 'Music, Art, D&T and NFS' },
+    { route: '/subject-tools', label: 'Subject Tools', desc: 'Music, Art, D&T and NFS' },
     { route: '/stimulus-material', label: 'Stimulus', desc: 'Passages, scenarios and texts' },
     { route: '/source-analysis', label: 'Sources', desc: 'Source based question sets' },
     { route: '/library', label: 'Library', desc: 'Everything you have saved' },
-    { route: '/knowledge', label: 'Knowledge bases', desc: 'Frameworks, references and your uploads' },
+    { route: '/knowledge', label: 'Knowledge Bases', desc: 'Frameworks, references and your uploads' },
     { route: '/math-sandbox', label: 'Formula Lab', desc: 'Typeset STEM lessons', tag: 'beta' },
   ] },
   { id: 'admin', group: 'Work', label: 'Admin', route: '/admin', match: ['/admin', '/free-time'], screens: [
     { route: '/admin', label: 'Admin', desc: 'Find a teacher, Student Finder, forms and events', demo: 'admin' },
-    { route: '/free-time', label: 'Common free time', desc: 'When you and your colleagues are all free', demo: 'free-time' },
+    { route: '/free-time', label: 'Common Free Time', desc: 'When you and your colleagues are all free', demo: 'free-time' },
   ] },
   { id: 'personal', group: 'You', label: 'Personal', route: '/personal', match: ['/personal', '/my-timetable', '/my-growth', '/settings'], screens: [
     { route: '/personal', label: 'Personal', desc: 'What is yours', demo: 'look' },
-    { route: '/my-timetable', label: 'My timetable', desc: 'Odd and even weeks, as the school published them' },
-    { route: '/my-growth', label: 'My learning', desc: 'Your PD portfolio and practice story' },
+    { route: '/my-timetable', label: 'My Timetable', desc: 'Odd and even weeks, as the school published them' },
+    { route: '/my-growth', label: 'My Learning', desc: 'Your PD portfolio and practice story' },
     { route: '/settings', label: 'Settings', desc: 'Your key, your data, your preferences' },
   ] },
 ];

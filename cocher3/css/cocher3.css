@@ -19,6 +19,12 @@
 
 /* ── Looks: neutrals ─────────────────────────────────────────────── */
 
+/* Text size. Every size in Co-Cher is set in rem, so one number on <html>
+ * moves all of it together. Larger is the starting point: one pixel in sixteen. */
+html.v3[data-text="standard"] { font-size: 100%; }
+html.v3, html.v3[data-text="larger"] { font-size: 106.25%; }
+html.v3[data-text="largest"] { font-size: 112.5%; }
+
 /* Sharp text. The engine asks the browser for thinned ("antialiased") letters;
  * with the light strokes of Zen Kaku Gothic and Shippori Mincho that reads as
  * soft, more so on ordinary (non retina) screens. Co-Cher 3 lets the browser
@@ -465,6 +471,11 @@ html.v3:not([data-nav="dock"]):not([data-home]) .v3-strip .v3-mark { display: no
 .v3-mile { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; margin-bottom: 16px; padding: 12px 16px; border: 1px solid var(--border-light); border-left: 2px solid var(--accent); border-radius: var(--radius-lg); background: var(--bg-card); }
 .v3-mile b { display: block; font-weight: 600; color: var(--ink); }
 .v3-mile span { font-size: .875rem; color: var(--ink-muted); }
+
+/* A menu item in flight between its tile and its place in the menu. */
+.v3-link.v3-fly { position: fixed; z-index: 600; margin: 0; pointer-events: none; box-sizing: border-box; background: transparent; box-shadow: none; }
+.v3-link.v3-fly::before { display: none; }
+.v3-nav.v3-landing .v3-link, .v3-nav.v3-landing .v3-brand, .v3-nav.v3-landing .v3-group, .v3-nav.v3-landing .v3-school { opacity: 0; }
 
 /* My School has no menu of its own: its tiles are the menu. */
 html.v3[data-home]:not(.v3-arriving) .v3-nav { display: none; }
