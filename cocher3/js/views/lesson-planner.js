@@ -42,6 +42,11 @@ let chatMessages = [];
 let isGenerating = false;
 let currentLessonId = null;  // if editing a saved lesson
 let planClassContext = null;  // class context from "Plan from Class"
+/* The brief from Co-Cher 3's "New Lesson" screen (js/v3/planner.js): the class,
+ * the words to send, which scheme of work the lesson stands on and where in
+ * it, and whether to send at once. Read once, when a fresh conversation opens. */
+const PLAN_BRIEF_KEY = 'cocher3_plan_brief';
+let planBrief = null;
 let vigilanceNudged = false;  // at most one nudge per conversation
 let vigilanceState = null;    // { prompt } while the nudge card is showing
 let attachedKBContext = [];   // attached knowledge base resources
@@ -1193,6 +1198,17 @@ export function render(container) {
   const classes = Store.getClasses();
   const currentLesson = currentLessonId ? Store.getLesson(currentLessonId) : null;
 
+  // Pick up the brief from "New Lesson"
+  let briefNow = null;
+  try { briefNow = JSON.parse(sessionStorage.getItem(PLAN_BRIEF_KEY) || 'null'); } catch { briefNow = null; }
+  if (briefNow && !currentLessonId && chatMessages.length === 0) {
+    sessionStorage.removeItem(PLAN_BRIEF_KEY);
+    planBrief = briefNow;
+    const bc = briefNow.classId ? classes.find(c => c.id === briefNow.classId) : null;
+    planClassContext = bc ? { id: bc.id, name: bc.name, subject: bc.subject || '', level: bc.level || '' }
+      : (briefNow.subject || briefNow.level) ? { id: null, name: '', subject: briefNow.subject || '', level: briefNow.level || '' } : null;
+  } else briefNow = null;
+
   // Pick up "Plan from Class" context from sessionStorage
   const planClassId = sessionStorage.getItem('cocher2_plan_class_id');
   if (planClassId && !currentLessonId && chatMessages.length === 0) {
@@ -1494,6 +1510,14 @@ export function render(container) {
   const chatInput = container.querySelector('#chat-input');
   const chatSend = container.querySelector('#chat-send');
 
+  // The brief's words go into the composer; sent at once only if nothing is left to fill in.
+  if (briefNow?.prompt && !chatInput.value) {
+    chatInput.value = briefNow.prompt;
+    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+    if (briefNow.send && Store.get('apiKey') && !/\[[^\]]+\]/.test(briefNow.prompt)) setTimeout(() => chatSend?.click(), 250);
+    else chatInput.focus();
+  }
+
   // WS-5: prefill the composer with the CCE topic — ready to edit or send.
   // One-shot: internal re-renders must not resurrect the prefill text.
   if (cceContext?.pendingInput) {
@@ -1749,13 +1773,25 @@ export function render(container) {
       });
     }
     // Auto-attach SoW if available and first message (background context)
+    const firstTurn = chatMessages.length === 0;
+    let sowInPlay = false;
     if (chatMessages.length === 0) {
-      const sowUploads = (Store.get('knowledgeUploads') || []).filter(u => u.category === 'Scheme of Work');
-      sowUploads.forEach(sow => {
-        if (!attachedKBContext.some(kb => kb.id === sow.id)) {
-          contextParts.push(`[Scheme of Work — ${sow.title}]:\n${(sow.content || '').slice(0, 3000)}`);
-        }
+      /* The scheme of work the lesson stands on. It used to attach EVERY scheme
+       * of work held, whatever its subject, and only its first 3000 characters.
+       * Now: the one the teacher chose on New Lesson, else those that match the
+       * class's subject (and level, where the title says). The part of it this
+       * lesson sits in goes first, so a long document cannot push it out. */
+      const allSow = (Store.get('knowledgeUploads') || []).filter(u => u.category === 'Scheme of Work');
+      const subjKey = String(planClassContext?.subject || '').toLowerCase();
+      const fits = (u) => { const hay = `${u.subject || ''} ${u.title || ''}`.toLowerCase();
+        return !subjKey || !String(u.subject || '').trim() || hay.includes(subjKey) || subjKey.includes(String(u.subject || '').toLowerCase()); };
+      const chosenSow = planBrief?.sowId ? allSow.filter(u => u.id === planBrief.sowId) : allSow.filter(fits).slice(0, 2);
+      chosenSow.forEach(sow => {
+        if (attachedKBContext.some(kb => kb.id === sow.id)) return;
+        const focus = planBrief?.sowId === sow.id && planBrief.sowFocus ? `THIS LESSON'S PLACE IN IT:\n${planBrief.sowFocus}\n\n` : '';
+        contextParts.push(`[Scheme of Work — ${sow.title}]:\n${focus}${(sow.content || '').slice(0, 4000)}\n\nKeep the lesson inside this scheme of work: its outcomes, its key concepts, its place in the sequence. Say in one short line which outcome the lesson serves.`);
       });
+      sowInPlay = chosenSow.length > 0 || attachedKBContext.some(kb => /scheme of work/i.test(kb.category || ''));
       // Inject reflection insights from previous lesson
       if (reflectionInsights) {
         contextParts.push(`[Post-Lesson Reflection from "${reflectionInsights.fromLesson}"]:\n${reflectionInsights.insights}\n\nPlease use these insights to inform the lesson plan — build on what worked and address what needs adjustment.`);
@@ -1822,7 +1858,9 @@ export function render(container) {
       // Expand any attachment-bearing messages into Gemini's multimodal shape;
       // text-only messages pass through unchanged.
       const apiMessages = sessionMessages.map(toMultimodalMessage);
-      const response = await sendChat(apiMessages, { trackLabel: 'lessonChat', trackDetail: [planClassContext?.subject, planClassContext?.level].filter(Boolean).join(' ') || '' });
+      // No scheme of work behind a new lesson: let the first answer check itself against the web.
+      const lookToWeb = firstTurn && !sowInPlay;
+      const response = await sendChat(apiMessages, { trackLabel: 'lessonChat', webSearch: lookToWeb, trackDetail: [planClassContext?.subject, planClassContext?.level].filter(Boolean).join(' ') || '' });
       if (chatMessages !== sessionMessages) return;
       chatMessages.push({ role: 'assistant', content: response });
       // The model has now "seen" these files — drop their base64 so subsequent

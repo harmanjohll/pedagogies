@@ -19,6 +19,12 @@
 
 /* ── Looks: neutrals ─────────────────────────────────────────────── */
 
+/* Text size. Every size in Co-Cher is set in rem, so one number on <html>
+ * moves all of it together. Larger is the starting point: one pixel in sixteen. */
+html.v3[data-text="standard"] { font-size: 100%; }
+html.v3, html.v3[data-text="larger"] { font-size: 106.25%; }
+html.v3[data-text="largest"] { font-size: 112.5%; }
+
 /* Sharp text. The engine asks the browser for thinned ("antialiased") letters;
  * with the light strokes of Zen Kaku Gothic and Shippori Mincho that reads as
  * soft, more so on ordinary (non retina) screens. Co-Cher 3 lets the browser
@@ -432,6 +438,32 @@ html.v3:not([data-look="classic"]) .cce-content { max-width: 1200px !important; 
 .v3-home-tile.now > div { flex: 1; display: flex; flex-direction: column; }
 @media (max-width: 1000px) and (min-width: 761px) { .v3-home { grid-template-columns: repeat(2, 1fr); } }
 
+/* New Lesson: one screen, a few choices. */
+.v3-plan { max-width: 860px; }
+.v3-plan .v3-panel { margin-bottom: 16px; }
+.v3-plan-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; align-items: start; }
+.v3-feels { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.v3-feel, .v3-rowpick { text-align: left; font: inherit; color: var(--ink); background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 16px; cursor: pointer; min-height: 48px; }
+.v3-feel b { display: block; font-weight: 600; }
+.v3-feel span { display: block; font-size: .8125rem; color: var(--ink-muted); margin-top: 2px; }
+.v3-feel:hover, .v3-rowpick:hover { border-color: var(--ink-faint); }
+.v3-feel[aria-pressed="true"], .v3-rowpick[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-light); }
+.v3-rows { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow: auto; }
+.v3-rowpick { padding: 8px 12px; font-size: .875rem; min-height: 40px; }
+.v3-plan-go { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+/* The planner's tools: those not kept in view wait behind "More tools". */
+.v3-shelved .v3-tool-off { display: none !important; }
+.v3-shelved > div:not(:has(button:not(.v3-tool-off))) { display: none; }      /* a group with nothing in view */
+.v3-more-tools { font-weight: 600; }
+.v3-toollist { display: flex; flex-direction: column; max-height: 52vh; overflow: auto; }
+.v3-toolrow { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--border-light); }
+.v3-toolrow:first-child { border-top: 0; }
+.v3-toolrow .run { flex: 1; text-align: left; font: inherit; color: var(--ink); background: transparent; border: 0; padding: 12px 4px; cursor: pointer; min-height: 44px; }
+.v3-toolrow .run:hover { color: var(--accent-dark); }
+.v3-toolrow label { display: flex; align-items: center; gap: 6px; font-size: .8125rem; color: var(--ink-muted); cursor: pointer; white-space: nowrap; }
+.v3-toolrow input { accent-color: var(--accent); }
+
 /* Send by Teams: the three steps, plainly numbered because the order matters. */
 .v3-steps { margin: 0; padding-left: 20px; font-size: .875rem; color: var(--ink-secondary); line-height: 1.6; }
 
@@ -465,6 +497,11 @@ html.v3:not([data-nav="dock"]):not([data-home]) .v3-strip .v3-mark { display: no
 .v3-mile { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; margin-bottom: 16px; padding: 12px 16px; border: 1px solid var(--border-light); border-left: 2px solid var(--accent); border-radius: var(--radius-lg); background: var(--bg-card); }
 .v3-mile b { display: block; font-weight: 600; color: var(--ink); }
 .v3-mile span { font-size: .875rem; color: var(--ink-muted); }
+
+/* A menu item in flight between its tile and its place in the menu. */
+.v3-link.v3-fly { position: fixed; z-index: 600; margin: 0; pointer-events: none; box-sizing: border-box; background: transparent; box-shadow: none; }
+.v3-link.v3-fly::before { display: none; }
+.v3-nav.v3-landing .v3-link, .v3-nav.v3-landing .v3-brand, .v3-nav.v3-landing .v3-group, .v3-nav.v3-landing .v3-school { opacity: 0; }
 
 /* My School has no menu of its own: its tiles are the menu. */
 html.v3[data-home]:not(.v3-arriving) .v3-nav { display: none; }

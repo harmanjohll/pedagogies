@@ -112,7 +112,7 @@ export function openEntry(entry, redraw) {
   const classes = Store.getClasses();
   const lessons = Store.getLessons();
   const { backdrop, close } = openModal({
-    title: isNew ? 'Add an entry' : 'Edit entry',
+    title: isNew ? 'Add an Entry' : 'Edit Entry',
     width: 480,
     body: `
       <div style="display:flex;flex-direction:column;gap:14px;">

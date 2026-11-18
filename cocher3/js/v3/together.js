@@ -3,19 +3,19 @@
  * ==================================
  * Three screens that need no server.
  *
- * Common free time (/free-time): pick colleagues and see when everyone,
+ * Common Free Time (/free-time): pick colleagues and see when everyone,
  * including you, is free. Read from the staff timetable the school published
  * with the app, and your own timetable. "Free" means free of everything in the
  * timetable: lessons, duty, PD, school events.
  *
- * Student handover (/handover): one teacher downloads their evidence on a
+ * Student Handover (/handover): one teacher downloads their evidence on a
  * class as a file and passes it on (Teams, OneDrive); the other loads it and
  * the observations join the same students in their own records. Matched by
  * Student Finder key, else by name within the same form class. Nothing is
  * doubled: an observation already held is skipped. The file holds student
  * names, so it travels by the school's own channels and never into this repo.
  *
- * Send to a colleague (/send): the teacher ticks what to send (lessons, room
+ * Send to a Colleague (/send): the teacher ticks what to send (lessons, room
  * layouts, entries, term goals) and gets one file. Lessons and layouts ride in
  * a Department Pack (cocher2/js/utils/share-pack.js), so everything a lesson
  * needs comes along and the receiver's copy is a draft that names its author.
@@ -43,7 +43,7 @@ const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const DAY = 86400000, DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const MIN_GAP = 30;
 
-/* ══════════ Common free time ══════════ */
+/* ══════════ Common Free Time ══════════ */
 
 export function renderFreeTime(container) {
   container.innerHTML = `<div class="main-scroll"><div class="v3-page"><p class="v3-empty">Reading the timetable…</p></div></div>`;
@@ -70,7 +70,7 @@ export function renderFreeTime(container) {
     if (all.length) bounds = [Math.min(...all.map(e => toMin(e.start)).filter(Boolean)), Math.max(...all.map(e => toMin(e.end)).filter(Boolean))];
     // Dated weeks while the term runs; outside it, the two patterns of the timetable.
     weeks = [
-      c0 ? { label: 'This week', cycle: c0, monday } : null,
+      c0 ? { label: 'This Week', cycle: c0, monday } : null,
       c1 ? { label: 'Next week', cycle: c1, monday: new Date(monday.getTime() + 7 * DAY) } : null,
     ].filter(Boolean);
     if (!weeks.length) {
@@ -104,13 +104,13 @@ export function renderFreeTime(container) {
     page.innerHTML = head() + `
       <div class="v3-grid">
         <div class="v3-col-4"><div class="v3-panel">
-          <div class="v3-h">Who needs to be there</div>
+          <div class="v3-h">Who Needs to Be There</div>
           <input class="input" id="ft2-q" type="search" placeholder="Name or department" value="${esc(filter)}" autocomplete="off" style="margin-bottom:12px;">
           ${chosen.length ? `<div class="v3-picked">${chosen.map(p => `<button class="v3-chip a" data-unpick="${p.i}" title="Remove">${esc(p.name)} ×</button>`).join('')}</div>` : ''}
           <div class="v3-people">${list.map(p => `<button class="v3-person${picked.has(p.i) ? ' on' : ''}" data-pick="${p.i}" aria-pressed="${picked.has(p.i)}"><span>${esc(p.name)}</span><small>${esc(p.department)}</small></button>`).join('') || '<p class="v3-empty">No colleague matches</p>'}</div>
         </div></div>
         <div class="v3-col-8"><div class="v3-panel">
-          <div class="v3-h">When you are all free
+          <div class="v3-h">When You Are All Free
             <span class="v3-seg">${weeks.map((x, i) => `<button data-week="${i}" aria-pressed="${i === weekIx}">${esc(x.label)}${x.monday ? '' : ''}</button>`).join('')}</span></div>
           ${!mine.length ? '<p class="v3-empty" style="margin-bottom:12px;">Your own timetable is not on this device, so only your colleagues’ lessons are counted.</p>' : ''}
           ${!chosen.length ? '<p class="v3-empty">Pick one or more colleagues. Their timetables and yours are laid over each other, and the gaps of 30 minutes or more show here.</p>'
@@ -134,7 +134,7 @@ export function renderFreeTime(container) {
     });
   }
 
-  const head = () => `<div class="v3-head"><div><div class="v3-eyebrow">With colleagues</div><h1 class="v3-title">Common free time</h1>
+  const head = () => `<div class="v3-head"><div><div class="v3-eyebrow">With Colleagues</div><h1 class="v3-title">Common Free Time</h1>
     <p class="v3-lede">Find when you and your colleagues are all free, from the school’s timetable</p></div></div>`;
 
   return () => { alive = false; };
@@ -219,7 +219,7 @@ async function sendByTeams({ doc, name, what, how }) {
   setTimeout(() => q('#tm-q').focus(), 60);
 }
 
-/* ══════════ Student handover ══════════ */
+/* ══════════ Student Handover ══════════ */
 
 const FILE_KIND = 'cocher-handover';
 
@@ -256,7 +256,7 @@ export function renderHandover(container) {
 
   function draw(note = '') {
     container.innerHTML = `<div class="main-scroll"><div class="v3-page">
-      <div class="v3-head"><div><div class="v3-eyebrow">With colleagues</div><h1 class="v3-title">Student handover</h1>
+      <div class="v3-head"><div><div class="v3-eyebrow">With Colleagues</div><h1 class="v3-title">Student Handover</h1>
         <p class="v3-lede">Pass your evidence on a class to a colleague, and take in theirs. It joins the same students, with nothing doubled</p></div></div>
       <div class="v3-grid">
         <div class="v3-col-6"><div class="v3-panel">
@@ -328,7 +328,7 @@ export function renderHandover(container) {
 }
 
 
-/* ══════════ Send to a colleague ══════════ */
+/* ══════════ Send to a Colleague ══════════ */
 
 const SEND_KIND = 'cocher-send';
 const who = () => { const u = getCurrentUser() || {}; return getPreferredName() || u.name || u.email || 'A colleague'; };
@@ -347,7 +347,7 @@ export function renderSend(container) {
   function draw(note = '') {
     const gs = groups(); const any = gs.some(g => g.items.length);
     container.innerHTML = `<div class="main-scroll"><div class="v3-page">
-      <div class="v3-head"><div><div class="v3-eyebrow">With colleagues</div><h1 class="v3-title">Send to a colleague</h1>
+      <div class="v3-head"><div><div class="v3-eyebrow">With Colleagues</div><h1 class="v3-title">Send to a Colleague</h1>
         <p class="v3-lede">Tick what to send. It goes as one file, by Teams or any way you like; your colleague loads it here and it joins their own work</p></div></div>
       <div class="v3-grid">
         <div class="v3-col-7"><div class="v3-panel">

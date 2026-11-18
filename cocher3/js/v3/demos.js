@@ -25,7 +25,7 @@ export const DEMOS = [
   { id: 'paths', title: 'Where is Paths for ECG lessons?', about: 'CCE2021, then ECG', src: '07-paths.mp4' },
   { id: 'learning-log', title: 'What is the E21CC Learning Log?', about: 'For Beatty: student view, console, demo', src: '08-learning-log.mp4', only: 'bty' },
   { id: 'admin', title: 'What is in Admin?', about: 'Quick tools, Find a teacher, events', src: '12-admin.mp4' },
-  { id: 'free-time', title: 'When are my colleagues and I all free?', about: 'Common free time, in Admin', src: '09-common-free-time.mp4' },
+  { id: 'free-time', title: 'When are my colleagues and I all free?', about: 'Common Free Time, in Admin', src: '09-common-free-time.mp4' },
   { id: 'send', title: 'How do I pass my work to a colleague?', about: 'Send lessons, layouts, entries, goals', src: '10-send-to-a-colleague.mp4' },
   { id: 'look', title: 'Can I change how Co-Cher looks?', about: 'Look, day or night, type, menu', src: '11-make-it-yours.mp4' },
 ];
@@ -40,7 +40,7 @@ const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<':
 export function demoPlayerHTML(d) {
   if (!d?.src) {
     return `<div class="v3-demo-stage empty"><div>
-      <b>Not made yet</b><span>This space is kept for a short animation of ${esc(d?.title || 'this feature').toLowerCase()}</span>
+      <b>Not Made Yet</b><span>This space is kept for a short animation of ${esc(d?.title || 'this feature').toLowerCase()}</span>
     </div></div>`;
   }
   const url = new URL(`../../demos/${d.src}`, import.meta.url).href;
@@ -49,21 +49,21 @@ export function demoPlayerHTML(d) {
   return `<div class="v3-demo-stage"><img src="${esc(url)}" alt="${esc(d.title)}"></div>`;
 }
 
-/** The "How it works" screen: every slot, filled or waiting. */
+/** The "How Co-Cher Works" screen: every slot, filled or waiting. */
 export function renderDemos(container, params) {
   const pick = (params && params.id) || '';
   const list = mine();
   const sel = demoById(pick) || list.find(d => d.src) || list[0];
   container.innerHTML = `<div class="main-scroll"><div class="v3-page">
     <div class="v3-head"><div>
-      <div class="v3-eyebrow">How it works</div>
-      <h1 class="v3-title">Short videos, one question each</h1>
+      <div class="v3-eyebrow">How Co-Cher Works</div>
+      <h1 class="v3-title">Short Videos, One Question Each</h1>
       <p class="v3-lede">About twenty seconds each, with captions and no sound. Recorded at a made up Beatty: every person shown is invented, and your own school\u2019s names and timetable appear in their place</p>
     </div></div>
     <div class="v3-grid">
       <div class="v3-col-8"><div class="v3-panel flush">${demoPlayerHTML(sel)}
         <div style="padding:16px 20px;"><div class="v3-row-t">${esc(sel.title)}</div><div class="v3-row-s">${esc(sel.about)}</div></div></div></div>
-      <div class="v3-col-4"><div class="v3-panel"><div class="v3-h">All videos</div>
+      <div class="v3-col-4"><div class="v3-panel"><div class="v3-h">All Videos</div>
         ${list.map(d => `<a class="v3-row" href="#/demos/${d.id}">
           <span><span class="v3-row-t" style="${d.id === sel.id ? 'color:var(--accent-dark);' : ''}">${esc(d.title)}</span><br><span class="v3-row-s">${d.src ? esc(d.about) : 'Not made yet'}</span></span>
         </a>`).join('')}</div></div>
