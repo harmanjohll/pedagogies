@@ -28,6 +28,7 @@ import { fetchBundledRoster } from '../utils/directory.js';
 import { getMyTimetable } from '../utils/timetable.js';
 import { cycleForDate } from '../utils/school.js';
 import { showToast } from '../components/toast.js';
+import { openModal } from '../components/modals.js';
 import { classCode } from '../utils/evidence.js';
 import { ymd, addEntry, allEntries, KINDS } from './agenda.js';
 import { allGoals } from './goals.js';
@@ -139,6 +140,85 @@ export function renderFreeTime(container) {
   return () => { alive = false; };
 }
 
+/* ══════════ Passing a file on, by Teams ══════════
+ * Co-Cher has no server, so "sending" is a file changing hands. This makes the
+ * hand over one step shorter: pick the colleague, and Co-Cher saves the file
+ * and opens a Teams chat with them, the message already written. The teacher
+ * drags the file in and sends.
+ *
+ * A web page cannot put a file into a Teams chat by itself: that needs a
+ * Microsoft app the school's IT has approved (see cocher3/SHARING.md, plan B).
+ * On a phone or tablet the device's own share sheet CAN hand the file straight
+ * to Teams, so that is offered where the device allows it.
+ */
+const realEmail = (e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(e || '').trim());
+const teamsChat = (emails, message) => `https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(emails.join(','))}&message=${encodeURIComponent(message)}`;
+
+function saveFile(doc, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(doc)], { type: 'application/json' }));
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/** doc: the file's contents. name: its file name. what: "2 lessons, 1 room layout". how: where the colleague loads it. */
+async function sendByTeams({ doc, name, what, how }) {
+  const me = String(getCurrentUser()?.email || '').toLowerCase();
+  const roster = await fetchBundledRoster(currentSchoolId()).catch(() => null);
+  const people = (roster?.teachers || []).filter(t => realEmail(t.email) && t.email.toLowerCase() !== me)
+    .map(t => ({ name: t.name, email: t.email, department: t.department || '' })).sort((a, b) => a.name.localeCompare(b.name));
+  const chosen = [];
+  const file = (typeof File === 'function') ? new File([JSON.stringify(doc)], name, { type: 'application/json' }) : null;
+  const canShare = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
+  const message = `From Co-Cher: ${what}. The file is "${name}". To add it to your own work: open Co-Cher, ${how}.`;
+
+  const { backdrop, close } = openModal({ title: 'Send by Teams', width: 520,
+    body: `<div style="display:flex;flex-direction:column;gap:14px;">
+      <div><label class="input-label" for="tm-q">To</label>
+        <div class="v3-picked" id="tm-chosen"></div>
+        <input class="input" id="tm-q" type="search" autocomplete="off" placeholder="${people.length ? 'Name, department, or an email address' : 'Their email address'}">
+        <div class="v3-people" id="tm-list" style="max-height:176px;margin-top:8px;"></div></div>
+      <div><label class="input-label" for="tm-msg">Message</label>
+        <textarea class="input" id="tm-msg" rows="3" style="resize:vertical;">${esc(message)}</textarea></div>
+      <ol class="v3-steps"><li>Co-Cher saves the file to your Downloads.</li><li>Teams opens on your chat, with the message ready.</li><li>Drag the file into the message, and send.</li></ol>
+    </div>`,
+    footer: `${canShare ? '<button class="btn btn-ghost" data-act="share" style="margin-right:auto;" title="Hand the file to Teams, or another app, on this device">Share from this device</button>' : ''}
+      <button class="btn btn-secondary" data-act="cancel">Cancel</button>
+      <button class="btn btn-primary" data-act="go" disabled>Save file and open Teams</button>` });
+  const q = (x) => backdrop.querySelector(x);
+  const draw = () => {
+    const f = q('#tm-q').value.trim().toLowerCase();
+    q('#tm-chosen').innerHTML = chosen.map((p, i) => `<button class="v3-chip a" data-un="${i}" title="Remove">${esc(p.name || p.email)} ×</button>`).join('');
+    const list = people.filter(p => !chosen.some(c => c.email === p.email) && (!f || `${p.name} ${p.department} ${p.email}`.toLowerCase().includes(f))).slice(0, 40);
+    const typed = realEmail(f) && !chosen.some(c => c.email === f) && !people.some(p => p.email.toLowerCase() === f);
+    q('#tm-list').innerHTML = (typed ? `<button class="v3-person" data-email="${esc(f)}"><span>Add ${esc(f)}</span><small>typed</small></button>` : '')
+      + list.map(p => `<button class="v3-person" data-email="${esc(p.email)}"><span>${esc(p.name)}</span><small>${esc(p.department)}</small></button>`).join('')
+      || (people.length ? '<p class="v3-row-s" style="padding:8px 0;">No one by that name. You can type an email address.</p>' : '<p class="v3-row-s" style="padding:8px 0;">Type your colleague\u2019s email address.</p>');
+    q('[data-act="go"]').disabled = !chosen.length;
+  };
+  backdrop.addEventListener('click', (e) => {
+    const add = e.target.closest('[data-email]'), un = e.target.closest('[data-un]');
+    if (add) { const em = add.dataset.email; chosen.push(people.find(p => p.email === em) || { name: '', email: em }); q('#tm-q').value = ''; draw(); q('#tm-q').focus(); }
+    if (un) { chosen.splice(+un.dataset.un, 1); draw(); }
+  });
+  q('#tm-q').addEventListener('input', draw);
+  q('#tm-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); q('#tm-list [data-email]')?.click(); } });
+  q('[data-act="cancel"]').onclick = close;
+  q('[data-act="go"]').onclick = () => {
+    saveFile(doc, name);
+    window.open(teamsChat(chosen.map(c => c.email), q('#tm-msg').value.trim()), '_blank', 'noopener');
+    close();
+    showToast('File saved. In Teams, drag it into the message and send.', 'success');
+  };
+  if (canShare) q('[data-act="share"]').onclick = async () => {
+    try { await navigator.share({ files: [file], text: q('#tm-msg').value.trim() }); close(); }
+    catch (err) { if (err?.name !== 'AbortError') showToast('This device could not share the file. Use Save file and open Teams.', 'warning'); }
+  };
+  draw();
+  setTimeout(() => q('#tm-q').focus(), 60);
+}
+
 /* ══════════ Student handover ══════════ */
 
 const FILE_KIND = 'cocher-handover';
@@ -184,8 +264,8 @@ export function renderHandover(container) {
           ${classes.length ? `<label class="input-label" for="ho-class">Class</label>
             <select class="input" id="ho-class">${classes.map(c => { const n = (c.students || []).reduce((a, s) => a + (s.observations || []).length, 0);
               return `<option value="${esc(c.id)}">${esc(c.name)} · ${plural(n, 'observation')}</option>`; }).join('')}</select>
-            <button class="btn btn-primary" id="ho-send" style="margin-top:12px;">Download handover file</button>
-            <p class="v3-row-s" style="margin-top:12px;">The file holds student names and your observations. Send it by Teams or OneDrive, as you would a class list.</p>`
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><button class="btn btn-primary" id="ho-teams">Send by Teams</button><button class="btn btn-secondary" id="ho-send">Download the file</button></div>
+            <p class="v3-row-s" style="margin-top:12px;">The file holds student names and your observations. Keep it inside the school: Teams or OneDrive, as you would a class list.</p>`
           : '<p class="v3-empty">You have no classes yet.</p>'}
         </div></div>
         <div class="v3-col-6"><div class="v3-panel">
@@ -195,21 +275,20 @@ export function renderHandover(container) {
           <div id="ho-in" style="margin-top:12px;">${note ? `<p class="v3-row-t">${esc(note)}</p>` : ''}${incoming ? preview() : ''}</div>
         </div></div>
       </div></div></div>`;
-    container.querySelector('#ho-send')?.addEventListener('click', send);
+    container.querySelector('#ho-send')?.addEventListener('click', () => send(false));
+    container.querySelector('#ho-teams')?.addEventListener('click', () => send(true));
     container.querySelector('#ho-pick').addEventListener('click', () => container.querySelector('#ho-file').click());
     container.querySelector('#ho-file').addEventListener('change', load);
     container.querySelector('#ho-add')?.addEventListener('click', take);
   }
 
-  function send() {
+  function send(byTeams) {
     const cls = Store.getClass(container.querySelector('#ho-class').value);
     const doc = buildHandover(cls);
     if (!doc.students.length) { showToast('No observations in that class yet', 'warning'); return; }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(doc)], { type: 'application/json' }));
-    a.download = `handover ${cls.name}.json`.replace(/[\\/:*?"<>|]/g, ' ');
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    const name = `handover ${cls.name}.json`.replace(/[\\/:*?"<>|]/g, ' ');
+    if (byTeams) return sendByTeams({ doc, name, what: `my observations on ${cls.name} (${plural(doc.students.length, 'student')})`, how: 'go to Classes, then Handover, and choose "Load a handover file"' });
+    saveFile(doc, name);
     showToast(`${plural(doc.students.length, 'student')} in the file`, 'success');
   }
 
@@ -269,14 +348,14 @@ export function renderSend(container) {
     const gs = groups(); const any = gs.some(g => g.items.length);
     container.innerHTML = `<div class="main-scroll"><div class="v3-page">
       <div class="v3-head"><div><div class="v3-eyebrow">With colleagues</div><h1 class="v3-title">Send to a colleague</h1>
-        <p class="v3-lede">Tick what to send. You get one file to pass on; your colleague loads it here and it joins their own work</p></div></div>
+        <p class="v3-lede">Tick what to send. It goes as one file, by Teams or any way you like; your colleague loads it here and it joins their own work</p></div></div>
       <div class="v3-grid">
         <div class="v3-col-7"><div class="v3-panel">
           <div class="v3-h">Send <span id="sd-count" class="v3-row-s"></span></div>
           ${any ? gs.filter(g => g.items.length).map((g, i) => `<details class="v3-pick"${i === 0 ? ' open' : ''}>
               <summary><b>${g.label}</b><span data-n="${g.key}">${g.items.length}</span></summary>
               ${g.items.map(x => `<label><input type="checkbox" data-g="${g.key}" value="${esc(x.id)}"><span><span class="t">${esc(x.t)}</span>${x.s ? `<span class="s">${esc(x.s)}</span>` : ''}</span></label>`).join('')}
-            </details>`).join('') + `<button class="btn btn-primary" id="sd-send" style="margin-top:16px;" disabled>Download the file</button>
+            </details>`).join('') + `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;"><button class="btn btn-primary" id="sd-teams" disabled>Send by Teams</button><button class="btn btn-secondary" id="sd-send" disabled>Download the file</button></div>
             <p class="v3-row-s" style="margin-top:12px;">No student data goes in this file. A lesson leaves its class behind; your reflections stay with you.</p>`
           : '<p class="v3-empty">Nothing to send yet. Lessons, room layouts, entries and term goals show here once you have some.</p>'}
         </div></div>
@@ -290,16 +369,17 @@ export function renderSend(container) {
     const picked = () => [...container.querySelectorAll('input[data-g]:checked')];
     container.querySelectorAll('input[data-g]').forEach(i => i.addEventListener('change', () => {
       const n = picked().length;
-      container.querySelector('#sd-send').disabled = !n;
+      container.querySelector('#sd-send').disabled = !n; container.querySelector('#sd-teams').disabled = !n;
       container.querySelector('#sd-count').textContent = n ? `${n} chosen` : '';
     }));
     container.querySelector('#sd-send')?.addEventListener('click', () => send(picked()));
+    container.querySelector('#sd-teams')?.addEventListener('click', () => send(picked(), true));
     container.querySelector('#sd-pick').addEventListener('click', () => container.querySelector('#sd-file').click());
     container.querySelector('#sd-file').addEventListener('change', load);
     container.querySelector('#sd-add')?.addEventListener('click', take);
   }
 
-  async function send(boxes) {
+  async function send(boxes, byTeams) {
     const ids = (g) => new Set(boxes.filter(b => b.dataset.g === g).map(b => b.value));
     const L = ids('lessons'), Y = ids('layouts'), E = ids('entries'), G = ids('goals');
     const lessons = Store.getLessons().filter(l => L.has(l.id)), layouts = Store.getSavedLayouts().filter(l => Y.has(l.id));
@@ -308,11 +388,12 @@ export function renderSend(container) {
       // an entry's links to a class or a lesson are local, so they stay behind; its goal comes along if the goal does
       entries: allEntries().filter(e => E.has(e.id)).map(e => ({ kind: e.kind, title: e.title, date: e.date || '', goalId: G.has(e.goalId) ? e.goalId : '' })),
       goals: allGoals().filter(g => G.has(g.id)).map(g => ({ id: g.id, title: g.title, note: g.note || '' })) };
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(doc)], { type: 'application/json' }));
-    a.download = `from ${who()} ${ymd(new Date())}.cocher.json`.replace(/[\\/:*?"<>|]/g, ' ');
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    const name = `from ${who()} ${ymd(new Date())}.cocher.json`.replace(/[\\/:*?"<>|]/g, ' ');
+    if (byTeams) {
+      const what = [lessons.length ? plural(lessons.length, 'lesson') : '', layouts.length ? plural(layouts.length, 'room layout') : '', doc.entries.length ? plural(doc.entries.length, 'entry').replace('entrys', 'entries') : '', doc.goals.length ? plural(doc.goals.length, 'term goal') : ''].filter(Boolean).join(', ');
+      return sendByTeams({ doc, name, what, how: 'go to Lessons, then Send, and choose "Load a file from a colleague"' });
+    }
+    saveFile(doc, name);
     showToast(`${plural(boxes.length, 'item')} in the file`, 'success');
   }
 

@@ -10,6 +10,7 @@ This repository is public and is served by GitHub Pages at
 |---|---|---|---|
 | `cocher3/` | **Co-Cher 3, the main line.** Every school. Its own engine, school files, look and videos | `/pedagogies/` (the root opens it) and `/pedagogies/cocher3/` | **Active** |
 | `cocher3/schools/` | School packs, published staff rosters, and the onboarding form for a new school (see its README) | | |
+| `cocher3/SHARING.md` | How teachers share work: what is built (Teams), what is planned (OneDrive for Beatty, Google Drive for others) and what each needs | | |
 | `cocher2/` | **Co-Cher 2.** Still works, as the fallback, on the same saved work | `/pedagogies/cocher2/` | Frozen at v2.7 |
 | `app/` | **Co-Cher 1** (Beatty only). The folder is called `app` for historical reasons; its address must not change | `/pedagogies/app/cocher.html` | Frozen at v8.9 |
 | `backend/` | The optional school backend (a Drive folder per school) | | |
