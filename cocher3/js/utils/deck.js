@@ -23,6 +23,17 @@ const MEDIA_STORE = 'media';
 
 /* ── Escaping — every model/teacher string that lands in the compiled
  * document goes through this (attribute-safe: quotes covered). ── */
+/** The look a new deck starts with: the School style, in the signed in school's colours. */
+export async function schoolDeckLook() {
+  let theme = {};
+  try {
+    const [{ loadPack }, { currentSchoolId }] = await Promise.all([import('./school.js'), import('../components/login.js')]);
+    const pack = await loadPack(currentSchoolId());
+    if (pack?.theme?.accent) theme = { accent: pack.theme.accent, accent2: pack.theme.secondary || '' };
+  } catch { /* no school: the default colours stand */ }
+  return { style: 'school', theme };
+}
+
 function esc(v) {
   return String(v ?? '')
     .replace(/&/g, '&amp;')
@@ -170,15 +181,41 @@ function embedSrcFor(media) {
  * (slide.media / slide.youtube), which is external and needs a connection —
  * those slides also render a "Watch on YouTube" link as a graceful fallback.
  */
+/* ── The look of a deck ──
+ * A deck carries its own look (`deck.style`) and its school's two colours
+ * (`deck.theme`), so it reads as the school's and as Co-Cher's wherever it is
+ * opened: in the app, as a downloaded file, in PowerPoint.
+ *   school   the school's colour, softened, on cool paper (the default for new decks)
+ *   paper    warm paper and ink; the school colour only as an accent
+ *   night    for a dim room or a bright projector
+ *   classic  the first look decks had; decks made before styles keep it
+ * School colours are softened by rule (mixed toward the ink), as in the app. */
+export const DECK_STYLES = [
+  { id: 'school', label: 'School' }, { id: 'paper', label: 'Paper' }, { id: 'night', label: 'Night' }, { id: 'classic', label: 'Classic' },
+];
+const hexOk = (v) => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v.trim());
+function mixHex(a, b, t) {
+  const n = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const x = n(a), y = n(b);
+  return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join('');
+}
+export function deckPalette(deck, theme) {
+  const school = hexOk(deck?.theme?.accent) ? deck.theme.accent.trim() : (hexOk(theme?.accent) ? theme.accent.trim() : '#3A4E8C');
+  const second = hexOk(deck?.theme?.accent2) ? deck.theme.accent2.trim() : (hexOk(theme?.accent2) ? theme.accent2.trim() : '#C99A2E');
+  const serif = `'Shippori Mincho','Hiragino Mincho ProN',Georgia,'Times New Roman',serif`;
+  const sans = `'Zen Kaku Gothic New','Hiragino Sans',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif`;
+  switch (deck?.style) {
+    case 'school': return { id: 'school', accent: mixHex(school, '#1C2733', 0.22), accent2: mixHex(second, '#1C2733', 0.18), bg: '#FAFBFB', ink: '#1C2733', muted: '#4C5C5C', line: '#D5DBDA', surface: '#EEF1F0', display: serif, body: sans, weight: 600 };
+    case 'paper': return { id: 'paper', accent: mixHex(school, '#25241F', 0.35), accent2: mixHex(second, '#25241F', 0.25), bg: '#F5F2EA', ink: '#25241F', muted: '#5B564C', line: '#DDD7C8', surface: '#ECE7DB', display: serif, body: sans, weight: 600 };
+    case 'night': return { id: 'night', accent: mixHex(school, '#E3EAE9', 0.55), accent2: mixHex(second, '#E3EAE9', 0.25), bg: '#171C1D', ink: '#E3EAE9', muted: '#9CAAA9', line: '#2E3A3C', surface: '#212A2C', display: serif, body: sans, weight: 600 };
+    default: return { id: 'classic', accent: hexOk(theme?.accent) ? theme.accent : '#4361ee', accent2: hexOk(theme?.accent2) ? theme.accent2 : '#7c3aed', bg: '#ffffff', ink: '#0f172a', muted: '#64748b', line: '#e2e8f0', surface: '#f1f5f9',
+      display: 'system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif', body: 'system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif', weight: 800 };
+  }
+}
+
 export function compileDeckHTML(deck, { theme } = {}) {
-  const safeColor = (v, fb) => (typeof v === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(v.trim())) ? v.trim() : fb;
-  const pal = {
-    accent: safeColor(theme?.accent, '#4361ee'),
-    accent2: safeColor(theme?.accent2, '#7c3aed'),
-    bg: safeColor(theme?.bg, '#ffffff'),
-    ink: safeColor(theme?.ink, '#0f172a'),
-    muted: '#64748b', line: '#e2e8f0', surface: '#f1f5f9',
-  };
+  const pal = deckPalette(deck, theme);
+  const styled = pal.id !== 'classic';
   const title = String(deck?.title ?? 'Slide deck');
   const slides = Array.isArray(deck?.slides) ? deck.slides : [];
   const total = slides.length;
@@ -217,7 +254,9 @@ export function compileDeckHTML(deck, { theme } = {}) {
     const ico = s?.icon && DECK_ICONS[s.icon] ? `<span class="deck-head-ic">${svgIcon(s.icon)}</span>` : '';
 
     if (layout === 'title') {
-      return `<div class="l-title"><p class="kicker" data-ed="${i}.kicker">${esc(s?.kicker || title)}</p><h1${hEd}>${heading}</h1>${sub}${bullets.length ? listHTML(s?.bullets, s?.icon, `${i}.bullets`) : ''}</div>`;
+      const kick = String(s?.kicker || '').trim();
+      const showKick = kick && kick.toLowerCase() !== String(s?.title || title).trim().toLowerCase();   // a kicker that only repeats the title says nothing
+      return `<div class="l-title">${showKick || !styled ? `<p class="kicker" data-ed="${i}.kicker">${esc(kick || title)}</p>` : ''}<h1${hEd}>${heading}</h1>${sub}${bullets.length ? listHTML(s?.bullets, s?.icon, `${i}.bullets`) : ''}</div>`;
     }
     if (layout === 'section') {
       return `<div class="l-section"><span class="l-num">${String(i + 1).padStart(2, '0')}</span><div>${ico}<h2${hEd}>${heading}</h2>${sub}</div></div>`;
@@ -257,6 +296,7 @@ export function compileDeckHTML(deck, { theme } = {}) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
+${styled ? '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">' : ''}
 <style>
   :root { --accent:${pal.accent}; --accent2:${pal.accent2}; --bg:${pal.bg}; --ink:${pal.ink}; --muted:${pal.muted}; --line:${pal.line}; --surface:${pal.surface}; }
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -332,6 +372,12 @@ export function compileDeckHTML(deck, { theme } = {}) {
   body.show-notes .notes { display:block; }
   .slide-foot { position:absolute; left:8vw; right:8vw; bottom:3.2vh; display:flex; justify-content:space-between; font-size:.8rem; color:var(--muted); font-variant-numeric:tabular-nums; letter-spacing:.02em; }
   .l-exit ~ .slide-foot, .slide.l-exit .slide-foot { color:rgba(255,255,255,.85); }
+  ${styled ? `/* The school, paper and night looks: a serif for headings, plain labels, no shouting. */
+  body { font-family:${pal.body}; -webkit-font-smoothing:auto; }
+  h1, h2, .statement, blockquote, .l-num { font-family:${pal.display}; font-weight:${pal.weight}; letter-spacing:0; }
+  h3 { font-weight:700; }
+  .kicker { text-transform:none; letter-spacing:0; font-weight:600; font-size:clamp(.95rem,1.7vw,1.25rem); }
+  li::before { background:var(--accent2); }` : ''}
   #deck-ctrl { position:fixed; right:16px; bottom:14px; display:flex; gap:8px; z-index:10; }
   #deck-ctrl button { font:inherit; font-size:.85rem; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:4px 10px; cursor:pointer; }
   #deck-ctrl button:hover { color:var(--accent); border-color:var(--accent); }
@@ -377,7 +423,9 @@ ${slideHTML}
       else { s.classList.remove('in'); s.setAttribute('hidden', ''); }
     });
     if (prog) prog.style.width = ((i + 1) / slides.length * 100) + '%';
+    try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'cocher-deck-slide', i: i, total: slides.length }, '*'); } catch(e){}
   }
+  window.addEventListener('message', function (ev) { var d = (ev && ev.data) || {}; if (d.type === 'cocher-deck-goto') show(Number(d.i) || 0); });
   function next() { show(i + 1); } function prev() { show(i - 1); }
   function toggleFull(){ try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch(e){} }
   // Exit the presentation: leave fullscreen, then close the tab (decks open via

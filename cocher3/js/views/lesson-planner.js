@@ -8,7 +8,7 @@
 import { Store } from '../state.js';
 import { sendChat, reviewLesson, generateRubric, suggestGrouping, groupingToMarkdown, generateExitTicket, suggestDifferentiation, generateTimeline, suggestSeatAssignment, seatPlanToMarkdown, generateRunOfShow, mapSegmentsToSTP, suggestYouTubeVideos, suggestSimulations, generateWorksheet, generateDiscussionPrompts, suggestExternalResources, generateLISC, generateStimulusMaterial, generateVocabulary, generateModelResponse, generateSourceAnalysis, expandSection, generateDeck, generatePodcastScript, generateSpeech, generateSVGDiagram, generateImage } from '../api.js';
 import { cceContextBlock } from './cce.js';
-import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, getDeckModel, openDeckById, downloadBlob } from '../utils/deck.js';
+import { compileDeckHTML, deckFilename, slugify, saveDeckMaterial, saveAudioMaterial, listDeckMeta, listAudioMeta, getMediaContent, getDeckModel, openDeckById, downloadBlob, schoolDeckLook } from '../utils/deck.js';
 import { showToast } from '../components/toast.js';
 import { openModal, confirmDialog } from '../components/modals.js';
 import { navigate } from '../router.js';
@@ -997,7 +997,7 @@ const AI_TOOLS = [
   { id: 'ai-lisc-btn', label: 'LI / SC', icon: '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>', color: 'var(--brand-navy, #16323A)', cat: 'planning', eee: 'lisc' },
   { id: 'ai-review-btn', label: 'Review', icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M8 11l2 2 4-4"/>', color: '', cat: 'planning', eee: 'review' },
   { id: 'ai-rubric-btn', label: 'Rubric', icon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>', color: '', cat: 'assess', eee: 'rubric' },
-  { id: 'ai-group-btn', label: 'Grouping', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', color: '', cat: 'planning', eee: 'grouping' },
+  { id: 'ai-group-btn', label: 'Groups and Seats', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', color: '', cat: 'planning', eee: 'grouping' },
   { id: 'ai-timeline-btn', label: 'Timeline', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', color: '', cat: 'planning', eee: 'timeline' },
   { id: 'ai-exit-ticket-btn', label: 'Exit Ticket', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>', color: '', cat: 'assess', eee: 'exitTicket' },
   { id: 'ai-differentiation-btn', label: 'Differentiate', icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>', color: '', cat: 'planning', eee: 'differentiation' },
@@ -4077,15 +4077,36 @@ function showGroupingModal(container, classes) {
   const contextClassId = planClassContext?.id || '';
 
   const { backdrop, close } = openModal({
-    title: 'AI Student Grouping',
+    title: 'Groups and Seats',
     body: `
+      <div class="input-group">
+        <label class="input-label" for="group-want">What do you need</label>
+        <select class="input" id="group-want">
+          <option value="both">Groups, then seats for them</option>
+          <option value="groups">Groups only</option>
+          <option value="seats">Seats only (class order, no grouping by Co-Cher)</option>
+        </select>
+      </div>
       <div class="input-group">
         <label class="input-label">Select Class</label>
         <select class="input" id="group-class">
           ${classesWithStudents.map(c => `<option value="${c.id}" ${c.id === contextClassId ? 'selected' : ''}>${c.name} (${c.students.length} students)</option>`).join('')}
         </select>
       </div>
-      <div class="input-group">
+      <div class="input-group" data-for="seats">
+        <label class="input-label" for="group-layout">Room</label>
+        <select class="input" id="group-layout">
+          <option value="pods">Collaborative Pods</option>
+          <option value="direct">Rows (Direct Instruction)</option>
+          <option value="stations">Stations</option>
+          <option value="ushape">U-Shape / Circle</option>
+          <option value="quiet">Quiet Work (Individual)</option>
+          <option value="gallery">Gallery Walk</option>
+          <option value="fishbowl">Fishbowl / Socratic</option>
+          <option value="maker">Makerspace</option>
+        </select>
+      </div>
+      <div class="input-group" data-for="groups">
         <label class="input-label">Activity Type</label>
         <select class="input" id="group-activity">
           <option value="Collaborative group work">Collaborative group work</option>
@@ -4110,7 +4131,7 @@ function showGroupingModal(container, classes) {
           <span>Pairs</span><span>Trios</span><span>Quads</span><span>Fives</span><span>Sixes</span>
         </div>
       </div>
-      <div class="input-group">
+      <div class="input-group" data-for="groups">
         <label class="input-label">Grouping Considerations <span style="font-weight:400;color:var(--ink-faint);">(optional)</span></label>
         <textarea class="input" id="group-considerations" rows="3" placeholder="E.g. 'Keep Ahmad and Wei Lin in separate groups', 'Priya needs a confident English speaker in her group', 'Balance genders where possible', 'Seat students with vision needs near the front'..." style="resize:vertical;font-size:0.8125rem;"></textarea>
         <div style="font-size:0.6875rem;color:var(--ink-faint);margin-top:4px;">Share any seating preferences, student dynamics, or special needs the AI should factor in.</div>
@@ -4118,9 +4139,20 @@ function showGroupingModal(container, classes) {
     `,
     footer: `
       <button class="btn btn-secondary" data-action="cancel">Cancel</button>
-      <button class="btn btn-primary" data-action="generate">Generate Groups</button>
+      <button class="btn btn-primary" data-action="generate">Make groups and seats</button>
     `
   });
+
+  // Each part is optional: show only the questions the choice needs.
+  const wantSel = backdrop.querySelector('#group-want');
+  const syncWant = () => {
+    const w = wantSel.value;
+    backdrop.querySelectorAll('[data-for="groups"]').forEach(el => { el.style.display = w === 'seats' ? 'none' : ''; });
+    backdrop.querySelectorAll('[data-for="seats"]').forEach(el => { el.style.display = w === 'groups' ? 'none' : ''; });
+    backdrop.querySelector('[data-action="generate"]').textContent = w === 'both' ? 'Make groups and seats' : w === 'groups' ? 'Make groups' : 'Make a seating plan';
+  };
+  wantSel.addEventListener('change', syncWant);
+  syncWant();
 
   // Group size slider label
   const sizeSlider = backdrop.querySelector('#group-size');
@@ -4137,8 +4169,21 @@ function showGroupingModal(container, classes) {
     const considerations = backdrop.querySelector('#group-considerations').value.trim();
     const cls = classes.find(c => c.id === classId);
     if (!cls) return;
+    const want = wantSel.value;
+    const roomPreset = backdrop.querySelector('#group-layout').value;
 
     close();
+
+    // Seats only: no grouping by Co-Cher. The class, in its own order, in tables of the chosen size.
+    if (want === 'seats') {
+      const kids = cls.students || [];
+      const tables = [];
+      for (let k = 0; k < kids.length; k += groupSize) tables.push({ name: `Table ${tables.length + 1}`, studentNames: kids.slice(k, k + groupSize).map(x => x.name), studentIds: kids.slice(k, k + groupSize).map(x => x.id) });
+      lastGroupingResult = { groups: tables, strategyNote: 'Class order; not grouped by Co-Cher.' };
+      lastGroupingMeta = { classId, className: cls.name, activityType, groupSize, studentCount: kids.length };
+      await runSeatAssignment(container, lastGroupingResult, lastGroupingMeta, roomPreset);
+      return;
+    }
 
     const statusEl = container.querySelector('#ai-result');
     statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Analysing E21CC profiles and creating groups for ${cls.students.length} students...</div></div>`;
@@ -4175,6 +4220,12 @@ function showGroupingModal(container, classes) {
         structured
       });
       renderComponents(container);
+
+      // Groups, then seats: seat them now, in the room chosen, with no second pop up.
+      if (want === 'both') {
+        await runSeatAssignment(container, lastGroupingResult, lastGroupingMeta, roomPreset);
+        return;
+      }
 
       // Show action buttons in status area
       statusEl.innerHTML = `
@@ -4289,36 +4340,41 @@ function showSeatAssignmentModal(container, groupingResult, meta) {
   backdrop.querySelector('[data-action="assign"]').addEventListener('click', async () => {
     const layoutPreset = layoutSelect.value;
     close();
-
-    // Structured grouping (new path) or regex parse of legacy markdown
-    const groups = (groupingResult && typeof groupingResult === 'object' && Array.isArray(groupingResult.groups))
-      ? groupingResult.groups
-          .map((g, i) => ({
-            name: g.name || `Group ${i + 1}`,
-            members: [...(g.studentNames || g.members || [])]
-          }))
-          .filter(g => g.members.length > 0)
-      : parseGroupsFromText(String(groupingResult));
-
-    const statusEl = container.querySelector('#ai-result');
-    statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Assigning seats for ${groups.length} groups in ${PRESET_NAMES[layoutPreset] || layoutPreset} layout...</div></div>`;
-    statusEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
-
-    try {
-      const seatPlan = await suggestSeatAssignment(groups, layoutPreset, meta.studentCount);
-      // Markdown content for display/back-compat; raw structured JSON in meta
-      // so buildSeatPlanVisual can draw the SVG without re-parsing text.
-      setComponent('seatPlan', seatPlanToMarkdown(seatPlan), {
-        label: PRESET_NAMES[layoutPreset] || layoutPreset,
-        structured: seatPlan
-      });
-      statusEl.innerHTML = '';
-      renderComponents(container);
-      showToast('Seating plan added to components.', 'success');
-    } catch (err) {
-      statusEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Seat assignment failed: ${err.message}</div>`;
-    }
+    await runSeatAssignment(container, groupingResult, meta, layoutPreset);
   });
+}
+
+/* Seat the groups on a kind of room. Shared by "Who Sits Where" and by the
+ * Groups and Seats flow, so groups can be seated in the same step they are made. */
+async function runSeatAssignment(container, groupingResult, meta, layoutPreset) {
+  // Structured grouping (new path) or regex parse of legacy markdown
+  const groups = (groupingResult && typeof groupingResult === 'object' && Array.isArray(groupingResult.groups))
+    ? groupingResult.groups
+        .map((g, i) => ({
+          name: g.name || `Group ${i + 1}`,
+          members: [...(g.studentNames || g.members || [])]
+        }))
+        .filter(g => g.members.length > 0)
+    : parseGroupsFromText(String(groupingResult));
+
+  const statusEl = container.querySelector('#ai-result');
+  statusEl.innerHTML = `<div class="card" style="padding:var(--sp-5);"><div class="chat-typing">Assigning seats for ${groups.length} groups in ${PRESET_NAMES[layoutPreset] || layoutPreset} layout...</div></div>`;
+  statusEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+  try {
+    const seatPlan = await suggestSeatAssignment(groups, layoutPreset, meta.studentCount);
+    // Markdown content for display/back-compat; raw structured JSON in meta
+    // so buildSeatPlanVisual can draw the SVG without re-parsing text.
+    setComponent('seatPlan', seatPlanToMarkdown(seatPlan), {
+      label: PRESET_NAMES[layoutPreset] || layoutPreset,
+      structured: seatPlan
+    });
+    statusEl.innerHTML = '';
+    renderComponents(container);
+    showToast('Seating plan added to components.', 'success');
+  } catch (err) {
+    statusEl.innerHTML = `<div class="card" style="padding:var(--sp-4);color:var(--danger);">Seat assignment failed: ${err.message}</div>`;
+  }
 }
 
 /* ── Parse groups from AI grouping text ── */
@@ -5251,6 +5307,7 @@ async function generateDeckFlow(container) {
   }
   try {
     const deck = await generateDeck(args);
+    Object.assign(deck, await schoolDeckLook());   // the school's colours and Co-Cher's type, from the start
     await resolveDeckMedia(deck, resultEl); // fill svgPrompt/imagePrompt slides with real visuals
     if (resultEl) resultEl.innerHTML = '';
     showDeckPreviewModal(container, deck, args);
@@ -5338,6 +5395,7 @@ function showDeckPreviewModal(container, deck, args) {
     btn.textContent = 'Regenerating…';
     try {
       const fresh = await generateDeck(args);
+      Object.assign(fresh, await schoolDeckLook());
       close();
       showDeckPreviewModal(container, fresh, args);
     } catch (err) {

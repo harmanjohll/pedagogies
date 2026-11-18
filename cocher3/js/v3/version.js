@@ -6,10 +6,15 @@
  * teachers should hear about it. Raise CACHE in ../../sw.js with it.
  */
 
-export const VERSION = '3.10.0';
+export const VERSION = '3.11.0';
 
 /* Newest first. Shown once to a returning teacher, in Co-Cher 3 only. */
 export const NOTES = [
+  { version: '3.11.0', items: [
+    ['Slide Decks, Much Stronger', 'Open a deck and choose "Edit with Co-Cher": see every slide, move, add or remove them, and tell Co-Cher what to change in your own words. Decks carry your school\u2019s colours, open with the hook, and download as PowerPoint.'],
+    ['Groups and Seats, Together', 'One tool: groups then seats, groups only, or seats only.'],
+    ['How Did It Go', 'After a lesson, two taps on Now: what worked, what to change. Your next plan for that class reads them.'],
+  ] },
   { version: '3.10.0', items: [
     ['New Lesson', 'In Lessons: four quick choices (who, what, how it should feel, how to begin) and Co-Cher drafts a one screen lesson, or asks you a few questions first.'],
     ['Your Scheme of Work, Followed', 'Pick the scheme of work and the week; the lesson stays inside it. With none, Co-Cher checks the lesson against the web.'],

@@ -452,6 +452,11 @@ html.v3:not([data-look="classic"]) .cce-content { max-width: 1200px !important; 
 .v3-rowpick { padding: 8px 12px; font-size: .875rem; min-height: 40px; }
 .v3-plan-go { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 
+/* The two tap reflection: small ticks, not cards. */
+.v3-ticks { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.v3-ticks .v3-feel { padding: 8px 12px; min-height: 44px; }
+.v3-ticks .v3-feel b { font-weight: 500; }
+
 /* The planner's tools: those not kept in view wait behind "More tools". */
 .v3-shelved .v3-tool-off { display: none !important; }
 .v3-shelved > div:not(:has(button:not(.v3-tool-off))) { display: none; }      /* a group with nothing in view */
