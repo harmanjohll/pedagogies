@@ -6,10 +6,13 @@
  * teachers should hear about it. Raise CACHE in ../../sw.js with it.
  */
 
-export const VERSION = '3.7.0';
+export const VERSION = '3.8.0';
 
 /* Newest first. Shown once to a returning teacher, in Co-Cher 3 only. */
 export const NOTES = [
+  { version: '3.8.0', items: [
+    ['Send by Teams', 'In Lessons, Send and in Classes, Handover: pick a colleague, and Co-Cher saves the file and opens your Teams chat with the message written. Drag the file in and send.'],
+  ] },
   { version: '3.7.0', items: [
     ['No more "model unavailable"', 'If the AI model on your device cannot be used with your key, Co-Cher now finds one that can and carries on.'],
     ['Word, PowerPoint and Excel files', 'Attach them in the lesson planner, and upload them wherever a PDF was accepted.'],
