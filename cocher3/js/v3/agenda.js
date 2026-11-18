@@ -117,7 +117,7 @@ export function openEntry(entry, redraw) {
     body: `
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div><label class="input-label" for="ag-title">What needs doing</label>
-          <input class="input" id="ag-title" maxlength="140" value="${esc(e.title)}" placeholder="Rates of reaction, 3E Chemistry" autocomplete="off"></div>
+          <input class="input" id="ag-title" maxlength="140" value="${esc(e.title)}" placeholder="Topic or task, and the class" autocomplete="off"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div><label class="input-label" for="ag-kind">Kind</label>
             <select class="input" id="ag-kind">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}"${k === e.kind ? ' selected' : ''}>${v.label}</option>`).join('')}</select></div>

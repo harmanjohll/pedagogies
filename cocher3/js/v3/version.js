@@ -6,10 +6,16 @@
  * teachers should hear about it. Raise CACHE in ../../sw.js with it.
  */
 
-export const VERSION = '3.6.0';
+export const VERSION = '3.7.0';
 
 /* Newest first. Shown once to a returning teacher, in Co-Cher 3 only. */
 export const NOTES = [
+  { version: '3.7.0', items: [
+    ['No more "model unavailable"', 'If the AI model on your device cannot be used with your key, Co-Cher now finds one that can and carries on.'],
+    ['Word, PowerPoint and Excel files', 'Attach them in the lesson planner, and upload them wherever a PDF was accepted.'],
+    ['Scheme of work as a file', 'In Auto-Lesson, download a generated scheme of work as Word or Excel.'],
+    ['Prompts for every subject', 'Lesson prompts name your subject and level only when Co-Cher is sure of them. Otherwise you fill them in.'],
+  ] },
   { version: '3.6.0', items: [
     ['Co-Cher 3 is the main Co-Cher', 'The main address now opens here. Your classes and lessons are the same ones; nothing has moved.'],
     ['Works without wifi', 'Once you have opened Co-Cher here, it opens again offline. Online, you always get the newest version.'],

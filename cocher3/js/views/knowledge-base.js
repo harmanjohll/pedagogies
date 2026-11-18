@@ -545,7 +545,7 @@ function showUploadModal(container, defaultCategory = null) {
         </select>
       </div>
       <div class="input-group">
-        <label class="input-label">Upload File (.txt, .md, .csv, .pdf)</label>
+        <label class="input-label">Upload File (.pdf, .docx, .pptx, .xlsx, .txt, .md, .csv)</label>
         <div id="upload-zone-mount"></div>
       </div>
       <div class="input-group">

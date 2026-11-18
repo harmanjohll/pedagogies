@@ -308,6 +308,66 @@ function bullets(text) {
   return text.split('\n').map(l => l.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '').trim()).filter(Boolean);
 }
 
+/* ── A scheme of work as a file ──
+ * Word: an HTML document Word opens and edits (the same pattern the RAMS
+ * export uses). Excel: a real .xlsx through SheetJS, one row per week, with
+ * the overview, outcomes, assessment and resources on a second sheet.
+ * If the AI's answer did not come in the expected sections, the Word file
+ * carries the text as written and Excel is declined, with a plain reason. */
+function sowParts(raw) {
+  const s = parseSections(raw || '');
+  const weeks = bullets(s.TOPIC_SEQUENCE).map(w => { const p = w.split('|').map(x => x.trim());
+    const m = (p[0] || '').match(/^(Week\s*[\d\-–to ]+)\s*[:.\-]?\s*(.*)$/i);
+    return { week: m ? m[1].trim() : '', topic: m ? m[2].trim() : (p[0] || ''), concepts: p[1] || '', domain: p[2] || '', pedagogy: p[3] || '' }; });
+  return { s, weeks, overview: bullets(s.UNIT_OVERVIEW), outcomes: bullets(s.LEARNING_OUTCOMES), assessment: bullets(s.ASSESSMENT_STRATEGY), resources: bullets(s.RESOURCES) };
+}
+
+function saveBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+export function downloadSoW(raw, params, kind) {
+  if (!raw) throw new Error('There is no scheme of work to download yet.');
+  const p = sowParts(raw);
+  const title = `Scheme of Work: ${params.topic || 'Unit'} (${[params.subject, params.level].filter(Boolean).join(', ')})`;
+  const file = `SoW ${params.subject || ''} ${params.level || ''} ${params.topic || ''}`.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+  const h = (t) => escapeHtml(String(t || ''));
+
+  if (kind === 'excel') {
+    const X = window.XLSX;
+    if (!X) throw new Error('The Excel maker has not loaded yet. Check your connection and try again.');
+    if (!p.weeks.length) throw new Error('This scheme of work has no week by week table to put in Excel. Download Word instead.');
+    const wb = X.utils.book_new();
+    const rows = [['Week', 'Topic', 'Key concepts', 'E21CC domain', 'Pedagogy'], ...p.weeks.map(w => [w.week, w.topic, w.concepts, w.domain, w.pedagogy])];
+    const ws = X.utils.aoa_to_sheet(rows); ws['!cols'] = [{ wch: 10 }, { wch: 32 }, { wch: 44 }, { wch: 18 }, { wch: 30 }];
+    X.utils.book_append_sheet(wb, ws, 'Topic sequence');
+    const about = [[title], [], ['Overview'], ...p.overview.map(x => [x]), [], ['Learning outcomes'], ...p.outcomes.map(x => [x]), [], ['Assessment'], ...p.assessment.map(x => [x]), [], ['Resources'], ...p.resources.map(x => [x])];
+    const ws2 = X.utils.aoa_to_sheet(about); ws2['!cols'] = [{ wch: 100 }];
+    X.utils.book_append_sheet(wb, ws2, 'Overview');
+    X.writeFile(wb, `${file}.xlsx`);
+    return;
+  }
+
+  const list = (items) => items.length ? `<ul>${items.map(x => `<li>${h(x)}</li>`).join('')}</ul>` : '';
+  const cell = 'border:1px solid #999;padding:4px 6px;vertical-align:top;';
+  const body = Object.keys(p.s).length ? `
+    ${p.overview.length ? `<h2>Overview</h2>${list(p.overview)}` : ''}
+    ${p.outcomes.length ? `<h2>Learning outcomes</h2>${list(p.outcomes)}` : ''}
+    ${p.weeks.length ? `<h2>Topic sequence</h2><table><tr>${['Week', 'Topic', 'Key concepts', 'E21CC domain', 'Pedagogy'].map(x => `<th style="${cell}background:#eef1f0;text-align:left;">${x}</th>`).join('')}</tr>
+      ${p.weeks.map(w => `<tr>${[w.week, w.topic, w.concepts, w.domain, w.pedagogy].map(x => `<td style="${cell}">${h(x)}</td>`).join('')}</tr>`).join('')}</table>` : ''}
+    ${p.assessment.length ? `<h2>Assessment</h2>${list(p.assessment)}` : ''}
+    ${p.resources.length ? `<h2>Resources</h2>${list(p.resources)}` : ''}`
+    : `<pre style="white-space:pre-wrap;font-family:Calibri,Arial,sans-serif;">${h(raw)}</pre>`;
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>${h(title)}</title>
+<style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1e293b;}h1{font-size:16pt;}h2{font-size:12pt;margin:14pt 0 4pt;}table{border-collapse:collapse;width:100%;}li{margin-bottom:2pt;}</style></head>
+<body><h1>${h(title)}</h1>${body}</body></html>`;
+  saveBlob(new Blob(['\ufeff', html], { type: 'application/msword' }), `${file}.doc`);
+}
+
 /* ── Render a single step's structured output ── */
 function renderStepOutput(stepId, raw, params) {
   const s = parseSections(raw);
@@ -585,9 +645,14 @@ export function render(container) {
     const visualBtns = s.id === 'lesson' ? `
       <button class="btn btn-ghost btn-sm" data-visual="image" title="Uses your Gemini key's image model — costs quota">&#127912; Hook visual</button>
       <button class="btn btn-ghost btn-sm" data-visual="svg" title="Free — drawn by the text model as SVG">&#128506;&#65039; Concept diagram</button>` : '';
+    // A scheme of work leaves Co-Cher in the forms departments keep them in.
+    const fileBtns = s.id === 'sow' ? `
+      <button class="btn btn-ghost btn-sm" data-sow-file="word" title="A Word document, ready to edit">Download Word</button>
+      <button class="btn btn-ghost btn-sm" data-sow-file="excel" title="An Excel sheet, one row per week">Download Excel</button>` : '';
     return `
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px dashed var(--border-light);">
         ${saveBtn}
+        ${fileBtns}
         ${visualBtns}
         <button class="btn btn-ghost btn-sm" data-adjust-step="${s.id}">&#8635; Adjust &amp; re-run</button>
       </div>
@@ -1021,6 +1086,13 @@ export function render(container) {
           showToast(`Saved to Knowledge Base: "${title}"${id === 'sow' ? ' — the planner will auto-attach it as context.' : ''}`, 'success');
         }
         renderView();
+      });
+    });
+
+    container.querySelectorAll('[data-sow-file]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try { downloadSoW(outputs.sow, params, btn.dataset.sowFile); }
+        catch (err) { showToast(err.message || 'Could not make the file.', 'danger'); }
       });
     });
 

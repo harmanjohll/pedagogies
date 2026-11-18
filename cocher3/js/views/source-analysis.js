@@ -836,7 +836,7 @@ export function render(container) {
         <hr class="sa-divider" />
 
         <div class="sa-field" style="margin-bottom:16px;">
-          <label class="sa-label">Upload Source File (.txt, .md, .csv, .pdf)</label>
+          <label class="sa-label">Upload Source File (.pdf, .docx, .pptx, .xlsx, .txt, .md, .csv)</label>
           <div id="sa-manual-upload-mount"></div>
           <div id="sa-manual-source-ref" style="display:none;"></div>
         </div>

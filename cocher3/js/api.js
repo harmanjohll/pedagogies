@@ -133,7 +133,7 @@ async function fetchWithRetry(url, init, { retries = 2, timeoutMs = DEFAULT_TIME
 function friendlyApiError(status, raw) {
   if (status === 429) return 'Gemini is rate-limiting your key (free-tier quota). Co-Cher already retried; wait a minute and try again.';
   if (status === 401 || status === 403) return 'Your Gemini API key was rejected. Check it in Settings → Gemini API Key.';
-  if (status === 404) return 'The selected model is unavailable. Pick another model in Settings.';
+  if (status === 404) return 'Co-Cher could not find a Gemini model that this API key can use. Check the key in Settings (it may be for a different Google service), or create a fresh key at aistudio.google.com.';
   if (status >= 500) return 'Gemini had a server hiccup. Co-Cher retried without luck; try again shortly.';
   return raw;
 }
@@ -141,6 +141,63 @@ function friendlyApiError(status, raw) {
 /** Map a stored model id that no longer exists to the current default. */
 export function normalizeModel(id) {
   return AVAILABLE_MODELS.some(m => m.id === id) ? id : 'gemini-2.5-flash';
+}
+
+/* ── A model that heals itself ──
+ * "The selected model is unavailable" used to reach teachers whenever the
+ * model named on their device could not be used with their key: Google
+ * retires model names, and a key does not always carry every model (Pro is
+ * the usual one). The cure was a trip to Settings that most never made.
+ *
+ * Now, when Gemini answers 404 for the model, Co-Cher asks Gemini which
+ * models this key CAN use, picks the best general one, remembers it on the
+ * device, and repeats the request once. The teacher sees their answer, not an
+ * error. The choice is kept per wanted model and re-checked after a week.
+ */
+const MODEL_AUTO_KEY = 'cocher3_model_auto';
+const MODEL_AUTO_TTL = 7 * 24 * 3600 * 1000;
+const readAuto = () => { try { return JSON.parse(localStorage.getItem(MODEL_AUTO_KEY) || '{}') || {}; } catch { return {}; } };
+const writeAuto = (v) => { try { localStorage.setItem(MODEL_AUTO_KEY, JSON.stringify(v)); } catch { /* private mode */ } };
+
+/** The model to actually call: the stand in found earlier for `wanted`, if still fresh. */
+function effectiveModel(wanted) {
+  const a = readAuto()[wanted];
+  return a && a.use && Date.now() - (a.at || 0) < MODEL_AUTO_TTL ? a.use : wanted;
+}
+/** What Settings can show: { wanted, use } when a stand in is in force, else null. */
+export function modelStandIn() {
+  const wanted = normalizeModel(Store.get('model') || 'gemini-2.5-flash');
+  const use = effectiveModel(wanted);
+  return use !== wanted ? { wanted, use } : null;
+}
+
+/** Rank the text models a key offers; higher is better. Null for ones Co-Cher cannot use. */
+function scoreModel(m, wantPro) {
+  const id = String(m.name || '').replace(/^models\//, '');
+  if (!/^gemini-/.test(id)) return null;
+  if (!(m.supportedGenerationMethods || []).includes('generateContent')) return null;
+  if (/(image|tts|audio|live|embedding|vision|robotics|computer-use|nano|thinking-exp)/i.test(id)) return null;
+  const v = parseFloat((id.match(/^gemini-(\d+(?:\.\d+)?)/) || [])[1] || '0');
+  let score = v * 100;
+  const pro = /-pro/.test(id), flash = /-flash/.test(id), lite = /-lite/.test(id);
+  if (wantPro ? pro : flash && !lite) score += 50;       // the family the teacher chose
+  else if (flash && !lite) score += 30;
+  else if (pro) score += 10;
+  if (lite) score -= 20;
+  if (/preview|exp/.test(id)) score -= 120;              // a settled model before a trial one, even a newer trial
+  if (/latest$/.test(id)) score += 5;
+  return { id, score };
+}
+
+/** Ask Gemini what this key can use and pick the best. Null if nothing usable or the ask fails. */
+async function findUsableModel(apiKey, wanted) {
+  try {
+    const res = await fetch(`${ENDPOINT}?pageSize=200`, { headers: { 'x-goog-api-key': apiKey } });
+    if (!res.ok) return null;
+    const list = ((await res.json()).models || []).map(m => scoreModel(m, /-pro/.test(wanted))).filter(Boolean)
+      .filter(m => m.id !== wanted).sort((a, b) => b.score - a.score);
+    return list.length ? list[0].id : null;
+  } catch { return null; }
 }
 
 /* ── Defensive JSON extraction for jsonMode responses ──
@@ -167,7 +224,8 @@ export async function sendChat(messages, options = {}) {
   const apiKey = Store.get('apiKey');
   // options.model lets a caller pick a heavier model for one call
   // (e.g. complex simulation builds) without changing the app default
-  const model = normalizeModel(options.model || Store.get('model') || 'gemini-2.5-flash');
+  const wantedModel = normalizeModel(options.model || Store.get('model') || 'gemini-2.5-flash');
+  let model = effectiveModel(wantedModel);
 
   if (!apiKey) {
     throw new Error('No API key configured. Please add your Gemini API key in Settings.');
@@ -266,11 +324,24 @@ export async function sendChat(messages, options = {}) {
   }
 
   // Key travels in a header (not the URL) so it can't leak into logs/history
-  const res = await fetchWithRetry(`${ENDPOINT}/${model}:generateContent`, {
+  const call = (m) => fetchWithRetry(`${ENDPOINT}/${m}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify(body)
   }, { timeoutMs: options.timeoutMs });
+
+  let res = await call(model);
+
+  // The model is not there for this key: find one that is, remember it, try once more.
+  if (res.status === 404) {
+    const found = await findUsableModel(apiKey, model);
+    if (found) {
+      const auto = readAuto(); auto[wantedModel] = { use: found, at: Date.now() }; writeAuto(auto);
+      console.info(`Co-Cher: "${model}" is not available for this key; using "${found}".`);
+      model = found;
+      res = await call(model);
+    }
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

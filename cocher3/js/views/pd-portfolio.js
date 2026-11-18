@@ -1036,7 +1036,7 @@ function showAddMaterialModal(folderId, defaultType, onDone) {
       </div>
       ${!isNote ? `
         <div class="input-group">
-          <label class="input-label">Upload File (.txt, .md, .csv, .pdf)</label>
+          <label class="input-label">Upload File (.pdf, .docx, .pptx, .xlsx, .txt, .md, .csv)</label>
           <div id="mat-upload-mount"></div>
         </div>
         <div id="mat-source-ref" style="display:none;"></div>

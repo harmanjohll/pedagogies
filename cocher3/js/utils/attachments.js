@@ -18,9 +18,19 @@
  * so a few screenshots can never blow the storage quota.
  */
 
-// accept= string for the hidden <input type="file"> — images + PDF.
+import { extractText } from './doc-extract.js';
+
+// accept= string for the hidden <input type="file">: images, PDF, and Office or text files.
 export const ATTACH_ACCEPT =
-  'image/png,image/jpeg,image/jpg,image/webp,application/pdf,.png,.jpg,.jpeg,.webp,.pdf';
+  'image/png,image/jpeg,image/jpg,image/webp,application/pdf,.png,.jpg,.jpeg,.webp,.pdf,.docx,.pptx,.xlsx,.xls,.txt,.md,.csv';
+
+/* Word, PowerPoint, Excel and plain text: Gemini cannot take these as files,
+ * so Co-Cher reads the words out of them on the device (utils/doc-extract.js)
+ * and sends the words. Old .doc and .ppt files cannot be read this way. */
+const DOC_EXT = /\.(docx|pptx|xlsx|xls|txt|text|md|markdown|csv)$/i;
+const OLD_OFFICE = /\.(doc|ppt)$/i;
+const DOC_TEXT_CAP = 60000;               // characters; keeps a long scheme of work inside the request
+function isDocFile(file) { return DOC_EXT.test(file.name || ''); }
 
 const MAX_INLINE_BYTES = 6 * 1024 * 1024; // ~6MB raw → ~8MB base64, safely under Gemini's ~20MB request ceiling
 const IMAGE_MAX_EDGE = 1600;              // longest-side px after downscale — keeps worksheets legible but light
@@ -38,7 +48,7 @@ function isPdfFile(file) {
 
 /** True when this file is something we know how to attach (image or PDF). */
 export function isAcceptedAttachment(file) {
-  return !!file && (isImageFile(file) || isPdfFile(file));
+  return !!file && (isImageFile(file) || isPdfFile(file) || isDocFile(file) || OLD_OFFICE.test(file.name || ''));
 }
 
 function readAsDataURL(file) {
@@ -155,7 +165,16 @@ async function buildPdfAttachment(file) {
 export async function buildAttachment(file) {
   if (isImageFile(file)) return buildImageAttachment(file);
   if (isPdfFile(file)) return buildPdfAttachment(file);
-  throw new Error('Only images (PNG/JPG/WebP/GIF) and PDFs can be attached.');
+  if (OLD_OFFICE.test(file.name || '')) {
+    throw new Error(`"${file.name}" is in the old Office format. Open it and use Save As to make a .docx or .pptx (or a PDF), then attach that.`);
+  }
+  if (isDocFile(file)) {
+    const { text } = await extractText(file);
+    const clean = String(text || '').trim();
+    if (!clean) throw new Error(`No readable text in "${file.name}". If it is a scan, attach it as a PDF or a photo.`);
+    return { name: file.name, kind: 'doc-text', text: clean.length > DOC_TEXT_CAP ? clean.slice(0, DOC_TEXT_CAP) + '\n\n[The rest of the file is not included]' : clean };
+  }
+  throw new Error('Attach an image, a PDF, or a Word, PowerPoint, Excel or text file.');
 }
 
 /**
@@ -167,12 +186,12 @@ export async function buildAttachment(file) {
 export function toMultimodalMessage(m) {
   const attachments = Array.isArray(m.attachments) ? m.attachments : [];
   const inlineParts = attachments.filter(a => a && a.data && (a.kind === 'image' || a.kind === 'pdf'));
-  const textFallbacks = attachments.filter(a => a && a.kind === 'pdf-text' && a.text);
+  const textFallbacks = attachments.filter(a => a && (a.kind === 'pdf-text' || a.kind === 'doc-text') && a.text);
   if (!inlineParts.length && !textFallbacks.length) {
     return { role: m.role, content: m.content };
   }
   let text = typeof m.content === 'string' ? m.content : '';
-  textFallbacks.forEach(a => { text += `\n\n[Attached PDF "${a.name}" — extracted text]:\n${a.text}`; });
+  textFallbacks.forEach(a => { text += `\n\n[Attached ${a.kind === 'pdf-text' ? 'PDF' : 'file'} "${a.name}" — extracted text]:\n${a.text}`; });
   const parts = [{ text }];
   inlineParts.forEach(a => parts.push({ inlineData: { mimeType: a.mimeType, data: a.data } }));
   return { role: m.role, content: parts };

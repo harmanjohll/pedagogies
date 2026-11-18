@@ -5,7 +5,7 @@
  */
 
 import { Store, getStorageEstimate, FRAMEWORK_PURPOSES } from '../state.js';
-import { validateApiKey, AVAILABLE_MODELS, normalizeModel, sendChat } from '../api.js';
+import { validateApiKey, AVAILABLE_MODELS, normalizeModel, sendChat, modelStandIn } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { confirmDialog, openModal } from '../components/modals.js';
 import { extractText, fileExt } from '../utils/doc-extract.js';
@@ -751,6 +751,7 @@ export function render(container) {
               </option>
             `).join('')}
           </select>
+          ${(() => { const st = modelStandIn(); return st ? `<p style="font-size:0.8125rem;color:var(--ink-muted);margin-top:var(--sp-3);line-height:1.5;">Your API key cannot use ${st.wanted} right now, so Co-Cher is using <strong>${st.use}</strong> in its place. Nothing for you to do.</p>` : ''; })()}
         </div>
 
         <!-- Appearance -->

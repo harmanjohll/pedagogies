@@ -803,9 +803,14 @@ function buildQuickPrompts(classes) {
     ? [planClassContext.level]
     : [...new Set(classes.map(c => c.level).filter(Boolean))];
 
-  const subj = subjects[0] || '[subject]';
-  const level = levels[0] || `[level e.g. ${exampleLevel()}]`;
-  const hasSub = subjects.length > 0;
+  /* Name a subject or level only when it is certain: a class was chosen, or
+   * every class the teacher holds shares it. Otherwise leave a placeholder the
+   * teacher fills in. (It used to take the FIRST class's subject, so a teacher
+   * of several subjects, or one still on the sample classes, was offered
+   * Chemistry prompts whatever they taught.) */
+  const subj = subjects.length === 1 ? subjects[0] : '[subject]';
+  const level = levels.length === 1 ? levels[0] : `[level e.g. ${exampleLevel()}]`;
+  const hasSub = subjects.length === 1;
 
   // Subject-specific prompts — each with label, desc (card hint), and prompt (full editable text)
   const subjectBank = {
@@ -1334,7 +1339,7 @@ export function render(container) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 Attach Context
               </button>
-              <button class="btn btn-ghost btn-sm" id="attach-file-btn" title="Attach an image or PDF for Co-Cher to read (worksheet, diagram, textbook page, student work…)">
+              <button class="btn btn-ghost btn-sm" id="attach-file-btn" title="Attach an image, PDF, Word, PowerPoint or Excel file for Co-Cher to read (worksheet, diagram, textbook page, student work…)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 Add file
               </button>
@@ -1915,7 +1920,7 @@ export function render(container) {
       const thumb = a.kind === 'image' && a.previewUrl
         ? `<img src="${a.previewUrl}" alt="" style="width:28px;height:28px;object-fit:cover;border-radius:4px;flex-shrink:0;" />`
         : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
-      const note = a.kind === 'pdf-text' ? ' <span style="color:var(--ink-faint);">(text only)</span>' : '';
+      const note = (a.kind === 'pdf-text' || a.kind === 'doc-text') ? ' <span style="color:var(--ink-faint);">(text only)</span>' : '';
       return `<span class="composer-attach-chip" style="display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg-subtle);border:1px solid var(--border-light);border-radius:var(--radius);font-size:0.75rem;max-width:220px;">
         ${thumb}
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(a.name)}${note}</span>
@@ -1935,7 +1940,7 @@ export function render(container) {
     if (!files.length) return;
     const accepted = files.filter(isAcceptedAttachment);
     const rejected = files.length - accepted.length;
-    if (rejected > 0) showToast(`${rejected} file(s) skipped — only images and PDFs can be attached.`, 'danger');
+    if (rejected > 0) showToast(`${rejected} file(s) skipped — attach an image, a PDF, or a Word, PowerPoint, Excel or text file.`, 'danger');
     for (const file of accepted) {
       if (pendingAttachments.length >= 6) { showToast('Up to 6 files per message.', 'danger'); break; }
       try {

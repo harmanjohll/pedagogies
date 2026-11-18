@@ -2,7 +2,8 @@
  * Co-Cher PDF & File Upload Component
  * ====================================
  * Reusable drag-drop + browse upload widget with PDF page-range extraction.
- * Supports .txt, .md, .csv, .pdf files.
+ * Supports .txt, .md, .csv, .pdf, and Word, PowerPoint and Excel files
+ * (.docx, .pptx, .xlsx), read on the device by utils/doc-extract.js.
  *
  * Usage:
  *   import { createFileUploadZone } from '../components/pdf-upload.js';
@@ -18,8 +19,9 @@
  */
 
 import { showToast } from './toast.js';
+import { extractText, fileExt } from '../utils/doc-extract.js';
 
-const ACCEPTED_TYPES = '.txt,.md,.csv,.text,.pdf';
+const ACCEPTED_TYPES = '.txt,.md,.csv,.text,.pdf,.docx,.pptx,.xlsx,.xls';
 
 const UPLOAD_ICON = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5" style="margin:0 auto var(--sp-2);display:block;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`;
 
@@ -158,7 +160,7 @@ export function createFileUploadZone({ onContent, compact = false, placeholder =
   el.className = 'file-upload-zone';
 
   const dropText = placeholder || 'Drop file here or click to browse';
-  const supportText = 'Supports .txt, .md, .csv, .pdf';
+  const supportText = 'Supports .pdf, .docx, .pptx, .xlsx, .txt, .md, .csv';
 
   el.innerHTML = `
     <style>
@@ -268,6 +270,24 @@ export function createFileUploadZone({ onContent, compact = false, placeholder =
       };
       reader.readAsArrayBuffer(file);
 
+    } else if (['doc', 'ppt'].includes(fileExt(file))) {
+      showToast(`"${file.name}" is in the old Office format. Save it as .docx or .pptx (or PDF) and try again.`, 'danger');
+      statusEl.textContent = supportText;
+    } else if (['docx', 'pptx', 'xlsx', 'xls'].includes(fileExt(file))) {
+      // Word, PowerPoint, Excel: read the words out on this device
+      pdfRangeContainer.innerHTML = '';
+      pdfArrayBuffer = null;
+      statusEl.textContent = `Reading ${file.name}...`;
+      extractText(file).then(({ text }) => {
+        if (!String(text || '').trim()) throw new Error('no readable text in it (a scan, perhaps)');
+        statusEl.textContent = `Loaded: ${file.name}`;
+        dropZone.classList.add('has-file');
+        onContent(text, { filename: file.name, isPdf: false, totalPages: null, pageRange: null, extractedPages: null });
+      }).catch(err => {
+        showToast(`Could not read ${file.name}: ${err.message}`, 'danger');
+        statusEl.textContent = supportText;
+        dropZone.classList.remove('has-file');
+      });
     } else {
       // Plain text file
       pdfRangeContainer.innerHTML = '';

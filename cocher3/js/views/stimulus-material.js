@@ -605,7 +605,7 @@ export function render(container) {
               <div id="sm-manual-reflections" style="display:none;"></div>
 
               <div class="sm-field" style="margin-bottom:14px;">
-                <label class="sm-label">Upload File (.txt, .md, .csv, .pdf)</label>
+                <label class="sm-label">Upload File (.pdf, .docx, .pptx, .xlsx, .txt, .md, .csv)</label>
                 <div id="sm-manual-upload-mount"></div>
               </div>
 
