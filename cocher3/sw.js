@@ -12,7 +12,7 @@
  * Not kept: videos (large, and played in ranges), AI calls, other apps.
  * Scope is this folder only; Co-Cher 1 and 2 have their own workers.
  */
-const CACHE = 'cocher3-v8';
+const CACHE = 'cocher3-v9';
 const KEEP_HOSTS = ['cdn.jsdelivr.net', 'cdn.sheetjs.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', () => self.skipWaiting());

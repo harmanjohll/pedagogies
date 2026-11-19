@@ -26,6 +26,8 @@
 import { Store } from '../state.js';
 import { openModal } from '../components/modals.js';
 import { exampleLevel } from '../utils/vocabulary.js';
+import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
+import { markStart } from './start.js';
 
 const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -68,6 +70,7 @@ export function renderNewLesson(container) {
       `Plan a ${st.minutes} minute ${level() || `[level e.g. ${exampleLevel()}]`} ${subject() || '[subject]'} lesson on ${st.topic.trim() || '[topic]'}${who}.`,
       `Make it a lesson students enjoy and remember. It should feel like: ${feel}. Open with a hook of that kind.`,
       `Keep the plan to one screen: the hook in one or two lines, three or four parts with times, and one check for learning at the end. No long prose.`,
+      `Follow the Singapore Teaching Practice: tag each part with the Lesson Enactment Teaching Area it serves, by its exact name, and name the check for learning as Checking for Understanding and Providing Feedback.`,
     ];
     if (cls() && lastReflection(cls().id)) lines.push(`${lastReflection(cls().id)}. Keep what worked and act on what to change.`);
     if (mode === 'ask') lines.push('Before you plan, ask me up to three short questions, one line each, that would most improve the lesson. Then wait for my answers.');
@@ -78,6 +81,7 @@ export function renderNewLesson(container) {
 
   function go(mode) {
     try { sessionStorage.setItem('cocher3_plan_brief', JSON.stringify(brief(mode))); } catch { /* private mode: the planner opens empty */ }
+    markStart('lesson');
     location.hash = '#/lesson-planner';
   }
 
@@ -85,7 +89,7 @@ export function renderNewLesson(container) {
     const c = cls(); const fit = fitting(); const sow = sows().find(u => u.id === st.sowId) || null; const rows = sow ? sowRows(sow) : [];
     container.innerHTML = `<div class="main-scroll"><div class="v3-page v3-plan">
       <div class="v3-head"><div><div class="v3-eyebrow">Lessons</div><h1 class="v3-title">New Lesson</h1>
-        <p class="v3-lede">Four quick choices. Co-Cher does the rest, and you change anything after.</p></div></div>
+        <p class="v3-lede">Lesson Preparation, in four quick choices. Co-Cher drafts the lesson along the Singapore Teaching Practice, and you change anything after.</p></div></div>
 
       <div class="v3-panel"><div class="v3-h">Who Is It For</div>
         <div class="v3-plan-row">
@@ -101,7 +105,8 @@ export function renderNewLesson(container) {
 
       <div class="v3-panel"><div class="v3-h">What Is It About</div>
         <label class="input-label" for="pl-topic">Topic</label>
-        <input class="input" id="pl-topic" value="${esc(st.topic)}" placeholder="The topic, in a few words" autocomplete="off">
+        <div class="v3-keyrow"><input class="input" id="pl-topic" value="${esc(st.topic)}" placeholder="The topic, in a few words" autocomplete="off">
+          ${isVoiceInputSupported() ? '<button class="btn btn-secondary v3-mic" id="pl-mic" aria-pressed="false" title="Say the topic instead of typing it">' + MIC + '<span>Speak</span></button>' : ''}</div>
         ${fit.length ? `<div style="margin-top:16px;"><label class="input-label" for="pl-sow">From your scheme of work</label>
             <select class="input" id="pl-sow"><option value="">Choose one, and the lesson will follow it</option>${fit.map(u => `<option value="${esc(u.id)}"${u.id === st.sowId ? ' selected' : ''}>${esc(u.title)}</option>`).join('')}</select>
             ${sow ? (rows.length ? `<p class="v3-row-s" style="margin:12px 0 8px;">Where is this lesson in it? Pick one and the topic fills in.</p>
@@ -117,6 +122,7 @@ export function renderNewLesson(container) {
       <div class="v3-plan-go">
         <button class="btn btn-primary" data-go="draft">Draft it for me</button>
         <button class="btn btn-secondary" data-go="ask">Ask me a few questions first</button>
+        <a class="btn btn-ghost" href="#/autopilot" title="Auto-Lesson: scheme of work, lesson, assessment and reflection in one pass">Plan the whole unit in one pass</a>
         <a class="btn btn-ghost" href="#/lesson-planner">Skip: open the planner</a>
       </div>
       ${Store.get('apiKey') ? '' : '<p class="v3-row-s" style="margin-top:12px;">No AI key on this device yet, so the words will be placed in the planner for you, unsent. Add a key in Settings.</p>'}
@@ -132,8 +138,62 @@ export function renderNewLesson(container) {
     container.querySelectorAll('[data-row]').forEach(b => b.onclick = () => { st.row = +b.dataset.row; st.topic = rowTopic(rows[st.row]); draw(); });
     container.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { st.feels.has(b.dataset.feel) ? st.feels.delete(b.dataset.feel) : st.feels.add(b.dataset.feel); b.setAttribute('aria-pressed', st.feels.has(b.dataset.feel)); });
     container.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+    speakInto(q('#pl-mic'), q('#pl-topic'), (text) => { st.topic = text; });
   }
   draw();
+}
+
+/* ══════════ Voice ══════════
+ * A teacher on a phone would sooner say it than type it. `speakInto` turns a
+ * button into press to talk for one field. It only ever fills the field: the
+ * teacher still reads it and sends it. Hidden where the device cannot listen. */
+const MIC = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.500 11a6.500 6.500 0 0 0 13 0M12 17.500V21"/></svg>';
+function speakInto(button, field, onText) {
+  if (!button || !field || !isVoiceInputSupported()) return;
+  const word = button.querySelector('span');
+  const idle = word ? word.textContent : '';
+  let on = false;
+  const set = (v, label) => { on = v; button.setAttribute('aria-pressed', String(v)); if (word) word.textContent = label || (v ? 'Listening…' : idle); };
+  const d = createDictation({
+    onPhase: (ph) => { if (word) word.textContent = ph === 'transcribing' ? 'Writing it down…' : 'Listening…'; },
+    onResult: (text) => { const t = String(text || '').trim(); if (!t) return; field.value = (field.value ? field.value.replace(/\s+$/, '') + ' ' : '') + t; field.dispatchEvent(new Event('input', { bubbles: true })); if (onText) onText(field.value); },
+    onError: () => set(false),
+    onEnd: () => set(false),
+  });
+  button.addEventListener('click', () => { if (on) { d.stop(); set(false); } else if (d.start()) set(true); });
+}
+
+/* ══════════ The planner on a phone ══════════
+ * On a narrow screen the planner shows one pane at a time. A lesson that
+ * already exists opens on the LESSON, with a slim bar at the foot: speak or
+ * type to change it. The writing pane itself is pared back: its optional
+ * extras (lens, frameworks) fold behind "Options", so the box, the mic and
+ * Send are what is on screen. */
+const PHONE = () => window.matchMedia('(max-width: 760px)').matches;
+function phonePlanner() {
+  const layout = document.getElementById('lp-layout') || document.querySelector('.lp-layout');
+  if (!layout || !PHONE()) return;
+  const chat = layout.querySelector('.lp-chat-col'), plan = layout.querySelector('.lp-plan-col');
+  if (!chat || !plan) return;
+  if (!layout.dataset.v3Phone) {                          // once for each time the planner is drawn
+    layout.dataset.v3Phone = '1';
+    const hasLesson = !!layout.querySelector('#chat-messages .chat-msg, #chat-messages [class*="assistant"]') || /\S/.test(layout.querySelector('#plan-content')?.textContent || '');
+    if (hasLesson) layout.classList.add('show-plan');
+  }
+  if (!plan.querySelector('#v3-askbar')) {
+    const bar = document.createElement('div'); bar.id = 'v3-askbar'; bar.className = 'v3-askbar';
+    bar.innerHTML = `${isVoiceInputSupported() ? `<button class="v3-mic" id="v3-ask-mic" title="Say what to change">${MIC}</button>` : ''}<button class="v3-ask" id="v3-ask-type">Tell Co-Cher what to change</button>`;
+    plan.appendChild(bar);
+    const toChat = () => { layout.classList.remove('show-plan'); const box = document.getElementById('chat-input'); if (box) box.focus(); };
+    bar.querySelector('#v3-ask-type').addEventListener('click', toChat);
+    bar.querySelector('#v3-ask-mic')?.addEventListener('click', () => { toChat(); document.getElementById('composer-mic-btn')?.click(); });
+  }
+  const tools = chat.querySelector('.chat-composer-toolbar');
+  if (tools && !tools.querySelector('#v3-opts')) {
+    const opt = document.createElement('button'); opt.id = 'v3-opts'; opt.type = 'button'; opt.className = 'btn btn-ghost btn-sm'; opt.textContent = 'Options'; opt.setAttribute('aria-expanded', 'false');
+    opt.addEventListener('click', () => { const open = tools.classList.toggle('v3-open'); opt.setAttribute('aria-expanded', String(open)); });
+    tools.appendChild(opt);
+  }
 }
 
 /* ══════════ The two tap reflection ══════════
@@ -230,11 +290,28 @@ function openTools(bar) {
   backdrop.querySelector('[data-act="reset"]').onclick = () => { keepTools(DEFAULT_TOOLS.slice()); close(); shelve(bar); };
 }
 
+/* The planner's header had eight buttons before a lesson existed. Save stays;
+ * staging is offered by the "Next" button; the ones used now and then (Print,
+ * Word, Snapshot, Share, Templates, and the two staging buttons for those who
+ * want them directly) wait under one "More". Their own buttons stay in the
+ * page, hidden, and the menu simply presses them. */
+const HEADER_MORE = [['auto-stage-btn', 'Stage it for me'], ['stage-lesson-btn', 'Stage it myself'], ['export-pdf-btn', 'Print'], ['export-word-btn', 'Word'], ['snapshot-btn', 'Snapshot'], ['share-lesson-btn', 'Share'], ['templates-btn', 'Templates']];
+function tidyHeader() {
+  const save = document.getElementById('save-lesson-btn'); if (!save || document.getElementById('v3-header-more')) return;
+  const found = HEADER_MORE.map(([id, label]) => [document.getElementById(id), label]).filter(([b]) => b);
+  if (!found.length) return;
+  found.forEach(([b]) => b.classList.add('v3-tucked'));   // the button only: a menu it opens (Templates) lives beside it and must still show
+  const wrap = document.createElement('details'); wrap.id = 'v3-header-more'; wrap.className = 'v3-morewrap';
+  wrap.innerHTML = `<summary class="btn btn-secondary btn-sm">More</summary><div class="v3-moremenu">${found.map(([b, label]) => `<button type="button" data-press="${esc(b.id)}">${esc(label)}</button>`).join('')}</div>`;
+  wrap.addEventListener('click', (e) => { const x = e.target.closest('[data-press]'); if (x) { wrap.removeAttribute('open'); document.getElementById(x.dataset.press)?.click(); } });
+  save.insertAdjacentElement('afterend', wrap);
+}
+
 /** Watch for the planner, and shelve its tools each time it draws them. */
 export function watchPlannerTools() {
   const root = document.getElementById('main-view') || document.body;
   let busy = false;
-  const run = () => { if (busy) return; busy = true; try { const bar = document.getElementById('ai-tools-bar'); if (bar) shelve(bar); } finally { busy = false; } };
+  const run = () => { if (busy) return; busy = true; try { const bar = document.getElementById('ai-tools-bar'); if (bar) shelve(bar); tidyHeader(); phonePlanner(); } finally { busy = false; } };
   new MutationObserver(run).observe(root, { childList: true, subtree: true });
   run();
 }

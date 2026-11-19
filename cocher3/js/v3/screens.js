@@ -19,6 +19,7 @@ import { mountEmbed, GENAPP } from '../components/app-embed.js';
 import { ymd, entriesForNow, entriesBetween, entryHTML, wireEntries } from './agenda.js';
 import { goalsHTML, wireGoals, allGoals } from './goals.js';
 import { openQuickReflect } from './planner.js';
+import { startHereHTML, wireStartHere } from './start.js';
 import { getDailyQuote, pickMilestone, markMilestoneSeen } from '../views/dashboard.js';
 import { getIdentity } from '../utils/identity.js';
 
@@ -200,6 +201,7 @@ export function renderSchool(container) {
       <button class="btn btn-ghost" id="v3-find">Find a student</button>
       <button class="btn btn-primary" data-add-entry="${ymd(new Date())}">Add entry</button>
     </div></div>
+    ${startHereHTML()}
     ${milestoneHTML()}
     <div class="v3-home">
       <a class="v3-home-tile now" href="#/now" data-place="now"><span class="k">Now</span><div id="v3-home-now"><span class="v3-row-s">Reading your day…</span></div><span class="go">Open Now →</span></a>
@@ -227,6 +229,7 @@ export function renderSchool(container) {
     if (b.dataset.mile === 'x') card.remove();
   });
   wireEntries(container, redraw);
+  wireStartHere(container, redraw);
   wireTileFlight(container);
   tilesFromDock(container);
   return () => { alive = false; };

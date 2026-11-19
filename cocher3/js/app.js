@@ -215,7 +215,7 @@ async function init() {
   // Consolidated first-run flow: welcome (shown before init) → onboarding intro
   // → guided spotlight tour. The four first-run systems are sequenced here so
   // they never stack on top of each other.
-  initOnboarding((res) => {
+  if (!shell) initOnboarding((res) => {   // Co-Cher 3 guides a new teacher from My School (Start Here) and its videos
     // Genuine new user who wants the walkthrough: start the tour once.
     if (!shell && res && res.shown && !res.skipped && !isTourComplete('main')) {
       // Small gap so the onboarding overlay is fully gone before the tour dims.
@@ -275,7 +275,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function startApp() {
     startPriming();                     // the teacher is known now — fetch their school's pack
     if (shouldShowWelcome()) {
-      renderWelcome(() => init());      // …while the welcome screen is on-screen
+      if (window.__cocherShell?.welcome) window.__cocherShell.welcome(() => init());   // Co-Cher 3 has its own first screen
+      else renderWelcome(() => init());      // …while the welcome screen is on-screen
     } else {
       init();
     }

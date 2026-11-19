@@ -8,7 +8,7 @@ import { Store } from './state.js';
 import { trackEvent } from './utils/analytics.js';
 import { getPreferredName } from './components/login.js';
 import { SCHEMA_PRESETS } from './utils/tracking.js';
-import { TEACHING_AREAS, actionsForArea, TEACHING_ACTION_OTHER } from './utils/stp.js';
+import { TEACHING_AREAS, actionsForArea, TEACHING_ACTION_OTHER , stpPromptText } from './utils/stp.js';
 import { schoolStage, defaultLevel } from './utils/vocabulary.js';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -52,7 +52,14 @@ Technology should amplify pedagogy, not replace it. Consider how digital tools c
 Respect the discipline the teacher works in. A Science lesson emphasises inquiry and evidence; a Language lesson emphasises expression and interpretation; a Humanities lesson emphasises perspective and analysis; a Mathematics lesson emphasises reasoning and modelling; a CCE lesson emphasises values clarification, ethical reasoning, and perspective-taking through discussion of real-world issues. Adapt your language, examples, and suggestions to the teacher's subject context. If no subject is specified, keep suggestions cross-disciplinary.
 
 ### Singapore Teaching Practice (STP)
-Align with the four Teaching Processes (non-hierarchical): Positive Classroom Culture, Lesson Preparation, Lesson Enactment, Assessment and Feedback.
+The STP is the spine of every lesson you help design. Its Pedagogical Practices are four Teaching Processes (not a ladder; Positive Classroom Culture runs through the others), each with its Teaching Areas:
+${stpPromptText()}
+How to use it:
+- A lesson plan is Lesson Preparation made visible: its objective, the learners it is for, the sequence, the key questions, the strategies and the resources.
+- Each part of the lesson says, in a short tag, which Lesson Enactment Teaching Area it serves, using the exact name (for example "Arousing Interest", "Activating Prior Knowledge", "Using Questions to Deepen Learning", "Concluding the Lesson").
+- Every lesson has at least one moment of Assessment and Feedback, named as "Checking for Understanding and Providing Feedback".
+- Where a move builds Positive Classroom Culture (a routine, trust, giving learners a say), name the Teaching Area in a clause.
+- Use the Teaching Areas' names exactly. Never invent a Teaching Area.
 
 ## Your Expertise
 - Singapore MOE frameworks: E21CC, STP, EdTech Masterplan 2030, CCE2021
@@ -2040,6 +2047,20 @@ export async function generateSpeech({ turns, voices, style, timeoutMs } = {}) {
   const blob = pcmToWavBlob(audio.inlineData.data, sampleRate);
   const durationHint = Math.max(1, Math.round((blob.size - 44) / (sampleRate * 2)));
   return { blob, mimeType: 'audio/wav', durationHint };
+}
+
+/** Ask Gemini whether this key works. Resolves { ok, message }; never throws. */
+export async function checkApiKey(key) {
+  const k = String(key || '').trim();
+  if (k.length < 20) return { ok: false, message: 'That does not look like a full key. Copy the whole of it.' };
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, message: 'You are offline, so the key cannot be checked now.' };
+  try {
+    const res = await fetch(`${ENDPOINT}?pageSize=1`, { headers: { 'x-goog-api-key': k } });
+    if (res.ok) return { ok: true, message: 'The key works.' };
+    if (res.status === 400 || res.status === 401 || res.status === 403) return { ok: false, message: 'Google did not accept this key. Check you copied all of it, and that it was made with your personal Google account.' };
+    if (res.status === 429) return { ok: true, message: 'The key is real, but Google is limiting it right now. Try again in a minute.' };
+    return { ok: false, message: `Google answered with an error (${res.status}). Try again shortly.` };
+  } catch { return { ok: false, message: 'Could not reach Google to check the key. Check your connection.' }; }
 }
 
 export function validateApiKey(key) {

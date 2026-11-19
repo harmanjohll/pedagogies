@@ -16,6 +16,7 @@ import { currentSchoolId } from '../components/login.js';
 
 export const DEMOS = [
   { id: 'overview', title: 'What is Co-Cher?', about: 'The whole app in one minute', src: '00-what-is-co-cher.mp4' },
+  { id: 'ai-key', title: 'How do I set up my AI key?', about: 'With your personal Google account, in two minutes', src: '13-ai-key.mp4' },
   { id: 'school', title: 'Where do I start?', about: 'My School, the tiles and the menu', src: '01-my-school.mp4' },
   { id: 'now', title: 'How do I keep track of what needs doing?', about: 'Entries on Now and Week; goals on Term', src: '02-entries-and-goals.mp4' },
   { id: 'lesson-cycle', title: 'How do I take a lesson from plan to class?', about: 'Lesson stages, the next step, Present', src: '03-plan-to-present.mp4' },

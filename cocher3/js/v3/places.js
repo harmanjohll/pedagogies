@@ -35,6 +35,7 @@ export const ICONS = {
 };
 
 /* `match` lists route prefixes that belong to the place (first hit wins).
+ * `more: true` keeps a screen out of the row of tabs unless it is the one open: it waits under "More".
  * `demo` names a slot in js/demos.js. `tag` marks beta tools, as v2 did. */
 export const PLACES = [
   { id: 'school', group: 'Home', label: 'School', route: '/school', match: ['/school', '/demos'], screens: [
@@ -62,13 +63,13 @@ export const PLACES = [
   { id: 'lessons', group: 'Work', label: 'Lessons', route: '/lessons', match: ['/lessons', '/lesson-planner', '/spatial', '/lesson-rehearsal', '/cce', '/autopilot', '/relief-kit', '/present', '/deck', '/live', '/send', '/plan'], screens: [
     { route: '/lessons', label: 'All Lessons', desc: 'Every lesson, and where it is in the cycle', demo: 'lesson-cycle' },
     { route: '/plan', label: 'New Lesson', desc: 'Four quick choices, then a lesson to adjust' },
-    { route: '/lesson-planner', label: 'Planner', desc: 'Design and refine a lesson with Co-Cher' },
+    { route: '/lesson-planner', label: 'Planner', desc: 'Design and refine a lesson with Co-Cher', more: true },
     { route: '/spatial', label: 'Room', desc: 'Lay out the room for the learning' },
-    { route: '/lesson-rehearsal', label: 'Rehearse', desc: 'Practise delivery with student personas' },
+    { route: '/lesson-rehearsal', label: 'Rehearse', desc: 'Practise delivery with student personas', more: true },
     { route: '/cce', label: 'CCE2021', desc: 'Six content areas, discussions, and Paths in ECG', demo: 'paths' },
-    { route: '/autopilot', label: 'Auto-Lesson', desc: 'Scheme of work to reflection in one pass', tag: 'beta' },
-    { route: '/relief-kit', label: 'Relief Kit', desc: 'A one period lesson any relief teacher can run', tag: 'beta' },
-    { route: '/send', label: 'Send', desc: 'Send lessons, layouts, entries or goals to a colleague, and take in theirs', demo: 'send' },
+    { route: '/autopilot', label: 'Auto-Lesson', desc: 'Scheme of work to reflection in one pass', tag: 'beta', more: true },
+    { route: '/relief-kit', label: 'Relief Kit', desc: 'A one period lesson any relief teacher can run', tag: 'beta', more: true },
+    { route: '/send', label: 'Send', desc: 'Send lessons, layouts, entries or goals to a colleague, and take in theirs', demo: 'send', more: true },
   ] },
   { id: 'assess', group: 'Work', label: 'Assess', route: '/assessment/afl', match: ['/assessment', '/question-bank'], screens: [
     { route: '/assessment/afl', label: 'For Learning', desc: 'Formative strategies, from intentions and success criteria' },

@@ -446,6 +446,74 @@ html.v3:not([data-look="classic"]) .cce-content { max-width: 1200px !important; 
 .lp-vresize:hover::after, .lp-vresize.active::after, .lp-vresize:focus-visible::after { background: var(--accent); }
 .lp-vresize:focus-visible { outline: none; }
 
+/* Voice, and the planner on a phone. */
+.v3-mic { display: inline-flex; align-items: center; gap: 8px; }
+.v3-mic[aria-pressed="true"] { border-color: var(--danger, #b42318); color: var(--danger, #b42318); }
+.v3-askbar { display: none; }
+#v3-opts { display: none; }
+@media (max-width: 760px) {
+  html.v3 .lp-plan-col { position: relative; }
+  /* One pane at a time. (The writing pane carries its own inline display, which used to keep it on screen beside the lesson.) */
+  html.v3 .lp-layout.show-plan .lp-chat-col { display: none !important; }
+  .v3-askbar { display: flex; flex-direction: row; flex-wrap: nowrap; width: 100%; box-sizing: border-box; flex-shrink: 0; gap: 8px; align-items: center; position: sticky; bottom: 0; z-index: 5; padding: 8px 12px; background: var(--bg-card); border-top: 1px solid var(--border-light); }
+  .v3-askbar .v3-mic { width: 44px; height: 44px; justify-content: center; border: 1px solid var(--border); border-radius: 50%; background: var(--bg-card); color: var(--ink); flex-shrink: 0; cursor: pointer; }
+  .v3-askbar .v3-ask { flex: 1; min-height: 44px; text-align: left; font: inherit; color: var(--ink-muted); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 0 16px; cursor: pointer; }
+  /* the writing pane: the box, the mic and Send; the optional extras fold away */
+  html.v3 .chat-composer-toolbar > #ideology-lens, html.v3 .chat-composer-toolbar > #framework-chips, html.v3 .chat-composer-toolbar > #attach-kb-btn { display: none !important; }
+  html.v3 .chat-composer-toolbar.v3-open > #ideology-lens { display: inline-block !important; }
+  html.v3 .chat-composer-toolbar.v3-open > #framework-chips { display: inline-flex !important; }
+  html.v3 .chat-composer-toolbar.v3-open > #attach-kb-btn { display: inline-flex !important; }
+  #v3-opts { display: inline-flex; margin-left: auto; }
+  html.v3 .chat-input { min-height: 48px; }
+  html.v3 .lp-vresize { display: none; }
+  html.v3 .workflow-breadcrumb .stp-culture { display: none; }
+  .lp-next-done { margin-left: 0; }
+}
+
+/* A new teacher's first minutes: the key screen, and Start Here on My School. */
+.v3-startwrap { position: fixed; inset: 0; z-index: 9500; overflow-y: auto; background: var(--bg); padding: 32px 16px; }
+.v3-start { max-width: 620px; margin: 0 auto; }
+.v3-callout { margin: 16px 0; padding: 12px 16px; border: 1px solid var(--accent); border-radius: var(--radius-lg); background: var(--accent-light); color: var(--ink); line-height: 1.5; }
+.v3-keysteps { margin: 16px 0; font-size: .9375rem; color: var(--ink); }
+.v3-keysteps li { margin-bottom: 4px; }
+.v3-keysteps a { color: var(--accent-dark); }
+.v3-keyvideo { margin: 0 0 16px; }
+.v3-keyvideo summary { cursor: pointer; color: var(--accent-dark); min-height: 32px; }
+.v3-keyvideo video { width: 100%; margin-top: 8px; border-radius: var(--radius-lg); border: 1px solid var(--border-light); background: var(--bg-subtle); }
+.v3-keyrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.v3-keyrow .input { flex: 1 1 260px; min-width: 0; }
+#st-msg { min-height: 1.4em; margin-top: 8px; }
+#st-msg[data-ok="yes"] { color: var(--success, #2c7a4b); }
+#st-msg[data-ok="no"] { color: var(--danger, #b42318); }
+.v3-starthere { margin-bottom: 16px; padding: 16px 20px 8px; border: 1px solid var(--border-light); border-radius: var(--radius-xl); background: var(--bg-card); }
+.v3-starthere .v3-h { align-items: center; }
+.v3-starthere .v3-h .v3-row-s { margin-right: auto; margin-left: 8px; }
+.v3-startrow { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-light); }
+.v3-startrow .n { width: 28px; height: 28px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border); font-size: .8125rem; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.v3-startrow.done .n { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
+.v3-startrow .b { flex: 1; min-width: 0; }
+.v3-startrow .b b { display: block; font-weight: 600; color: var(--ink); }
+.v3-startrow .b span { display: block; font-size: .875rem; color: var(--ink-muted); }
+.v3-startrow.done .b b { font-weight: 500; color: var(--ink-muted); }
+
+/* The planner's one next step, and the quiet record of what is done. */
+.lp-next { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.lp-next-why { font-size: .8125rem; color: var(--ink-muted); }
+.lp-next-done { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+.lp-done { font: inherit; font-size: .75rem; color: var(--ink-muted); background: transparent; border: 1px solid var(--border-light); border-radius: 999px; padding: 4px 10px; cursor: pointer; min-height: 28px; }
+.lp-done:hover { color: var(--ink); border-color: var(--ink-faint); }
+/* Buttons used now and then wait under "More", in the planner's header and in the tabs. */
+.v3-tucked { display: none !important; }
+.v3-morewrap { position: relative; display: inline-block; }
+.v3-morewrap > summary { list-style: none; cursor: pointer; }
+.v3-morewrap > summary::-webkit-details-marker { display: none; }
+.v3-moremenu { position: absolute; z-index: 60; top: calc(100% + 4px); left: 0; min-width: 200px; display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); }
+.v3-moremenu > * { display: flex !important; align-items: center; gap: 8px; width: 100%; justify-content: flex-start; text-align: left; font: inherit; font-size: .875rem; color: var(--ink); background: transparent; border: 0; border-radius: var(--radius-md); padding: 8px 12px; min-height: 40px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.v3-moremenu > *:hover { background: var(--surface-hover); }
+.v3-strip .v3-morewrap > summary { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; font-size: .8rem; color: var(--ink-muted); border: 1px solid transparent; white-space: nowrap; }
+.v3-strip .v3-morewrap > summary:hover { color: var(--ink); background: var(--surface-hover); }
+.v3-strip { overflow: visible; }
+
 /* New Lesson: one screen, a few choices. */
 .v3-plan { max-width: 860px; }
 .v3-plan .v3-panel { margin-bottom: 16px; }

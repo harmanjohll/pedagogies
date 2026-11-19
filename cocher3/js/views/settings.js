@@ -728,7 +728,7 @@ export function render(container) {
               <button class="input-icon-btn" id="toggle-key-visibility" type="button" style="font-size: 0.7rem;">Show</button>
             </div>
             <p class="input-hint" style="margin-top: var(--sp-2);">
-              Get a free key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color: var(--accent);">Google AI Studio</a>
+              Get a free key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color: var(--accent);">Google AI Studio</a>. <strong>Sign in there with your personal Google account, not your school account</strong>: school accounts usually cannot create a key
             </p>
           </div>
           <div style="display: flex; align-items: center; gap: var(--sp-2);">
