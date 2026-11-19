@@ -138,3 +138,48 @@ export function resolveTeachingAction(seg) {
   }
   return actionsForArea(seg.teachingArea).find(a => a.id === seg.teachingAction) || null;
 }
+
+
+/* ══════════ The whole of the STP's Pedagogical Practices ══════════
+ * ONE source for the four Teaching Processes and their 24 Teaching Areas, by
+ * their own names. Everything in Co-Cher that speaks of the STP reads from
+ * here: the trail across the top of the lesson screens, the planner's next
+ * step, what the AI is told, and the reference page in the Knowledge Base.
+ * (Before this, three places described the STP in three different wordings,
+ * none of them the Teaching Areas' real names.)
+ *
+ * The processes are not a ladder. Positive Classroom Culture runs through all
+ * the others, and a teacher moves back and forth between them. The TRAIL below
+ * is only the order a single lesson is usually worked on, with Reflect added
+ * as the teacher's own reflective practice that turns one lesson into the next.
+ *
+ * Source: MOE, The Singapore Teaching Practice. Written from memory of the
+ * published model; the owner should check the wording against the STP.
+ */
+export const TEACHING_PROCESSES = [
+  { key: 'culture', label: 'Positive Classroom Culture', short: 'Culture', areas: [
+    'Establishing Interaction and Rapport', 'Maintaining Positive Discipline', 'Setting Expectations and Routines', 'Building Trust', 'Empowering Learners'] },
+  { key: 'preparation', label: 'Lesson Preparation', short: 'Prepare', areas: [
+    'Determining Lesson Objectives', 'Considering Learners\u2019 Profiles', 'Selecting and Sequencing Content', 'Planning Key Questions', 'Sequencing Learning',
+    'Deciding on Instructional Strategies', 'Deciding on Teaching Aids and Learning Resources'] },
+  { key: 'enactment', label: 'Lesson Enactment', short: 'Enact', areas: [
+    'Activating Prior Knowledge', 'Arousing Interest', 'Encouraging Learner Engagement', 'Exercising Flexibility', 'Providing Clear Explanation',
+    'Pacing and Maintaining Momentum', 'Facilitating Collaborative Learning', 'Using Questions to Deepen Learning', 'Concluding the Lesson'] },
+  { key: 'assessment', label: 'Assessment and Feedback', short: 'Assess', areas: [
+    'Checking for Understanding and Providing Feedback', 'Supporting Self-directed Learning', 'Setting Meaningful Assignments'] },
+];
+export const processByKey = (key) => TEACHING_PROCESSES.find(p => p.key === key) || null;
+
+/* The trail a lesson follows through the app. Each step is a Teaching Process
+ * (or Reflect), with the place in Co-Cher where that work is done. */
+export const STP_TRAIL = [
+  { key: 'preparation', label: 'Lesson Preparation', route: '/plan', hint: 'Objectives, learners, content, questions, strategies, resources' },
+  { key: 'enactment', label: 'Lesson Enactment', route: '/lessons', hint: 'Teach it: interest, engagement, explanation, questions, pace' },
+  { key: 'assessment', label: 'Assessment and Feedback', route: '/assessment/afl', hint: 'Check for understanding, feed back, set meaningful work' },
+  { key: 'reflect', label: 'Reflect', route: '/now', hint: 'What worked, what to change: it shapes the next lesson' },
+];
+
+/** The STP in plain text, for the AI: the processes, their Teaching Areas, and how to use them in a plan. */
+export function stpPromptText() {
+  return TEACHING_PROCESSES.map(p => `${p.label}: ${p.areas.join('; ')}.`).join('\n');
+}

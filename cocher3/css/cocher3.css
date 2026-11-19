@@ -446,6 +446,24 @@ html.v3:not([data-look="classic"]) .cce-content { max-width: 1200px !important; 
 .lp-vresize:hover::after, .lp-vresize.active::after, .lp-vresize:focus-visible::after { background: var(--accent); }
 .lp-vresize:focus-visible { outline: none; }
 
+/* The planner's one next step, and the quiet record of what is done. */
+.lp-next { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.lp-next-why { font-size: .8125rem; color: var(--ink-muted); }
+.lp-next-done { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+.lp-done { font: inherit; font-size: .75rem; color: var(--ink-muted); background: transparent; border: 1px solid var(--border-light); border-radius: 999px; padding: 4px 10px; cursor: pointer; min-height: 28px; }
+.lp-done:hover { color: var(--ink); border-color: var(--ink-faint); }
+/* Buttons used now and then wait under "More", in the planner's header and in the tabs. */
+.v3-tucked { display: none !important; }
+.v3-morewrap { position: relative; display: inline-block; }
+.v3-morewrap > summary { list-style: none; cursor: pointer; }
+.v3-morewrap > summary::-webkit-details-marker { display: none; }
+.v3-moremenu { position: absolute; z-index: 60; top: calc(100% + 4px); left: 0; min-width: 200px; display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); }
+.v3-moremenu > * { display: flex !important; align-items: center; gap: 8px; width: 100%; justify-content: flex-start; text-align: left; font: inherit; font-size: .875rem; color: var(--ink); background: transparent; border: 0; border-radius: var(--radius-md); padding: 8px 12px; min-height: 40px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.v3-moremenu > *:hover { background: var(--surface-hover); }
+.v3-strip .v3-morewrap > summary { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; font-size: .8rem; color: var(--ink-muted); border: 1px solid transparent; white-space: nowrap; }
+.v3-strip .v3-morewrap > summary:hover { color: var(--ink); background: var(--surface-hover); }
+.v3-strip { overflow: visible; }
+
 /* New Lesson: one screen, a few choices. */
 .v3-plan { max-width: 860px; }
 .v3-plan .v3-panel { margin-bottom: 16px; }

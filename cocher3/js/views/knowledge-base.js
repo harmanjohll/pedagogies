@@ -11,6 +11,36 @@ import { openModal } from '../components/modals.js';
 import { createFileUploadZone } from '../components/pdf-upload.js';
 import { renderWorkflowBreadcrumb, bindWorkflowClicks } from '../components/workflow-breadcrumb.js';
 import { exampleLevel, exampleClass, subjects } from '../utils/vocabulary.js';
+import { TEACHING_PROCESSES } from '../utils/stp.js';
+
+/* One line on each Teaching Area: what it asks of the teacher. The names come
+ * from utils/stp.js; these notes are Co-Cher's plain gloss, not MOE's text. */
+const STP_AREA_NOTES = {
+  'Establishing Interaction and Rapport': 'Know the students and let them know you; warmth that makes learning possible.',
+  'Maintaining Positive Discipline': 'Guide behaviour firmly and kindly, so the room stays fit for learning.',
+  'Setting Expectations and Routines': 'Make clear how the class works, and keep to it, so time goes to learning.',
+  'Building Trust': 'A room where it is safe to be wrong, to ask, and to try.',
+  'Empowering Learners': 'Give students a say and a share of the responsibility for their learning.',
+  'Determining Lesson Objectives': 'Decide what students will know or be able to do by the end.',
+  'Considering Learners\u2019 Profiles': 'Plan for these students: their readiness, interests and needs.',
+  'Selecting and Sequencing Content': 'Choose what matters and put it in an order that builds.',
+  'Planning Key Questions': 'Prepare the few questions that will carry the thinking.',
+  'Sequencing Learning': 'Order the activities so each step makes the next one possible.',
+  'Deciding on Instructional Strategies': 'Pick the approach that fits the objective and the learners.',
+  'Deciding on Teaching Aids and Learning Resources': 'Choose the materials and tools that serve the learning.',
+  'Activating Prior Knowledge': 'Bring to mind what students already know, to build on it.',
+  'Arousing Interest': 'Open in a way that makes students want to find out.',
+  'Encouraging Learner Engagement': 'Keep every student thinking and doing, not only watching.',
+  'Exercising Flexibility': 'Change course when the lesson in front of you calls for it.',
+  'Providing Clear Explanation': 'Explain so that it is understood: clear, well paced, well illustrated.',
+  'Pacing and Maintaining Momentum': 'Keep the lesson moving at a speed that fits the learners.',
+  'Facilitating Collaborative Learning': 'Have students learn with and from one another, with purpose.',
+  'Using Questions to Deepen Learning': 'Ask, wait and probe, so thinking goes further.',
+  'Concluding the Lesson': 'Close by pulling the learning together and looking ahead.',
+  'Checking for Understanding and Providing Feedback': 'Find out what students have understood, and tell them how to improve.',
+  'Supporting Self-directed Learning': 'Help students judge their own progress and steer their own learning.',
+  'Setting Meaningful Assignments': 'Set work that extends or secures the learning, and is worth doing.',
+};
 
 const FRAMEWORKS = [
   {
@@ -69,45 +99,16 @@ const FRAMEWORKS = [
     accentLight: 'var(--e21cc-cci-light)',
     icon: 'STP',
     tags: [
-      { label: 'Pedagogy', badge: 'badge-green' },
-      { label: 'Assessment', badge: 'badge-green' },
-      { label: 'Positive Culture', badge: 'badge-green' },
+      { label: 'Positive Classroom Culture', badge: 'badge-green' },
+      { label: 'Lesson Preparation', badge: 'badge-green' },
+      { label: 'Lesson Enactment', badge: 'badge-green' },
+      { label: 'Assessment and Feedback', badge: 'badge-green' },
     ],
-    overview: 'The Singapore Teaching Practice (STP) is an integrated model of the knowledge bases, skills, and professional values that underpin effective teaching. It guides teachers in creating positive learning experiences across four areas of practice.',
-    sections: [
-      {
-        heading: 'Lesson Preparation',
-        items: [
-          { term: 'Understanding Learners', desc: 'Know students\' readiness, interests, backgrounds, and learning profiles to plan inclusive lessons.' },
-          { term: 'Clear Learning Objectives', desc: 'Define outcomes aligned to syllabi, E21CC, and relevant assessment criteria.' },
-          { term: 'Resource & Material Planning', desc: 'Select or create resources that scaffold learning and engage multiple modalities.' },
-        ]
-      },
-      {
-        heading: 'Lesson Enactment',
-        items: [
-          { term: 'Teaching Actions', desc: 'Direct instruction, inquiry-based learning, discussion, modelling, selecting the right approach for the outcome.' },
-          { term: 'Interaction Patterns', desc: 'Managing teacher\u2013student and student\u2013student interactions; think-pair-share, jigsaw, Socratic dialogue.' },
-          { term: 'Classroom Discourse', desc: 'Questioning techniques that promote higher-order thinking; productive talk moves.' },
-        ]
-      },
-      {
-        heading: 'Assessment and Feedback',
-        items: [
-          { term: 'Formative Assessment', desc: 'Check for understanding in real time: exit tickets, concept checks, mini-whiteboards.' },
-          { term: 'Effective Feedback', desc: 'Timely, specific, actionable feedback that helps students close the gap between current and desired performance.' },
-          { term: 'Differentiated Support', desc: 'Adjust instruction based on assessment data; provide scaffolds or extensions as needed.' },
-        ]
-      },
-      {
-        heading: 'Positive Classroom Culture',
-        items: [
-          { term: 'Safe & Supportive Environment', desc: 'Build trust, belonging, and psychological safety so students can take intellectual risks.' },
-          { term: 'Routines & Expectations', desc: 'Establish clear, consistent classroom norms that maximise learning time.' },
-          { term: 'Student Agency', desc: 'Empower students to take ownership of their learning through choice, reflection, and self-assessment.' },
-        ]
-      }
-    ]
+    overview: 'The Singapore Teaching Practice (STP) makes explicit how effective teaching and learning is achieved in Singapore schools. Its Pedagogical Practices are four Teaching Processes, with 24 Teaching Areas between them. The processes are not a ladder: Positive Classroom Culture runs through the others, and teachers move back and forth between them. Co-Cher follows the same four, and adds Reflect as the step that turns one lesson into the next.',
+    sections: TEACHING_PROCESSES.map(p => ({
+      heading: `${p.label} (${p.areas.length} Teaching Areas)`,
+      items: p.areas.map(name => ({ term: name, desc: STP_AREA_NOTES[name] || '' })),
+    }))
   },
   {
     id: 'edtech',

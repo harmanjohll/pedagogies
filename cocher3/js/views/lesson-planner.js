@@ -21,7 +21,7 @@ import { md, escapeHtml, mountExpansion, stripExpandMarkers } from '../utils/mar
 import { critiquePlan } from '../api.js';
 import { toggleFocusMode } from '../components/keyboard-shortcuts.js';
 import { SCHEMA_PRESETS } from '../utils/tracking.js';
-import { TEACHING_AREAS, TEACHING_AREA_ICONS, TEACHING_AREA_LABELS, actionsForArea, resolveTeachingAction, TEACHING_ACTION_OTHER } from '../utils/stp.js';
+import { TEACHING_AREAS, TEACHING_AREA_ICONS, TEACHING_AREA_LABELS, actionsForArea, resolveTeachingAction, TEACHING_ACTION_OTHER, stpPromptText } from '../utils/stp.js';
 import { layoutToSVG } from './spatial-designer.js';
 import { isVoiceInputSupported, createDictation, dictationErrorMessage } from '../utils/voice.js';
 import { ATTACH_ACCEPT, isAcceptedAttachment, buildAttachment, toMultimodalMessage, attachmentContextNote, stripAttachmentData } from '../utils/attachments.js';
@@ -857,7 +857,7 @@ function buildQuickPrompts(classes) {
   const who = `${level} ${subj}`;
   const topic = `[topic, e.g. ${topicExample(hasSub ? subj : '')}]`;
   const FEEL = '[how it should feel: curiosity / a game / movement / real world stakes / student choice]';
-  const SHAPE = 'Keep the plan to one screen: a hook, three or four parts with times, and one check for learning. No long prose.';
+  const SHAPE = 'Keep the plan to one screen: a hook, three or four parts with times, and one check for learning. Tag each part with the Singapore Teaching Practice Teaching Area it serves. No long prose.';
 
   prompts.push({ label: hasSub ? `Plan a ${subj} Lesson, Guided` : 'Plan a Lesson, Guided', desc: 'Fill in what you know; Co-Cher builds the lesson around it',
     prompt: `Plan a [minutes, e.g. 60] minute ${who} lesson on ${topic}.
@@ -4803,13 +4803,22 @@ function renderJourneyBar(container) {
     { key: 'present', label: '▶ Present', isDone: false, title: done.stage ? 'Open the student-facing class screen' : 'Stage the lesson first' }
   ];
 
+  /* One next step, always in view. The lesson is being prepared (the STP's
+   * Lesson Preparation) until it is taught, so the steps are named as parts of
+   * that process, and the one to do now is the only button that stands out. */
+  const NEXT = {
+    plan: { step: 'plan', say: 'Next: draft the plan', why: 'Lesson Preparation: objectives, learners, sequence, key questions' },
+    stage: { step: 'stage', say: 'Next: turn the plan into parts to teach', why: 'Lesson Preparation: sequencing learning, deciding on strategies' },
+    place: { step: 'place', say: 'Next: seat the groups (optional)', why: 'Lesson Preparation: the room that serves the lesson' },
+    present: { step: 'present', say: 'Ready: present the lesson', why: 'Lesson Enactment begins' },
+  };
+  const next = NEXT[nextKey || 'present'];
+  const tick = (st) => `<button class="lp-journey-pill lp-done" data-step="${st.key}" title="${esc(st.title)}">${st.isDone ? '<span aria-hidden="true">&#10003;</span> ' : ''}${esc(st.label)}</button>`;
   el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:4px;margin-bottom:var(--sp-3);overflow-x:auto;padding-bottom:2px;">
-      ${steps.map((st, i) => `
-        ${i > 0 ? '<span style="color:var(--ink-faint);font-size:0.625rem;flex-shrink:0;">&rarr;</span>' : ''}
-        <button class="lp-journey-pill" data-step="${st.key}" title="${esc(st.title)}" style="${pillStyle(st.key, st.isDone)}">
-          ${st.isDone ? '<span aria-hidden="true" style="margin-right:3px;">&#10003;</span>' : ''}${esc(st.label)}
-        </button>`).join('')}
+    <div class="lp-next">
+      <button class="btn btn-primary lp-journey-pill lp-next-btn" data-step="${next.step}"${next.step === 'present' && !done.stage ? ' disabled' : ''}>${esc(next.say)}</button>
+      <span class="lp-next-why">${esc(next.why)}</span>
+      <span class="lp-next-done">${steps.filter(st => st.key !== 'present').map(tick).join('')}${nextKey === 'place' ? `<button class="lp-journey-pill lp-done" data-step="present" title="Seating is optional: present now">Skip to Present</button>` : ''}</span>
     </div>`;
 
   el.querySelectorAll('.lp-journey-pill').forEach(btn => {
@@ -4843,7 +4852,7 @@ function renderJourneyBar(container) {
 
 const FRAMEWORK_SUMMARIES = [
   { id: 'e21cc', title: 'E21CC Framework', content: 'Emerging 21st Century Competencies (E21CC):\n\nCAIT — Critical, Adaptive & Inventive Thinking:\n- Sound Reasoning: Examine issues logically, draw well-reasoned conclusions\n- Creative Problem-Solving: Generate novel ideas, explore innovative solutions\n- Managing Complexity & Ambiguity: Navigate uncertain, complex problems\n- Metacognition: Monitor own thinking, self-regulate, transfer learning\n\nCCI — Communication, Collaboration & Information:\n- Communicative Competence: Express ideas clearly across modes and contexts\n- Collaborative Skills: Work effectively in teams, co-create meaning\n- Information Literacy: Find, evaluate, use information critically and ethically\n\nCGC — Civic, Global & Cross-cultural Literacy:\n- Active Citizenship: Contribute responsibly to community and nation\n- Global Awareness: Appreciate interconnectedness and global challenges\n- Cross-cultural Sensitivity: Respect diversity, bridge cultural divides' },
-  { id: 'stp', title: 'Singapore Teaching Practice', content: 'Singapore Teaching Practice (STP) — four Teaching Processes (non-hierarchical):\n\nPositive Classroom Culture — Safe environment, routines, student agency\nLesson Preparation — Understanding learners, clear objectives, resource planning\nLesson Enactment — Teaching actions, interaction patterns, classroom discourse\nAssessment and Feedback — Formative assessment, effective feedback, differentiated support' },
+  { id: 'stp', title: 'Singapore Teaching Practice', content: `Singapore Teaching Practice (STP): four Teaching Processes (not a ladder) and their Teaching Areas.\n\n${stpPromptText()}` },
   { id: 'edtech', title: 'EdTech Masterplan 2030', content: 'EdTech Masterplan 2030 — 3 Thrusts:\n\nThrust 1: Digital Literacy — Data literacy, information & media literacy, digital communication\nThrust 2: Digital Creation — Computational thinking, digital design, AI literacy\nThrust 3: Digital Citizenship — Online safety, digital ethics, digital wellbeing\n\nIntegration: TPACK model, blended learning (SLS), AI-enhanced pedagogy' }
 ];
 

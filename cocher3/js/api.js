@@ -8,7 +8,7 @@ import { Store } from './state.js';
 import { trackEvent } from './utils/analytics.js';
 import { getPreferredName } from './components/login.js';
 import { SCHEMA_PRESETS } from './utils/tracking.js';
-import { TEACHING_AREAS, actionsForArea, TEACHING_ACTION_OTHER } from './utils/stp.js';
+import { TEACHING_AREAS, actionsForArea, TEACHING_ACTION_OTHER , stpPromptText } from './utils/stp.js';
 import { schoolStage, defaultLevel } from './utils/vocabulary.js';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -52,7 +52,14 @@ Technology should amplify pedagogy, not replace it. Consider how digital tools c
 Respect the discipline the teacher works in. A Science lesson emphasises inquiry and evidence; a Language lesson emphasises expression and interpretation; a Humanities lesson emphasises perspective and analysis; a Mathematics lesson emphasises reasoning and modelling; a CCE lesson emphasises values clarification, ethical reasoning, and perspective-taking through discussion of real-world issues. Adapt your language, examples, and suggestions to the teacher's subject context. If no subject is specified, keep suggestions cross-disciplinary.
 
 ### Singapore Teaching Practice (STP)
-Align with the four Teaching Processes (non-hierarchical): Positive Classroom Culture, Lesson Preparation, Lesson Enactment, Assessment and Feedback.
+The STP is the spine of every lesson you help design. Its Pedagogical Practices are four Teaching Processes (not a ladder; Positive Classroom Culture runs through the others), each with its Teaching Areas:
+${stpPromptText()}
+How to use it:
+- A lesson plan is Lesson Preparation made visible: its objective, the learners it is for, the sequence, the key questions, the strategies and the resources.
+- Each part of the lesson says, in a short tag, which Lesson Enactment Teaching Area it serves, using the exact name (for example "Arousing Interest", "Activating Prior Knowledge", "Using Questions to Deepen Learning", "Concluding the Lesson").
+- Every lesson has at least one moment of Assessment and Feedback, named as "Checking for Understanding and Providing Feedback".
+- Where a move builds Positive Classroom Culture (a routine, trust, giving learners a say), name the Teaching Area in a clause.
+- Use the Teaching Areas' names exactly. Never invent a Teaching Area.
 
 ## Your Expertise
 - Singapore MOE frameworks: E21CC, STP, EdTech Masterplan 2030, CCE2021

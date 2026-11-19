@@ -137,8 +137,12 @@ function stripHTML() {
   const screens = screensIn(place);
   const current = screens.filter(s => r === s.route || (s.route !== '/' && r.startsWith(s.route))).sort((a, b) => b.route.length - a.route.length)[0];
   const demo = current?.demo ? demoById(current.demo) : null;
-  const tabs = screens.length > 1 ? `<span class="where">${place.label}</span>` + screens.map(s =>
-    `<a href="#${s.route}" class="${current && current.route === s.route ? 'on' : ''}"${current && current.route === s.route ? ' aria-current="page"' : ''}${s.linked ? ` title="Linked here by you; its home is ${esc(s.home.label)}"` : ''}>${esc(s.label)}${s.linked ? ICONS.link : ''}</a>`).join('') : '';
+  const tab = (s) => `<a href="#${s.route}" class="${current && current.route === s.route ? 'on' : ''}"${current && current.route === s.route ? ' aria-current="page"' : ''}${s.linked ? ` title="Linked here by you; its home is ${esc(s.home.label)}"` : ''}>${esc(s.label)}${s.linked ? ICONS.link : ''}</a>`;
+  // Screens marked `more` wait under "More", so the row stays short. The one that is open always shows.
+  const isOpen = (s) => current && current.route === s.route;
+  const shown = screens.filter(s => !s.more || isOpen(s)), tucked = screens.filter(s => s.more && !isOpen(s));
+  const tabs = screens.length > 1 ? `<span class="where">${place.label}</span>` + shown.map(tab).join('')
+    + (tucked.length ? `<details class="v3-morewrap"><summary>More (${tucked.length})</summary><div class="v3-moremenu">${tucked.map(s => `<a href="#${s.route}">${esc(s.label)}</a>`).join('')}</div></details>` : '') : '';
   const tools = current ? `<span class="tools">
       ${demo ? `<a class="tool" href="#/demos/${demo.id}" title="A short demo of this screen">${ICONS.play}Demo</a>` : ''}
       <button class="tool" data-act="link" data-route="${esc(current.route)}" title="Also show this screen under another place">${ICONS.link}Link</button>
@@ -261,6 +265,9 @@ window.__cocherShell = {
       if (b.dataset.act === 'look') openLook();
       if (b.dataset.act === 'more') openMore();
       if (b.dataset.act === 'link') openLink(b.dataset.route);
+    });
+    document.addEventListener('click', (e) => {
+      document.querySelectorAll('details.v3-morewrap[open]').forEach(d => { if (!d.contains(e.target) || e.target.closest('.v3-moremenu')) d.removeAttribute('open'); });
     });
     backupOnce();
     watchPlannerTools();

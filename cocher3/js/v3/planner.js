@@ -68,6 +68,7 @@ export function renderNewLesson(container) {
       `Plan a ${st.minutes} minute ${level() || `[level e.g. ${exampleLevel()}]`} ${subject() || '[subject]'} lesson on ${st.topic.trim() || '[topic]'}${who}.`,
       `Make it a lesson students enjoy and remember. It should feel like: ${feel}. Open with a hook of that kind.`,
       `Keep the plan to one screen: the hook in one or two lines, three or four parts with times, and one check for learning at the end. No long prose.`,
+      `Follow the Singapore Teaching Practice: tag each part with the Lesson Enactment Teaching Area it serves, by its exact name, and name the check for learning as Checking for Understanding and Providing Feedback.`,
     ];
     if (cls() && lastReflection(cls().id)) lines.push(`${lastReflection(cls().id)}. Keep what worked and act on what to change.`);
     if (mode === 'ask') lines.push('Before you plan, ask me up to three short questions, one line each, that would most improve the lesson. Then wait for my answers.');
@@ -85,7 +86,7 @@ export function renderNewLesson(container) {
     const c = cls(); const fit = fitting(); const sow = sows().find(u => u.id === st.sowId) || null; const rows = sow ? sowRows(sow) : [];
     container.innerHTML = `<div class="main-scroll"><div class="v3-page v3-plan">
       <div class="v3-head"><div><div class="v3-eyebrow">Lessons</div><h1 class="v3-title">New Lesson</h1>
-        <p class="v3-lede">Four quick choices. Co-Cher does the rest, and you change anything after.</p></div></div>
+        <p class="v3-lede">Lesson Preparation, in four quick choices. Co-Cher drafts the lesson along the Singapore Teaching Practice, and you change anything after.</p></div></div>
 
       <div class="v3-panel"><div class="v3-h">Who Is It For</div>
         <div class="v3-plan-row">
@@ -117,6 +118,7 @@ export function renderNewLesson(container) {
       <div class="v3-plan-go">
         <button class="btn btn-primary" data-go="draft">Draft it for me</button>
         <button class="btn btn-secondary" data-go="ask">Ask me a few questions first</button>
+        <a class="btn btn-ghost" href="#/autopilot" title="Auto-Lesson: scheme of work, lesson, assessment and reflection in one pass">Plan the whole unit in one pass</a>
         <a class="btn btn-ghost" href="#/lesson-planner">Skip: open the planner</a>
       </div>
       ${Store.get('apiKey') ? '' : '<p class="v3-row-s" style="margin-top:12px;">No AI key on this device yet, so the words will be placed in the planner for you, unsent. Add a key in Settings.</p>'}
@@ -230,11 +232,28 @@ function openTools(bar) {
   backdrop.querySelector('[data-act="reset"]').onclick = () => { keepTools(DEFAULT_TOOLS.slice()); close(); shelve(bar); };
 }
 
+/* The planner's header had eight buttons before a lesson existed. Save stays;
+ * staging is offered by the "Next" button; the ones used now and then (Print,
+ * Word, Snapshot, Share, Templates, and the two staging buttons for those who
+ * want them directly) wait under one "More". Their own buttons stay in the
+ * page, hidden, and the menu simply presses them. */
+const HEADER_MORE = [['auto-stage-btn', 'Stage it for me'], ['stage-lesson-btn', 'Stage it myself'], ['export-pdf-btn', 'Print'], ['export-word-btn', 'Word'], ['snapshot-btn', 'Snapshot'], ['share-lesson-btn', 'Share'], ['templates-btn', 'Templates']];
+function tidyHeader() {
+  const save = document.getElementById('save-lesson-btn'); if (!save || document.getElementById('v3-header-more')) return;
+  const found = HEADER_MORE.map(([id, label]) => [document.getElementById(id), label]).filter(([b]) => b);
+  if (!found.length) return;
+  found.forEach(([b]) => b.classList.add('v3-tucked'));   // the button only: a menu it opens (Templates) lives beside it and must still show
+  const wrap = document.createElement('details'); wrap.id = 'v3-header-more'; wrap.className = 'v3-morewrap';
+  wrap.innerHTML = `<summary class="btn btn-secondary btn-sm">More</summary><div class="v3-moremenu">${found.map(([b, label]) => `<button type="button" data-press="${esc(b.id)}">${esc(label)}</button>`).join('')}</div>`;
+  wrap.addEventListener('click', (e) => { const x = e.target.closest('[data-press]'); if (x) { wrap.removeAttribute('open'); document.getElementById(x.dataset.press)?.click(); } });
+  save.insertAdjacentElement('afterend', wrap);
+}
+
 /** Watch for the planner, and shelve its tools each time it draws them. */
 export function watchPlannerTools() {
   const root = document.getElementById('main-view') || document.body;
   let busy = false;
-  const run = () => { if (busy) return; busy = true; try { const bar = document.getElementById('ai-tools-bar'); if (bar) shelve(bar); } finally { busy = false; } };
+  const run = () => { if (busy) return; busy = true; try { const bar = document.getElementById('ai-tools-bar'); if (bar) shelve(bar); tidyHeader(); } finally { busy = false; } };
   new MutationObserver(run).observe(root, { childList: true, subtree: true });
   run();
 }

@@ -197,11 +197,12 @@ function wireMic(btn, container) {
  * each stage surfaces ONE next step so the interface guides the teacher
  * through the cycle. Design leads — it's the critical craft of the plan. */
 export const LIFECYCLE_STAGES = [
-  { key: 'draft', label: 'Design' },
-  { key: 'ready', label: 'Prepare' },
-  { key: 'rehearsed', label: 'Rehearse' },
-  { key: 'taught', label: 'Teach' },
-  { key: 'reflected', label: 'Reflect' },
+  // Labels follow the STP trail (utils/stp.js): three stages of Lesson Preparation, then Lesson Enactment, then Reflect.
+  { key: 'draft', label: 'Preparing' },
+  { key: 'ready', label: 'Prepared' },
+  { key: 'rehearsed', label: 'Rehearsed' },
+  { key: 'taught', label: 'Enacted' },
+  { key: 'reflected', label: 'Reflected' },
 ];
 
 export function lessonStage(l) {
