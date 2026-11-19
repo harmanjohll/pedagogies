@@ -132,7 +132,7 @@ async function boot(page, hash = '#/') {
   await page.goto(BASE + hash);
   await page.waitForTimeout(1500);
   if (await page.locator('#welcome-skip').isVisible().catch(() => false)) { await page.click('#welcome-skip'); await page.waitForTimeout(1500); }
-  for (let i = 0; i < 4; i++) for (const sel of ['#ob-skip', '#ob-explore', 'button:has-text("Skip")', '.modal-close', 'button:has-text("Got it")']) {
+  for (let i = 0; i < 4; i++) for (const sel of ['#st-later', '#ob-skip', '#ob-explore', 'button:has-text("Skip")', '.modal-close', 'button:has-text("Got it")']) {
     const b = page.locator(sel).first();
     if (await b.isVisible().catch(() => false)) { await b.click().catch(() => {}); await page.waitForTimeout(400); }
   }

@@ -17,6 +17,7 @@ import { PLACES, ICONS, placeFor, screensIn, getLinks, setLinks, ALL_SCREENS } f
 import { renderHome, renderNow, renderSchool, renderWeek, renderTerm, renderHub, renderPaths } from './screens.js';
 import { renderFreeTime, renderHandover, renderSend } from './together.js';
 import { renderNewLesson, watchPlannerTools } from './planner.js';
+import { openKeySetup } from './start.js';
 import { openModal } from '../components/modals.js';
 import { renderDemos, demoById } from './demos.js';
 import { openSearch } from '../components/unified-search.js';
@@ -300,6 +301,9 @@ window.__cocherShell = {
     registerRoute('/demos', renderDemos);
     registerRoute('/demos/:id', renderDemos);
   },
+
+  /* A teacher with no AI key meets the key screen first, once. */
+  welcome(onDone) { applyPrefs(); openKeySetup(onDone, { first: true }); },
 
   openLook,
   whatsNew,

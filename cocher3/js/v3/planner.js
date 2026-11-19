@@ -26,6 +26,8 @@
 import { Store } from '../state.js';
 import { openModal } from '../components/modals.js';
 import { exampleLevel } from '../utils/vocabulary.js';
+import { isVoiceInputSupported, createDictation } from '../utils/voice.js';
+import { markStart } from './start.js';
 
 const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -79,6 +81,7 @@ export function renderNewLesson(container) {
 
   function go(mode) {
     try { sessionStorage.setItem('cocher3_plan_brief', JSON.stringify(brief(mode))); } catch { /* private mode: the planner opens empty */ }
+    markStart('lesson');
     location.hash = '#/lesson-planner';
   }
 
@@ -102,7 +105,8 @@ export function renderNewLesson(container) {
 
       <div class="v3-panel"><div class="v3-h">What Is It About</div>
         <label class="input-label" for="pl-topic">Topic</label>
-        <input class="input" id="pl-topic" value="${esc(st.topic)}" placeholder="The topic, in a few words" autocomplete="off">
+        <div class="v3-keyrow"><input class="input" id="pl-topic" value="${esc(st.topic)}" placeholder="The topic, in a few words" autocomplete="off">
+          ${isVoiceInputSupported() ? '<button class="btn btn-secondary v3-mic" id="pl-mic" aria-pressed="false" title="Say the topic instead of typing it">' + MIC + '<span>Speak</span></button>' : ''}</div>
         ${fit.length ? `<div style="margin-top:16px;"><label class="input-label" for="pl-sow">From your scheme of work</label>
             <select class="input" id="pl-sow"><option value="">Choose one, and the lesson will follow it</option>${fit.map(u => `<option value="${esc(u.id)}"${u.id === st.sowId ? ' selected' : ''}>${esc(u.title)}</option>`).join('')}</select>
             ${sow ? (rows.length ? `<p class="v3-row-s" style="margin:12px 0 8px;">Where is this lesson in it? Pick one and the topic fills in.</p>
@@ -134,8 +138,62 @@ export function renderNewLesson(container) {
     container.querySelectorAll('[data-row]').forEach(b => b.onclick = () => { st.row = +b.dataset.row; st.topic = rowTopic(rows[st.row]); draw(); });
     container.querySelectorAll('[data-feel]').forEach(b => b.onclick = () => { st.feels.has(b.dataset.feel) ? st.feels.delete(b.dataset.feel) : st.feels.add(b.dataset.feel); b.setAttribute('aria-pressed', st.feels.has(b.dataset.feel)); });
     container.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+    speakInto(q('#pl-mic'), q('#pl-topic'), (text) => { st.topic = text; });
   }
   draw();
+}
+
+/* ══════════ Voice ══════════
+ * A teacher on a phone would sooner say it than type it. `speakInto` turns a
+ * button into press to talk for one field. It only ever fills the field: the
+ * teacher still reads it and sends it. Hidden where the device cannot listen. */
+const MIC = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.500 11a6.500 6.500 0 0 0 13 0M12 17.500V21"/></svg>';
+function speakInto(button, field, onText) {
+  if (!button || !field || !isVoiceInputSupported()) return;
+  const word = button.querySelector('span');
+  const idle = word ? word.textContent : '';
+  let on = false;
+  const set = (v, label) => { on = v; button.setAttribute('aria-pressed', String(v)); if (word) word.textContent = label || (v ? 'Listening…' : idle); };
+  const d = createDictation({
+    onPhase: (ph) => { if (word) word.textContent = ph === 'transcribing' ? 'Writing it down…' : 'Listening…'; },
+    onResult: (text) => { const t = String(text || '').trim(); if (!t) return; field.value = (field.value ? field.value.replace(/\s+$/, '') + ' ' : '') + t; field.dispatchEvent(new Event('input', { bubbles: true })); if (onText) onText(field.value); },
+    onError: () => set(false),
+    onEnd: () => set(false),
+  });
+  button.addEventListener('click', () => { if (on) { d.stop(); set(false); } else if (d.start()) set(true); });
+}
+
+/* ══════════ The planner on a phone ══════════
+ * On a narrow screen the planner shows one pane at a time. A lesson that
+ * already exists opens on the LESSON, with a slim bar at the foot: speak or
+ * type to change it. The writing pane itself is pared back: its optional
+ * extras (lens, frameworks) fold behind "Options", so the box, the mic and
+ * Send are what is on screen. */
+const PHONE = () => window.matchMedia('(max-width: 760px)').matches;
+function phonePlanner() {
+  const layout = document.getElementById('lp-layout') || document.querySelector('.lp-layout');
+  if (!layout || !PHONE()) return;
+  const chat = layout.querySelector('.lp-chat-col'), plan = layout.querySelector('.lp-plan-col');
+  if (!chat || !plan) return;
+  if (!layout.dataset.v3Phone) {                          // once for each time the planner is drawn
+    layout.dataset.v3Phone = '1';
+    const hasLesson = !!layout.querySelector('#chat-messages .chat-msg, #chat-messages [class*="assistant"]') || /\S/.test(layout.querySelector('#plan-content')?.textContent || '');
+    if (hasLesson) layout.classList.add('show-plan');
+  }
+  if (!plan.querySelector('#v3-askbar')) {
+    const bar = document.createElement('div'); bar.id = 'v3-askbar'; bar.className = 'v3-askbar';
+    bar.innerHTML = `${isVoiceInputSupported() ? `<button class="v3-mic" id="v3-ask-mic" title="Say what to change">${MIC}</button>` : ''}<button class="v3-ask" id="v3-ask-type">Tell Co-Cher what to change</button>`;
+    plan.appendChild(bar);
+    const toChat = () => { layout.classList.remove('show-plan'); const box = document.getElementById('chat-input'); if (box) box.focus(); };
+    bar.querySelector('#v3-ask-type').addEventListener('click', toChat);
+    bar.querySelector('#v3-ask-mic')?.addEventListener('click', () => { toChat(); document.getElementById('composer-mic-btn')?.click(); });
+  }
+  const tools = chat.querySelector('.chat-composer-toolbar');
+  if (tools && !tools.querySelector('#v3-opts')) {
+    const opt = document.createElement('button'); opt.id = 'v3-opts'; opt.type = 'button'; opt.className = 'btn btn-ghost btn-sm'; opt.textContent = 'Options'; opt.setAttribute('aria-expanded', 'false');
+    opt.addEventListener('click', () => { const open = tools.classList.toggle('v3-open'); opt.setAttribute('aria-expanded', String(open)); });
+    tools.appendChild(opt);
+  }
 }
 
 /* ══════════ The two tap reflection ══════════
@@ -253,7 +311,7 @@ function tidyHeader() {
 export function watchPlannerTools() {
   const root = document.getElementById('main-view') || document.body;
   let busy = false;
-  const run = () => { if (busy) return; busy = true; try { const bar = document.getElementById('ai-tools-bar'); if (bar) shelve(bar); tidyHeader(); } finally { busy = false; } };
+  const run = () => { if (busy) return; busy = true; try { const bar = document.getElementById('ai-tools-bar'); if (bar) shelve(bar); tidyHeader(); phonePlanner(); } finally { busy = false; } };
   new MutationObserver(run).observe(root, { childList: true, subtree: true });
   run();
 }

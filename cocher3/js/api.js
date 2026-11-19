@@ -2049,6 +2049,20 @@ export async function generateSpeech({ turns, voices, style, timeoutMs } = {}) {
   return { blob, mimeType: 'audio/wav', durationHint };
 }
 
+/** Ask Gemini whether this key works. Resolves { ok, message }; never throws. */
+export async function checkApiKey(key) {
+  const k = String(key || '').trim();
+  if (k.length < 20) return { ok: false, message: 'That does not look like a full key. Copy the whole of it.' };
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, message: 'You are offline, so the key cannot be checked now.' };
+  try {
+    const res = await fetch(`${ENDPOINT}?pageSize=1`, { headers: { 'x-goog-api-key': k } });
+    if (res.ok) return { ok: true, message: 'The key works.' };
+    if (res.status === 400 || res.status === 401 || res.status === 403) return { ok: false, message: 'Google did not accept this key. Check you copied all of it, and that it was made with your personal Google account.' };
+    if (res.status === 429) return { ok: true, message: 'The key is real, but Google is limiting it right now. Try again in a minute.' };
+    return { ok: false, message: `Google answered with an error (${res.status}). Try again shortly.` };
+  } catch { return { ok: false, message: 'Could not reach Google to check the key. Check your connection.' }; }
+}
+
 export function validateApiKey(key) {
   return key && key.trim().length >= 20;
 }

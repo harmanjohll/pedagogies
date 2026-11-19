@@ -6,10 +6,16 @@
  * teachers should hear about it. Raise CACHE in ../../sw.js with it.
  */
 
-export const VERSION = '3.12.0';
+export const VERSION = '3.13.0';
 
 /* Newest first. Shown once to a returning teacher, in Co-Cher 3 only. */
 export const NOTES = [
+  { version: '3.13.0', items: [
+    ['One Trail: the Singapore Teaching Practice', 'Lesson screens now follow the STP: Lesson Preparation, Lesson Enactment, Assessment and Feedback, then Reflect, with Positive Classroom Culture throughout. Plans tag each part with its Teaching Area.'],
+    ['One Next Step', 'The planner shows one button for what to do now. Print, Word, Share and the rest wait under More.'],
+    ['On Your Phone', 'A lesson opens on the lesson, with a bar to speak or type a change. New Lesson takes the topic by voice.'],
+    ['Your AI Key', 'A clearer set up, with a check that the key works. Use your personal Google account, not your school one.'],
+  ] },
   { version: '3.12.0', items: [
     ['Planner: One Third, Two Thirds', 'The writing pane takes a third; your lesson takes two. Drag the line between them, or the top edge of the writing box. Co-Cher remembers. Double click either to reset.'],
     ['Guided Starters', 'Each starter is now a short brief: what students know, where they get stuck, what they will be able to do, how you will know, how it should feel.'],

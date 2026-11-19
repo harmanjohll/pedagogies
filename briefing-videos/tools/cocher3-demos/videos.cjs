@@ -217,6 +217,26 @@ const S = {
     await d.move(page.locator('#events-list h3').nth(1)); await d.wait(1600);
     await d.endCard('Admin', 'Student Finder and Common free time have their own videos.');
   }],
+  '13-ai-key': [BTY, '#/', async (page, d) => {
+    await d.card('Getting started', 'How do I set up my AI key?', 'Two minutes, once. It is free, and it stays on your device.');
+    await d.cap('Use your personal Google account', 'Not your school account: school accounts usually cannot create a key.');
+    await d.ring('.v3-callout'); await d.wait(3600); await d.unring();
+    await d.cap('In Google AI Studio', 'Open the link, sign in with your personal account, and choose Create API key.');
+    await d.ring('.v3-keysteps'); await d.move('.v3-keysteps a'); await d.wait(3800); await d.unring();
+    await d.cap('Copy the key, and paste it here', 'It is a long line of letters and numbers. Paste all of it.');
+    await d.click('#st-key'); await page.locator('#st-key').pressSequentially('AIzaSy-your-own-key-goes-here-0000', { delay: 35 }); await d.wait(900);
+    await d.cap('Check the key', 'Co-Cher asks Google whether it works, before you go on.');
+    await d.click('#st-check'); await d.wait(2400);
+    await d.cap('Save and continue', 'Never share your key. You can change or remove it in Settings.');
+    await d.click('#st-save'); await d.wait(2600);
+    await d.endCard('Your AI key', 'On My School: Start Here, then Add Your AI Key.');
+  }, async (page) => {
+    // a teacher with no key yet; the key check is answered by a stand in (no real key is ever used in a recording)
+    await page.context().route(/generativelanguage\.googleapis\.com/, r => r.fulfill({ contentType: 'application/json', body: '{"models":[]}' }));
+    await page.evaluate(() => { try { localStorage.removeItem('cocher3_start'); } catch {} });
+    await page.reload(); await page.waitForTimeout(2200);
+    await page.locator('[data-start="key"]').click(); await page.waitForTimeout(900);
+  }],
 };
 
 (async () => {
